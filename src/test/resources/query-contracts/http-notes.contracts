@@ -7,7 +7,9 @@
 # Create: moderation check (user), quoted post, note and image inserts, then the author for the
 # response. Reply/like counts of a new note are known to be zero and are not queried. After commit,
 # a new top-level note that is not direct asks once for the followers who rang the author's bell.
-@junit | note-create | 5 | 2 | 0 | 0 | 7
+# A follow rings it from the start, so the author's follower hears of it: their preferences and
+# keyword filters, the notice insert, then names for the push.
+@junit | note-create | 9 | 3 | 0 | 0 | 12
 # Replies, likes, reposts and quotes also notify the note's author after commit: whether the author
 # blocked the actor, their preference for the type, for likes and reposts whether this actor is
 # already in today's group, the insert, then the recipient's and the actor's names for the push.
@@ -16,7 +18,7 @@
 # A thread posts its notes in one transaction, each as a reply to the one before: per note the same
 # work as a single create (authors, insert, and after commit the federation and bell checks), the
 # first note's moderation check once, and for every later note the block check each way.
-@junit | note-thread-create | 14 | 3 | 0 | 0 | 17
+@junit | note-thread-create | 26 | 6 | 0 | 0 | 32
 # Reading that thread: its first note lists the later parts in order apart from other replies, and
 # the public feed carries the second part under the first.
 @junit | note-thread-parts | 9 | 0 | 0 | 0 | 9
@@ -125,17 +127,18 @@
 @junit | note-trending-orphan | 5 | 0 | 0 | 0 | 5
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
-@junit | note-create-link | 4 | 2 | 0 | 0 | 6
+@junit | note-create-link | 8 | 3 | 0 | 0 | 11
 @junit | note-thread-link | 9 | 0 | 0 | 0 | 9
 # Visibility (Mastodon's four). Restricted notes (followers-only, direct) record the members they
 # mention as recipients in one insert; they still get their mention notices. Shared feeds (everyone,
 # tags) filter public inside their one query. A page with restricted notes by someone else asks once
 # which of them this viewer may read (author, recipient, or follower for followers-only); a page of
 # public notes asks nothing more. Hidden notes answer 404 on every path. /ap/notes serves only public
-# and unlisted notes (its first read also creates the author's actor).
-@junit | note-vis-create-public | 4 | 2 | 0 | 0 | 6
-@junit | note-vis-create-unlisted | 4 | 2 | 0 | 0 | 6
-@junit | note-vis-create-private | 9 | 4 | 0 | 0 | 13
+# and unlisted notes (its first read also creates the author's actor). Every non-direct create here
+# also notifies the author's follower, whose bell is on from the follow.
+@junit | note-vis-create-public | 8 | 3 | 0 | 0 | 11
+@junit | note-vis-create-unlisted | 8 | 3 | 0 | 0 | 11
+@junit | note-vis-create-private | 13 | 5 | 0 | 0 | 18
 # A direct mention from someone the recipient doesn't follow is an unsolicited private mention,
 # which the default notification policy keeps aside: stored filtered, no push (its two lookups go).
 @junit | note-vis-create-direct | 6 | 4 | 0 | 0 | 10
@@ -221,18 +224,22 @@
 @junit | note-reply-conversation-muted | 7 | 1 | 0 | 0 | 8
 @junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5
 @junit | note-conversation-unmute | 1 | 0 | 0 | 1 | 2
-# Mastodon's bell on a followed account. Only a follower rings it (409 before following): the
-# target, then the follow row, updated in place. The follow status reads the bell from that row,
-# and the blocks between the two both ways in one statement.
+# Mastodon's bell on a followed account, on from the follow. Only a follower rings it (409 before
+# following): the target, then the follow row, updated in place. The follow answers with the bell of
+# the row it inserted; the follow status reads it from that row, and the blocks between the two both
+# ways in one statement.
 @junit | note-bell-before-follow | 2 | 0 | 0 | 0 | 2
-@junit | note-bell-on | 2 | 0 | 1 | 0 | 3
+@junit | note-bell-follow | 11 | 2 | 0 | 0 | 13
 @junit | note-bell-follow-status | 5 | 0 | 0 | 0 | 5
 # A new note finds the bell-ringers in one query (blocks and notice mutes excluded), then records
 # their notices like other fan-outs: preferences in one read, the insert, names for the push.
 @junit | note-create-bell | 8 | 2 | 0 | 0 | 10
 # A reply to someone else's note rings no bell; Mastodon tells of posts and self-threads only.
 @junit | note-reply-bell-elsewhere | 11 | 2 | 0 | 0 | 13
+# With the bell off, a new note finds nobody and records nothing, as for an author nobody follows.
 @junit | note-bell-off | 2 | 0 | 1 | 0 | 3
+@junit | note-create-bell-off | 4 | 1 | 0 | 0 | 5
+@junit | note-bell-on | 2 | 0 | 1 | 0 | 3
 # Who shared a note hears of its edit, once each: a reposter and a quoter, never the author who
 # reposted their own note, nor anyone who blocked or muted them or the conversation (one query).
 @junit | note-repost-before-edit | 12 | 2 | 0 | 0 | 14

@@ -45,8 +45,10 @@ public class FollowUseCase {
     if (blocks.blocksViewer()) {
       throw new UserException(UserErrorCode.BLOCKED_TARGET);
     }
-    if (followRepository.existsByFollowerIdAndFollowingId(followerId, target.getId())) {
-      return statusOf(true, target, blocks);
+    Optional<FollowEntity> existing =
+        followRepository.findByFollowerIdAndFollowingId(followerId, target.getId());
+    if (existing.isPresent()) {
+      return statusOf(true, target, blocks).notifyingOfNotes(existing.get().isNotifyNotes());
     }
     // A locked account approves each follower, as on Mastodon: the follow waits as a request.
     if (target.isLocked()) {
@@ -57,9 +59,10 @@ public class FollowUseCase {
       return statusOf(false, target, blocks).requesting(true, true);
     }
     // Only a new follow records attribution and notifies; repeats preserve the original source.
-    followRepository.save(new FollowEntity(followerId, target.getId(), sourcePostId));
+    FollowEntity follow = new FollowEntity(followerId, target.getId(), sourcePostId);
+    followRepository.save(follow);
     events.publishEvent(BlogInteractionEvent.follow(target.getId(), followerId, Instant.now()));
-    return statusOf(true, target, blocks);
+    return statusOf(true, target, blocks).notifyingOfNotes(follow.isNotifyNotes());
   }
 
   @Transactional

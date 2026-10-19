@@ -101,11 +101,12 @@ class ImportRowApplier {
       if ("false".equalsIgnoreCase(cell(cells, 1))) {
         feedSettings.setRepostsHidden(userId, address.username(), true);
       }
-      if ("true".equalsIgnoreCase(cell(cells, 2))) {
+      String notify = cell(cells, 2);
+      if ("true".equalsIgnoreCase(notify) || "false".equalsIgnoreCase(notify)) {
         try {
-          follows.setNoteNotifications(userId, address.username(), true);
+          follows.setNoteNotifications(userId, address.username(), Boolean.parseBoolean(notify));
         } catch (RuntimeException e) {
-          log.debug("bell left off for a follow still waiting: {}", e.getMessage());
+          log.debug("bell left as is for a follow still waiting: {}", e.getMessage());
         }
       }
       return true;
