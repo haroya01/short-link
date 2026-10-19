@@ -6,7 +6,6 @@ import static com.example.short_link.federation.application.ActivityStreams.text
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
-import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
@@ -404,7 +403,7 @@ public class InboxService {
   }
 
   private static boolean shareable(NoteSnapshot note) {
-    return note.visibility() == Visibility.PUBLIC || note.visibility() == Visibility.UNLISTED;
+    return note.visibility().shareable();
   }
 
   private static boolean authoredBy(JsonNode object, String actorUri) {

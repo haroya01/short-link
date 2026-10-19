@@ -2,8 +2,8 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;

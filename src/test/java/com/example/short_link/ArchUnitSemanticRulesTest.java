@@ -6,6 +6,9 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.note.application.access.NoteAccess;
+import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.tngtech.archunit.base.DescribedPredicate;
@@ -30,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -116,6 +120,20 @@ class ArchUnitSemanticRulesTest {
           .should(leaveWhetherAPostIsPublishedToThePolicy());
 
   @ArchTest
+  static final ArchRule noteVisibilityIsAskedOfItsQuestions =
+      classes()
+          .that(DescribedPredicate.not(JavaClass.Predicates.belongToAnyOf(NoteVisibility.class)))
+          .should(leaveWhoSeesANoteToItsVisibility());
+
+  @ArchTest
+  static final ArchRule whoMayReadANoteIsAskedOfNoteAccess =
+      noClasses()
+          .that()
+          .doNotBelongToAnyOf(NoteAccess.class)
+          .should()
+          .callMethod(NoteRepository.class, "visibleTo", Long.class, Collection.class);
+
+  @ArchTest
   static final ArchRule transactionsDoNotCallOutboundClients =
       methods().that(areTransactional()).should(notCallOutboundClients());
 
@@ -181,6 +199,24 @@ class ArchUnitSemanticRulesTest {
                   || target.getOwner().isEquivalentTo(PostStatus.class)
                       && target.getName().equals("PUBLISHED");
           if (publishedCheck) {
+            events.add(SimpleConditionEvent.violated(access, access.getDescription()));
+          }
+        }
+      }
+    };
+  }
+
+  private static ArchCondition<JavaClass> leaveWhoSeesANoteToItsVisibility() {
+    return new ArchCondition<>("leave who sees a note to the questions NoteVisibility answers") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        for (JavaAccess<?> access : javaClass.getAccessesFromSelf()) {
+          AccessTarget target = access.getTarget();
+          if (!target.getOwner().isEquivalentTo(NoteVisibility.class)) continue;
+          boolean named =
+              NoteVisibility.where(visibility -> true).stream()
+                  .anyMatch(visibility -> visibility.name().equals(target.getName()));
+          if (named || target.getName().equals("ordinal")) {
             events.add(SimpleConditionEvent.violated(access, access.getDescription()));
           }
         }

@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -40,6 +41,7 @@ public class NoteQueryService {
   private final NoteBookmarkRepository bookmarks;
   private final NotePeopleReader people;
   private final NoteViews views;
+  private final NoteAccess access;
   private final NoteSeriesReader noteSeries;
 
   @Transactional(readOnly = true)
@@ -264,10 +266,7 @@ public class NoteQueryService {
         note.isRemote()
             ? people.remoteAuthors(Set.of(note.getRemoteActorId()), viewerId).isEmpty()
             : people.activeAuthors(Set.of(note.getUserId())).isEmpty();
-    if (authorGone
-        || (note.getVisibility().restricted()
-            && !note.isOwnedBy(viewerId)
-            && !notes.visibleTo(viewerId, Set.of(noteId)).contains(noteId))) {
+    if (authorGone || !access.readable(note, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
     }
     List<NoteHistoryView.Version> versions = new ArrayList<>();

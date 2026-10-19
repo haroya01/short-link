@@ -12,11 +12,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NotePollEndedEvent;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NotePollTally;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
@@ -46,7 +47,8 @@ class NotePollServiceTest {
   @Mock private ApplicationEventPublisher events;
 
   private NotePollService service() {
-    return new NotePollService(notes, polls, blocks, events, Clock.fixed(NOW, ZoneOffset.UTC));
+    return new NotePollService(
+        notes, new NoteAccess(notes), polls, blocks, events, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static NoteEntity poll(Long id, boolean multiple, Instant ends) {

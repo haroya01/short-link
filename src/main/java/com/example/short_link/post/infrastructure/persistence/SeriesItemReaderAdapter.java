@@ -1,5 +1,7 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.DiscoveryQuality;
@@ -44,7 +46,7 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
               (String) row[2],
               (String) row[3],
               (Instant) row[4],
-              shared((String) row[5])));
+              NoteVisibility.valueOf((String) row[5]).shareable()));
     }
     return notes;
   }
@@ -66,7 +68,8 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                     + " AND u.username IS NOT NULL"
                     + " JOIN series_item i ON i.item_type = 'NOTE' AND i.ref_id = n.id"
                     + " JOIN series s ON s.id = i.series_id"
-                    + " WHERE n.id IN (:ids) AND n.visibility IN ('PUBLIC', 'UNLISTED')")
+                    + " WHERE n.id IN (:ids) AND "
+                    + NoteAccessSql.shareable("n"))
             .setParameter("ids", noteIds)
             .unwrap(NativeQuery.class)
             .addScalar("id", Long.class)
@@ -146,8 +149,8 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                     + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id AND "
                     + PostAccessSql.OPEN
                     + " AND p.body_text_length >= :minBody"
-                    + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
-                    + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                    + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id AND "
+                    + NoteAccessSql.shareable("n")
                     + " WHERE (p.id IS NOT NULL OR n.id IS NOT NULL)"
                     + HeardSql.heard("s.user_id")
                     + " GROUP BY i.series_id HAVING COUNT(*) >= :minItems"
@@ -191,8 +194,8 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                 + " FROM series_item i"
                 + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id AND "
                 + PostAccessSql.OPEN
-                + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
-                + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id AND "
+                + NoteAccessSql.shareable("n")
                 + " WHERE i.series_id IN (:ids) AND (p.id IS NOT NULL OR n.id IS NOT NULL)"
                 + " ORDER BY i.series_id, i.position, i.id")
         .setParameter("ids", seriesIds)
@@ -207,9 +210,5 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
         .addScalar("content_warning", String.class)
         .addScalar("item_at", Instant.class)
         .getResultList();
-  }
-
-  private static boolean shared(String visibility) {
-    return "PUBLIC".equals(visibility) || "UNLISTED".equals(visibility);
   }
 }

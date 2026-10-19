@@ -27,7 +27,7 @@ public interface NoteSnapshotReader {
       QuotedNote quotedNote,
       String contentWarning,
       boolean sensitive,
-      Visibility visibility,
+      NoteVisibility visibility,
       Poll poll,
       String language) {
 
@@ -44,7 +44,7 @@ public interface NoteSnapshotReader {
         QuotedNote quotedNote,
         String contentWarning,
         boolean sensitive,
-        Visibility visibility,
+        NoteVisibility visibility,
         Poll poll) {
       this(
           id,
@@ -77,7 +77,7 @@ public interface NoteSnapshotReader {
         QuotedNote quotedNote,
         String contentWarning,
         boolean sensitive,
-        Visibility visibility) {
+        NoteVisibility visibility) {
       this(
           id,
           authorId,
@@ -118,7 +118,7 @@ public interface NoteSnapshotReader {
           null,
           null,
           false,
-          Visibility.PUBLIC);
+          NoteVisibility.DEFAULT);
     }
 
     public NoteSnapshot(
@@ -147,16 +147,8 @@ public interface NoteSnapshotReader {
           quotedNote,
           contentWarning,
           sensitive,
-          Visibility.PUBLIC);
+          NoteVisibility.DEFAULT);
     }
-  }
-
-  // Mirrors the note slice's visibility for readers outside it. Direct notes are never federated.
-  enum Visibility {
-    PUBLIC,
-    UNLISTED,
-    PRIVATE,
-    DIRECT
   }
 
   record Quote(String title, String slug, String authorUsername) {}
