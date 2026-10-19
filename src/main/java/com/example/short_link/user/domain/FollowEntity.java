@@ -47,6 +47,7 @@ public class FollowEntity extends BaseCreatedEntity {
     this.followerId = followerId;
     this.followingId = followingId;
     this.sourcePostId = sourcePostId;
+    this.notifyNotes = true;
   }
 
   public void notifyOfNotes(boolean on) {

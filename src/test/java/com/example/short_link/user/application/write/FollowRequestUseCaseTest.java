@@ -84,6 +84,7 @@ class FollowRequestUseCaseTest {
     verify(followRepository).save(saved.capture());
     assertThat(saved.getValue().getFollowerId()).isEqualTo(9L);
     assertThat(saved.getValue().getFollowingId()).isEqualTo(2L);
+    assertThat(saved.getValue().isNotifyNotes()).isTrue();
     verify(events).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
   }
 

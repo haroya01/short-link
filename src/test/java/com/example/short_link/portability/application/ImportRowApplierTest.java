@@ -2,7 +2,9 @@ package com.example.short_link.portability.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -69,6 +71,15 @@ class ImportRowApplierTest {
     verify(follows).follow(7L, "sori", null);
     verify(feedSettings).setRepostsHidden(7L, "sori", true);
     verify(follows).setNoteNotifications(7L, "sori", true);
+  }
+
+  @Test
+  void aBellTheFileLeftOffIsTurnedOffAndAMissingOneKeepsTheFollowsDefault() {
+    applier().apply(7L, ImportKind.FOLLOWING, List.of("sori", "true", "FALSE"));
+    applier().apply(7L, ImportKind.FOLLOWING, List.of("mio", "true"));
+
+    verify(follows).setNoteNotifications(7L, "sori", false);
+    verify(follows, never()).setNoteNotifications(eq(7L), eq("mio"), anyBoolean());
   }
 
   @Test
