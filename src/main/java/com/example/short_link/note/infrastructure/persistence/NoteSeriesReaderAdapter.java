@@ -1,5 +1,6 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteSeries;
@@ -28,8 +29,8 @@ class NoteSeriesReaderAdapter implements NoteSeriesReader {
                     + " JOIN series_item i ON i.series_id = s.id"
                     + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id AND "
                     + PostAccessSql.OPEN
-                    + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
-                    + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                    + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id AND "
+                    + NoteAccessSql.shareable("n")
                     + " WHERE mine.item_type = 'NOTE' AND mine.ref_id = :noteId"
                     + " AND (p.id IS NOT NULL OR n.id IS NOT NULL)"
                     + " ORDER BY i.position, i.id")

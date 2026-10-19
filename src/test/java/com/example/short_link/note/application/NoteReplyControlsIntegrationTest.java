@@ -3,6 +3,7 @@ package com.example.short_link.note.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
@@ -292,7 +293,7 @@ class NoteReplyControlsIntegrationTest {
         "먼 곳의 답글",
         null,
         false,
-        "public",
+        NoteVisibility.PUBLIC,
         null,
         parent,
         "https://kurl.me/ap/notes/" + parent,

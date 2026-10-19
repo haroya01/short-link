@@ -4,6 +4,7 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Poll;
 import com.example.short_link.common.note.RemoteNotes.Shape;
@@ -11,7 +12,6 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteReplyPolicy;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -103,8 +103,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (parent != null && !mayAnswer(received.remoteActorId(), parent)) {
       parent = null;
     }
-    NoteVisibility visibility =
-        NoteVisibility.parse(received.visibility()).orElse(NoteVisibility.DIRECT);
+    NoteVisibility visibility = received.visibility();
     String warning = warning(received.contentWarning());
     Shape shape = received.shape();
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
