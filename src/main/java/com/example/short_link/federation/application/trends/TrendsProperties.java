@@ -7,10 +7,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "short-link.federation.trends")
 public record TrendsProperties(
-    boolean enabled, List<String> hosts, int perHost, Duration every, Duration patience) {
+    boolean enabled,
+    List<String> hosts,
+    int perHost,
+    int pages,
+    Duration every,
+    Duration patience) {
 
   // Mastodon answers at most 40 trending posts a request.
   static final int MAX_PER_HOST = 40;
+
+  static final int MAX_PAGES = 5;
 
   public TrendsProperties {
     hosts =
@@ -21,7 +28,8 @@ public record TrendsProperties(
                 .filter(host -> !host.isEmpty())
                 .distinct()
                 .toList();
-    perHost = perHost <= 0 ? 20 : Math.min(perHost, MAX_PER_HOST);
+    perHost = perHost <= 0 ? MAX_PER_HOST : Math.min(perHost, MAX_PER_HOST);
+    pages = pages <= 0 ? 2 : Math.min(pages, MAX_PAGES);
     every = every == null ? Duration.ofMinutes(30) : every;
     patience = patience == null ? Duration.ofSeconds(5) : patience;
   }

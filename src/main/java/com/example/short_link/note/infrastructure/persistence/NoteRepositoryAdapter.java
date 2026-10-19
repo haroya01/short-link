@@ -167,6 +167,26 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE "
+                + notReply("n")
+                + " AND n.visibility = 'PUBLIC' AND n.remote_actor_id IS NOT NULL"
+                + " AND n.id < :before"
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   // A profile shows what this viewer may read: public and unlisted to anyone, followers-only to
   // followers and mentioned members, and direct notes to no one but their author.
   static String onProfile(String alias) {

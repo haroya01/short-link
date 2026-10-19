@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.exception.FederationErrorCode;
@@ -19,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @ExtendWith(MockitoExtension.class)
 class RemoteResolutionTest {
@@ -46,6 +48,7 @@ class RemoteResolutionTest {
   @Mock private RemoteNoteIntake notes;
   @Mock private RemoteFollowing following;
   @Mock private NoteViewReader noteViews;
+  @Mock private TrendingPosts trending;
 
   private RemoteResolution resolution() {
     return new RemoteResolution(
@@ -55,7 +58,23 @@ class RemoteResolutionTest {
         notes,
         following,
         noteViews,
-        new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")));
+        new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
+        trending);
+  }
+
+  @Test
+  void aPostTrendingElsewhereIsBroughtFromWhatItsServerAlreadyAnsweredWithoutAskingAgain() {
+    String status = ALICE + "/statuses/9";
+    ObjectNode object = JSON.createObjectNode();
+    object.put("id", status);
+    object.put("type", "Note");
+    object.put("attributedTo", ALICE);
+    when(trending.object(status)).thenReturn(Optional.of(object));
+    when(notes.fetched(object, URI.create(status))).thenReturn(Optional.of(31L));
+    when(noteViews.view(31L, 7L)).thenReturn(Optional.of("the note"));
+
+    assertThat(resolution().resolve(7L, status).note()).isEqualTo("the note");
+    verifyNoInteractions(documents);
   }
 
   private static RemoteActorEntity alice() {

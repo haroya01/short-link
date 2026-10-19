@@ -1,7 +1,6 @@
 package com.example.short_link.federation.presentation;
 
-import com.example.short_link.federation.application.trends.TrendingPosts;
-import com.example.short_link.federation.presentation.response.TrendingNoteListResponse;
+import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,11 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RemoteTrendsController {
 
-  private final TrendingPosts trending;
+  private final RemoteTrendingFeed trending;
 
   @GetMapping("/trending")
-  public TrendingNoteListResponse trending(
-      @AuthenticationPrincipal Long viewerId, @RequestParam(defaultValue = "20") int limit) {
-    return new TrendingNoteListResponse(trending.list(viewerId, limit));
+  public RemoteTrendingFeed.Page trending(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "20") int limit,
+      @RequestParam(required = false) String cursor) {
+    return trending.page(viewerId, cursor, limit);
   }
 }

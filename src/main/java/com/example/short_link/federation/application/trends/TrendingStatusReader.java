@@ -35,7 +35,7 @@ class TrendingStatusReader {
   private final RemoteNoteParser parser;
   private final JsonMapper json;
 
-  record Read(TrendingNote note, String actorUri, String domain) {}
+  record Read(TrendingNote note, String actorUri, String domain, JsonNode object) {}
 
   Optional<Read> read(JsonNode status, String server) {
     String uri = text(status.get("uri"));
@@ -57,6 +57,7 @@ class TrendingStatusReader {
       return Optional.empty();
     }
     ObjectNode object = object(status, uri);
+    object.put("attributedTo", actorUri);
     RemoteNoteParser.Parsed parsed = parser.parse(object, object);
     if (parsed.publishedAt() == null) {
       return Optional.empty();
@@ -90,7 +91,7 @@ class TrendingStatusReader {
             uri,
             parsed.url() != null ? parsed.url() : uri,
             List.of(server));
-    return Optional.of(new Read(note, actorUri, domain));
+    return Optional.of(new Read(note, actorUri, domain, object));
   }
 
   private ObjectNode object(JsonNode status, String uri) {
