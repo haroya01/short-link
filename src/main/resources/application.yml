@@ -8,6 +8,10 @@ spring:
     fallback-to-system-locale: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  flyway:
+    # InnoDB fixes a FULLTEXT index's stopwords whenever it builds the index, including the rebuild an
+    # ALTER on the table triggers; the default list would drop every ngram holding 'a' or 'i' (V195).
+    init-sqls: SET SESSION innodb_ft_enable_stopword = OFF
   cache:
     type: redis
   jpa:
