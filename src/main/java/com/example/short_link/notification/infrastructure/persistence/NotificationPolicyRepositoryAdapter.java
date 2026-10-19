@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.policy.NotificationPolicy;
 import com.example.short_link.notification.domain.policy.NotificationPolicyLevel;
@@ -89,8 +90,9 @@ class NotificationPolicyRepositoryAdapter implements NotificationPolicyRepositor
                         + " AND ra.created_at > :fresh)"
                         + " ELSE EXISTS (SELECT 1 FROM users u WHERE u.id = :actorUserId"
                         + " AND u.created_at > :fresh) END,"
-                        + " EXISTS (SELECT 1 FROM note n WHERE n.id = :mentionNote"
-                        + " AND n.visibility = 'DIRECT')"
+                        + " EXISTS (SELECT 1 FROM note n WHERE n.id = :mentionNote AND "
+                        + NoteAccessSql.direct("n")
+                        + ")"
                         + " FROM (SELECT 1) one"
                         + " LEFT JOIN notification_policy p ON p.user_id = :recipient")
                 .setParameter("recipient", recipientUserId)

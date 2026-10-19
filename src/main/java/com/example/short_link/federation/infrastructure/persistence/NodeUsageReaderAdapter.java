@@ -1,5 +1,6 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.federation.domain.NodeUsage;
 import com.example.short_link.federation.domain.repository.NodeUsageReader;
 import jakarta.persistence.EntityManager;
@@ -19,7 +20,9 @@ class NodeUsageReaderAdapter implements NodeUsageReader {
           + " AND NOT EXISTS (SELECT 1 FROM federation_preference p"
           + " WHERE p.user_id = u.id AND NOT p.enabled)),"
           + " (SELECT COUNT(*) FROM note n JOIN users nu ON nu.id = n.user_id"
-          + " WHERE n.visibility = 'PUBLIC' AND nu.deleted_at IS NULL)";
+          + " WHERE "
+          + NoteAccessSql.listed("n")
+          + " AND nu.deleted_at IS NULL)";
 
   private final EntityManager em;
 

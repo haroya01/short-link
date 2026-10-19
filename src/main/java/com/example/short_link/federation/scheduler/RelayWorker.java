@@ -195,7 +195,7 @@ public class RelayWorker implements SmartLifecycle {
       return "foreign";
     }
     RemoteNoteParser.Parsed note = parser.parse(post, post);
-    if (!"public".equals(note.visibility())) {
+    if (!note.visibility().listed()) {
       return "not-public";
     }
     if (note.inReplyToUri() != null) {

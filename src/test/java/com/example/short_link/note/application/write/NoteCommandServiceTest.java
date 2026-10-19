@@ -24,9 +24,11 @@ import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -36,7 +38,6 @@ import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -100,6 +101,7 @@ class NoteCommandServiceTest {
         people,
         images,
         views,
+        new NoteAccess(notes),
         moderation,
         blocks,
         connections,
@@ -786,7 +788,7 @@ class NoteCommandServiceTest {
     NoteAuthor other = new NoteAuthor(8L, "other", null);
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
-    when(notes.visibleTo(8L, List.of(100L))).thenReturn(Set.of());
+    when(notes.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
 
     service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
 
