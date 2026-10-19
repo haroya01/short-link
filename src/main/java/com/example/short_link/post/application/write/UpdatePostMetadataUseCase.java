@@ -11,6 +11,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,7 +55,9 @@ public class UpdatePostMetadataUseCase {
       }
       post.updateSlug(cmd.slug());
     }
-    boolean searchFieldChanged = cmd.title() != null || cmd.excerpt() != null || cmd.tags() != null;
+    String titleBefore = post.getTitle();
+    String excerptBefore = post.getExcerpt();
+    List<String> tagsBefore = cmd.tags() == null ? null : List.copyOf(post.getTags());
     if (cmd.title() != null) {
       post.updateTitle(cmd.title());
     }
@@ -81,7 +84,12 @@ public class UpdatePostMetadataUseCase {
     }
 
     post.markEdited();
-    List<PostBlockEntity> body = searchFieldChanged ? searchTextUpdater.refresh(post) : null;
+    boolean searchFieldChanged =
+        !Objects.equals(titleBefore, post.getTitle())
+            || !Objects.equals(excerptBefore, post.getExcerpt())
+            || (tagsBefore != null && !tagsBefore.equals(post.getTags()));
+    List<PostBlockEntity> body =
+        searchFieldChanged && post.isPublished() ? searchTextUpdater.refresh(post) : null;
     if (post.isPublished()) {
       if (body == null) {
         revisions.capture(post);

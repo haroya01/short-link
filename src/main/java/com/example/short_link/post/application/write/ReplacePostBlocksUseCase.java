@@ -28,28 +28,46 @@ public class ReplacePostBlocksUseCase {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
     post.markEdited();
-    postBlockRepository.deleteAllByPostId(cmd.postId());
-    if (cmd.blocks().isEmpty()) {
-      // 본문이 비었어도 검색 컬럼은 제목·요약·태그로 다시 채워야 한다(예전 본문 잔재가 남지 않게).
-      searchTextUpdater.refresh(post, List.of());
-      noteQuotes.index(post, List.of());
-      recordPublished(post, List.of());
-      return new PostBodyView(post.getContentVersion(), List.of());
-    }
-    List<PostBlockEntity> entities = new ArrayList<>(cmd.blocks().size());
-    int order = 0;
-    for (ReplacePostBlocksCommand.BlockInput input : cmd.blocks()) {
-      entities.add(new PostBlockEntity(cmd.postId(), input.type(), input.content(), order++));
-    }
-    // IDENTITY는 JDBC 배치가 안 되므로 다중 행 INSERT 후 생성 ID를 다시 읽는다.
-    postBlockRepository.insertAll(entities);
     List<PostBlockEntity> persisted =
-        postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
-    searchTextUpdater.refresh(post, persisted);
+        rewrite(
+            cmd.postId(),
+            cmd.blocks(),
+            postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId()));
+    // 검색 평문은 공개 글만 읽고 발행할 때 다시 만들므로 초안 자동 저장에서는 쓰지 않는다.
+    if (post.isPublished()) {
+      searchTextUpdater.refresh(post, persisted);
+    }
     noteQuotes.index(post, persisted);
     recordPublished(post, persisted);
     return new PostBodyView(
         post.getContentVersion(), persisted.stream().map(PostBlockView::from).toList());
+  }
+
+  private List<PostBlockEntity> rewrite(
+      Long postId,
+      List<ReplacePostBlocksCommand.BlockInput> wanted,
+      List<PostBlockEntity> current) {
+    int kept = Math.min(current.size(), wanted.size());
+    for (int i = 0; i < kept; i++) {
+      ReplacePostBlocksCommand.BlockInput input = wanted.get(i);
+      current.get(i).rewrite(input.type(), input.content(), i);
+    }
+    if (current.size() > kept) {
+      postBlockRepository.deleteAllById(
+          current.subList(kept, current.size()).stream().map(PostBlockEntity::getId).toList());
+      return new ArrayList<>(current.subList(0, kept));
+    }
+    if (wanted.size() == kept) {
+      return current;
+    }
+    List<PostBlockEntity> added = new ArrayList<>(wanted.size() - kept);
+    for (int i = kept; i < wanted.size(); i++) {
+      ReplacePostBlocksCommand.BlockInput input = wanted.get(i);
+      added.add(new PostBlockEntity(postId, input.type(), input.content(), i));
+    }
+    // IDENTITY는 JDBC 배치가 안 되므로 다중 행 INSERT 후 생성 ID를 다시 읽는다.
+    postBlockRepository.insertAll(added);
+    return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(postId);
   }
 
   // 독자가 본 내용은 모두 버전으로 남긴다. 초안 자동 저장은 기록하지 않는다.

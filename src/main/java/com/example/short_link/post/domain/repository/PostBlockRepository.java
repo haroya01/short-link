@@ -1,6 +1,7 @@
 package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.PostBlockEntity;
+import java.util.Collection;
 import java.util.List;
 
 public interface PostBlockRepository {
@@ -12,4 +13,6 @@ public interface PostBlockRepository {
   List<PostBlockEntity> findAllByPostIdOrderByBlockOrderAsc(Long postId);
 
   void deleteAllByPostId(Long postId);
+
+  void deleteAllById(Collection<Long> ids);
 }

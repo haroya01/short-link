@@ -7,6 +7,8 @@ import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.PostSearchTextFlattener;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
+import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
+import com.example.short_link.post.application.write.ReplacePostBlocksUseCase;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -48,6 +50,7 @@ class PublicFeedSearchIntegrationTest {
   @Autowired private UserRepository userRepository;
   @Autowired private CreatePostUseCase createPost;
   @Autowired private PublishPostUseCase publishPost;
+  @Autowired private ReplacePostBlocksUseCase replaceBlocks;
   @Autowired private JdbcTemplate jdbc;
 
   private final PostSearchTextFlattener flattener =
@@ -311,6 +314,22 @@ class PublicFeedSearchIntegrationTest {
     assertThat(rows).isEqualTo(1);
     assertThat(relevanceSlugs("동시성")).containsExactly("publish-only");
     assertThat(relevanceSlugs("제어")).containsExactly("publish-only");
+  }
+
+  @Test
+  void aDraftsAutosavedBodyBecomesSearchableWhenItIsPublished() {
+    long author = author("drafter");
+    var created = createPost.execute(new CreatePostCommand(author, "autosaved", "초안 제목", "ko"));
+    replaceBlocks.execute(
+        new ReplacePostBlocksCommand(
+            author,
+            created.id(),
+            List.of(new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "카디널리티 측정")),
+            null,
+            false));
+    publishPost.execute(new PublishPostCommand(author, created.id()));
+
+    assertThat(relevanceSlugs("카디널리티")).containsExactly("autosaved");
   }
 
   // 회귀 방지(짧은 질의): ngram(token size 2) 은 두 글자 미만 토큰을 인덱싱하지 않아 "C++"→"C" 같은 질의는 MATCH
