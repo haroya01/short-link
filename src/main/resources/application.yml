@@ -208,6 +208,13 @@ short-link:
       hosts: ${FEDERATION_TRENDS_HOSTS:mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
       per-host: ${FEDERATION_TRENDS_PER_HOST:40}
       pages: ${FEDERATION_TRENDS_PAGES:2}
+    latest:
+      enabled: ${FEDERATION_LATEST_ENABLED:true}
+      hosts: ${FEDERATION_LATEST_HOSTS:mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
+      per-host: ${FEDERATION_LATEST_PER_HOST:40}
+      max-items: ${FEDERATION_LATEST_MAX_ITEMS:600}
+      fresh-for: ${FEDERATION_LATEST_FRESH_FOR:5m}
+      patience: ${FEDERATION_LATEST_PATIENCE:3s}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

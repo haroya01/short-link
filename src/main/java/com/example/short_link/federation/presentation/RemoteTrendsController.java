@@ -22,4 +22,12 @@ public class RemoteTrendsController {
       @RequestParam(required = false) String cursor) {
     return trending.page(viewerId, cursor, limit);
   }
+
+  @GetMapping("/latest")
+  public RemoteTrendingFeed.Page latest(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "20") int limit,
+      @RequestParam(required = false) String cursor) {
+    return trending.latest(viewerId, cursor, limit);
+  }
 }

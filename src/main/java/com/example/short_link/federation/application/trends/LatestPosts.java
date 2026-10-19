@@ -1,0 +1,296 @@
+package com.example.short_link.federation.application.trends;
+
+import com.example.short_link.federation.application.FederationHttp;
+import com.example.short_link.federation.application.signature.Signer;
+import com.example.short_link.federation.application.signature.SigningKeys;
+import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
+import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
+import java.net.URI;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
+// The newest public posts of a few chosen servers, held only in memory and asked for only while
+// someone reads them: the first read waits for the servers, a read after freshFor answers from
+// memory and asks again behind it, and nobody reading means nothing is asked. Each refresh asks
+// only for what came after the newest post kept from that server; scrolling past the oldest asks
+// for the page before it. Posts marked sensitive or behind a warning, and posts by bots, are left
+// out, as is everything trending leaves out.
+@Slf4j
+@Service
+public class LatestPosts {
+
+  private final LatestProperties props;
+  private final FederationHttp http;
+  private final SigningKeys signingKeys;
+  private final FederationDomainBlockRepository serverBlocks;
+  private final RemoteAccountStandingReader standings;
+  private final TrendingStatusReader reader;
+  private final JsonMapper json;
+  private final Clock clock;
+  private final ExecutorService askers = Executors.newVirtualThreadPerTaskExecutor();
+  private final AtomicBoolean refreshing = new AtomicBoolean();
+  private final Map<String, Edge> edges = new ConcurrentHashMap<>();
+
+  private volatile List<Kept> latest = List.of();
+  private volatile Instant askedAt;
+
+  record Kept(TrendingStatusReader.Read read, String host) {}
+
+  private record Edge(String newest, String oldest, boolean bottom) {}
+
+  private record Answer(
+      String host, List<TrendingStatusReader.Read> reads, String first, String last, int raw) {}
+
+  public record Page(List<TrendingNote> items, boolean more, List<String> unknownAuthors) {}
+
+  @Autowired
+  public LatestPosts(
+      LatestProperties props,
+      FederationHttp http,
+      SigningKeys signingKeys,
+      FederationDomainBlockRepository serverBlocks,
+      RemoteAccountStandingReader standings,
+      TrendingStatusReader reader,
+      JsonMapper json) {
+    this(props, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
+  }
+
+  LatestPosts(
+      LatestProperties props,
+      FederationHttp http,
+      SigningKeys signingKeys,
+      FederationDomainBlockRepository serverBlocks,
+      RemoteAccountStandingReader standings,
+      TrendingStatusReader reader,
+      JsonMapper json,
+      Clock clock) {
+    this.props = props;
+    this.http = http;
+    this.signingKeys = signingKeys;
+    this.serverBlocks = serverBlocks;
+    this.standings = standings;
+    this.reader = reader;
+    this.json = json;
+    this.clock = clock;
+  }
+
+  public Page page(Long viewerId, int offset, int limit) {
+    if (!props.enabled()) {
+      return new Page(List.of(), false, List.of());
+    }
+    if (askedAt == null) {
+      refresh();
+    } else if (askedAt.plus(props.freshFor()).isBefore(clock.instant())) {
+      CompletableFuture.runAsync(this::refresh, askers);
+    }
+    int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
+    if (offset + size > latest.size()) {
+      deepen();
+    }
+    List<Kept> all = latest;
+    RemoteAccountStandingReader.Hidden hidden =
+        viewerId == null || all.isEmpty()
+            ? RemoteAccountStandingReader.Hidden.NONE
+            : standings.hidden(
+                viewerId,
+                all.stream().map(kept -> kept.read().actorUri()).distinct().toList(),
+                all.stream().map(kept -> kept.read().domain()).distinct().toList(),
+                clock.instant());
+    List<TrendingStatusReader.Read> shown =
+        all.stream()
+            .map(Kept::read)
+            .filter(
+                read ->
+                    !hidden.actorUris().contains(read.actorUri())
+                        && !hidden.domains().contains(read.domain()))
+            .toList();
+    int from = Math.clamp(offset, 0, shown.size());
+    List<TrendingStatusReader.Read> page = shown.subList(from, Math.min(from + size, shown.size()));
+    boolean more = from + page.size() < shown.size() || canDeepen();
+    return new Page(
+        page.stream().map(read -> read.note().seenBy(viewerId != null)).toList(),
+        more,
+        page.stream()
+            .filter(read -> read.note().author().remoteId() == null)
+            .map(TrendingStatusReader.Read::actorUri)
+            .distinct()
+            .toList());
+  }
+
+  public Optional<JsonNode> object(String address) {
+    return latest.stream()
+        .map(Kept::read)
+        .filter(read -> address.equals(read.note().uri()) || address.equals(read.note().url()))
+        .map(TrendingStatusReader.Read::object)
+        .findFirst();
+  }
+
+  void refresh() {
+    if (!refreshing.compareAndSet(false, true)) {
+      return;
+    }
+    try {
+      askedAt = clock.instant();
+      keep(askAll(edge -> edge == null ? "" : "&since_id=" + edge.newest()), true);
+    } finally {
+      refreshing.set(false);
+    }
+  }
+
+  private boolean canDeepen() {
+    return latest.size() < props.maxItems()
+        && props.hosts().stream()
+            .anyMatch(
+                host -> {
+                  Edge edge = edges.get(host);
+                  return edge != null && !edge.bottom();
+                });
+  }
+
+  private void deepen() {
+    if (!canDeepen() || !refreshing.compareAndSet(false, true)) {
+      return;
+    }
+    try {
+      keep(
+          askAll(edge -> edge == null || edge.bottom() ? null : "&max_id=" + edge.oldest()), false);
+    } finally {
+      refreshing.set(false);
+    }
+  }
+
+  private List<Answer> askAll(Function<Edge, String> window) {
+    Signer signer = signingKeys.forInstance();
+    Map<String, Boolean> blocked = new HashMap<>();
+    List<CompletableFuture<Optional<Answer>>> asks = new ArrayList<>();
+    for (String host : props.hosts()) {
+      String query = window.apply(edges.get(host));
+      if (query == null || blocked(host, blocked)) {
+        continue;
+      }
+      asks.add(CompletableFuture.supplyAsync(() -> ask(host, query, signer), askers));
+    }
+    List<Answer> answers = new ArrayList<>();
+    for (CompletableFuture<Optional<Answer>> ask : asks) {
+      ask.join().ifPresent(answers::add);
+    }
+    return answers;
+  }
+
+  private Optional<Answer> ask(String host, String query, Signer signer) {
+    URI uri =
+        URI.create(
+            "https://"
+                + host
+                + "/api/v1/timelines/public?local=true&limit="
+                + props.perHost()
+                + query);
+    FederationHttp.Result result = http.getJson(uri, signer, props.patience());
+    if (!(result instanceof FederationHttp.Result.Ok ok)) {
+      log.info("federation latest unanswered host={} outcome={}", host, result);
+      return Optional.empty();
+    }
+    JsonNode statuses;
+    try {
+      statuses = json.readTree(ok.body());
+    } catch (JacksonException malformed) {
+      return Optional.empty();
+    }
+    if (statuses == null || !statuses.isArray()) {
+      return Optional.empty();
+    }
+    List<TrendingStatusReader.Read> reads = new ArrayList<>();
+    String first = null;
+    String last = null;
+    for (JsonNode status : statuses) {
+      String id = status.path("id").asString(null);
+      if (id == null) {
+        continue;
+      }
+      first = first == null ? id : first;
+      last = id;
+      if (safe(status)) {
+        reader.read(status, host).ifPresent(reads::add);
+      }
+    }
+    return Optional.of(new Answer(host, reads, first, last, statuses.size()));
+  }
+
+  private static boolean safe(JsonNode status) {
+    return !status.path("sensitive").asBoolean(false)
+        && status.path("spoiler_text").asString("").isBlank()
+        && !status.path("account").path("bot").asBoolean(false);
+  }
+
+  private void keep(List<Answer> answers, boolean newer) {
+    Map<String, Boolean> blocked = new HashMap<>();
+    Map<String, Kept> byUri = new LinkedHashMap<>();
+    for (Kept kept : latest) {
+      byUri.put(kept.read().note().uri(), kept);
+    }
+    for (Answer answer : answers) {
+      Edge edge = edges.get(answer.host());
+      boolean shortPage = answer.raw() < props.perHost();
+      if (edge == null) {
+        edges.put(
+            answer.host(),
+            answer.first() == null
+                ? new Edge("0", "0", true)
+                : new Edge(answer.first(), answer.last(), shortPage));
+      } else if (newer) {
+        if (answer.first() != null) {
+          edges.put(answer.host(), new Edge(answer.first(), edge.oldest(), edge.bottom()));
+        }
+      } else {
+        edges.put(
+            answer.host(),
+            new Edge(
+                edge.newest(), answer.last() == null ? edge.oldest() : answer.last(), shortPage));
+      }
+      for (TrendingStatusReader.Read read : answer.reads()) {
+        if (!blocked(read.domain(), blocked)) {
+          byUri.putIfAbsent(read.note().uri(), new Kept(read, answer.host()));
+        }
+      }
+    }
+    latest =
+        byUri.values().stream()
+            .sorted(Comparator.comparing((Kept kept) -> kept.read().note().createdAt()).reversed())
+            .limit(props.maxItems())
+            .toList();
+  }
+
+  private boolean blocked(String domain, Map<String, Boolean> blocked) {
+    return blocked.computeIfAbsent(domain, host -> serverBlocks.severityFor(host).isPresent());
+  }
+
+  // A server blocked here leaves at once.
+  public void withdraw(String domain) {
+    latest =
+        latest.stream()
+            .filter(
+                kept ->
+                    !kept.read().domain().equals(domain)
+                        && !kept.read().domain().endsWith("." + domain))
+            .toList();
+  }
+}

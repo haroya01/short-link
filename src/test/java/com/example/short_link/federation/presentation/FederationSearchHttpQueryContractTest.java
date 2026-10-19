@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
 
@@ -385,6 +386,49 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 owner.getId(),
                 "https://" + host("ra") + "/inbox"))
         .containsExactly("Announce", "Undo");
+  }
+
+  @Test
+  void anyoneReadsTheLatestPostsOfTheChosenServersAndAMemberBringsOneOverFromMemory()
+      throws Exception {
+    ObjectNode fresh = (ObjectNode) json.readTree(trendingStatus("mstdn.jp", "yui" + tag, 0));
+    fresh.put("id", "101");
+    ObjectNode warned = (ObjectNode) json.readTree(trendingStatus("mstdn.jp", "rin" + tag, 0));
+    warned.put("id", "100");
+    warned.put("spoiler_text", "ネタバレ");
+    when(http.getJson(
+            eq(URI.create("https://mstdn.jp/api/v1/timelines/public?local=true&limit=40")),
+            any(),
+            any()))
+        .thenReturn(
+            ok("[" + json.writeValueAsString(fresh) + "," + json.writeValueAsString(warned) + "]"));
+    String status = "https://mstdn.jp/users/yui" + tag + "/statuses/1";
+    when(http.get(eq(URI.create("https://mstdn.jp/users/yui" + tag)), any()))
+        .thenReturn(ok(person("mstdn.jp", "yui" + tag, KEYS.publicKey())));
+
+    var latest =
+        body(
+            call(
+                "federation-latest-first",
+                "GET",
+                "/api/v1/federation/latest?limit=20",
+                null,
+                null,
+                200));
+    assertThat(trendingUris(latest)).containsExactly(status);
+    assertThat(latest.path("next").isNull()).isTrue();
+
+    var resolved =
+        body(
+            call(
+                "federation-latest-resolve",
+                "GET",
+                "/api/v1/federation/resolve?q=" + query(status),
+                null,
+                token,
+                200));
+    assertThat(resolved.path("note").path("id").asLong()).isPositive();
+    verify(http, never()).get(eq(URI.create(status)), any());
   }
 
   @Test

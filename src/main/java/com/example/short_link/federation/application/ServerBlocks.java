@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.common.event.ServerSuspendedEvent;
+import com.example.short_link.federation.application.trends.LatestPosts;
 import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.federation.domain.FederationDomainBlockEntity;
 import com.example.short_link.federation.domain.ServerBlockSeverity;
@@ -25,6 +26,7 @@ public class ServerBlocks {
   private final FederationUrls urls;
   private final ApplicationEventPublisher events;
   private final TrendingPosts trending;
+  private final LatestPosts latest;
 
   public record View(
       String domain, ServerBlockSeverity severity, String reason, Instant createdAt) {
@@ -53,6 +55,7 @@ public class ServerBlocks {
                 })
             .orElseGet(() -> blocks.save(new FederationDomainBlockEntity(domain, severity, note)));
     trending.withdraw(domain);
+    latest.withdraw(domain);
     if (severity == ServerBlockSeverity.SUSPEND) {
       blocks.sever(domain);
       events.publishEvent(new ServerSuspendedEvent(domain));
