@@ -7,6 +7,7 @@ import com.example.short_link.federation.domain.repository.FederationDomainBlock
 import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -49,6 +50,7 @@ public class LatestPosts {
   private final ExecutorService askers = Executors.newVirtualThreadPerTaskExecutor();
   private final AtomicBoolean refreshing = new AtomicBoolean();
   private final Map<String, Edge> edges = new ConcurrentHashMap<>();
+  private final Map<String, Quiet> quiet = new ConcurrentHashMap<>();
 
   private volatile List<Kept> latest = List.of();
   private volatile Instant askedAt;
@@ -56,6 +58,11 @@ public class LatestPosts {
   record Kept(TrendingStatusReader.Read read, String host) {}
 
   private record Edge(String newest, String oldest, boolean bottom) {}
+
+  private record Quiet(int times, Instant until) {}
+
+  static final Duration FIRST_QUIET = Duration.ofHours(1);
+  static final Duration LONGEST_QUIET = Duration.ofHours(24);
 
   private record Answer(
       String host, List<TrendingStatusReader.Read> reads, String first, String last, int raw) {}
@@ -184,7 +191,7 @@ public class LatestPosts {
     List<CompletableFuture<Optional<Answer>>> asks = new ArrayList<>();
     for (String host : props.hosts()) {
       String query = window.apply(edges.get(host));
-      if (query == null || blocked(host, blocked)) {
+      if (query == null || resting(host) || blocked(host, blocked)) {
         continue;
       }
       asks.add(CompletableFuture.supplyAsync(() -> ask(host, query, signer), askers));
@@ -205,6 +212,12 @@ public class LatestPosts {
                 + props.perHost()
                 + query);
     FederationHttp.Result result = http.getJson(uri, signer, props.patience());
+    if (result instanceof FederationHttp.Result.Failed failed
+        && failed.status() >= 400
+        && failed.status() < 500) {
+      rest(host);
+      return Optional.empty();
+    }
     if (!(result instanceof FederationHttp.Result.Ok ok)) {
       log.info("federation latest unanswered host={} outcome={}", host, result);
       return Optional.empty();
@@ -232,7 +245,30 @@ public class LatestPosts {
         reader.read(status, host).ifPresent(reads::add);
       }
     }
+    if (statuses.isEmpty() && !edges.containsKey(host)) {
+      rest(host);
+      return Optional.empty();
+    }
+    quiet.remove(host);
     return Optional.of(new Answer(host, reads, first, last, statuses.size()));
+  }
+
+  // A server that keeps its public timeline from visitors answers 4xx, or 200 with nothing at all
+  // on the first ask; it is asked again after 1, 2, 4 and at most 24 hours.
+  private void rest(String host) {
+    Quiet before = quiet.get(host);
+    int times = before == null ? 0 : before.times() + 1;
+    Duration wait = FIRST_QUIET.multipliedBy(1L << Math.min(times, 5));
+    quiet.put(
+        host,
+        new Quiet(
+            times, clock.instant().plus(wait.compareTo(LONGEST_QUIET) > 0 ? LONGEST_QUIET : wait)));
+    log.info("federation latest no preview host={} wait={}", host, wait);
+  }
+
+  private boolean resting(String host) {
+    Quiet rest = quiet.get(host);
+    return rest != null && rest.until().isAfter(clock.instant());
   }
 
   private static boolean safe(JsonNode status) {

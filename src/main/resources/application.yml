@@ -210,7 +210,7 @@ short-link:
       pages: ${FEDERATION_TRENDS_PAGES:2}
     latest:
       enabled: ${FEDERATION_LATEST_ENABLED:true}
-      hosts: ${FEDERATION_LATEST_HOSTS:mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
+      hosts: ${FEDERATION_LATEST_HOSTS:mstdn.jp,qdon.space,planet.moe,social.silicon.moe}
       per-host: ${FEDERATION_LATEST_PER_HOST:40}
       max-items: ${FEDERATION_LATEST_MAX_ITEMS:600}
       fresh-for: ${FEDERATION_LATEST_FRESH_FOR:5m}

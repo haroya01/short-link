@@ -223,4 +223,42 @@ class LatestPostsTest {
     assertThat(latest.object("https://a.example/users/u9/statuses/9")).isPresent();
     assertThat(latest.object("https://a.example/users/u7/statuses/7")).isEmpty();
   }
+
+  @Test
+  void aServerThatRefusesVisitorsOrShowsThemNothingRestsAndIsAskedAgainLater() {
+    when(http.getJson(timeline("a.example", 2, ""), instance, PATIENCE))
+        .thenReturn(new FederationHttp.Result.Failed(422, "requires an authenticated user"));
+    answers(timeline("b.example", 2, ""));
+    LatestPosts latest = latest(true, 2, 100, "a.example", "b.example");
+
+    latest.page(null, 0, 20);
+    clock.pass(Duration.ofMinutes(10));
+    latest.refresh();
+    verify(http, times(1)).getJson(timeline("a.example", 2, ""), instance, PATIENCE);
+    verify(http, times(1)).getJson(timeline("b.example", 2, ""), instance, PATIENCE);
+
+    clock.pass(Duration.ofMinutes(51));
+    latest.refresh();
+    verify(http, times(2)).getJson(timeline("a.example", 2, ""), instance, PATIENCE);
+    verify(http, times(2)).getJson(timeline("b.example", 2, ""), instance, PATIENCE);
+
+    clock.pass(Duration.ofMinutes(61));
+    latest.refresh();
+    verify(http, times(2)).getJson(timeline("a.example", 2, ""), instance, PATIENCE);
+  }
+
+  @Test
+  void nothingNewSinceTheLastAskIsNotARefusal() {
+    answers(timeline("a.example", 2, ""), post("a.example", 9, "2026-10-19T23:50:00Z"));
+    answers(timeline("a.example", 2, "&since_id=9"));
+    LatestPosts latest = latest(true, 2, 100, "a.example");
+
+    latest.page(null, 0, 20);
+    clock.pass(Duration.ofMinutes(6));
+    latest.refresh();
+    clock.pass(Duration.ofMinutes(6));
+    latest.refresh();
+
+    verify(http, times(2)).getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE);
+  }
 }
