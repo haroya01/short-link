@@ -214,6 +214,10 @@
 @junit | note-search-seed-private | 4 | 1 | 0 | 0 | 5
 @junit | note-search | 5 | 0 | 0 | 0 | 5
 @junit | note-search-short | 5 | 0 | 0 | 0 | 5
+@junit | note-search-hashtag | 5 | 0 | 0 | 0 | 5
+# Related tags: one statement takes the newest listed posts and public notes the words find, their
+# tags, and ranks them by how many people used each.
+@junit | search-related | 1 | 0 | 0 | 0 | 1
 # Mastodon's mute conversation. A reply joins its thread's root (no extra write: a top-level note is
 # its own conversation). Muting reads the note for its conversation and INSERT IGNOREs the mute;
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.

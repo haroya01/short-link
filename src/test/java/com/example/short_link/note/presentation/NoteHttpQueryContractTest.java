@@ -1019,6 +1019,25 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     var short_ =
         step("note-search-short", "GET", "/api/v1/public/notes/search?q=포", null, null, 200);
     assertThat(only(short_, List.of(found, quiet))).containsExactly(found);
+    var hashtag =
+        step(
+            "note-search-hashtag",
+            "GET",
+            "/api/v1/public/notes/search?q=%23헥사고날%20포트",
+            null,
+            null,
+            200);
+    assertThat(only(hashtag, List.of(found, quiet))).containsExactly(found);
+
+    jdbc.update(
+        "INSERT INTO note_tag (note_id, tag) VALUES (?, '헥사고날'), (?, '아키텍처')", found, found);
+    jdbc.update("INSERT INTO note_tag (note_id, tag) VALUES (?, '비밀태그')", quiet);
+    var related =
+        step("search-related", "GET", "/api/v1/public/search/related?q=%23헥사고날", null, null, 200);
+    List<String> tags =
+        related.path("tags").findValues("tag").stream().map(JsonNode::asText).toList();
+    assertThat(tags).contains("아키텍처").doesNotContain("헥사고날", "비밀태그");
+    assertThat(related.path("tags").get(tags.indexOf("아키텍처")).path("notes").asLong()).isEqualTo(1);
   }
 
   private long post(String id, Actor author, String body, String visibility) throws Exception {
