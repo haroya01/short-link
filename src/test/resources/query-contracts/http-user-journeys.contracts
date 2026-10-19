@@ -83,8 +83,8 @@
 @junit | author-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-draft-detail | 2 | 0 | 0 | 0 | 2
 @junit | author-draft-markdown-read | 2 | 0 | 0 | 0 | 2
-@junit | author-draft-markdown-write | 3 | 2 | 1 | 1 | 7
-@junit | author-draft-metadata-edit | 3 | 3 | 1 | 0 | 7
+@junit | author-draft-markdown-write | 3 | 1 | 1 | 0 | 5
+@junit | author-draft-metadata-edit | 2 | 2 | 1 | 0 | 5
 @junit | author-draft-other-reader-denied | 1 | 0 | 0 | 0 | 1
 @junit | author-draft-public-hidden | 2 | 0 | 0 | 0 | 2
 @junit | author-drafts-list | 2 | 0 | 0 | 0 | 2
@@ -215,7 +215,7 @@
 @junit | curation-second-collection-delete | 1 | 0 | 0 | 1 | 2
 @junit | curation-second-curator-collection | 0 | 1 | 0 | 0 | 1
 @junit | curation-second-curator-connect-shared-post | 7 | 2 | 0 | 0 | 9
-@junit | curation-source-body-write | 3 | 2 | 1 | 1 | 7
+@junit | curation-source-body-write | 3 | 1 | 1 | 0 | 5
 @junit | curation-source-highlight-create | 8 | 2 | 0 | 0 | 10
 @junit | curation-source-post-create | 2 | 1 | 0 | 0 | 3
 @junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
@@ -228,16 +228,16 @@
 # DNS result persistence reloads the domain in its own transaction, including failed checks.
 @junit | custom-domain-verification-missing | 2 | 0 | 1 | 0 | 3
 @junit | custom-domain-verify | 2 | 0 | 1 | 0 | 3
-@junit | discovery-english-body | 3 | 2 | 1 | 1 | 7
+@junit | discovery-english-body | 3 | 1 | 1 | 0 | 5
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
-@junit | discovery-english-metadata | 3 | 2 | 1 | 0 | 6
+@junit | discovery-english-metadata | 2 | 1 | 1 | 0 | 4
 @junit | discovery-english-publish | 7 | 2 | 1 | 0 | 10
 @junit | discovery-for-you-cold-start | 7 | 0 | 0 | 0 | 7
 @junit | discovery-for-you-excludes-read | 7 | 0 | 0 | 0 | 7
 @junit | discovery-for-you-followed-interest | 7 | 0 | 0 | 0 | 7
-@junit | discovery-korean-body | 3 | 2 | 1 | 1 | 7
+@junit | discovery-korean-body | 3 | 1 | 1 | 0 | 5
 @junit | discovery-korean-draft-create | 2 | 1 | 0 | 0 | 3
-@junit | discovery-korean-metadata | 3 | 2 | 1 | 0 | 6
+@junit | discovery-korean-metadata | 2 | 1 | 1 | 0 | 4
 @junit | discovery-korean-publish | 7 | 2 | 1 | 0 | 10
 @junit | discovery-language-filter | 4 | 0 | 0 | 0 | 4
 @junit | discovery-popular-tags | 1 | 0 | 0 | 0 | 1
@@ -309,7 +309,7 @@
 @junit | image-denies-other | 1 | 0 | 0 | 0 | 1
 @junit | image-import | 1 | 0 | 0 | 0 | 1
 @junit | image-presign | 1 | 0 | 0 | 0 | 1
-@junit | interaction-body-write | 3 | 2 | 1 | 1 | 7
+@junit | interaction-body-write | 3 | 1 | 1 | 0 | 5
 @junit | interaction-post-create | 2 | 1 | 0 | 0 | 3
 @junit | interaction-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | link-account-stream | 0 | 0 | 0 | 0 | 0
@@ -699,7 +699,7 @@
 @junit | removal-retained-reader-collection | 0 | 1 | 0 | 0 | 1
 @junit | schedule-author-creates-draft | 2 | 1 | 0 | 0 | 3
 @junit | schedule-author-selects-future-time | 3 | 0 | 1 | 0 | 4
-@junit | schedule-author-writes-body | 3 | 2 | 1 | 1 | 7
+@junit | schedule-author-writes-body | 3 | 1 | 1 | 0 | 5
 @junit | schedule-follower-marks-notification-read | 0 | 0 | 1 | 0 | 1
 @junit | schedule-follower-receives-new-post | 2 | 0 | 0 | 0 | 2
 @junit | schedule-reader-cannot-open-draft | 2 | 0 | 0 | 0 | 2

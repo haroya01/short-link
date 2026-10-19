@@ -11,7 +11,7 @@
 
 # Interaction access: normal HTTP setup and delivered notifications are included.
 @junit | interaction-access-author-block | 2 | 1 | 0 | 3 | 6
-@junit | interaction-access-body-write | 3 | 2 | 1 | 1 | 7
+@junit | interaction-access-body-write | 3 | 1 | 1 | 0 | 5
 @junit | interaction-access-comment-create | 9 | 2 | 0 | 0 | 11
 @junit | interaction-access-existing-comment-like | 11 | 2 | 0 | 0 | 13
 @junit | interaction-access-existing-post-like | 10 | 2 | 1 | 0 | 13
