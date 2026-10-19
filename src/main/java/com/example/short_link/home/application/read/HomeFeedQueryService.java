@@ -70,7 +70,11 @@ public class HomeFeedQueryService {
         takeNote = noteTurn;
       } else {
         takeNote =
-            !noteQueue.get(n).note().createdAt().isBefore(postQueue.get(p).post().publishedAt());
+            !noteQueue
+                .get(n)
+                .note()
+                .createdAt()
+                .isBefore(postQueue.get(p).post().item().publishedAt());
       }
       if (takeNote) {
         items.add(new Item("note", noteQueue.get(n++).note(), null));

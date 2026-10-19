@@ -157,12 +157,12 @@ public class PublicFeedQueryService {
 
   public PostSlice recentAt(Long viewerId, int offset, int limit) {
     List<PostEntity> rows = postRepository.findPublishedRecentAt(viewerId, offset, limit);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
   }
 
   public PostSlice trendingAt(Long viewerId, int offset, int limit) {
     List<PostEntity> rows = postRepository.findPublishedTrendingAt(viewerId, offset, limit);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
   }
 
   public PostSlice followingAt(Long userId, int offset, int limit) {
@@ -181,19 +181,31 @@ public class PublicFeedQueryService {
     List<PostEntity> rows =
         postRepository.findPublishedByAuthorsSeriesOrTagsAt(
             userId, followingIds, subscribedSeriesIds, followedTags, offset, limit);
-    return slice(rows, annotate(rows, following), offset, limit);
+    return slice(rows, annotate(rows, following), offset, limit, userId);
   }
 
-  private static PostSlice slice(
-      List<PostEntity> rows, List<PublicFeedItem> shown, int offset, int limit) {
+  private PostSlice slice(
+      List<PostEntity> rows, List<PublicFeedItem> shown, int offset, int limit, Long viewerId) {
     Map<Long, PublicFeedItem> byId =
         shown.stream()
             .collect(Collectors.toMap(PublicFeedItem::id, Function.identity(), (a, b) -> a));
+    Map<Long, PostRepository.CardMarks> marks =
+        byId.isEmpty() ? Map.of() : postRepository.cardMarks(byId.keySet(), viewerId);
     List<PostSlice.At> items = new ArrayList<>(rows.size());
     for (int i = 0; i < rows.size(); i++) {
-      PublicFeedItem item = byId.get(rows.get(i).getId());
+      PostEntity row = rows.get(i);
+      PublicFeedItem item = byId.get(row.getId());
       if (item != null) {
-        items.add(new PostSlice.At(offset + i, item));
+        PostRepository.CardMarks mark =
+            marks.getOrDefault(row.getId(), new PostRepository.CardMarks(0, false));
+        items.add(
+            new PostSlice.At(
+                offset + i,
+                new PostCard(
+                    item,
+                    PostCard.readMinutes(row.getBodyTextLength()),
+                    mark.comments(),
+                    viewerId == null ? null : mark.liked())));
       }
     }
     return new PostSlice(items, rows.size() < limit);

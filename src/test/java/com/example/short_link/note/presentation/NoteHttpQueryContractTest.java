@@ -1070,6 +1070,11 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             null,
             200);
     assertThat(homeKeys(onward)).containsExactly("post:" + post);
+    JsonNode card = onward.path("items").get(0).path("post");
+    assertThat(card.path("title").asText()).isEqualTo("홈에 실린 글");
+    assertThat(card.path("readMinutes").asInt()).isEqualTo(1);
+    assertThat(card.path("commentCount").asLong()).isZero();
+    assertThat(card.path("likedByMe").asBoolean()).isFalse();
     assertThat(homeKeys(onward)).doesNotContain("note:" + older);
   }
 

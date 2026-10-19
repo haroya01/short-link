@@ -4,5 +4,5 @@ import java.util.List;
 
 public record PostSlice(List<At> items, boolean exhausted) {
 
-  public record At(int position, PublicFeedItem post) {}
+  public record At(int position, PostCard post) {}
 }

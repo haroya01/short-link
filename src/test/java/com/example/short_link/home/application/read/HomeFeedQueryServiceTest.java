@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicFeedItem;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
@@ -30,7 +31,7 @@ class HomeFeedQueryServiceTest {
   private static PostSlice.At post(int position, String at) {
     PublicFeedItem item = mock(PublicFeedItem.class);
     when(item.publishedAt()).thenReturn(Instant.parse(at));
-    return new PostSlice.At(position, item);
+    return new PostSlice.At(position, new PostCard(item, 1, 0, null));
   }
 
   private static List<String> kinds(HomeFeedQueryService.Page page) {

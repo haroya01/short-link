@@ -8,11 +8,15 @@ import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,8 @@ class PostRepositoryAdapter implements PostRepository {
   private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
+
+  @PersistenceContext private EntityManager em;
 
   @Override
   public Optional<PostEntity> findById(Long id) {
@@ -173,6 +179,30 @@ class PostRepositoryAdapter implements PostRepository {
         HeardSql.viewer(viewerId),
         Instant.now(),
         new OffsetLimit(offset, limit));
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Map<Long, CardMarks> cardMarks(Collection<Long> postIds, Long viewerId) {
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT p.id, (SELECT COUNT(*) FROM comment c WHERE c.post_id = p.id"
+                    + " AND c.deleted_at IS NULL), EXISTS (SELECT 1 FROM post_like l"
+                    + " WHERE l.post_id = p.id AND l.user_id = :viewer)"
+                    + " FROM posts p WHERE p.id IN (:ids)")
+            .setParameter("ids", postIds)
+            .setParameter("viewer", HeardSql.viewer(viewerId))
+            .getResultList();
+    Map<Long, CardMarks> marks = new HashMap<>();
+    for (Object[] row : rows) {
+      marks.put(
+          ((Number) row[0]).longValue(),
+          new CardMarks(((Number) row[1]).longValue(), ((Number) row[2]).intValue() == 1));
+    }
+    return marks;
   }
 
   @Override
