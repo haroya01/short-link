@@ -14,9 +14,11 @@ import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NotePolls;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
@@ -28,7 +30,6 @@ import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -71,6 +72,7 @@ public class NoteCommandService {
   private final NotePeopleReader people;
   private final NoteImages images;
   private final NoteViews views;
+  private final NoteAccess access;
   private final UserModerationGuard moderation;
   private final UserBlockChecker blocks;
   private final CollectionConnectionCleaner connections;
@@ -89,6 +91,7 @@ public class NoteCommandService {
       NotePeopleReader people,
       NoteImages images,
       NoteViews views,
+      NoteAccess access,
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
@@ -104,6 +107,7 @@ public class NoteCommandService {
         people,
         images,
         views,
+        access,
         moderation,
         blocks,
         connections,
@@ -122,6 +126,7 @@ public class NoteCommandService {
       NotePeopleReader people,
       NoteImages images,
       NoteViews views,
+      NoteAccess access,
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
@@ -137,6 +142,7 @@ public class NoteCommandService {
     this.people = people;
     this.images = images;
     this.views = views;
+    this.access = access;
     this.moderation = moderation;
     this.blocks = blocks;
     this.connections = connections;
@@ -332,7 +338,7 @@ public class NoteCommandService {
     fresh.showTo(
         requested != null
             ? requested
-            : parent != null ? parent.getVisibility() : NoteVisibility.PUBLIC);
+            : parent != null ? parent.getVisibility() : NoteVisibility.DEFAULT);
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     if (pollOptions != null) {
       fresh.attachPoll(
@@ -376,16 +382,11 @@ public class NoteCommandService {
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
     }
-    if (note.getVisibility() != NoteVisibility.DIRECT
+    if (note.getVisibility().followersRead()
         && (parent == null || userId.equals(parent.getUserId()))) {
       events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
     }
-    boolean quoteSeen =
-        quotedNote != null
-            && (!restricted
-                || notes
-                    .visibleTo(quotedNote.getUserId(), List.of(note.getId()))
-                    .contains(note.getId()));
+    boolean quoteSeen = quotedNote != null && access.readable(note, quotedNote.getUserId());
     if (quoteSeen) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
@@ -586,7 +587,7 @@ public class NoteCommandService {
     if (!note.isTopLevel()) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
     }
-    if (note.getVisibility() == NoteVisibility.DIRECT) {
+    if (note.getVisibility().direct()) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_DIRECT);
     }
     if (notes.countPinned(userId) >= NoteEntity.MAX_PINS) {
@@ -791,9 +792,7 @@ public class NoteCommandService {
   }
 
   private void requireReadable(Long userId, NoteEntity note) {
-    if (note.getVisibility().restricted()
-        && !note.isOwnedBy(userId)
-        && !notes.visibleTo(userId, Set.of(note.getId())).contains(note.getId())) {
+    if (!access.readable(note, userId)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
     }
   }

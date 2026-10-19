@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.common.note.NoteVisibility;
 import jakarta.persistence.Column;
 import jakarta.persistence.ColumnResult;
 import jakarta.persistence.Entity;
@@ -95,7 +96,7 @@ public class NoteEntity extends BaseCreatedEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
-  private NoteVisibility visibility = NoteVisibility.PUBLIC;
+  private NoteVisibility visibility = NoteVisibility.DEFAULT;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "reply_policy", nullable = false, length = 16)
