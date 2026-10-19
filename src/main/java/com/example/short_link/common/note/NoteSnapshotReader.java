@@ -161,7 +161,16 @@ public interface NoteSnapshotReader {
 
   record Quote(String title, String slug, String authorUsername) {}
 
-  record QuotedNote(Long id, String authorUsername) {}
+  record QuotedNote(Long id, String authorUsername, String uri, String url) {
+
+    public QuotedNote(Long id, String authorUsername) {
+      this(id, authorUsername, null, null);
+    }
+
+    public boolean remote() {
+      return uri != null;
+    }
+  }
 
   record Image(String url, String contentType, String altText, Integer width, Integer height) {
     public Image(String url, String contentType, String altText) {

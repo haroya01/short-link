@@ -50,7 +50,12 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onDeleted(NoteDeletedEvent event) {
-    notes.deleted(event.noteId(), event.authorId(), event.inReplyToId(), event.remoteHandles());
+    notes.deleted(
+        event.noteId(),
+        event.authorId(),
+        event.inReplyToId(),
+        event.remoteHandles(),
+        event.quotedNoteId());
   }
 
   @Async("webhookExecutor")

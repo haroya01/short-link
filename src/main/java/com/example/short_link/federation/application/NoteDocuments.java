@@ -41,6 +41,15 @@ public class NoteDocuments {
 
   public Map<String, Object> note(
       NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    return note(note, actorPublicId, parent, named, null);
+  }
+
+  private Map<String, Object> note(
+      NoteSnapshot note,
+      String actorPublicId,
+      RemoteParents.Parent parent,
+      List<Addressee> named,
+      RemoteParents.Parent quoted) {
     List<Addressee> addressed = addressed(parent, named);
     Map<String, Object> object = new LinkedHashMap<>();
     object.put("id", urls.note(note.id()));
@@ -56,17 +65,17 @@ public class NoteDocuments {
     }
     object.put("url", urls.notePage(note.authorUsername(), note.id()));
     object.put("to", to(note, actorPublicId, addressed));
-    object.put("cc", cc(note, actorPublicId, addressed));
+    object.put("cc", cc(note, actorPublicId, addressed, quoted));
     object.put(
         "inReplyTo",
         parent != null
             ? parent.uri()
             : note.inReplyToId() == null ? null : urls.note(note.inReplyToId()));
     if (note.quotedNote() != null) {
-      String quoted = urls.note(note.quotedNote().id());
-      object.put("quoteUrl", quoted);
-      object.put("quoteUri", quoted);
-      object.put("_misskey_quote", quoted);
+      String quotedUri = quotedId(note.quotedNote());
+      object.put("quoteUrl", quotedUri);
+      object.put("quoteUri", quotedUri);
+      object.put("_misskey_quote", quotedUri);
     }
     object.put("summary", note.contentWarning());
     object.put("sensitive", note.sensitive());
@@ -140,13 +149,22 @@ public class NoteDocuments {
 
   public Map<String, Object> create(
       NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    return create(note, actorPublicId, parent, named, null);
+  }
+
+  public Map<String, Object> create(
+      NoteSnapshot note,
+      String actorPublicId,
+      RemoteParents.Parent parent,
+      List<Addressee> named,
+      RemoteParents.Parent quoted) {
     List<Addressee> addressed = addressed(parent, named);
     String noteUri = urls.note(note.id());
     Map<String, Object> activity = activity(noteUri + "/activity", "Create", actorPublicId);
     activity.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
     activity.put("to", to(note, actorPublicId, addressed));
-    activity.put("cc", cc(note, actorPublicId, addressed));
-    activity.put("object", note(note, actorPublicId, parent, named));
+    activity.put("cc", cc(note, actorPublicId, addressed, quoted));
+    activity.put("object", note(note, actorPublicId, parent, named, quoted));
     return activity;
   }
 
@@ -179,10 +197,14 @@ public class NoteDocuments {
   }
 
   private List<String> cc(NoteSnapshot note, String actorPublicId) {
-    return cc(note, actorPublicId, List.of());
+    return cc(note, actorPublicId, List.of(), null);
   }
 
-  private List<String> cc(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
+  private List<String> cc(
+      NoteSnapshot note,
+      String actorPublicId,
+      List<Addressee> addressed,
+      RemoteParents.Parent quoted) {
     List<String> cc =
         new ArrayList<>(
             switch (note.visibility()) {
@@ -192,6 +214,9 @@ public class NoteDocuments {
             });
     if (note.visibility() != NoteSnapshotReader.Visibility.DIRECT) {
       addressed.forEach(person -> cc.add(person.actorUri()));
+      if (quoted != null && !cc.contains(quoted.actorUri())) {
+        cc.add(quoted.actorUri());
+      }
     }
     return cc;
   }
@@ -202,13 +227,22 @@ public class NoteDocuments {
 
   public Map<String, Object> update(
       NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    return update(note, actorPublicId, parent, named, null);
+  }
+
+  public Map<String, Object> update(
+      NoteSnapshot note,
+      String actorPublicId,
+      RemoteParents.Parent parent,
+      List<Addressee> named,
+      RemoteParents.Parent quoted) {
     List<Addressee> addressed = addressed(parent, named);
     long version = note.editedAt() == null ? 0 : note.editedAt().toEpochMilli();
     Map<String, Object> activity =
         activity(urls.note(note.id()) + "#updates/" + version, "Update", actorPublicId);
     activity.put("to", to(note, actorPublicId, addressed));
-    activity.put("cc", cc(note, actorPublicId, addressed));
-    activity.put("object", note(note, actorPublicId, parent, named));
+    activity.put("cc", cc(note, actorPublicId, addressed, quoted));
+    activity.put("object", note(note, actorPublicId, parent, named, quoted));
     return activity;
   }
 
@@ -333,9 +367,7 @@ public class NoteDocuments {
           .append("</a></p>");
     }
     if (note.quotedNote() != null) {
-      String href =
-          HtmlUtils.htmlEscape(
-              urls.notePage(note.quotedNote().authorUsername(), note.quotedNote().id()));
+      String href = HtmlUtils.htmlEscape(quotedPage(note.quotedNote()));
       html.append("<p class=\"quote-inline\">RE: <a href=\"")
           .append(href)
           .append("\">")
@@ -343,6 +375,19 @@ public class NoteDocuments {
           .append("</a></p>");
     }
     return html.toString();
+  }
+
+  private String quotedId(NoteSnapshotReader.QuotedNote quoted) {
+    return quoted.remote() ? quoted.uri() : urls.note(quoted.id());
+  }
+
+  private String quotedPage(NoteSnapshotReader.QuotedNote quoted) {
+    if (!quoted.remote()) {
+      return urls.notePage(quoted.authorUsername(), quoted.id());
+    }
+    return quoted.url() != null && URL.matcher(quoted.url()).matches()
+        ? quoted.url()
+        : quoted.uri();
   }
 
   private String linkify(String escaped) {
