@@ -19,6 +19,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteException;
 import java.util.List;
@@ -45,13 +46,22 @@ class NoteQueryServiceTest {
   @Mock private NotePeopleReader people;
   @Mock private NoteViews views;
   @Mock private NoteSeriesReader noteSeries;
+  @Mock private NoteRoomReader rooms;
   private NoteQueryService service;
 
   @BeforeEach
   void service() {
     service =
         new NoteQueryService(
-            notes, likes, reposts, bookmarks, people, views, new NoteAccess(notes), noteSeries);
+            notes,
+            likes,
+            reposts,
+            bookmarks,
+            people,
+            views,
+            new NoteAccess(notes),
+            rooms,
+            noteSeries);
   }
 
   private static NoteEntity note(Long id, Long inReplyTo) {

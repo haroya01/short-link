@@ -104,7 +104,7 @@ public class NoteFederation {
   public void createdElsewhere(Long noteId, Long authorId) {
     Optional<LocalActor> actor = localActors.byUserId(authorId);
     Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty()) {
+    if (found.isEmpty() || !found.get().visibility().federates()) {
       return;
     }
     NoteSnapshot note = found.get();
@@ -130,7 +130,7 @@ public class NoteFederation {
     }
     Optional<LocalActor> actor = localActors.byUserId(authorId);
     Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty()) {
+    if (found.isEmpty() || !found.get().visibility().federates()) {
       return;
     }
     NoteSnapshot note = found.get();

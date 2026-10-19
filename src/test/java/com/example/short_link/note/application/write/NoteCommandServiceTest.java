@@ -45,6 +45,7 @@ import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -85,6 +86,7 @@ class NoteCommandServiceTest {
   @Mock private NoteImages images;
   @Mock private NoteViews views;
   @Mock private UserModerationGuard moderation;
+  @Mock private NoteRoomReader rooms;
   @Mock private UserBlockChecker blocks;
   @Mock private CollectionConnectionCleaner connections;
   @Mock private SeriesItemCleaner seriesItems;
@@ -102,6 +104,7 @@ class NoteCommandServiceTest {
         images,
         views,
         new NoteAccess(notes),
+        rooms,
         moderation,
         blocks,
         connections,

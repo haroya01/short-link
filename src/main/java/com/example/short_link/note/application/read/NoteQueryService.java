@@ -11,6 +11,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -42,6 +43,7 @@ public class NoteQueryService {
   private final NotePeopleReader people;
   private final NoteViews views;
   private final NoteAccess access;
+  private final NoteRoomReader rooms;
   private final NoteSeriesReader noteSeries;
 
   @Transactional(readOnly = true)
@@ -56,6 +58,22 @@ public class NoteQueryService {
         size,
         viewerId,
         (offset, limit) -> notes.byRemoteActor(remoteActorId, viewerId, offset, limit));
+  }
+
+  @Transactional(readOnly = true)
+  public NoteFeedView room(Long roomId, Long viewerId, int page, int size) {
+    if (!rooms.isMember(roomId, viewerId)) {
+      throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
+    }
+    return page(
+        page, size, viewerId, (offset, limit) -> notes.inRoom(roomId, viewerId, offset, limit));
+  }
+
+  // The writer's own room notes, from rooms they are in or have left, so they can still delete
+  // them.
+  @Transactional(readOnly = true)
+  public NoteFeedView roomNotesBy(Long userId, int page, int size) {
+    return page(page, size, userId, (offset, limit) -> notes.roomNotesBy(userId, offset, limit));
   }
 
   @Transactional(readOnly = true)

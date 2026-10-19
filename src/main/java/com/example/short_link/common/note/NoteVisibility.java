@@ -8,29 +8,34 @@ import java.util.function.Predicate;
 
 // Mastodon's four: public shows everywhere; unlisted is public but stays out of the shared feeds
 // (everyone, trending, tags); private is for followers and mentioned members; direct is for
-// mentioned members only and never leaves kurl. Every decision about who sees a note is one of the
+// mentioned members only and never leaves kurl. A room note is for the room's members alone and
+// never leaves the room. Every decision about who sees a note is one of the
 // questions below, and NoteAccessSql asks the same ones in SQL: a new boundary answers each here,
 // and a new kind of reader is a new Reader that NoteAccessSql gives its condition.
 public enum NoteVisibility {
   PUBLIC,
   UNLISTED,
   PRIVATE,
-  DIRECT;
+  DIRECT,
+  ROOM;
 
   public static final NoteVisibility DEFAULT = PUBLIC;
 
-  public boolean listed() {
-    return switch (this) {
-      case PUBLIC -> true;
-      case UNLISTED, PRIVATE, DIRECT -> false;
-    };
-  }
+  public static final NoteVisibility IN_ROOM = ROOM;
 
   public enum Reader {
     ANYONE,
     AUTHOR,
     NAMED,
-    FOLLOWER
+    FOLLOWER,
+    MEMBER
+  }
+
+  public boolean listed() {
+    return switch (this) {
+      case PUBLIC -> true;
+      case UNLISTED, PRIVATE, DIRECT, ROOM -> false;
+    };
   }
 
   public boolean readBy(Reader reader) {
@@ -38,16 +43,26 @@ public enum NoteVisibility {
       case ANYONE ->
           switch (this) {
             case PUBLIC, UNLISTED -> true;
-            case PRIVATE, DIRECT -> false;
+            case PRIVATE, DIRECT, ROOM -> false;
           };
-      case AUTHOR, NAMED ->
+      case AUTHOR ->
+          switch (this) {
+            case PUBLIC, UNLISTED, PRIVATE, DIRECT, ROOM -> true;
+          };
+      case NAMED ->
           switch (this) {
             case PUBLIC, UNLISTED, PRIVATE, DIRECT -> true;
+            case ROOM -> false;
           };
       case FOLLOWER ->
           switch (this) {
             case PUBLIC, UNLISTED, PRIVATE -> true;
-            case DIRECT -> false;
+            case DIRECT, ROOM -> false;
+          };
+      case MEMBER ->
+          switch (this) {
+            case ROOM -> true;
+            case PUBLIC, UNLISTED, PRIVATE, DIRECT -> false;
           };
     };
   }
@@ -61,6 +76,28 @@ public enum NoteVisibility {
     return false;
   }
 
+  public boolean direct() {
+    return switch (this) {
+      case DIRECT -> true;
+      case PUBLIC, UNLISTED, PRIVATE, ROOM -> false;
+    };
+  }
+
+  public boolean federates() {
+    return switch (this) {
+      case PUBLIC, UNLISTED, PRIVATE, DIRECT -> true;
+      case ROOM -> false;
+    };
+  }
+
+  public boolean onProfile(boolean author) {
+    return switch (this) {
+      case PUBLIC, UNLISTED, PRIVATE -> true;
+      case DIRECT -> author;
+      case ROOM -> false;
+    };
+  }
+
   public boolean shareable() {
     return readBy(Reader.ANYONE);
   }
@@ -69,11 +106,12 @@ public enum NoteVisibility {
     return readBy(Reader.FOLLOWER);
   }
 
-  public boolean direct() {
-    return switch (this) {
-      case DIRECT -> true;
-      case PUBLIC, UNLISTED, PRIVATE -> false;
-    };
+  public boolean inRoom() {
+    return readBy(Reader.MEMBER) && !shareable();
+  }
+
+  public boolean namesReaders() {
+    return readBy(Reader.NAMED) && !shareable();
   }
 
   public boolean restricted() {

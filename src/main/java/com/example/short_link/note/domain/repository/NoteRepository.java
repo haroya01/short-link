@@ -43,6 +43,14 @@ public interface NoteRepository {
 
   Set<Long> visibleTo(Long viewerId, Collection<Long> restrictedIds);
 
+  Set<Long> readersAmong(Long noteId, Collection<Long> userIds);
+
+  List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit);
+
+  List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit);
+
+  List<Long> roomNoteIdsBy(Long authorId, Long roomId);
+
   void addRecipients(Long noteId, Collection<Long> userIds);
 
   List<NoteEntity> direct(Long viewerId, int offset, int limit);

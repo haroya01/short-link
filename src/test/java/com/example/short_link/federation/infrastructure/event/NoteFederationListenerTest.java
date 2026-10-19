@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.event;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
@@ -20,6 +21,13 @@ class NoteFederationListenerTest {
   private final NoteFederation notes = mock(NoteFederation.class);
   private final FederationLeaving leaving = mock(FederationLeaving.class);
   private final NoteFederationListener listener = new NoteFederationListener(notes, leaving);
+
+  @Test
+  void aNoteThatNeverLeftThisServerIsNotDeletedElsewhere() {
+    listener.onDeleted(new NoteDeletedEvent(3L, 7L, List.of(), 41L, List.of("a@m.example"), false));
+
+    verifyNoInteractions(notes);
+  }
 
   @Test
   void eachEventReachesItsHandler() {

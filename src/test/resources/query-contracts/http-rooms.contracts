@@ -1,0 +1,2 @@
+# Rooms, measured against Docker MySQL. Never automatically update on test failure.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount

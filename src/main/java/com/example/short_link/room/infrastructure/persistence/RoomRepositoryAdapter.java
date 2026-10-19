@@ -1,0 +1,438 @@
+package com.example.short_link.room.infrastructure.persistence;
+
+import com.example.short_link.common.user.HeardSql;
+import com.example.short_link.room.domain.RoomEntity;
+import com.example.short_link.room.domain.RoomInviteEntity;
+import com.example.short_link.room.domain.RoomJoinRequest;
+import com.example.short_link.room.domain.RoomPerson;
+import com.example.short_link.room.domain.RoomSummary;
+import com.example.short_link.room.domain.repository.RoomRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import org.hibernate.query.NativeQuery;
+import org.springframework.stereotype.Repository;
+
+@Repository
+class RoomRepositoryAdapter implements RoomRepository {
+
+  private static final String PERSON = "u.id, u.username, u.display_name, u.avatar_url";
+
+  private static final int EXCERPT_LENGTH = 80;
+
+  @PersistenceContext private EntityManager em;
+
+  @Override
+  public RoomEntity save(RoomEntity room) {
+    em.persist(room);
+    return room;
+  }
+
+  @Override
+  public Optional<RoomEntity> findById(Long roomId) {
+    return Optional.ofNullable(em.find(RoomEntity.class, roomId));
+  }
+
+  @Override
+  public Optional<RoomEntity> lock(Long roomId) {
+    return Optional.ofNullable(em.find(RoomEntity.class, roomId, LockModeType.PESSIMISTIC_WRITE));
+  }
+
+  @Override
+  public boolean isMember(Long roomId, Long userId) {
+    return !em.createNativeQuery(
+            "SELECT 1 FROM room_member WHERE room_id = :room AND user_id = :user")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .getResultList()
+        .isEmpty();
+  }
+
+  @Override
+  public long countMembers(Long roomId) {
+    return ((Number)
+            em.createNativeQuery("SELECT COUNT(*) FROM room_member WHERE room_id = :room")
+                .setParameter("room", roomId)
+                .getSingleResult())
+        .longValue();
+  }
+
+  // The watermark starts at the room's newest note, so a newcomer does not find its whole history
+  // unread.
+  @Override
+  public void addMember(Long roomId, Long userId, Instant at) {
+    em.createNativeQuery(
+            "INSERT IGNORE INTO room_member (room_id, user_id, joined_at, last_read_note_id)"
+                + " SELECT :room, :user, :at, COALESCE(MAX(n.id), 0) FROM note n"
+                + " WHERE n.room_id = :room")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .setParameter("at", at)
+        .executeUpdate();
+  }
+
+  @Override
+  public void removeMember(Long roomId, Long userId) {
+    em.createNativeQuery("DELETE FROM room_member WHERE room_id = :room AND user_id = :user")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .executeUpdate();
+  }
+
+  @Override
+  public List<RoomPerson> members(Long roomId, int limit) {
+    return people(
+        em.createNativeQuery(
+                "SELECT "
+                    + PERSON
+                    + " FROM room_member m JOIN users u ON u.id = m.user_id"
+                    + " WHERE m.room_id = :room AND u.deleted_at IS NULL"
+                    + " ORDER BY m.joined_at, u.id")
+            .setParameter("room", roomId)
+            .setMaxResults(limit)
+            .getResultList());
+  }
+
+  @Override
+  public Optional<Long> longestStayingMemberBesides(Long roomId, Long userId) {
+    return em
+        .createNativeQuery(
+            "SELECT m.user_id FROM room_member m WHERE m.room_id = :room AND m.user_id <> :user"
+                + " ORDER BY m.joined_at, m.user_id")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .setMaxResults(1)
+        .getResultList()
+        .stream()
+        .findFirst()
+        .map(id -> ((Number) id).longValue());
+  }
+
+  @Override
+  public boolean hiddenFromFeed(Long roomId, Long userId) {
+    return em
+        .createNativeQuery(
+            "SELECT hidden_from_feed FROM room_member WHERE room_id = :room AND user_id = :user")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .getResultList()
+        .stream()
+        .anyMatch(RoomRepositoryAdapter::truth);
+  }
+
+  @Override
+  public void hideFromFeed(Long roomId, Long userId, boolean hidden) {
+    em.createNativeQuery(
+            "UPDATE room_member SET hidden_from_feed = :hidden"
+                + " WHERE room_id = :room AND user_id = :user")
+        .setParameter("hidden", hidden)
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .executeUpdate();
+  }
+
+  @Override
+  public void readUpTo(Long roomId, Long userId, Long noteId) {
+    em.createNativeQuery(
+            "UPDATE room_member SET last_read_note_id = GREATEST(last_read_note_id, :note)"
+                + " WHERE room_id = :room AND user_id = :user")
+        .setParameter("note", noteId)
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .executeUpdate();
+  }
+
+  @Override
+  public long unread(Long roomId, Long userId) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM room_member m JOIN note n ON n.room_id = m.room_id"
+                        + " AND n.id > m.last_read_note_id AND NOT (n.user_id <=> m.user_id)"
+                        + " WHERE m.room_id = :room AND m.user_id = :user")
+                .setParameter("room", roomId)
+                .setParameter("user", userId)
+                .getSingleResult())
+        .longValue();
+  }
+
+  // Every room of the member in one statement: its newest note (a warned one by its warning),
+  // what came after the member's watermark from others, and how many are in it.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<RoomSummary> summaries(Long userId) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT r.id AS id, r.name AS name, r.owner_id AS owner, m.hidden_from_feed AS hidden,"
+                    + " (SELECT COUNT(*) FROM room_member c WHERE c.room_id = r.id) AS members,"
+                    + " (SELECT COUNT(*) FROM note un WHERE un.room_id = r.id"
+                    + " AND un.id > m.last_read_note_id AND NOT (un.user_id <=> m.user_id))"
+                    + " AS unread,"
+                    + " COALESCE(ln.created_at, r.created_at) AS active_at,"
+                    + " ln.id AS note_id, ln.body AS body, ln.content_warning AS warning,"
+                    + " ln.created_at AS note_at, lu.id AS author_id, lu.username AS username,"
+                    + " lu.display_name AS display_name, lu.avatar_url AS avatar_url"
+                    + " FROM room_member m JOIN room r ON r.id = m.room_id"
+                    + " LEFT JOIN note ln ON ln.id ="
+                    + " (SELECT MAX(x.id) FROM note x WHERE x.room_id = r.id)"
+                    + " LEFT JOIN users lu ON lu.id = ln.user_id"
+                    + " WHERE m.user_id = :user"
+                    + " ORDER BY active_at DESC, r.id DESC")
+            .setParameter("user", userId)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("name", String.class)
+            .addScalar("owner", Long.class)
+            .addScalar("hidden", Boolean.class)
+            .addScalar("members", Long.class)
+            .addScalar("unread", Long.class)
+            .addScalar("active_at", Instant.class)
+            .addScalar("note_id", Long.class)
+            .addScalar("body", String.class)
+            .addScalar("warning", String.class)
+            .addScalar("note_at", Instant.class)
+            .addScalar("author_id", Long.class)
+            .addScalar("username", String.class)
+            .addScalar("display_name", String.class)
+            .addScalar("avatar_url", String.class)
+            .getResultList();
+    List<RoomSummary> summaries = new ArrayList<>(rows.size());
+    for (Object[] c : rows) {
+      RoomSummary.LastNote last =
+          c[7] == null
+              ? null
+              : new RoomSummary.LastNote(
+                  (Long) c[7],
+                  excerpt((String) c[8], (String) c[9]),
+                  c[11] == null
+                      ? null
+                      : new RoomPerson(
+                          (Long) c[11], (String) c[12], (String) c[13], (String) c[14]),
+                  (Instant) c[10]);
+      summaries.add(
+          new RoomSummary(
+              (Long) c[0],
+              (String) c[1],
+              userId.equals(c[2]),
+              (Long) c[4],
+              Boolean.TRUE.equals(c[3]),
+              (Long) c[5],
+              (Instant) c[6],
+              last));
+    }
+    return summaries;
+  }
+
+  @Override
+  public RoomInviteEntity save(RoomInviteEntity invite) {
+    em.persist(invite);
+    return invite;
+  }
+
+  @Override
+  public Optional<RoomInviteEntity> inviteByCode(String code) {
+    return em.createQuery(
+            "select i from RoomInviteEntity i where i.code = :code", RoomInviteEntity.class)
+        .setParameter("code", code)
+        .getResultStream()
+        .findFirst();
+  }
+
+  @Override
+  public Optional<RoomInviteEntity> lockInvite(String code) {
+    return em.createQuery(
+            "select i from RoomInviteEntity i where i.code = :code", RoomInviteEntity.class)
+        .setParameter("code", code)
+        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+        .getResultStream()
+        .findFirst();
+  }
+
+  @Override
+  public Optional<RoomInviteEntity> invite(Long roomId, Long inviteId) {
+    return Optional.ofNullable(em.find(RoomInviteEntity.class, inviteId))
+        .filter(invite -> invite.getRoomId().equals(roomId));
+  }
+
+  @Override
+  public List<RoomInviteEntity> invites(Long roomId) {
+    return em.createQuery(
+            "select i from RoomInviteEntity i where i.roomId = :room order by i.id desc",
+            RoomInviteEntity.class)
+        .setParameter("room", roomId)
+        .getResultList();
+  }
+
+  @Override
+  public void disableInvitesBy(Long roomId, Long creatorId, Instant at) {
+    em.createNativeQuery(
+            "UPDATE room_invite SET disabled_at = :at"
+                + " WHERE room_id = :room AND creator_id = :creator AND disabled_at IS NULL")
+        .setParameter("at", at)
+        .setParameter("room", roomId)
+        .setParameter("creator", creatorId)
+        .executeUpdate();
+  }
+
+  @Override
+  public boolean request(Long roomId, Long userId, Long inviteId, Instant at) {
+    return em.createNativeQuery(
+                "INSERT IGNORE INTO room_join_request (room_id, user_id, invite_id, created_at)"
+                    + " VALUES (:room, :user, :invite, :at)")
+            .setParameter("room", roomId)
+            .setParameter("user", userId)
+            .setParameter("invite", inviteId)
+            .setParameter("at", at)
+            .executeUpdate()
+        > 0;
+  }
+
+  @Override
+  public Optional<Long> requestedThrough(Long roomId, Long userId) {
+    return em
+        .createNativeQuery(
+            "SELECT invite_id FROM room_join_request WHERE room_id = :room AND user_id = :user")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .getResultList()
+        .stream()
+        .findFirst()
+        .map(id -> ((Number) id).longValue());
+  }
+
+  @Override
+  public boolean withdrawRequest(Long roomId, Long userId) {
+    return em.createNativeQuery(
+                "DELETE FROM room_join_request WHERE room_id = :room AND user_id = :user")
+            .setParameter("room", roomId)
+            .setParameter("user", userId)
+            .executeUpdate()
+        > 0;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<RoomJoinRequest> requests(Long roomId) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT u.id AS id, u.username AS username, u.display_name AS display_name,"
+                    + " u.avatar_url AS avatar_url, q.created_at AS requested_at"
+                    + " FROM room_join_request q JOIN users u ON u.id = q.user_id"
+                    + " WHERE q.room_id = :room AND u.deleted_at IS NULL ORDER BY q.created_at")
+            .setParameter("room", roomId)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("username", String.class)
+            .addScalar("display_name", String.class)
+            .addScalar("avatar_url", String.class)
+            .addScalar("requested_at", Instant.class)
+            .getResultList();
+    List<RoomJoinRequest> requests = new ArrayList<>(rows.size());
+    for (Object[] c : rows) {
+      requests.add(new RoomJoinRequest(person(c), (Instant) c[4]));
+    }
+    return requests;
+  }
+
+  @Override
+  public void markRemoved(Long roomId, Long userId, Instant at) {
+    em.createNativeQuery(
+            "INSERT IGNORE INTO room_removal (room_id, user_id, created_at)"
+                + " VALUES (:room, :user, :at)")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .setParameter("at", at)
+        .executeUpdate();
+  }
+
+  @Override
+  public boolean isRemoved(Long roomId, Long userId) {
+    return !em.createNativeQuery(
+            "SELECT 1 FROM room_removal WHERE room_id = :room AND user_id = :user")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .getResultList()
+        .isEmpty();
+  }
+
+  @Override
+  public Optional<RoomPerson> person(Long userId) {
+    return people(
+            em.createNativeQuery(
+                    "SELECT "
+                        + PERSON
+                        + " FROM users u WHERE u.id = :user AND u.deleted_at IS NULL")
+                .setParameter("user", userId)
+                .getResultList())
+        .stream()
+        .findFirst();
+  }
+
+  // Mutual follows, newest first, that the member has not waved off, who share no room with them
+  // yet, and with no block between them either way.
+  @Override
+  public List<RoomPerson> friendsWithoutARoom(Long userId, int limit) {
+    return people(
+        em.createNativeQuery(
+                "SELECT "
+                    + PERSON
+                    + " FROM user_follow a"
+                    + " JOIN user_follow b ON b.follower_id = a.following_id"
+                    + " AND b.following_id = a.follower_id"
+                    + " JOIN users u ON u.id = a.following_id"
+                    + " AND u.deleted_at IS NULL AND u.username IS NOT NULL"
+                    + " WHERE a.follower_id = :viewer"
+                    + " AND NOT EXISTS (SELECT 1 FROM room_suggestion_dismissal d"
+                    + " WHERE d.user_id = :viewer AND d.friend_id = u.id)"
+                    + " AND NOT EXISTS (SELECT 1 FROM room_member mine"
+                    + " JOIN room_member theirs ON theirs.room_id = mine.room_id"
+                    + " WHERE mine.user_id = :viewer AND theirs.user_id = u.id)"
+                    + HeardSql.unblocked("u.id")
+                    + " ORDER BY GREATEST(a.created_at, b.created_at) DESC, u.id DESC")
+            .setParameter("viewer", userId)
+            .setMaxResults(limit)
+            .getResultList());
+  }
+
+  @Override
+  public void dismissSuggestions(Long userId, Collection<Long> friendIds, Instant at) {
+    for (Long friendId : friendIds) {
+      em.createNativeQuery(
+              "INSERT IGNORE INTO room_suggestion_dismissal (user_id, friend_id, created_at)"
+                  + " VALUES (:user, :friend, :at)")
+          .setParameter("user", userId)
+          .setParameter("friend", friendId)
+          .setParameter("at", at)
+          .executeUpdate();
+    }
+  }
+
+  private static List<RoomPerson> people(List<?> rows) {
+    List<RoomPerson> people = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      people.add(person((Object[]) raw));
+    }
+    return people;
+  }
+
+  private static RoomPerson person(Object[] c) {
+    return new RoomPerson(((Number) c[0]).longValue(), (String) c[1], (String) c[2], (String) c[3]);
+  }
+
+  private static boolean truth(Object value) {
+    return value instanceof Boolean b ? b : value != null && ((Number) value).intValue() != 0;
+  }
+
+  private static String excerpt(String body, String warning) {
+    String text = warning != null && !warning.isBlank() ? warning : body;
+    String flat = text == null ? "" : text.strip().replaceAll("\\s+", " ");
+    if (flat.codePointCount(0, flat.length()) <= EXCERPT_LENGTH) {
+      return flat;
+    }
+    return flat.substring(0, flat.offsetByCodePoints(0, EXCERPT_LENGTH)) + "…";
+  }
+}

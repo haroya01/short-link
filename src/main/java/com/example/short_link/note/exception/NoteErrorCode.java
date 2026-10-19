@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 
 public enum NoteErrorCode {
   NOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "note not found: %s"),
+  NOTE_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "room not found: %s"),
+  NOTE_ROOM_MISMATCH(HttpStatus.BAD_REQUEST, "a reply stays in its parent's room"),
   NOTE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "note permission denied"),
   NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body or an image is required"),
   NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds %s characters"),
