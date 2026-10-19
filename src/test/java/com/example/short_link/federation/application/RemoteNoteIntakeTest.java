@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.inbox.EarlyDeletes;
 import com.example.short_link.federation.domain.RemoteActorDocument;
@@ -112,7 +113,7 @@ class RemoteNoteIntakeTest {
     assertThat(received.getValue().uri()).isEqualTo(NOTE);
     assertThat(received.getValue().url()).isEqualTo("https://mastodon.example/@alice/1");
     assertThat(received.getValue().body()).isEqualTo("hello");
-    assertThat(received.getValue().visibility()).isEqualTo("public");
+    assertThat(received.getValue().visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(received.getValue().inReplyToLocalId()).isNull();
   }
 

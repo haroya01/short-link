@@ -7,6 +7,7 @@ import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
+import com.example.short_link.common.note.NoteVisibility;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.UNLISTED);
+            NoteVisibility.UNLISTED);
     NoteSnapshot followersOnly =
         new NoteSnapshot(
             42L,
@@ -72,7 +73,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.PRIVATE);
+            NoteVisibility.PRIVATE);
 
     Map<String, Object> quiet = documents.create(unlisted, "pid");
     assertThat(quiet.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
@@ -98,7 +99,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.PUBLIC,
+            NoteVisibility.PUBLIC,
             null,
             "ko");
 
@@ -360,7 +361,7 @@ class NoteDocumentsTest {
         null,
         null,
         false,
-        NoteSnapshotReader.Visibility.PUBLIC,
+        NoteVisibility.PUBLIC,
         new NoteSnapshotReader.Poll(
             List.of(
                 new NoteSnapshotReader.PollOption("강남", 3),

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
@@ -186,7 +187,7 @@ class NoteFederationTest {
   private static final LocalActor WRITER =
       new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB");
 
-  private static NoteSnapshot reply(NoteSnapshotReader.Visibility visibility) {
+  private static NoteSnapshot reply(NoteVisibility visibility) {
     return new NoteSnapshot(
         43L,
         7L,
@@ -206,7 +207,7 @@ class NoteFederationTest {
   @Test
   void aReplyToANoteElsewhereReachesItsAuthorsServerEvenWithoutFollowers() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
     when(followers.deliveryInboxes(7L)).thenReturn(List.of());
 
@@ -229,7 +230,7 @@ class NoteFederationTest {
   @Test
   void aDirectReplyElsewhereGoesToThatAuthorAloneAndNothingLeavesWithoutAnActor() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER), Optional.empty());
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.DIRECT)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.DIRECT)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
 
     service().createdElsewhere(43L, 7L);
@@ -251,7 +252,7 @@ class NoteFederationTest {
   @Test
   void anEditedReplyElsewhereReachesThatServerAsWellAsTheFollowers() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
     when(followers.deliveryInboxes(7L))
         .thenReturn(List.of("https://a.example/inbox", "https://m.example/inbox"));
@@ -275,7 +276,7 @@ class NoteFederationTest {
   @Test
   void anEditThatOwesNoOneElsewhereGoesToTheFollowersAloneOrNowhere() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.empty());
     when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"), List.of());
 
@@ -305,7 +306,7 @@ class NoteFederationTest {
             41L, null, ALICE_NOTE.uri(), "https://m.example/@alice/9"),
         null,
         false,
-        NoteSnapshotReader.Visibility.PUBLIC);
+        NoteVisibility.PUBLIC);
   }
 
   @Test
@@ -361,7 +362,7 @@ class NoteFederationTest {
             new NoteSnapshotReader.QuotedNote(9L, "mio"),
             null,
             false,
-            NoteSnapshotReader.Visibility.PUBLIC);
+            NoteVisibility.PUBLIC);
     when(notes.find(44L)).thenReturn(Optional.of(quotingMio));
     when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
 
@@ -523,7 +524,7 @@ class NoteFederationTest {
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 
-  private static NoteSnapshot naming(NoteSnapshotReader.Visibility visibility) {
+  private static NoteSnapshot naming(NoteVisibility visibility) {
     return new NoteSnapshot(
         44L,
         7L,
@@ -543,7 +544,7 @@ class NoteFederationTest {
   @Test
   void aNoteNamingSomeoneElsewhereMentionsThemAndReachesTheirServer() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
     when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
@@ -572,7 +573,7 @@ class NoteFederationTest {
   @Test
   void aDirectNoteNamingSomeoneElsewhereGoesToThemAlone() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.DIRECT)));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.DIRECT)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
 
@@ -593,7 +594,7 @@ class NoteFederationTest {
   @Test
   void aNoteWhoseHandlesResolveToNoOneTakesTheUsualPath() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find(any())).thenReturn(Optional.empty());
     federating();
 
@@ -613,7 +614,7 @@ class NoteFederationTest {
     var suspended = bob();
     org.springframework.test.util.ReflectionTestUtils.setField(suspended, "serverBlock", "SUSPEND");
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(suspended));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
     federating();

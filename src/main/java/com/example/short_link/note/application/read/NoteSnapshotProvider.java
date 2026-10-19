@@ -90,7 +90,7 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             quotedNote,
             note.getContentWarning(),
             note.isSensitive(),
-            NoteSnapshotReader.Visibility.valueOf(note.getVisibility().name()),
+            note.getVisibility(),
             poll(note),
             note.getLanguage()));
   }

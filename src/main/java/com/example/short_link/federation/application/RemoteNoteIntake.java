@@ -6,7 +6,6 @@ import static com.example.short_link.federation.application.ActivityStreams.idsO
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
-import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.inbox.EarlyDeletes;
 import com.example.short_link.federation.domain.FederationActorEntity;
@@ -16,7 +15,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -26,7 +24,6 @@ import tools.jackson.databind.JsonNode;
 public class RemoteNoteIntake {
 
   private static final int MAX_URI = 512;
-  private static final Set<String> SHAREABLE = Set.of("public", "unlisted");
 
   private final RemoteNoteParser parser;
   private final RemoteNotes remoteNotes;
@@ -56,7 +53,7 @@ public class RemoteNoteIntake {
       return false;
     }
     RemoteNoteParser.Parsed note = parser.parse(object, object);
-    return SHAREABLE.contains(note.visibility()) && keep(actor, note, null, false).isPresent();
+    return note.visibility().shareable() && keep(actor, note, null, false).isPresent();
   }
 
   public Optional<Long> relayed(RemoteActorEntity author, RemoteNoteParser.Parsed note) {
@@ -120,7 +117,7 @@ public class RemoteNoteIntake {
       return Optional.empty();
     }
     RemoteNoteParser.Parsed note = parser.parse(object, object);
-    if (!SHAREABLE.contains(note.visibility())) {
+    if (!note.visibility().shareable()) {
       return Optional.empty();
     }
     NoteSnapshot parent = urls.noteIdOf(note.inReplyToUri()).flatMap(notes::find).orElse(null);
@@ -131,15 +128,11 @@ public class RemoteNoteIntake {
   // one, an accepted follower or a named account on a followers-only one, a named account on a
   // direct one. A named account is one the note's text mentions, as delivery reached it.
   public boolean mayRead(RemoteActorEntity actor, NoteSnapshot note) {
-    if (note.visibility() == Visibility.PUBLIC || note.visibility() == Visibility.UNLISTED) {
-      return true;
-    }
     boolean named =
         actor.getUsername() != null
             && Mentions.remote(note.body())
                 .contains((actor.getUsername() + "@" + actor.getDomain()).toLowerCase(Locale.ROOT));
-    return named
-        || (note.visibility() == Visibility.PRIVATE
-            && followers.accepts(note.authorId(), actor.getId()));
+    return note.visibility()
+        .readableBy(false, named, () -> followers.accepts(note.authorId(), actor.getId()));
   }
 }

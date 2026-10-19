@@ -12,13 +12,13 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -52,7 +52,7 @@ class RemoteNoteRecorderTest {
   }
 
   private static RemoteNotes.Received received(
-      String visibility,
+      NoteVisibility visibility,
       Instant published,
       Long localParent,
       String parentUri,
@@ -83,7 +83,7 @@ class RemoteNoteRecorderTest {
         recorder()
             .receive(
                 received(
-                    "public",
+                    NoteVisibility.PUBLIC,
                     Instant.parse("2026-10-07T01:00:00.123456789Z"),
                     null,
                     null,
@@ -126,7 +126,8 @@ class RemoteNoteRecorderTest {
     when(notes.findById(5L)).thenReturn(Optional.of(parent));
     when(notes.insertRemote(any())).thenReturn(Optional.of(901L));
 
-    recorder().receive(received("direct", null, 5L, null, List.of(7L, 8L), List.of(), "cw"));
+    recorder()
+        .receive(received(NoteVisibility.DIRECT, null, 5L, null, List.of(7L, 8L), List.of(), "cw"));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
@@ -174,7 +175,7 @@ class RemoteNoteRecorderTest {
     recorder()
         .receive(
             received(
-                "unlisted",
+                NoteVisibility.UNLISTED,
                 NOW.plusSeconds(3600),
                 null,
                 "https://m.example/s/1",
@@ -190,10 +191,13 @@ class RemoteNoteRecorderTest {
   }
 
   @Test
-  void aNoteDeliveredTwiceIsStoredOnceAndAnUnknownVisibilityIsDirect() {
+  void aNoteDeliveredTwiceIsStoredOnce() {
     when(notes.insertRemote(any())).thenReturn(Optional.empty());
 
-    assertThat(recorder().receive(received("odd", null, null, null, List.of(), List.of(), null)))
+    assertThat(
+            recorder()
+                .receive(
+                    received(NoteVisibility.DIRECT, null, null, null, List.of(), List.of(), null)))
         .isEmpty();
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
@@ -327,7 +331,7 @@ class RemoteNoteRecorderTest {
                 "answering #Cats and #dogs",
                 null,
                 false,
-                "public",
+                NoteVisibility.PUBLIC,
                 null,
                 null,
                 "https://m.example/s/404",
@@ -355,8 +359,10 @@ class RemoteNoteRecorderTest {
             java.util.Map.of(42L, NoteAuthor.remote(42L, "alice@m.example", null, null, null)),
             java.util.Map.of(42L, NoteAuthor.remote(42L, "Bob@m.example", null, null, null)));
 
-    recorder().receive(received("public", null, 5L, null, List.of(7L), List.of(), null));
-    recorder().receive(received("public", null, 5L, null, List.of(7L), List.of(), null));
+    recorder()
+        .receive(received(NoteVisibility.PUBLIC, null, 5L, null, List.of(7L), List.of(), null));
+    recorder()
+        .receive(received(NoteVisibility.PUBLIC, null, 5L, null, List.of(7L), List.of(), null));
 
     ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes, times(2)).insertRemote(rows.capture());
@@ -380,7 +386,7 @@ class RemoteNoteRecorderTest {
     when(people.remoteAuthors(java.util.Set.of(42L), null)).thenReturn(java.util.Map.of());
     when(people.followsRemote(7L, 42L)).thenReturn(true);
 
-    recorder().receive(received("public", null, 5L, null, List.of(), List.of(), null));
+    recorder().receive(received(NoteVisibility.PUBLIC, null, 5L, null, List.of(), List.of(), null));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
@@ -396,7 +402,7 @@ class RemoteNoteRecorderTest {
         "hello from afar",
         null,
         false,
-        "public",
+        NoteVisibility.PUBLIC,
         null,
         localParent,
         null,

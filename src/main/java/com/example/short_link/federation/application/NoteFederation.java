@@ -3,7 +3,6 @@ package com.example.short_link.federation.application;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
-import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
@@ -81,10 +80,7 @@ public class NoteFederation {
         publicId ->
             notes
                 .find(noteId)
-                .filter(
-                    note ->
-                        note.visibility() == Visibility.PUBLIC
-                            || note.visibility() == Visibility.UNLISTED)
+                .filter(note -> note.visibility().shareable())
                 .flatMap(note -> localActors.byUsername(note.authorUsername()))
                 .map(author -> documents.announce(repostId, noteId, publicId, author.publicId())));
   }
@@ -122,9 +118,7 @@ public class NoteFederation {
         documents.create(
             note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
         reach.inboxes(
-            note.visibility() == Visibility.DIRECT
-                ? List.of()
-                : followers.deliveryInboxes(authorId)));
+            note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of()));
   }
 
   // An edit goes wherever the note went: to the writer's followers, and to the server of the note
@@ -144,9 +138,7 @@ public class NoteFederation {
     Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
     List<String> inboxes =
         reach.inboxes(
-            note.visibility() == Visibility.DIRECT
-                ? List.of()
-                : followers.deliveryInboxes(authorId));
+            note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of());
     if (inboxes.isEmpty()) {
       return;
     }
@@ -270,7 +262,7 @@ public class NoteFederation {
   }
 
   private static boolean leaves(NoteSnapshot note) {
-    return note.visibility() != Visibility.DIRECT;
+    return note.visibility().followersRead();
   }
 
   private void deliver(Long authorId, Function<String, Optional<Map<String, Object>>> activity) {
