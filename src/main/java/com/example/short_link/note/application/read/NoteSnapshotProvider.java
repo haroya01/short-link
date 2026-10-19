@@ -113,8 +113,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
 
   @Override
   @Transactional(readOnly = true)
-  public long countByAuthor(Long authorId) {
-    return notes.countByAuthor(authorId);
+  public long countSharedByAuthor(Long authorId) {
+    return notes.countSharedByAuthor(authorId);
   }
 
   @Override

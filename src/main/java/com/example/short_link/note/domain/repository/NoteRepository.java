@@ -109,5 +109,5 @@ public interface NoteRepository {
 
   void retag(Long noteId, List<String> tags);
 
-  long countByAuthor(Long userId);
+  long countSharedByAuthor(Long userId);
 }

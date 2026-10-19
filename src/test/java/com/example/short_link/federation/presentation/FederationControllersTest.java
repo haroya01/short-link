@@ -180,7 +180,7 @@ class FederationControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("https://kurl.me/ap/actors/pid123/following"))
         .andExpect(jsonPath("$.totalItems").doesNotExist());
-    when(notes.countByAuthor(7L)).thenReturn(3L);
+    when(notes.countSharedByAuthor(7L)).thenReturn(3L);
     mvc.perform(get("/ap/actors/pid123/outbox"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalItems").value(3));

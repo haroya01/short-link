@@ -97,7 +97,7 @@ public class ActorController {
                         ActivityPubMedia.CONTEXT,
                         urls.outbox(publicId),
                         "OrderedCollection",
-                        Math.toIntExact(notes.countByAuthor(actor.user().id())),
+                        Math.toIntExact(notes.countSharedByAuthor(actor.user().id())),
                         List.of())))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }

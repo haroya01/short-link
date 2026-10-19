@@ -12,7 +12,7 @@
 @junit | federation-actor-html | 3 | 0 | 0 | 0 | 3
 @junit | federation-actor-followers | 3 | 0 | 0 | 0 | 3
 @junit | federation-actor-following | 3 | 0 | 0 | 0 | 3
-# The outbox also counts the author's notes.
+# The outbox also counts the author's public and unlisted notes.
 @junit | federation-actor-outbox | 4 | 0 | 0 | 0 | 4
 # Featured lists the pinned note ids, newest pin first.
 @junit | federation-actor-featured | 4 | 0 | 0 | 0 | 4
