@@ -1,5 +1,6 @@
 package com.example.short_link.note.domain;
 
+import com.example.short_link.common.note.NoteVisibility;
 import java.time.Instant;
 import java.util.List;
 

@@ -2,6 +2,7 @@ package com.example.short_link;
 
 import archfixtures.CacheFixtures;
 import archfixtures.EntityFixtures;
+import archfixtures.NoteVisibilityFixtures;
 import archfixtures.PostVisibilityFixtures;
 import archfixtures.RedisFixtures;
 import archfixtures.TransactionFixtures;
@@ -48,6 +49,18 @@ final class ArchRuleProofs {
                   PostVisibilityFixtures.ListsPostsByStatus.class,
                   PostVisibilityFixtures.FiltersByAMethodReference.class),
               List.of(PostVisibilityFixtures.AsksThePolicy.class, PublishesAPost.class)),
+          new Proof(
+              "ArchUnitSemanticRulesTest.noteVisibilityIsAskedOfItsQuestions",
+              ArchUnitSemanticRulesTest.noteVisibilityIsAskedOfItsQuestions,
+              List.of(
+                  NoteVisibilityFixtures.ShowsANoteBecauseItIsPublic.class,
+                  NoteVisibilityFixtures.SwitchesOverTheVisibility.class),
+              List.of(NoteVisibilityFixtures.AsksTheVisibility.class)),
+          new Proof(
+              "ArchUnitSemanticRulesTest.whoMayReadANoteIsAskedOfNoteAccess",
+              ArchUnitSemanticRulesTest.whoMayReadANoteIsAskedOfNoteAccess,
+              List.of(NoteVisibilityFixtures.LooksUpReadersItself.class),
+              List.of(NoteVisibilityFixtures.AsksNoteAccess.class)),
           new Proof(
               "ArchUnitSemanticRulesTest.transactionsDoNotCallOutboundClients",
               ArchUnitSemanticRulesTest.transactionsDoNotCallOutboundClients,

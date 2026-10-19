@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Kind;
 import com.example.short_link.common.note.RemoteNotes.Shape;
@@ -78,16 +79,18 @@ class RemoteNoteParserTest {
 
   @Test
   void addressingDecidesVisibilityAsOnMastodon() {
-    assertThat(RemoteNoteParser.visibility(Set.of(PUBLIC), Set.of())).isEqualTo("public");
-    assertThat(RemoteNoteParser.visibility(Set.of("as:Public"), Set.of())).isEqualTo("public");
+    assertThat(RemoteNoteParser.visibility(Set.of(PUBLIC), Set.of()))
+        .isEqualTo(NoteVisibility.PUBLIC);
+    assertThat(RemoteNoteParser.visibility(Set.of("as:Public"), Set.of()))
+        .isEqualTo(NoteVisibility.PUBLIC);
     assertThat(
             RemoteNoteParser.visibility(
                 Set.of("https://m.example/users/a/followers"), Set.of(PUBLIC)))
-        .isEqualTo("unlisted");
+        .isEqualTo(NoteVisibility.UNLISTED);
     assertThat(RemoteNoteParser.visibility(Set.of("https://m.example/users/a/followers"), Set.of()))
-        .isEqualTo("private");
+        .isEqualTo(NoteVisibility.PRIVATE);
     assertThat(RemoteNoteParser.visibility(Set.of("https://kurl.me/ap/actors/pid"), Set.of()))
-        .isEqualTo("direct");
+        .isEqualTo(NoteVisibility.DIRECT);
   }
 
   @Test
@@ -117,7 +120,7 @@ class RemoteNoteParserTest {
     assertThat(parsed.contentWarning()).isEqualTo("spoilers");
     assertThat(parsed.sensitive()).isTrue();
     assertThat(parsed.publishedAt()).isNull();
-    assertThat(parsed.visibility()).isEqualTo("private");
+    assertThat(parsed.visibility()).isEqualTo(NoteVisibility.PRIVATE);
     assertThat(parsed.inReplyToLocalId()).contains(7L);
     assertThat(parsed.addressedPublicIds()).containsExactly("pid", "other");
     assertThat(parsed.language()).isEqualTo("pt");
@@ -159,7 +162,7 @@ class RemoteNoteParserTest {
 
     assertThat(parsed.body()).isEqualTo("Which editor do you write in?");
     assertThat(parsed.url()).isEqualTo("https://mastodon.example/@alice/113300000000000001");
-    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(parsed.shape())
         .isEqualTo(
             new Shape(
@@ -246,7 +249,7 @@ class RemoteNoteParserTest {
     assertThat(parsed.contentWarning()).isNull();
     assertThat(parsed.url())
         .isEqualTo("https://blog.example/2026/10/01/what-the-garden-taught-me/");
-    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(parsed.media())
         .containsExactly(
             new RemoteNotes.Media(
@@ -296,7 +299,7 @@ class RemoteNoteParserTest {
     assertThat(parsed.body())
         .isEqualTo("Thinking about building raised beds this winter. Anyone regret it?");
     assertThat(parsed.url()).isNull();
-    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(parsed.publishedAt()).isEqualTo(Instant.parse("2026-10-05T03:00:00.123456Z"));
     assertThat(parsed.media())
         .containsExactly(
@@ -342,7 +345,7 @@ class RemoteNoteParserTest {
         .isEqualTo(new Shape(Kind.VIDEO, "Building a raised bed in ten minutes", null, null));
     assertThat(parsed.url()).isEqualTo("https://peertube.example/w/kVBbnS8f4E5yDLs8JhzHmb");
     assertThat(parsed.body()).isEqualTo("Step by step, with **cheap** lumber and one saw.");
-    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(parsed.media())
         .containsExactly(
             new RemoteNotes.Media(

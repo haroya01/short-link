@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
@@ -37,12 +38,11 @@ class NoteFederationAudienceTest {
   record Sent(String type, String body, List<String> inboxes) {}
 
   @ParameterizedTest
-  @EnumSource(NoteSnapshotReader.Visibility.class)
-  void aNoteLeavesForTheServersOfThoseWhoMayReadIt(NoteSnapshotReader.Visibility visibility) {
+  @EnumSource(NoteVisibility.class)
+  void aNoteLeavesForTheServersOfThoseWhoMayReadIt(NoteVisibility visibility) {
     boolean shareable =
-        visibility == NoteSnapshotReader.Visibility.PUBLIC
-            || visibility == NoteSnapshotReader.Visibility.UNLISTED;
-    boolean followers = visibility != NoteSnapshotReader.Visibility.DIRECT;
+        visibility == NoteVisibility.PUBLIC || visibility == NoteVisibility.UNLISTED;
+    boolean followers = visibility != NoteVisibility.DIRECT;
 
     List<Sent> created = sent(visibility, federation -> federation.created(42L, 7L));
     List<Sent> edited = sent(visibility, federation -> federation.edited(42L, 7L));
@@ -72,8 +72,7 @@ class NoteFederationAudienceTest {
     }
   }
 
-  private static List<Sent> sent(
-      NoteSnapshotReader.Visibility visibility, Consumer<NoteFederation> act) {
+  private static List<Sent> sent(NoteVisibility visibility, Consumer<NoteFederation> act) {
     NoteSnapshotReader notes = mock(NoteSnapshotReader.class);
     RemoteParents parents = mock(RemoteParents.class);
     FederationActorService localActors = mock(FederationActorService.class);

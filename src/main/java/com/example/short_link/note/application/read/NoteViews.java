@@ -2,6 +2,7 @@ package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -44,6 +45,7 @@ import org.springframework.stereotype.Component;
 public class NoteViews {
 
   private final NoteRepository notes;
+  private final NoteAccess access;
   private final NoteMediaRepository media;
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
@@ -82,22 +84,13 @@ public class NoteViews {
     Authors authors =
         new Authors(
             members, remoteIds.isEmpty() ? Map.of() : people.remoteAuthors(remoteIds, viewerId));
-    Set<Long> restricted = new HashSet<>();
-    for (NoteEntity note : page) {
-      if (note.getVisibility().restricted() && !note.isOwnedBy(viewerId)) {
-        restricted.add(note.getId());
-      }
-    }
-    for (NoteEntity quoted : quotedNotes) {
-      if (quoted.getVisibility().restricted() && !quoted.isOwnedBy(viewerId)) {
-        restricted.add(quoted.getId());
-      }
-    }
-    Set<Long> allowed = notes.visibleTo(viewerId, restricted);
+    List<NoteEntity> candidates = new ArrayList<>(page);
+    candidates.addAll(quotedNotes);
+    Set<Long> readable = access.readable(candidates, viewerId);
     List<NoteEntity> visible =
         page.stream()
             .filter(note -> authors.of(note) != null)
-            .filter(note -> !restricted.contains(note.getId()) || allowed.contains(note.getId()))
+            .filter(note -> readable.contains(note.getId()))
             .toList();
     if (visible.isEmpty()) {
       return List.of();
@@ -106,10 +99,7 @@ public class NoteViews {
     Map<Long, NoteEntity> quotedById =
         quotedNotes.stream()
             .filter(quotedNote -> authors.of(quotedNote) != null)
-            .filter(
-                quotedNote ->
-                    !restricted.contains(quotedNote.getId())
-                        || allowed.contains(quotedNote.getId()))
+            .filter(quotedNote -> readable.contains(quotedNote.getId()))
             .collect(Collectors.toMap(NoteEntity::getId, quotedNote -> quotedNote));
     List<Long> imageNoteIds = new ArrayList<>(ids);
     imageNoteIds.addAll(quotedById.keySet());
@@ -252,17 +242,9 @@ public class NoteViews {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     List<NoteEntity> heard = notes.heardAmong(parentIds, viewerId);
-    Set<Long> restricted =
-        heard.stream()
-            .filter(parent -> parent.getVisibility().restricted() && !parent.isOwnedBy(viewerId))
-            .map(NoteEntity::getId)
-            .collect(Collectors.toSet());
-    Set<Long> allowed = notes.visibleTo(viewerId, restricted);
+    Set<Long> allowed = access.readable(heard, viewerId);
     List<NoteEntity> readable =
-        heard.stream()
-            .filter(
-                parent -> !restricted.contains(parent.getId()) || allowed.contains(parent.getId()))
-            .toList();
+        heard.stream().filter(parent -> allowed.contains(parent.getId())).toList();
     Set<Long> authorIds = new HashSet<>();
     Set<Long> remoteIds = new HashSet<>();
     readable.forEach(parent -> collectAuthor(parent, authorIds, remoteIds));
