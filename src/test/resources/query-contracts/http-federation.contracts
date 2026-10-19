@@ -316,13 +316,22 @@
 # the row is gone by then; the edit also asks who shared it.
 @junit | federation-remote-reply-edit | 18 | 2 | 1 | 0 | 21
 @junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14
+# A member reposts a note from elsewhere, a follower sees it in the following feed under the
+# reposter's name and on the reposter's profile, the member takes the repost back (the repost row,
+# its delete and the count, then after commit their actor, the note and its account, follower
+# inboxes and the Undo's delivery), and the note leaves the feed: the follows, then the feed
+# statement that finds nothing. A quote of it reads its account from elsewhere instead of a
+# member's, and after commit the Create goes to its server (actor, the note and the quoted note,
+# that account, follower inboxes, delivery) beside the usual new-note work (bell subscribers,
+# filters, one NOTE_POST for the following member). Deleting the quote asks once for the quoted
+# note's server.
 @junit | federation-remote-share-repost | 11 | 2 | 0 | 0 | 13
 @junit | federation-remote-share-following | 8 | 0 | 0 | 0 | 8
-@junit | federation-remote-share-profile-reposts | 8 | 0 | 0 | 0 | 8
-@junit | federation-remote-share-unrepost | 7 | 1 | 0 | 1 | 9
-@junit | federation-remote-share-following-undone | 7 | 0 | 0 | 0 | 7
-@junit | federation-remote-share-quote | 16 | 2 | 0 | 0 | 18
-@junit | federation-remote-share-quotes | 6 | 0 | 0 | 0 | 6
+@junit | federation-remote-share-profile-reposts | 7 | 0 | 0 | 0 | 7
+@junit | federation-remote-share-unrepost | 10 | 1 | 0 | 1 | 12
+@junit | federation-remote-share-following-undone | 2 | 0 | 0 | 0 | 2
+@junit | federation-remote-share-quote | 20 | 3 | 0 | 0 | 23
+@junit | federation-remote-share-quotes | 7 | 0 | 0 | 0 | 7
 @junit | federation-remote-share-quote-delete | 9 | 1 | 0 | 4 | 14
 # Searching accounts this server already knows: one statement with the viewer's follow and mute
 # joined in and suspended servers, the viewer's blocked servers and blocked accounts left out. A
