@@ -486,7 +486,11 @@ class NoteReadersMatrixE2ETest {
     }
     long shared =
         all.stream()
-            .filter(note -> note.writer() == Writer.MEMBER && note.vis() != Vis.DIRECT)
+            .filter(
+                note ->
+                    note.writer() == Writer.MEMBER
+                        && note.vis() != Vis.DIRECT
+                        && note.vis() != Vis.ROOM)
             .count();
     String outbox = activity("/ap/actors/" + authorPublicId + "/outbox").body();
     if (!outbox.contains("\"totalItems\":" + shared + ",")) {
