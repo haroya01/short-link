@@ -14,11 +14,13 @@ import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 // The following feed merges followed authors' posts with subscribed series' posts. Only the real
@@ -55,6 +57,13 @@ class PublicFollowingFeedIntegrationTest {
     p.publish();
     postRepository.save(p);
     return slug;
+  }
+
+  private void publishAt(long userId, String slug, Instant at) {
+    PostEntity p = new PostEntity(userId, slug, slug, "ko");
+    p.publish();
+    ReflectionTestUtils.setField(p, "publishedAt", at);
+    postRepository.save(p);
   }
 
   @Test
@@ -106,6 +115,35 @@ class PublicFollowingFeedIntegrationTest {
     FollowReason reason = reasonOf(items, "spring-post");
     assertThat(reason.kind()).isEqualTo(FollowReason.TOPIC);
     assertThat(reason.tag()).isEqualTo("spring");
+  }
+
+  @Test
+  void followingOnlyAuthorsListsTheirPostsNewestFirstAndCountsThem() {
+    long me = user("authorsonly");
+    long first = user("firstauthor");
+    long second = user("secondauthor");
+    long stranger = user("notfollowed");
+
+    followRepository.save(new FollowEntity(me, first));
+    followRepository.save(new FollowEntity(me, second));
+
+    Instant base = Instant.parse("2026-10-01T00:00:00Z");
+    publishAt(first, "first-old", base);
+    publishAt(stranger, "stranger-post", base.plusSeconds(60));
+    publishAt(second, "second-mid", base.plusSeconds(120));
+    publishAt(first, "first-new", base.plusSeconds(180));
+
+    PublicFeedView page = service.feedFollowing(me, 0, 2);
+    assertThat(page.items())
+        .extracting(PublicFeedItem::slug)
+        .containsExactly("first-new", "second-mid");
+    assertThat(page.hasNext()).isTrue();
+    assertThat(service.feedFollowing(me, 1, 2).items())
+        .extracting(PublicFeedItem::slug)
+        .containsExactly("first-old");
+    assertThat(service.followingAt(me, 0, 20).items())
+        .extracting(at -> at.post().item().slug())
+        .containsExactly("first-new", "second-mid", "first-old");
   }
 
   @Test

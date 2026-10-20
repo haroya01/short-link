@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.example.short_link.post.domain.DiscoveryQuality;
 import java.time.Instant;
@@ -30,6 +31,23 @@ class PostRepositoryAdapterFeedParametersTest {
     verify(jpa)
         .countPublishedByAuthorsSeriesOrTags(
             eq(List.of(-1L)), eq(List.of(3L)), eq(List.of("\u0000")), eq(9L), any(Instant.class));
+  }
+
+  @Test
+  void followingOnlyAuthorsSkipsTheTagJoin() {
+    JpaPostRepository jpa = mock(JpaPostRepository.class);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of(), 0, 20);
+    adapter.findPublishedByAuthorsSeriesOrTagsAt(9L, List.of(4L), List.of(), List.of(), 20, 21);
+    adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of());
+    verify(jpa)
+        .findPublishedByAuthors(
+            eq(List.of(4L)), eq(9L), any(Instant.class), eq(PageRequest.of(0, 20)));
+    verify(jpa)
+        .findPublishedByAuthors(
+            eq(List.of(4L)), eq(9L), any(Instant.class), eq(new OffsetLimit(20, 21)));
+    verify(jpa).countPublishedByAuthors(eq(List.of(4L)), eq(9L), any(Instant.class));
+    verifyNoMoreInteractions(jpa);
   }
 
   @Test
