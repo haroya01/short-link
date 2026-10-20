@@ -51,6 +51,8 @@ public interface NoteRepository {
 
   List<NoteEntity> federated(Long viewerId, int offset, int limit);
 
+  List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
+
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, Long viewerId, int limit);

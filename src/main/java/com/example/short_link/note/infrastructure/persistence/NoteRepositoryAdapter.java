@@ -169,6 +169,28 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.listed("n")
+                + " AND n.remote_actor_id IS NOT NULL"
+                + " AND n.id < :before"
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   static String onProfile(String alias) {
     return " AND " + NoteAccessSql.onProfile(alias) + HeardSql.unblocked(alias + ".user_id");
   }
