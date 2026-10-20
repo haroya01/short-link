@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import com.example.short_link.note.application.write.RoomNoteErasures;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -49,6 +50,7 @@ class RoomE2ETest {
   @Autowired private FollowRepository follows;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private EntityManager em;
+  @Autowired private RoomNoteErasures erasures;
 
   private String tag;
   private Person owner;
@@ -306,6 +308,16 @@ class RoomE2ETest {
         .isEqualTo(204);
     em.flush();
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM note WHERE id = ?", Long.class, gone))
+        .isOne();
+    erasures.eraseDue();
+    em.flush();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM note WHERE id = ?", Long.class, gone))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM room_note_erasure WHERE user_id = ?",
+                Long.class,
+                friend.id()))
         .isZero();
     em.clear();
     assertThat(
@@ -313,7 +325,9 @@ class RoomE2ETest {
                 send(null, get("/api/v1/public/room-invites/" + friendsCode), null).at("$.usable"))
         .isFalse();
 
-    send(owner, delete("/api/v1/rooms/my-notes?roomId=" + room), null);
+    assertThat(send(owner, delete("/api/v1/rooms/my-notes?roomId=" + room), null).status())
+        .isEqualTo(202);
+    erasures.eraseDue();
     em.flush();
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM note WHERE id = ?", Long.class, kept))
         .isZero();

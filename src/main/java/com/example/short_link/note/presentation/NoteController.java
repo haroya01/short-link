@@ -130,9 +130,9 @@ public class NoteController {
   }
 
   @DeleteMapping("/api/v1/rooms/my-notes")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @ResponseStatus(HttpStatus.ACCEPTED)
   public void deleteMyRoomNotes(@AuthenticationPrincipal Long viewerId, @RequestParam Long roomId) {
-    command.deleteRoomNotes(viewerId, roomId);
+    command.requestRoomNoteErasure(viewerId, roomId);
   }
 
   @GetMapping("/api/v1/notes/direct")

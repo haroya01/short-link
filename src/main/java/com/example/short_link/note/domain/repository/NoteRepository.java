@@ -7,6 +7,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
@@ -49,7 +50,13 @@ public interface NoteRepository {
 
   List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit);
 
-  List<Long> roomNoteIdsBy(Long authorId, Long roomId);
+  List<Long> roomNoteIdsBy(Long authorId, Long roomId, int limit);
+
+  void requestRoomErasure(Long userId, Long roomId, Instant at);
+
+  List<RoomErasure> pendingRoomErasures(int limit);
+
+  void finishRoomErasure(Long userId, Long roomId);
 
   void addRecipients(Long noteId, Collection<Long> userIds);
 

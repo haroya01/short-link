@@ -136,8 +136,9 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
         "/api/v1/rooms/my-notes?roomId=" + roomId,
         friend,
         null,
-        204);
-    assertThat(count("note", "room_id = ? AND user_id = ?", roomId, friend.id())).isZero();
+        202);
+    assertThat(count("room_note_erasure", "room_id = ? AND user_id = ?", roomId, friend.id()))
+        .isOne();
   }
 
   @Test

@@ -11,7 +11,7 @@ class RoomNotesByWriter implements RoomNoteRemover {
   private final NoteCommandService command;
 
   @Override
-  public int removeNotesBy(Long userId, Long roomId) {
-    return command.deleteRoomNotes(userId, roomId);
+  public void eraseNotesBy(Long userId, Long roomId) {
+    command.requestRoomNoteErasure(userId, roomId);
   }
 }

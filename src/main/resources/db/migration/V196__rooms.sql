@@ -73,6 +73,18 @@ CREATE TABLE room_suggestion_dismissal (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A member asked for all their notes in a room to go, on leaving or later from their account. The
+-- request only records this; RoomNoteErasureJob deletes in chunks through the usual note delete and
+-- drops the row once none are left, so a restart resumes where it stopped.
+CREATE TABLE room_note_erasure (
+  user_id      BIGINT      NOT NULL,
+  room_id      BIGINT      NOT NULL,
+  requested_at DATETIME(6) NOT NULL,
+  PRIMARY KEY (user_id, room_id),
+  KEY idx_room_note_erasure_requested (requested_at),
+  CONSTRAINT fk_room_note_erasure_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- A room note's room. No foreign key: adding one would rebuild the note table.
 ALTER TABLE note
   ADD COLUMN room_id BIGINT NULL,

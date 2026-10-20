@@ -745,9 +745,19 @@ public class NoteCommandService {
   }
 
   @Transactional
-  public int deleteRoomNotes(Long userId, Long roomId) {
-    List<Long> ids = notes.roomNoteIdsBy(userId, roomId);
+  public void requestRoomNoteErasure(Long userId, Long roomId) {
+    notes.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+  }
+
+  // One chunk of a requested erasure, each note through the usual delete; the request is done once
+  // a chunk comes back short. Running it again after a crash only finds what is left.
+  @Transactional
+  public int eraseRoomNotes(Long userId, Long roomId, int chunk) {
+    List<Long> ids = notes.roomNoteIdsBy(userId, roomId, chunk);
     notes.findAllByIdIn(ids).forEach(this::remove);
+    if (ids.size() < chunk) {
+      notes.finishRoomErasure(userId, roomId);
+    }
     return ids.size();
   }
 

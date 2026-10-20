@@ -51,8 +51,8 @@
 # Leaving and keeping the notes: lock, membership, the membership deleted, the member's invites
 # stopped.
 @junit | room-leave | 2 | 0 | 1 | 1 | 4
-# Deleting one's notes in a room: their ids, then for each note the usual delete (the note, its
-# media, likes, collection and series links, the row); grows with the number of notes.
-@junit | room-my-notes-delete | 3 | 0 | 0 | 4 | 7
+# Deleting one's notes in a room only records the request; RoomNoteErasureJob deletes them later
+# in chunks, so the request stays one statement however many notes there are.
+@junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
 @junit | room-suggestions | 1 | 0 | 0 | 0 | 1
 @junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1

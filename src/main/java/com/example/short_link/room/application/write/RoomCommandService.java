@@ -58,7 +58,7 @@ public class RoomCommandService {
       rooms.longestStayingMemberBesides(roomId, userId).ifPresent(room::handTo);
     }
     if (deleteMyNotes) {
-      notes.removeNotesBy(userId, roomId);
+      notes.eraseNotesBy(userId, roomId);
     }
   }
 
