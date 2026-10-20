@@ -1,13 +1,16 @@
 package com.example.short_link.room.domain.repository;
 
 import com.example.short_link.room.domain.RoomEntity;
+import com.example.short_link.room.domain.RoomInvitation;
 import com.example.short_link.room.domain.RoomInviteEntity;
+import com.example.short_link.room.domain.RoomInvitee;
 import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.domain.RoomPerson;
 import com.example.short_link.room.domain.RoomSummary;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface RoomRepository {
@@ -34,11 +37,19 @@ public interface RoomRepository {
 
   void hideFromFeed(Long roomId, Long userId, boolean hidden);
 
+  long countPinned(Long userId);
+
+  boolean isPinned(Long roomId, Long userId);
+
+  void pin(Long roomId, Long userId, Instant at);
+
   void readUpTo(Long roomId, Long userId, Long noteId);
 
   long unread(Long roomId, Long userId);
 
   List<RoomSummary> summaries(Long userId);
+
+  Map<Long, List<RoomPerson>> faces(Collection<Long> roomIds, Long besidesUserId, int perRoom);
 
   RoomInviteEntity save(RoomInviteEntity invite);
 
@@ -54,7 +65,7 @@ public interface RoomRepository {
 
   boolean request(Long roomId, Long userId, Long inviteId, Instant at);
 
-  Optional<Long> requestedThrough(Long roomId, Long userId);
+  boolean hasRequested(Long roomId, Long userId);
 
   boolean withdrawRequest(Long roomId, Long userId);
 
@@ -69,4 +80,18 @@ public interface RoomRepository {
   List<RoomPerson> friendsWithoutARoom(Long userId, int limit);
 
   void dismissSuggestions(Long userId, Collection<Long> friendIds, Instant at);
+
+  int invite(Long roomId, Long inviterId, Collection<Long> userIds, Instant at);
+
+  long countInvitees(Long roomId);
+
+  List<RoomInvitee> invitees(Long roomId);
+
+  Optional<Long> inviterOf(Long roomId, Long userId);
+
+  boolean dropInvitation(Long roomId, Long userId);
+
+  boolean declineInvitation(Long roomId, Long userId, Instant at);
+
+  List<RoomInvitation> invitationsFor(Long userId, int limit);
 }

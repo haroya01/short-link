@@ -28,13 +28,21 @@
 # The room's notes as a member reads them: membership, the page, thread parts, authors, one
 # readable lookup for the room notes, media, counts, marks and the room's name.
 @junit | room-notes | 9 | 0 | 0 | 0 | 9
+# Every room the member is in, newest first: the room notes page as above without the membership
+# check, which the join to room_member is.
+@junit | room-feed | 8 | 0 | 0 | 0 | 8
 # The following feed carrying a room note: the same statements as any following page plus the one
 # readable lookup and the room's name, only because the page has a room note.
 @junit | room-following | 9 | 0 | 0 | 0 | 9
-# Every room of the member, its newest note, unread count and members in one statement.
-@junit | room-list | 1 | 0 | 0 | 0 | 1
+# Every room of the member, its newest note, unread count and members in one statement, then up
+# to three faces per room besides the member in one more.
+@junit | room-list | 2 | 0 | 0 | 0 | 2
 @junit | room-read | 2 | 0 | 1 | 0 | 3
 @junit | room-detail | 4 | 0 | 0 | 0 | 4
+# Pinning: membership, whether it is pinned already, the member's pin count against five, the
+# update. Unpinning skips the count.
+@junit | room-pin | 3 | 0 | 1 | 0 | 4
+@junit | room-unpin | 2 | 0 | 1 | 0 | 3
 @junit | room-feed-hide | 1 | 0 | 1 | 0 | 2
 @junit | room-feed-show | 1 | 0 | 1 | 0 | 2
 # The owner's changes run under the room's row lock, then the room is read back as on detail.
@@ -56,3 +64,14 @@
 @junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
 @junit | room-suggestions | 1 | 0 | 0 | 0 | 1
 @junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1
+# Inviting by name: the room locked, membership, the waiting count against the cap, one insert for
+# everyone asked (whoever cannot be asked is left out inside it), then who waits now.
+@junit | room-invitation-send | 4 | 1 | 0 | 0 | 5
+@junit | room-invitees | 3 | 0 | 0 | 0 | 3
+# The invitee's own invitations, with room, inviter and member count, in one statement.
+@junit | room-invitations-mine | 1 | 0 | 0 | 0 | 1
+# Accepting is joining: lock, the invitation taken, then the same membership, removal, request
+# and seat checks as an invite link before the member is added.
+@junit | room-invitation-accept | 6 | 1 | 0 | 1 | 8
+@junit | room-invitation-decline | 0 | 0 | 1 | 0 | 1
+@junit | room-invitation-cancel | 3 | 0 | 0 | 1 | 4

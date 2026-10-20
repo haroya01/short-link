@@ -8,6 +8,7 @@ public record RoomSummary(
     boolean owner,
     long memberCount,
     boolean hiddenFromFeed,
+    boolean pinned,
     long unreadCount,
     Instant lastActivityAt,
     LastNote lastNote) {

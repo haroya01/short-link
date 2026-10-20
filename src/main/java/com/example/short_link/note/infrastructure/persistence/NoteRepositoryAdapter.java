@@ -329,6 +329,25 @@ class NoteRepositoryAdapter implements NoteRepository {
 
   @Override
   @SuppressWarnings("unchecked")
+  public List<NoteEntity> inRoomsOf(Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM room_member m JOIN note n ON n.room_id = m.room_id"
+                + " WHERE m.user_id = :viewer AND "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.readable("n")
+                + heard("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
   public List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.user_id = :author AND "

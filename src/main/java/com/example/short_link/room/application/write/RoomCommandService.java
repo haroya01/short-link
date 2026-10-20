@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoomCommandService {
 
   static final int MAX_DISMISSED_AT_ONCE = 10;
+  static final int MAX_PINNED = 5;
 
   private final RoomRepository rooms;
   private final RoomQueryService query;
@@ -81,6 +82,18 @@ public class RoomCommandService {
     requireMember(roomId, userId);
     rooms.hideFromFeed(roomId, userId, hidden);
     return hidden;
+  }
+
+  @Transactional
+  public void pin(Long userId, Long roomId, boolean pinned) {
+    requireMember(roomId, userId);
+    if (pinned == rooms.isPinned(roomId, userId)) {
+      return;
+    }
+    if (pinned && rooms.countPinned(userId) >= MAX_PINNED) {
+      throw new RoomException(RoomErrorCode.ROOM_PINS_FULL, MAX_PINNED);
+    }
+    rooms.pin(roomId, userId, pinned ? now() : null);
   }
 
   @Transactional

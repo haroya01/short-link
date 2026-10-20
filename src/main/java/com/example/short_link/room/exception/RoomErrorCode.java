@@ -15,7 +15,11 @@ public enum RoomErrorCode {
       HttpStatus.BAD_REQUEST,
       "an invite is used 1 to %s times and lasts 5 minutes to 30 days, or without either limit"),
   ROOM_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no request to join from: %s"),
-  ROOM_SUGGESTION_INVALID(HttpStatus.BAD_REQUEST, "dismiss 1 to %s suggested friends at once");
+  ROOM_SUGGESTION_INVALID(HttpStatus.BAD_REQUEST, "dismiss 1 to %s suggested friends at once"),
+  ROOM_INVITATION_INVALID(HttpStatus.BAD_REQUEST, "invite 1 to %s people at once"),
+  ROOM_INVITATIONS_PILED(HttpStatus.CONFLICT, "a room waits on at most %s invitations at once"),
+  ROOM_INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "no invitation to room: %s"),
+  ROOM_PINS_FULL(HttpStatus.CONFLICT, "pin at most %s rooms");
 
   private final HttpStatus status;
   private final String template;

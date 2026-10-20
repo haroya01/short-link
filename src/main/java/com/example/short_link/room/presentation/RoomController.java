@@ -6,15 +6,20 @@ import com.example.short_link.room.application.read.RoomQueryService;
 import com.example.short_link.room.application.read.RoomSuggestions;
 import com.example.short_link.room.application.read.RoomView;
 import com.example.short_link.room.application.write.RoomCommandService;
+import com.example.short_link.room.application.write.RoomInvitationService;
 import com.example.short_link.room.application.write.RoomInviteService;
+import com.example.short_link.room.domain.RoomInvitation;
+import com.example.short_link.room.domain.RoomInvitee;
 import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.presentation.request.CreateRoomInviteRequest;
 import com.example.short_link.room.presentation.request.CreateRoomRequest;
 import com.example.short_link.room.presentation.request.DismissRoomSuggestionsRequest;
+import com.example.short_link.room.presentation.request.InviteToRoomRequest;
 import com.example.short_link.room.presentation.request.LeaveRoomRequest;
 import com.example.short_link.room.presentation.request.ReadRoomRequest;
 import com.example.short_link.room.presentation.request.UpdateRoomRequest;
 import com.example.short_link.room.presentation.response.FeedHiddenResponse;
+import com.example.short_link.room.presentation.response.JoinRoomResponse;
 import com.example.short_link.room.presentation.response.UnreadResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -40,6 +45,7 @@ public class RoomController {
   private final RoomQueryService query;
   private final RoomCommandService command;
   private final RoomInviteService invites;
+  private final RoomInvitationService invitations;
 
   @GetMapping
   public List<RoomListItem> mine(@AuthenticationPrincipal Long userId) {
@@ -63,6 +69,22 @@ public class RoomController {
   public void dismiss(
       @AuthenticationPrincipal Long userId, @RequestBody DismissRoomSuggestionsRequest request) {
     command.dismissSuggestions(userId, request.userIds());
+  }
+
+  @GetMapping("/invitations")
+  public List<RoomInvitation> invitations(@AuthenticationPrincipal Long userId) {
+    return query.invitations(userId);
+  }
+
+  @PostMapping("/invitations/{roomId}/accept")
+  public JoinRoomResponse accept(@AuthenticationPrincipal Long userId, @PathVariable Long roomId) {
+    return JoinRoomResponse.of(invitations.accept(userId, roomId));
+  }
+
+  @PostMapping("/invitations/{roomId}/decline")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void decline(@AuthenticationPrincipal Long userId, @PathVariable Long roomId) {
+    invitations.decline(userId, roomId);
   }
 
   @GetMapping("/{id}")
@@ -94,6 +116,18 @@ public class RoomController {
   @DeleteMapping("/{id}/feed-hidden")
   public FeedHiddenResponse show(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return new FeedHiddenResponse(command.hideFromFeed(userId, id, false));
+  }
+
+  @PutMapping("/{id}/pin")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void pin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    command.pin(userId, id, true);
+  }
+
+  @DeleteMapping("/{id}/pin")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void unpin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    command.pin(userId, id, false);
   }
 
   @PostMapping("/{id}/leave")
@@ -133,6 +167,26 @@ public class RoomController {
   public RoomInviteView disable(
       @AuthenticationPrincipal Long userId, @PathVariable Long id, @PathVariable Long inviteId) {
     return invites.disable(userId, id, inviteId);
+  }
+
+  @GetMapping("/{id}/invitations")
+  public List<RoomInvitee> invitees(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return query.invitees(id, userId);
+  }
+
+  @PostMapping("/{id}/invitations")
+  public List<RoomInvitee> inviteByName(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @RequestBody InviteToRoomRequest request) {
+    return invitations.invite(userId, id, request.userIds());
+  }
+
+  @DeleteMapping("/{id}/invitations/{inviteeId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void cancelInvitation(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id, @PathVariable Long inviteeId) {
+    invitations.cancel(userId, id, inviteeId);
   }
 
   @GetMapping("/{id}/requests")

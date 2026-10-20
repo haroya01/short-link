@@ -47,6 +47,8 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
 
     var notes = step("room-notes", "GET", "/api/v1/rooms/" + roomId + "/notes", friend, null, 200);
     assertThat(notes.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+    var feed = step("room-feed", "GET", "/api/v1/rooms/feed", friend, null, 200);
+    assertThat(feed.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
     var following = step("room-following", "GET", "/api/v1/notes/following", friend, null, 200);
     assertThat(following.path("items").get(0).path("room").path("id").asLong()).isEqualTo(roomId);
     var list = step("room-list", "GET", "/api/v1/rooms", friend, null, 200);
@@ -61,6 +63,8 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
             200);
     assertThat(read.path("unreadCount").asLong()).isZero();
     step("room-detail", "GET", "/api/v1/rooms/" + roomId, friend, null, 200);
+    step("room-pin", "PUT", "/api/v1/rooms/" + roomId + "/pin", friend, null, 204);
+    step("room-unpin", "DELETE", "/api/v1/rooms/" + roomId + "/pin", friend, null, 204);
     step("room-feed-hide", "PUT", "/api/v1/rooms/" + roomId + "/feed-hidden", friend, null, 200);
     step("room-feed-show", "DELETE", "/api/v1/rooms/" + roomId + "/feed-hidden", friend, null, 200);
 
@@ -139,6 +143,54 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
         202);
     assertThat(count("room_note_erasure", "room_id = ? AND user_id = ?", roomId, friend.id()))
         .isOne();
+  }
+
+  @Test
+  void peopleInvitedByNameAcceptOrDecline() throws Exception {
+    Actor owner = actor("room-namer", false);
+    Actor picked = actor("room-picked", false);
+    Actor other = actor("room-other", false);
+    Actor taken = actor("room-taken", false);
+    long roomId =
+        step("room-create", "POST", "/api/v1/rooms", owner, Map.of("name", "이름 방"), 201)
+            .path("id")
+            .asLong();
+
+    var sent =
+        step(
+            "room-invitation-send",
+            "POST",
+            "/api/v1/rooms/" + roomId + "/invitations",
+            owner,
+            Map.of("userIds", List.of(picked.id(), other.id(), taken.id())),
+            200);
+    assertThat(sent).hasSize(3);
+    step("room-invitees", "GET", "/api/v1/rooms/" + roomId + "/invitations", owner, null, 200);
+    var mine = step("room-invitations-mine", "GET", "/api/v1/rooms/invitations", picked, null, 200);
+    assertThat(mine.get(0).path("roomId").asLong()).isEqualTo(roomId);
+    var accepted =
+        step(
+            "room-invitation-accept",
+            "POST",
+            "/api/v1/rooms/invitations/" + roomId + "/accept",
+            picked,
+            null,
+            200);
+    assertThat(accepted.path("status").asText()).isEqualTo("joined");
+    step(
+        "room-invitation-decline",
+        "POST",
+        "/api/v1/rooms/invitations/" + roomId + "/decline",
+        other,
+        null,
+        204);
+    step(
+        "room-invitation-cancel",
+        "DELETE",
+        "/api/v1/rooms/" + roomId + "/invitations/" + taken.id(),
+        owner,
+        null,
+        204);
   }
 
   @Test
