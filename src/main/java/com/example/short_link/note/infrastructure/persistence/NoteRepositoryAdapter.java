@@ -989,8 +989,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   @Override
-  public long countSharedByAuthor(Long userId) {
+  public long countForFollowersByAuthor(Long userId) {
     return jpa.countByUserIdAndVisibilityIn(
-        userId, NoteVisibility.where(NoteVisibility::shareable));
+        userId, NoteVisibility.where(NoteVisibility::followersRead));
   }
 }
