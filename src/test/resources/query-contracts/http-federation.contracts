@@ -347,11 +347,12 @@
 @junit | federation-trending-resolve | 9 | 1 | 0 | 0 | 10
 @junit | federation-trending-repost | 12 | 3 | 0 | 0 | 15
 @junit | federation-trending-unrepost | 10 | 1 | 0 | 1 | 12
-# The first read of the latest posts asks whether each chosen server is blocked here and reads
-# the instance key; a warned post never enters memory. Bringing one over reads it from memory and
-# asks only for its author.
-@junit | federation-latest-first | 7 | 0 | 0 | 0 | 7
-@junit | federation-latest-resolve | 10 | 2 | 0 | 0 | 12
+# The first read of the latest posts reads the instance key and asks whether each chosen server is
+# blocked here; a warned post never enters memory. Bringing one over reads it from memory, so only
+# its author is fetched and kept (the reader was signed out when the page came, so nobody met the
+# author ahead), then the note insert and the view.
+@junit | federation-latest-first | 6 | 0 | 0 | 0 | 6
+@junit | federation-latest-resolve | 12 | 2 | 0 | 0 | 14
 # Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
 # leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and
 # servers suspended, limited or blocked by the member. Signing in comes first.
