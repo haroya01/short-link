@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,13 @@ public class RemoteTrendingFeed {
   private final TrendingAuthors authors;
   private final NoteViewReader notes;
 
-  public record Page(List<Object> items, String next) {}
+  public record Page(
+      List<Object> items, String next, @JsonInclude(JsonInclude.Include.NON_NULL) Boolean gap) {
+
+    public Page(List<Object> items, String next) {
+      this(items, next, null);
+    }
+  }
 
   public Page page(Long viewerId, String cursor, int limit) {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
@@ -34,15 +41,29 @@ public class RemoteTrendingFeed {
     return new Page(List.copyOf(pool.items()), next);
   }
 
-  public Page latest(Long viewerId, String cursor, int limit) {
+  public Page latest(Long viewerId, String cursor, String since, int limit) {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
-    LatestPosts.Page page = latest.page(viewerId, offset(cursor), size);
-    if (viewerId != null && !page.unknownAuthors().isEmpty()) {
-      authors.warm(page.unknownAuthors());
+    if (since != null && cursor == null) {
+      LatestPosts.Page top = latest.page(viewerId, 0, TrendingPosts.MAX_LIMIT);
+      List<String> uris = top.items().stream().map(TrendingNote::uri).toList();
+      int at = uris.indexOf(since);
+      if (at >= 0) {
+        warm(viewerId, top.unknownAuthors());
+        return new Page(List.copyOf(top.items().subList(0, at)), null, false);
+      }
     }
+    LatestPosts.Page page = latest.page(viewerId, offset(cursor), size);
+    warm(viewerId, page.unknownAuthors());
     return new Page(
         List.copyOf(page.items()),
-        page.more() ? "t" + (offset(cursor) + page.items().size()) : null);
+        page.more() ? "t" + (offset(cursor) + page.items().size()) : null,
+        since != null && cursor == null ? Boolean.TRUE : null);
+  }
+
+  private void warm(Long viewerId, List<String> unknownAuthors) {
+    if (viewerId != null && !unknownAuthors.isEmpty()) {
+      authors.warm(unknownAuthors);
+    }
   }
 
   private Page kept(Long viewerId, Long beforeId, int size) {
