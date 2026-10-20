@@ -121,6 +121,14 @@ public class NoteController {
     return query.room(id, viewerId, page, size);
   }
 
+  @GetMapping("/api/v1/rooms/feed")
+  public NoteFeedView roomsFeed(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.rooms(viewerId, page, size);
+  }
+
   @GetMapping("/api/v1/rooms/my-notes")
   public NoteFeedView myRoomNotes(
       @AuthenticationPrincipal Long viewerId,

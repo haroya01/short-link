@@ -148,6 +148,9 @@ class RoomE2ETest {
         .isTrue();
     assertThat(send(friend, get("/api/v1/notes/following"), null).body())
         .doesNotContain(tag + " 방 첫 글");
+    assertThat(send(friend, get("/api/v1/rooms/feed"), null).body()).contains(tag + " 방 첫 글");
+    assertThat(send(stranger, get("/api/v1/rooms/feed"), null).body())
+        .doesNotContain(tag + " 방 첫 글");
     assertThat(
             (Boolean)
                 send(friend, delete("/api/v1/rooms/" + room + "/feed-hidden"), null)

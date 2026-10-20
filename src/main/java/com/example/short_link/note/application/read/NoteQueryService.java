@@ -69,6 +69,11 @@ public class NoteQueryService {
         page, size, viewerId, (offset, limit) -> notes.inRoom(roomId, viewerId, offset, limit));
   }
 
+  @Transactional(readOnly = true)
+  public NoteFeedView rooms(Long viewerId, int page, int size) {
+    return page(page, size, viewerId, (offset, limit) -> notes.inRoomsOf(viewerId, offset, limit));
+  }
+
   // The writer's own room notes, from rooms they are in or have left, so they can still delete
   // them.
   @Transactional(readOnly = true)

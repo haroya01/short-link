@@ -28,6 +28,9 @@
 # The room's notes as a member reads them: membership, the page, thread parts, authors, one
 # readable lookup for the room notes, media, counts, marks and the room's name.
 @junit | room-notes | 9 | 0 | 0 | 0 | 9
+# Every room the member is in, newest first: the room notes page as above without the membership
+# check, which the join to room_member is.
+@junit | room-feed | 8 | 0 | 0 | 0 | 8
 # The following feed carrying a room note: the same statements as any following page plus the one
 # readable lookup and the room's name, only because the page has a room note.
 @junit | room-following | 9 | 0 | 0 | 0 | 9

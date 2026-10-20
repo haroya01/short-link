@@ -48,6 +48,8 @@ public interface NoteRepository {
 
   List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit);
 
+  List<NoteEntity> inRoomsOf(Long viewerId, int offset, int limit);
+
   List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit);
 
   List<Long> roomNoteIdsBy(Long authorId, Long roomId, int limit);

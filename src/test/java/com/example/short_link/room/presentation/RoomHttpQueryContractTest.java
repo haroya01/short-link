@@ -47,6 +47,8 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
 
     var notes = step("room-notes", "GET", "/api/v1/rooms/" + roomId + "/notes", friend, null, 200);
     assertThat(notes.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+    var feed = step("room-feed", "GET", "/api/v1/rooms/feed", friend, null, 200);
+    assertThat(feed.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
     var following = step("room-following", "GET", "/api/v1/notes/following", friend, null, 200);
     assertThat(following.path("items").get(0).path("room").path("id").asLong()).isEqualTo(roomId);
     var list = step("room-list", "GET", "/api/v1/rooms", friend, null, 200);
