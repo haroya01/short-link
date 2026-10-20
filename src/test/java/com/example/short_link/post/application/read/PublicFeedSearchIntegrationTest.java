@@ -269,7 +269,9 @@ class PublicFeedSearchIntegrationTest {
         "스프링 성능",
         List.of("스프링", "성능"),
         List.of(paragraph("스프링 성능 병목을 성능 프로파일링으로 잡는다")));
-    publish(a, "weak", "잡담 모음", "이것저것", List.of("일상"), List.of(paragraph("어쩌다 성능 이야기를 한 줄 스쳤다")));
+    publish(
+        a, "weak", "잡담 모음", "이것저것", List.of("일상"), List.of(paragraph("스프링 얘기 끝에 성능 이야기를 한 줄 스쳤다")));
+    publish(a, "half", "잡담 둘", "저것", List.of("일상"), List.of(paragraph("성능 이야기만 했다")));
 
     List<String> ranked = relevanceSlugs("스프링 성능");
     assertThat(ranked).containsExactly("strong", "weak");
@@ -335,5 +337,42 @@ class PublicFeedSearchIntegrationTest {
     publish(a, "db", "데이터 정합성", "트랜잭션 격리", List.of("db"));
 
     assertThat(relevanceSlugs("존재하지않는단어")).isEmpty();
+  }
+
+  @Test
+  void wordsOfStopwordLettersAndAHashtagFindTheirPostThroughTheIndex() {
+    long a = author("gcwriter");
+    publish(
+        a,
+        "jvm",
+        "가비지 컬렉터 정리",
+        "힙 구조",
+        List.of("Java"),
+        List.of(paragraph("data class 와 record 비교")));
+    publish(a, "other", "도커 네트워크", "브리지", List.of("docker"));
+
+    assertThat(relevanceSlugs("Java")).containsExactly("jvm");
+    assertThat(relevanceSlugs("#Java")).containsExactly("jvm");
+    assertThat(relevanceSlugs("data")).containsExactly("jvm");
+  }
+
+  @Test
+  void aLatinWordFindsItselfButNotALongerWordThatStartsWithIt() {
+    long a = author("wordfinder");
+    publish(a, "java-ko", "Java로 서버 만들기", "백엔드", List.of("server"));
+    publish(a, "javascript", "JavaScript 입문", "프런트엔드", List.of("web"));
+
+    assertThat(relevanceSlugs("java")).containsExactly("java-ko");
+    assertThat(relevanceSlugs("javascript")).containsExactly("javascript");
+  }
+
+  @Test
+  void everyWordOfAQueryMustMatch() {
+    long a = author("kmeans");
+    publish(a, "kmeans", "K-means 가속기 설계", "RISC-V", List.of("riscv"));
+    publish(a, "means", "self-invocation means trouble", "Spring 프록시", List.of("spring"));
+
+    assertThat(relevanceSlugs("k-means 가속기")).containsExactly("kmeans");
+    assertThat(relevanceSlugs("가속기 설계")).containsExactly("kmeans");
   }
 }

@@ -14,7 +14,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -232,6 +231,7 @@ class PostRepositoryAdapter implements PostRepository {
       Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedByRelevance(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -246,6 +246,7 @@ class PostRepositoryAdapter implements PostRepository {
       Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedRecent(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -261,6 +262,7 @@ class PostRepositoryAdapter implements PostRepository {
     Instant now = Instant.now();
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -275,6 +277,7 @@ class PostRepositoryAdapter implements PostRepository {
   public long countSearchPublished(Long viewerId, String query, String lang) {
     return jpa.countSearchPublished(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -294,41 +297,59 @@ class PostRepositoryAdapter implements PostRepository {
     return "%" + escaped + "%";
   }
 
-  // BOOLEAN 연산자를 제거해 검색어가 구문을 바꾸지 않게 한다.
-  // ngram의 한·영 부분 일치를 유지하려고 접두·구문 연산자 없이 평문 항만 전달한다.
+  // BOOLEAN 연산자와 해시태그 #을 지워 검색어가 구문을 바꾸지 않게 하고, 색인에 남는 항마다 +( )로
+  // 모두 요구한다. 괄호 없는 +는 한 바이그램짜리 항(설계)을 찾지 못한다.
   static String booleanMatch(String query) {
-    return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
-  }
-
-  // ngram 파서는 기본 스톱워드를 포함한 토큰을 색인하지 않고 토큰보다 긴 스톱워드는 무시한다.
-  // 한 글자 스톱워드 'a'·'i'는 포함 여부로, 두 글자 스톱워드는 이 목록과의 일치로 판정한다.
-  private static final Set<String> NGRAM_FATAL_BIGRAMS =
-      Set.of(
-          "an", "as", "at", "be", "by", "de", "en", "in", "is", "it", "la", "of", "on", "or", "to");
-
-  private static boolean visibleToNgram(String term) {
-    if (term.length() < 2) return false;
-    String lower = term.toLowerCase(Locale.ROOT);
-    for (int i = 0; i + 2 <= lower.length(); i++) {
-      String bigram = lower.substring(i, i + 2);
-      boolean contaminated =
-          bigram.indexOf('a') >= 0
-              || bigram.indexOf('i') >= 0
-              || NGRAM_FATAL_BIGRAMS.contains(bigram);
-      if (!contaminated) return true;
+    StringBuilder match = new StringBuilder();
+    for (String term : scrub(query).split(" ")) {
+      if (indexed(term)) {
+        match.append(match.isEmpty() ? "" : " ").append("+(").append(term).append(')');
+      }
     }
-    return false;
+    return match.toString();
   }
 
-  // 두 글자 미만이거나 모든 바이그램이 스톱워드에 걸려 ngram 색인에 남지 않는 항만으로 된 질의만
-  // 제목·요약 LIKE 폴백을 사용한다.
+  private static String scrub(String query) {
+    return query.replaceAll("[+\\-><()~*\"@#]", " ").replaceAll("\\s+", " ").trim();
+  }
+
+  static String matchWordBoundaries(String query) {
+    StringBuilder pattern = new StringBuilder();
+    for (String term : scrub(query).split(" ")) {
+      if (!indexed(term)) {
+        continue;
+      }
+      String word = term.toLowerCase(Locale.ROOT);
+      boolean head = isAsciiAlnum(word.charAt(0));
+      boolean tail = isAsciiAlnum(word.charAt(word.length() - 1));
+      if (head || tail) {
+        pattern
+            .append("(?=[\\s\\S]*")
+            .append(head ? "(^|[^a-z0-9])" : "")
+            .append(regexLiteral(word))
+            .append(tail ? "([^a-z0-9]|$)" : "")
+            .append(')');
+      }
+    }
+    return pattern.isEmpty() ? null : "^" + pattern;
+  }
+
+  // 두 글자 영문·숫자(AI·Go)는 ngram이 email·google 속까지 맞추므로 색인 대신 낱말 폴백에 둔다.
+  private static boolean indexed(String term) {
+    if (term.length() < 2) return false;
+    if (term.length() > 2) return true;
+    String lower = term.toLowerCase(Locale.ROOT);
+    return !(isAsciiAlnum(lower.charAt(0)) && isAsciiAlnum(lower.charAt(1)));
+  }
+
+  // 색인에 남는 항이 하나도 없는 질의만 제목·요약 LIKE 폴백을 사용한다.
   static String titleLikeFallback(String query) {
-    String scrubbed = booleanMatch(query);
+    String scrubbed = scrub(query);
     if (scrubbed.isEmpty()) {
       return null;
     }
     for (String term : scrubbed.split(" ")) {
-      if (visibleToNgram(term)) {
+      if (indexed(term)) {
         return null;
       }
     }

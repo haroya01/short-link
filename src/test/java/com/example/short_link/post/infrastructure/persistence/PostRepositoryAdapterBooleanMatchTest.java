@@ -7,22 +7,31 @@ import org.junit.jupiter.api.Test;
 class PostRepositoryAdapterBooleanMatchTest {
 
   @Test
-  void keepsPlainQueryVerbatim() {
-    assertThat(PostRepositoryAdapter.booleanMatch("검색")).isEqualTo("검색");
-    assertThat(PostRepositoryAdapter.booleanMatch("리다이렉트 성능")).isEqualTo("리다이렉트 성능");
+  void requiresEveryTerm() {
+    assertThat(PostRepositoryAdapter.booleanMatch("검색")).isEqualTo("+(검색)");
+    assertThat(PostRepositoryAdapter.booleanMatch("리다이렉트 성능")).isEqualTo("+(리다이렉트) +(성능)");
+    assertThat(PostRepositoryAdapter.booleanMatch("k-means 가속기")).isEqualTo("+(means) +(가속기)");
   }
 
   @Test
   void collapsesExtraWhitespace() {
-    assertThat(PostRepositoryAdapter.booleanMatch("  a   b  ")).isEqualTo("a b");
+    assertThat(PostRepositoryAdapter.booleanMatch("  spring   jpa  "))
+        .isEqualTo("+(spring) +(jpa)");
   }
 
   @Test
-  void stripsFulltextOperatorChars() {
-    // BOOLEAN 모드에서 하이재킹 방지용으로 연산자 문자를 공백으로 바꿔 토큰 경계로만 남긴다.
-    assertThat(PostRepositoryAdapter.booleanMatch("+foo* -bar")).isEqualTo("foo bar");
-    assertThat(PostRepositoryAdapter.booleanMatch("\"quoted\"")).isEqualTo("quoted");
-    assertThat(PostRepositoryAdapter.booleanMatch("(group)~1")).isEqualTo("group 1");
+  void stripsFulltextOperatorCharsAndTheHashtagMark() {
+    assertThat(PostRepositoryAdapter.booleanMatch("+foo* -bar")).isEqualTo("+(foo) +(bar)");
+    assertThat(PostRepositoryAdapter.booleanMatch("\"quoted\"")).isEqualTo("+(quoted)");
+    assertThat(PostRepositoryAdapter.booleanMatch("(group)~12")).isEqualTo("+(group)");
+    assertThat(PostRepositoryAdapter.booleanMatch("#Java")).isEqualTo("+(Java)");
+  }
+
+  @Test
+  void leavesOutTermsTheIndexCannotHoldOrWouldMatchInsideWords() {
+    assertThat(PostRepositoryAdapter.booleanMatch("AI 설계")).isEqualTo("+(설계)");
+    assertThat(PostRepositoryAdapter.booleanMatch("C++ 성능")).isEqualTo("+(성능)");
+    assertThat(PostRepositoryAdapter.booleanMatch("Go")).isEmpty();
   }
 
   @Test
@@ -40,13 +49,17 @@ class PostRepositoryAdapterBooleanMatchTest {
   }
 
   @Test
-  void titleLikeFallbackEngagesForStopwordDeadTerms() {
-    // 모든 바이그램이 기본 스톱워드('a'·'i' 포함)에 걸리는 항은 ngram 색인에 남지 않는다.
-    assertThat(PostRepositoryAdapter.titleLikeFallback("java")).isEqualTo("%java%");
-    assertThat(PostRepositoryAdapter.titleLikeFallback("Java")).isEqualTo("%java%");
-    assertThat(PostRepositoryAdapter.titleLikeFallback("data")).isEqualTo("%data%");
-    // "ab" 도 유일 바이그램 "ab" 가 'a' 포함이라 인덱스 불가시.
+  void titleLikeFallbackEngagesForTwoLetterLatinTerms() {
+    assertThat(PostRepositoryAdapter.titleLikeFallback("AI")).isEqualTo("%ai%");
     assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isEqualTo("%ab%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("C#")).isEqualTo("%c#%");
+  }
+
+  @Test
+  void wordsOnceLostToStopwordsGoToTheIndex() {
+    assertThat(PostRepositoryAdapter.titleLikeFallback("java")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("data")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("설계")).isNull();
   }
 
   @Test
@@ -54,8 +67,8 @@ class PostRepositoryAdapterBooleanMatchTest {
     // 영문·숫자로 시작·끝나는 폴백은 앞뒤가 영문·숫자가 아닐 때만 맞춘다(email 의 ai 제외).
     assertThat(PostRepositoryAdapter.titleWordFallback("AI"))
         .isEqualTo("(^|[^a-z0-9])ai([^a-z0-9]|$)");
-    assertThat(PostRepositoryAdapter.titleWordFallback("java"))
-        .isEqualTo("(^|[^a-z0-9])java([^a-z0-9]|$)");
+    assertThat(PostRepositoryAdapter.titleWordFallback("go"))
+        .isEqualTo("(^|[^a-z0-9])go([^a-z0-9]|$)");
     // 정규식 특수문자는 글자로, 영문·숫자가 아닌 끝에는 경계를 두지 않는다.
     assertThat(PostRepositoryAdapter.titleWordFallback("C++")).isEqualTo("(^|[^a-z0-9])c\\+\\+");
   }
@@ -73,8 +86,7 @@ class PostRepositoryAdapterBooleanMatchTest {
     assertThat(PostRepositoryAdapter.titleLikeFallback("C++ 성능")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("jpa")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("docker")).isNull();
-    // 죽은 토큰(java)과 산 토큰(성능)이 섞이면 산 쪽을 MATCH 에 맡긴다.
-    assertThat(PostRepositoryAdapter.titleLikeFallback("java 성능")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("AI 성능")).isNull();
   }
 
   @Test
@@ -88,5 +100,17 @@ class PostRepositoryAdapterBooleanMatchTest {
     // 짧은 질의라도 %/_ 는 리터럴로 — '모두 매칭' 으로 새지 않게 이스케이프한다.
     assertThat(PostRepositoryAdapter.titleLikeFallback("%")).isEqualTo("%!%%");
     assertThat(PostRepositoryAdapter.titleLikeFallback("_")).isEqualTo("%!_%");
+  }
+
+  @Test
+  void latinEdgedTermsMustStandAsWordsAndKoreanOnesNeedNot() {
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("java"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])java([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("Java 성능"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])java([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("node.js"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])node\\.js([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("성능 튜닝")).isNull();
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("AI")).isNull();
   }
 }

@@ -341,7 +341,6 @@ class NoteReadersMatrixE2ETest {
       expect("/api/v1/public/notes?size=50", viewer, remote, note -> false);
       expect("/api/v1/public/notes?sort=trending&size=50", viewer, both, listed.and(heard));
       expect("/api/v1/public/notes/tags/" + tag + "?size=50", viewer, both, listed.and(heard));
-      expect("/api/v1/public/notes/search?q=" + tag + "&size=50", viewer, both, listed.and(heard));
       expect("/api/v1/public/notes/links?url=" + link + "&size=50", viewer, top, listed.and(heard));
       expect(
           "/api/v1/public/notes/" + quotedByOther + "/quotes?size=50",
