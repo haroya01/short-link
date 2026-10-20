@@ -179,9 +179,19 @@ class LatestPostsTest {
     verify(http, timeout(2_000))
         .getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE);
     clock.pass(Duration.ofSeconds(1));
-    assertThat(uris(latest.page(null, 0, 20).items()))
+    assertThat(uris(pageOnceRefreshed(latest, 2)))
         .containsExactly(
             "https://a.example/users/u12/statuses/12", "https://a.example/users/u9/statuses/9");
+  }
+
+  private static List<TrendingNote> pageOnceRefreshed(LatestPosts latest, int size) {
+    long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+    List<TrendingNote> items = latest.page(null, 0, 20).items();
+    while (items.size() < size && System.nanoTime() < deadline) {
+      Thread.onSpinWait();
+      items = latest.page(null, 0, 20).items();
+    }
+    return items;
   }
 
   @Test
