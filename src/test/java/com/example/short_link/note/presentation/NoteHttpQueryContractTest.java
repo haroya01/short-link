@@ -1089,6 +1089,20 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(card.path("commentCount").asLong()).isZero();
     assertThat(card.path("likedByMe").asBoolean()).isFalse();
     assertThat(homeKeys(onward)).doesNotContain("note:" + older);
+
+    String marker = latest.path("newest").asText();
+    long arrived = noteWrittenAt(writer, "새로 온 노트", ahead);
+    var refreshed =
+        step(
+            "home-latest-since",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=3&since=" + marker,
+            null,
+            null,
+            200);
+    assertThat(homeKeys(refreshed)).containsExactly("note:" + arrived);
+    assertThat(refreshed.path("gap").asBoolean()).isFalse();
+    assertThat(refreshed.path("next").isNull()).isTrue();
   }
 
   @Test

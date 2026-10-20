@@ -293,3 +293,4 @@
 @junit | home-trending | 9 | 0 | 0 | 0 | 9
 @junit | home-following | 14 | 0 | 0 | 0 | 14
 @junit | home-following-next | 9 | 0 | 0 | 0 | 9
+@junit | home-latest-since | 11 | 0 | 0 | 0 | 11
