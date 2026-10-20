@@ -52,9 +52,12 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
     }
     QuotedNote quotedNote = null;
     if (note.getQuotedNoteId() != null) {
-      Optional<NoteEntity> quoted =
-          notes.findById(note.getQuotedNoteId()).filter(candidate -> !candidate.isRemote());
-      if (quoted.isPresent()) {
+      Optional<NoteEntity> quoted = notes.findById(note.getQuotedNoteId());
+      if (quoted.isPresent() && quoted.get().isRemote()) {
+        quotedNote =
+            new QuotedNote(
+                quoted.get().getId(), null, quoted.get().getUri(), quoted.get().getRemoteUrl());
+      } else if (quoted.isPresent()) {
         NoteAuthor quotedAuthor =
             people.activeAuthors(Set.of(quoted.get().getUserId())).get(quoted.get().getUserId());
         if (quotedAuthor != null) {

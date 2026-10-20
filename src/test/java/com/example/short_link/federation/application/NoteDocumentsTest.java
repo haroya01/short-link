@@ -203,6 +203,52 @@ class NoteDocumentsTest {
   }
 
   @Test
+  void aQuotedNoteFromElsewhereIsNamedByItsIdThereAndLinkedToItsPageOrElseItsId() {
+    NoteSnapshot quoting =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "agreed",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            new QuotedNote(
+                9L, null, "https://m.example/users/alice/statuses/1", "https://m.example/@alice/1"),
+            null,
+            false);
+
+    Map<String, Object> note = documents.note(quoting, "pid");
+
+    assertThat(note.get("quoteUri")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("quoteUrl")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("_misskey_quote")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("content"))
+        .isEqualTo(
+            "<p>agreed</p><p class=\"quote-inline\">RE: <a href=\"https://m.example/@alice/1\">"
+                + "https://m.example/@alice/1</a></p>");
+
+    NoteSnapshot withoutPage =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "agreed",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            new QuotedNote(9L, null, "https://m.example/users/alice/statuses/1", "javascript:x"),
+            null,
+            false);
+    assertThat(documents.note(withoutPage, "pid").get("content").toString())
+        .contains("RE: <a href=\"https://m.example/users/alice/statuses/1\">");
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   void aRepostIsAnAnnounceOfTheNoteAndUndoingItEmbedsThatAnnounce() {
     Map<String, Object> announce = documents.announce(900L, 42L, "reposter", "author");

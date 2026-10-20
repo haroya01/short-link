@@ -108,14 +108,15 @@ public class NoteFederation {
       return;
     }
     NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()));
+    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
     if (reach.isEmpty()) {
       created(noteId, authorId);
       return;
     }
     send(
         authorId,
-        documents.create(note, actor.get().publicId(), reach.parent(), reach.addressees()),
+        documents.create(
+            note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
         reach.inboxes(
             note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of()));
   }
@@ -134,7 +135,7 @@ public class NoteFederation {
       return;
     }
     NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()));
+    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
     List<String> inboxes =
         reach.inboxes(
             note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of());
@@ -143,14 +144,16 @@ public class NoteFederation {
     }
     send(
         authorId,
-        documents.update(note, actor.get().publicId(), reach.parent(), reach.addressees()),
+        documents.update(
+            note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
         inboxes);
   }
 
   // The note is already gone, so what it answered and whom it named come with the call.
   @Transactional
-  public void deleted(Long noteId, Long authorId, Long inReplyToId, List<String> handles) {
-    if (inReplyToId == null && handles.isEmpty()) {
+  public void deleted(
+      Long noteId, Long authorId, Long inReplyToId, List<String> handles, Long quotedNoteId) {
+    if (inReplyToId == null && handles.isEmpty() && quotedNoteId == null) {
       deleted(noteId, authorId);
       return;
     }
@@ -158,17 +161,19 @@ public class NoteFederation {
     if (actor.isEmpty()) {
       return;
     }
-    List<String> inboxes = reach(inReplyToId, handles).inboxes(followers.deliveryInboxes(authorId));
+    List<String> inboxes =
+        reach(inReplyToId, handles, quotedNoteId).inboxes(followers.deliveryInboxes(authorId));
     if (inboxes.isEmpty()) {
       return;
     }
     send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
   }
 
-  private record Reach(RemoteParents.Parent parent, List<RemoteActorEntity> named) {
+  private record Reach(
+      RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
 
     boolean isEmpty() {
-      return parent == null && named.isEmpty();
+      return parent == null && named.isEmpty() && quoted == null;
     }
 
     List<NoteDocuments.Addressee> addressees() {
@@ -189,18 +194,28 @@ public class NoteFederation {
       if (parent != null) {
         inboxes.add(parent.inbox());
       }
+      if (quoted != null) {
+        inboxes.add(quoted.inbox());
+      }
       named.forEach(person -> inboxes.add(person.deliveryInbox()));
       return List.copyOf(inboxes);
     }
   }
 
-  private Reach reach(Long inReplyToId, List<String> handles) {
-    RemoteParents.Parent parent = remoteParents.of(inReplyToId).orElse(null);
+  private Reach reach(Long inReplyToId, List<String> handles, Long quotedNoteId) {
+    RemoteParents.Parent parent =
+        inReplyToId == null ? null : remoteParents.of(inReplyToId).orElse(null);
     List<RemoteActorEntity> named = new ArrayList<>();
     for (String handle : handles) {
       finder.find(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
     }
-    return new Reach(parent, named);
+    RemoteParents.Parent quoted =
+        quotedNoteId == null ? null : remoteParents.of(quotedNoteId).orElse(null);
+    return new Reach(parent, named, quoted);
+  }
+
+  private static Long quotedElsewhere(NoteSnapshot note) {
+    return note.quotedNote() != null && note.quotedNote().remote() ? note.quotedNote().id() : null;
   }
 
   @Transactional

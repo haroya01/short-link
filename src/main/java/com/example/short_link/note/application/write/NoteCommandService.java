@@ -158,6 +158,7 @@ public class NoteCommandService {
       NoteVisibility requested,
       NoteEntity parent,
       NoteEntity quotedNote,
+      NoteAuthor quotedAuthor,
       QuotedPost quoted,
       List<String> handles,
       Map<Long, NoteAuthor> authors,
@@ -212,7 +213,6 @@ public class NoteCommandService {
                       new NoteException(
                           NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
       requireReadable(userId, quotedNote);
-      requireLocal(quotedNote);
       if (!quotedNote.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
@@ -229,7 +229,7 @@ public class NoteCommandService {
         attached.stream().map(image -> images.verify(userId, image)).toList();
 
     Set<Long> authorIds = new HashSet<>(Set.of(userId));
-    if (quotedNote != null) {
+    if (quotedNote != null && !quotedNote.isRemote()) {
       authorIds.add(quotedNote.getUserId());
     }
     List<String> handles = Mentions.of(body);
@@ -237,8 +237,17 @@ public class NoteCommandService {
         handles.isEmpty()
             ? people.activeAuthors(authorIds)
             : people.activeAuthors(authorIds, handles);
-    if (quotedNote != null && !authors.containsKey(quotedNote.getUserId())) {
-      throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
+    NoteAuthor quotedAuthor = null;
+    if (quotedNote != null) {
+      quotedAuthor =
+          quotedNote.isRemote()
+              ? people
+                  .remoteAuthors(Set.of(quotedNote.getRemoteActorId()), userId)
+                  .get(quotedNote.getRemoteActorId())
+              : authors.get(quotedNote.getUserId());
+      if (quotedAuthor == null) {
+        throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
+      }
     }
     if (parent != null) {
       requireMayAnswer(userId, parent, authors.get(userId));
@@ -251,6 +260,7 @@ public class NoteCommandService {
         requested,
         parent,
         quotedNote,
+        quotedAuthor,
         quoted,
         handles,
         authors,
@@ -369,7 +379,9 @@ public class NoteCommandService {
         new NotePublishedEvent(
             note.getId(),
             userId,
-            (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
+            (parent != null && parent.isRemote())
+                || (quotedNote != null && quotedNote.isRemote())
+                || !Mentions.remote(body).isEmpty()));
     List<NoteAuthor> mentioned = members(authors, handles);
     boolean restricted = note.getVisibility().restricted();
     if (restricted) {
@@ -386,7 +398,10 @@ public class NoteCommandService {
         && (parent == null || userId.equals(parent.getUserId()))) {
       events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
     }
-    boolean quoteSeen = quotedNote != null && access.readable(note, quotedNote.getUserId());
+    boolean quoteSeen =
+        quotedNote != null
+            && !quotedNote.isRemote()
+            && access.readable(note, quotedNote.getUserId());
     if (quoteSeen) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
@@ -426,7 +441,7 @@ public class NoteCommandService {
         0L,
         0L,
         false,
-        quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())),
+        quotedNote == null ? null : quotedView(quotedNote, checked.quotedAuthor()),
         null,
         null,
         0,
@@ -563,7 +578,11 @@ public class NoteCommandService {
     }
     events.publishEvent(
         new NoteEditedEvent(
-            noteId, userId, note.getInReplyToId() != null || !Mentions.remote(body).isEmpty()));
+            noteId,
+            userId,
+            note.getInReplyToId() != null
+                || note.getQuotedNoteId() != null
+                || !Mentions.remote(body).isEmpty()));
     events.publishEvent(new NoteRevisedEvent(noteId, userId, null, note.excerpt()));
     String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
@@ -681,7 +700,8 @@ public class NoteCommandService {
               note.getUserId(),
               keys,
               note.getInReplyToId(),
-              Mentions.remote(note.getBody())));
+              Mentions.remote(note.getBody()),
+              note.getQuotedNoteId()));
     }
   }
 
@@ -794,12 +814,6 @@ public class NoteCommandService {
   private void requireReadable(Long userId, NoteEntity note) {
     if (!access.readable(note, userId)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
-    }
-  }
-
-  private static void requireLocal(NoteEntity note) {
-    if (note.isRemote()) {
-      throw new NoteException(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED);
     }
   }
 
