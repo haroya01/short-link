@@ -10,7 +10,7 @@ public interface NoteSnapshotReader {
 
   Optional<NoteSnapshot> find(Long noteId);
 
-  long countByAuthor(Long authorId);
+  long countForFollowersByAuthor(Long authorId);
 
   List<Long> pinnedIds(Long authorId);
 

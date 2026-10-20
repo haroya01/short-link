@@ -442,6 +442,14 @@ class NoteReadersMatrixE2ETest {
     if (!pinned.equals(Set.of("PUBLIC", "UNLISTED"))) {
       failures.add("featured lists " + pinned);
     }
+    long shared =
+        all.stream()
+            .filter(note -> note.writer() == Writer.MEMBER && note.vis() != Vis.DIRECT)
+            .count();
+    String outbox = activity("/ap/actors/" + authorPublicId + "/outbox").body();
+    if (!outbox.contains("\"totalItems\":" + shared + ",")) {
+      failures.add("outbox counts " + outbox + " instead of " + shared);
+    }
 
     assertThat(failures).as("%d lists differ from today's rules", failures.size()).isEmpty();
   }

@@ -129,8 +129,8 @@ class NoteSnapshotProviderTest {
     when(notes.findById(1L)).thenReturn(Optional.empty());
     assertThat(provider.find(1L)).isEmpty();
 
-    when(notes.countByAuthor(7L)).thenReturn(2L);
-    assertThat(provider.countByAuthor(7L)).isEqualTo(2L);
+    when(notes.countForFollowersByAuthor(7L)).thenReturn(2L);
+    assertThat(provider.countForFollowersByAuthor(7L)).isEqualTo(2L);
   }
 
   @Test
