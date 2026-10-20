@@ -220,6 +220,46 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public NoteSlice everyoneAt(Long viewerId, int offset, int limit) {
+    return slice(notes.topLevel(viewerId, offset, limit), offset, limit, viewerId);
+  }
+
+  @Transactional(readOnly = true)
+  public NoteSlice trendingAt(Long viewerId, int offset, int limit) {
+    return slice(notes.trending(viewerId, offset, limit), offset, limit, viewerId);
+  }
+
+  private NoteSlice slice(List<NoteEntity> rows, int offset, int limit, Long viewerId) {
+    Map<Long, NoteView> byId =
+        views.ofFeed(rows, viewerId).stream()
+            .collect(Collectors.toMap(NoteView::id, Function.identity(), (first, again) -> first));
+    List<NoteSlice.At> items = new ArrayList<>(rows.size());
+    for (int i = 0; i < rows.size(); i++) {
+      NoteView view = byId.get(rows.get(i).getId());
+      if (view != null) {
+        items.add(new NoteSlice.At(offset + i, view));
+      }
+    }
+    return new NoteSlice(items, rows.size() < limit);
+  }
+
+  @Transactional(readOnly = true)
+  public NoteSlice followingAt(Long viewerId, int offset, int limit) {
+    List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
+    authors.add(viewerId);
+    List<NoteFeedRow> rows = notes.following(authors, viewerId, offset, limit);
+    List<NoteView> shown = followingViews(rows, viewerId);
+    List<NoteSlice.At> items = new ArrayList<>(shown.size());
+    int next = 0;
+    for (int i = 0; i < rows.size() && next < shown.size(); i++) {
+      if (rows.get(i).note().getId().equals(shown.get(next).id())) {
+        items.add(new NoteSlice.At(offset + i, shown.get(next++)));
+      }
+    }
+    return new NoteSlice(items, rows.size() < limit);
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView following(Long viewerId, int page, int size) {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
     authors.add(viewerId);
@@ -228,6 +268,10 @@ public class NoteQueryService {
     List<NoteFeedRow> rows = notes.following(authors, viewerId, safePage * safeSize, safeSize + 1);
     boolean hasNext = rows.size() > safeSize;
     List<NoteFeedRow> current = hasNext ? rows.subList(0, safeSize) : rows;
+    return new NoteFeedView(followingViews(current, viewerId), safePage, hasNext);
+  }
+
+  private List<NoteView> followingViews(List<NoteFeedRow> current, Long viewerId) {
     Set<Long> reposterIds =
         current.stream()
             .map(NoteFeedRow::reposterId)
@@ -250,7 +294,7 @@ public class NoteQueryService {
         items.add(view.withRepostedBy(reposters.get(row.reposterId())));
       }
     }
-    return new NoteFeedView(items, safePage, hasNext);
+    return items;
   }
 
   // Mastodon's edit history: the note as it reads now, then each earlier version, newest first.
