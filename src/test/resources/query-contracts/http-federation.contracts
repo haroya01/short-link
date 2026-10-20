@@ -332,12 +332,20 @@
 @junit | federation-trending-empty | 0 | 0 | 0 | 0 | 0
 @junit | federation-trending-refresh | 13 | 0 | 0 | 0 | 13
 @junit | federation-trending | 0 | 0 | 0 | 0 | 0
-@junit | federation-trending-member | 1 | 0 | 0 | 0 | 1
-@junit | federation-trending-pool-refresh | 13 | 0 | 0 | 0 | 13
-@junit | federation-trending-pool-member | 1 | 0 | 0 | 0 | 1
-@junit | federation-trending-kept | 5 | 0 | 0 | 0 | 5
-@junit | federation-trending-resolve | 10 | 2 | 0 | 0 | 12
-@junit | federation-trending-repost | 11 | 2 | 0 | 0 | 13
+# A member's read also learns, behind the answer, the accounts on the page this server has not met:
+# per account its row, whether its server is suspended and the instance key before asking (two
+# accounts here, whose servers answer 404).
+@junit | federation-trending-member | 7 | 0 | 0 | 0 | 7
+# Bringing a trending post over: a refresh (each configured server's block, the instance key, the
+# posts' servers' blocks, the known accounts), a member's first page whose one new account is fetched
+# and kept behind it, then the notes kept here by id, newest first, built as any note page. The post
+# itself comes from memory: its id, its account (met already), the note insert, the view. A repost
+# of it is the usual repost to a server elsewhere, including the member's first actor.
+@junit | federation-trending-pool-refresh | 5 | 0 | 0 | 0 | 5
+@junit | federation-trending-pool-member | 5 | 1 | 0 | 0 | 6
+@junit | federation-trending-kept | 6 | 0 | 0 | 0 | 6
+@junit | federation-trending-resolve | 9 | 1 | 0 | 0 | 10
+@junit | federation-trending-repost | 12 | 3 | 0 | 0 | 15
 @junit | federation-trending-unrepost | 10 | 1 | 0 | 1 | 12
 # Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
 # leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and
