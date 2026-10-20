@@ -126,11 +126,13 @@ class NoteRepositoryAdapter implements NoteRepository {
     return alias + ".in_reply_to_id IS NULL AND NOT " + alias + ".reply";
   }
 
+  // Without the forced index MySQL walks the primary key backwards through every reply and received
+  // note above the page, since a small LIMIT makes it prefer the id order.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevel(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE "
+            "SELECT n.* FROM note n FORCE INDEX (idx_note_local_top_level) WHERE "
                 + notReply("n")
                 + " AND "
                 + NoteAccessSql.listed("n")
