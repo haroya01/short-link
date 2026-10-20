@@ -17,7 +17,8 @@ class RemoteTrendingFeedTest {
   private final TrendingPosts trending = mock(TrendingPosts.class);
   private final TrendingAuthors authors = mock(TrendingAuthors.class);
   private final NoteViewReader notes = mock(NoteViewReader.class);
-  private final RemoteTrendingFeed feed = new RemoteTrendingFeed(trending, authors, notes);
+  private final LatestPosts latest = mock(LatestPosts.class);
+  private final RemoteTrendingFeed feed = new RemoteTrendingFeed(trending, latest, authors, notes);
 
   private static TrendingNote item() {
     return mock(TrendingNote.class);

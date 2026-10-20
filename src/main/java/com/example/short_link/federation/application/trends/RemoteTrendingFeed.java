@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class RemoteTrendingFeed {
 
   private final TrendingPosts trending;
+  private final LatestPosts latest;
   private final TrendingAuthors authors;
   private final NoteViewReader notes;
 
@@ -31,6 +32,17 @@ public class RemoteTrendingFeed {
     String next =
         pool.more() ? "t" + (offset(cursor) + pool.items().size()) : viewerId == null ? null : "r";
     return new Page(List.copyOf(pool.items()), next);
+  }
+
+  public Page latest(Long viewerId, String cursor, int limit) {
+    int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
+    LatestPosts.Page page = latest.page(viewerId, offset(cursor), size);
+    if (viewerId != null && !page.unknownAuthors().isEmpty()) {
+      authors.warm(page.unknownAuthors());
+    }
+    return new Page(
+        List.copyOf(page.items()),
+        page.more() ? "t" + (offset(cursor) + page.items().size()) : null);
   }
 
   private Page kept(Long viewerId, Long beforeId, int size) {

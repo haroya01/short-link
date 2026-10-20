@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.federation.application.trends.LatestPosts;
 import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.exception.FederationErrorCode;
@@ -24,6 +25,7 @@ public class RemoteResolution {
   private final NoteViewReader noteViews;
   private final FederationUrls urls;
   private final TrendingPosts trending;
+  private final LatestPosts latest;
 
   public record Resolved(RemoteAccountView account, Object note) {}
 
@@ -37,7 +39,7 @@ public class RemoteResolution {
     if (urls.isOurs(asked)) {
       throw RemoteDocuments.notFound(asked);
     }
-    Optional<JsonNode> remembered = trending.object(asked);
+    Optional<JsonNode> remembered = trending.object(asked).or(() -> latest.object(asked));
     JsonNode document = remembered.orElseGet(() -> documents.fetch(uri, asked));
     URI from = remembered.map(object -> URI.create(object.path("id").asString())).orElse(uri);
     if (RemoteNoteParser.kindOf(document).isPresent()) {

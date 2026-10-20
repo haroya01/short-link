@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.federation.application.trends.LatestPosts;
 import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
@@ -49,6 +50,7 @@ class RemoteResolutionTest {
   @Mock private RemoteFollowing following;
   @Mock private NoteViewReader noteViews;
   @Mock private TrendingPosts trending;
+  @Mock private LatestPosts latest;
 
   private RemoteResolution resolution() {
     return new RemoteResolution(
@@ -59,7 +61,8 @@ class RemoteResolutionTest {
         following,
         noteViews,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
-        trending);
+        trending,
+        latest);
   }
 
   @Test

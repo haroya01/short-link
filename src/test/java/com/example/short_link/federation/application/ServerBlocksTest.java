@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.ServerSuspendedEvent;
+import com.example.short_link.federation.application.trends.LatestPosts;
 import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.federation.domain.FederationDomainBlockEntity;
 import com.example.short_link.federation.domain.ServerBlockSeverity;
@@ -28,13 +29,15 @@ class ServerBlocksTest {
   @Mock private FederationDomainBlockRepository blocks;
   @Mock private ApplicationEventPublisher events;
   @Mock private TrendingPosts trending;
+  @Mock private LatestPosts latest;
 
   private ServerBlocks service() {
     return new ServerBlocks(
         blocks,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         events,
-        trending);
+        trending,
+        latest);
   }
 
   @Test
@@ -50,6 +53,7 @@ class ServerBlocksTest {
     verify(blocks, never()).sever(anyString());
     verify(events, never()).publishEvent(any(Object.class));
     verify(trending).withdraw("spam.example");
+    verify(latest).withdraw("spam.example");
   }
 
   @Test
