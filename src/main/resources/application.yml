@@ -8,6 +8,10 @@ spring:
     fallback-to-system-locale: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  flyway:
+    # InnoDB fixes a FULLTEXT index's stopwords whenever it builds the index, including the rebuild an
+    # ALTER on the table triggers; the default list would drop every ngram holding 'a' or 'i' (V195).
+    init-sqls: SET SESSION innodb_ft_enable_stopword = OFF
   cache:
     type: redis
   jpa:
@@ -178,6 +182,9 @@ short-link:
     enabled: ${SAFETY_RESCAN_ENABLED:true}
     cron: ${SAFETY_RESCAN_CRON:0 41 */6 * * *}
     batch-size: ${SAFETY_RESCAN_BATCH_SIZE:2000}
+  trending:
+    per-author: ${TRENDING_PER_AUTHOR:2}
+    cache-for: 20s
   destination-health:
     enabled: ${DESTINATION_HEALTH_ENABLED:true}
     cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}
@@ -204,6 +211,15 @@ short-link:
     trends:
       enabled: ${FEDERATION_TRENDS_ENABLED:false}
       hosts: ${FEDERATION_TRENDS_HOSTS:mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
+      per-host: ${FEDERATION_TRENDS_PER_HOST:40}
+      pages: ${FEDERATION_TRENDS_PAGES:2}
+    latest:
+      enabled: ${FEDERATION_LATEST_ENABLED:true}
+      hosts: ${FEDERATION_LATEST_HOSTS:mstdn.jp,qdon.space,planet.moe,social.silicon.moe}
+      per-host: ${FEDERATION_LATEST_PER_HOST:40}
+      max-items: ${FEDERATION_LATEST_MAX_ITEMS:600}
+      fresh-for: ${FEDERATION_LATEST_FRESH_FOR:5m}
+      patience: ${FEDERATION_LATEST_PATIENCE:3s}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

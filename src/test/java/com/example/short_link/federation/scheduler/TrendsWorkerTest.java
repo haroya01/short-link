@@ -20,7 +20,7 @@ class TrendsWorkerTest {
 
   private static TrendsProperties props(boolean enabled) {
     return new TrendsProperties(
-        enabled, List.of("a.example"), 20, Duration.ofMillis(10), Duration.ofSeconds(1));
+        enabled, List.of("a.example"), 20, 1, Duration.ofMillis(10), Duration.ofSeconds(1));
   }
 
   private static boolean threadAlive() {

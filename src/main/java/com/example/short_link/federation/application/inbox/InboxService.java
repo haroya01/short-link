@@ -6,7 +6,6 @@ import static com.example.short_link.federation.application.ActivityStreams.text
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
-import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
@@ -395,7 +394,9 @@ public class InboxService {
   // The same rule that serves the note document: it exists and its author federates. A personal
   // inbox already resolved its owner, who is usually the author.
   private Optional<NoteSnapshot> federated(Long noteId, Optional<LocalActor> owner) {
-    return notes.find(noteId).filter(note -> federates(note, owner));
+    return notes
+        .find(noteId)
+        .filter(note -> note.visibility().federates() && federates(note, owner));
   }
 
   private boolean federates(NoteSnapshot note, Optional<LocalActor> owner) {
@@ -404,7 +405,7 @@ public class InboxService {
   }
 
   private static boolean shareable(NoteSnapshot note) {
-    return note.visibility() == Visibility.PUBLIC || note.visibility() == Visibility.UNLISTED;
+    return note.visibility().shareable();
   }
 
   private static boolean authoredBy(JsonNode object, String actorUri) {

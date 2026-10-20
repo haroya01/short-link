@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -49,7 +50,7 @@ class TrendingPostsTest {
   private static final Duration PATIENCE = Duration.ofSeconds(4);
   private static final TrendsProperties PROPS =
       new TrendsProperties(
-          true, List.of(" A.example ", "b.example", "c.example", ""), 3, null, PATIENCE);
+          true, List.of(" A.example ", "b.example", "c.example", ""), 3, 1, null, PATIENCE);
 
   @Mock private FederationHttp http;
   @Mock private SigningKeys signingKeys;
@@ -67,6 +68,7 @@ class TrendingPostsTest {
     trending =
         new TrendingPosts(
             PROPS,
+            new TrendingSpread(2),
             http,
             signingKeys,
             serverBlocks,
@@ -149,6 +151,114 @@ class TrendingPostsTest {
     order.verify(http).getJson(trendsOf("c.example"), instance, PATIENCE);
     verify(signingKeys, times(1)).forInstance();
     verify(standings, never()).hidden(any(), any(), any(), any());
+  }
+
+  @Test
+  void anAccountPlacesTwoPostsPerRoundSoAThirdWaitsForTheOthers() {
+    String mina = "https://x.example/users/mina/statuses/";
+    answers("a.example", status(mina + 1, 0, 0), status(mina + 2, 0, 0), status(mina + 3, 0, 0));
+    answers(
+        "b.example",
+        status(mina + 4, 0, 0),
+        status(mina + 5, 0, 0),
+        status(post("z.example", 6), 0, 0));
+
+    trending.refresh();
+
+    assertThat(uris(trending.list(null, 20)))
+        .containsExactly(mina + 1, mina + 4, post("z.example", 6), mina + 2, mina + 5, mina + 3);
+    assertThat(uris(trending.list(null, 3)))
+        .containsExactly(mina + 1, mina + 4, post("z.example", 6));
+  }
+
+  private TrendingPosts pagedOver(String... hosts) {
+    return new TrendingPosts(
+        new TrendsProperties(true, List.of(hosts), 3, 2, null, PATIENCE),
+        new TrendingSpread(2),
+        http,
+        signingKeys,
+        serverBlocks,
+        standings,
+        new TrendingStatusReader(
+            new RemoteNoteParser(
+                new FederationUrls(
+                    new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
+            JSON),
+        JSON,
+        Clock.fixed(NOW, ZoneOffset.UTC));
+  }
+
+  private void answersAt(URI uri, ObjectNode... statuses) {
+    ArrayNode array = JSON.createArrayNode();
+    for (ObjectNode status : statuses) {
+      array.add(status);
+    }
+    when(http.getJson(uri, instance, PATIENCE))
+        .thenReturn(
+            new FederationHttp.Result.Ok(
+                200, JSON.writeValueAsString(array).getBytes(StandardCharsets.UTF_8)));
+  }
+
+  @Test
+  void aFullAnswerIsFollowedByTheNextPageAndAShortOneEndsTheServer() {
+    TrendingPosts paged = pagedOver("a.example", "b.example");
+    answersAt(
+        trendsOf("a.example"),
+        status(post("x.example", 1), 0, 0),
+        status(post("x.example", 2), 0, 0),
+        status(post("x.example", 3), 0, 0));
+    answersAt(
+        URI.create("https://a.example/api/v1/trends/statuses?limit=3&offset=3"),
+        status(post("x.example", 4), 0, 0));
+    answersAt(trendsOf("b.example"), status(post("y.example", 5), 0, 0));
+
+    paged.refresh();
+
+    assertThat(uris(paged.list(null, 20)))
+        .containsExactly(
+            post("x.example", 1),
+            post("y.example", 5),
+            post("x.example", 2),
+            post("x.example", 3),
+            post("x.example", 4));
+    verify(http, never())
+        .getJson(
+            URI.create("https://b.example/api/v1/trends/statuses?limit=3&offset=3"),
+            instance,
+            PATIENCE);
+  }
+
+  @Test
+  void aPageSaysWhetherMoreFollowAndWhichAuthorsThisServerHasNotMet() {
+    answers("a.example", status(post("x.example", 1), 0, 0), status(post("x.example", 2), 0, 0));
+    when(standings.idsOf(any())).thenReturn(Map.of("https://x.example/users/u1", 41L));
+    when(standings.hidden(any(), any(), any(), any()))
+        .thenReturn(RemoteAccountStandingReader.Hidden.NONE);
+    trending.refresh();
+
+    TrendingPosts.Page first = trending.page(7L, 0, 1);
+    TrendingPosts.Page second = trending.page(7L, 1, 1);
+
+    assertThat(uris(first.items())).containsExactly(post("x.example", 1));
+    assertThat(first.more()).isTrue();
+    assertThat(first.unknownAuthors()).isEmpty();
+    assertThat(uris(second.items())).containsExactly(post("x.example", 2));
+    assertThat(second.more()).isFalse();
+    assertThat(second.unknownAuthors()).containsExactly("https://x.example/users/u2");
+    assertThat(trending.page(7L, 9, 1).items()).isEmpty();
+  }
+
+  @Test
+  void aPostIsFoundByItsIdOrItsPageAndCarriesItsAuthor() {
+    answers("a.example", status(post("x.example", 1), 0, 0));
+    trending.refresh();
+
+    var object = trending.object(post("x.example", 1)).orElseThrow();
+    assertThat(object.path("type").asString()).isEqualTo("Note");
+    assertThat(object.path("attributedTo").asString()).isEqualTo("https://x.example/users/u1");
+    String page = trending.list(null, 1).getFirst().url();
+    assertThat(trending.object(page)).isPresent();
+    assertThat(trending.object("https://x.example/users/u1/statuses/404")).isEmpty();
   }
 
   @Test
@@ -365,11 +475,13 @@ class TrendingPostsTest {
   @Test
   void theSettingsKeepServersAsTypedOnceAndAskAtMostWhatMastodonAnswers() {
     assertThat(PROPS.hosts()).containsExactly("a.example", "b.example", "c.example");
-    TrendsProperties defaults = new TrendsProperties(false, null, 0, null, null);
+    TrendsProperties defaults = new TrendsProperties(false, null, 0, 0, null, null);
     assertThat(defaults.hosts()).isEmpty();
-    assertThat(defaults.perHost()).isEqualTo(20);
+    assertThat(defaults.perHost()).isEqualTo(40);
+    assertThat(defaults.pages()).isEqualTo(2);
     assertThat(defaults.every()).isEqualTo(Duration.ofMinutes(30));
     assertThat(defaults.patience()).isEqualTo(Duration.ofSeconds(5));
-    assertThat(new TrendsProperties(true, List.of(), 500, null, null).perHost()).isEqualTo(40);
+    assertThat(new TrendsProperties(true, List.of(), 500, 9, null, null).perHost()).isEqualTo(40);
+    assertThat(new TrendsProperties(true, List.of(), 500, 9, null, null).pages()).isEqualTo(5);
   }
 }

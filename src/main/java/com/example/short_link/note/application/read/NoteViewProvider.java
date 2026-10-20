@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import java.util.List;
 import java.util.Optional;
@@ -21,5 +22,13 @@ class NoteViewProvider implements NoteViewReader {
     return notes
         .findUnblocked(noteId, viewerId)
         .flatMap(note -> views.ofFeed(List.of(note), viewerId).stream().findFirst());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Listed> received(Long viewerId, Long beforeId, int limit) {
+    List<NoteEntity> page = notes.federatedBefore(viewerId, beforeId, limit);
+    List<NoteView> shown = views.ofFeed(page, viewerId);
+    return shown.stream().map(view -> new Listed(view.id(), view)).toList();
   }
 }

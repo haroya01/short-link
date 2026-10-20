@@ -3,7 +3,7 @@
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 # Writing the post is the same create, body replace and first publish as interaction-access-*.
 @junit | audience-post-create | 2 | 1 | 0 | 0 | 3
-@junit | audience-body-write | 3 | 2 | 1 | 1 | 7
+@junit | audience-body-write | 3 | 1 | 1 | 0 | 5
 @junit | audience-publish | 7 | 2 | 1 | 0 | 10
 # An access-only PATCH: locked post + the author's moderation row + the post update + tags for the
 # response. No body, search text or revision is read or written. The profile cache eviction and the

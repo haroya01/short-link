@@ -34,10 +34,7 @@ public class NoteObjectController {
       @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept) {
     return notes
         .find(id)
-        .filter(
-            note ->
-                note.visibility() == NoteSnapshotReader.Visibility.PUBLIC
-                    || note.visibility() == NoteSnapshotReader.Visibility.UNLISTED)
+        .filter(note -> note.visibility().shareable())
         .flatMap(
             note ->
                 actors

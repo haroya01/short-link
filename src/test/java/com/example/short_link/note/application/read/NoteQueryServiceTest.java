@@ -8,16 +8,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteSeries;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteException;
 import java.util.List;
@@ -25,9 +27,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.LongStream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -44,7 +46,23 @@ class NoteQueryServiceTest {
   @Mock private NotePeopleReader people;
   @Mock private NoteViews views;
   @Mock private NoteSeriesReader noteSeries;
-  @InjectMocks private NoteQueryService service;
+  @Mock private NoteRoomReader rooms;
+  private NoteQueryService service;
+
+  @BeforeEach
+  void service() {
+    service =
+        new NoteQueryService(
+            notes,
+            likes,
+            reposts,
+            bookmarks,
+            people,
+            views,
+            new NoteAccess(notes),
+            rooms,
+            noteSeries);
+  }
 
   private static NoteEntity note(Long id, Long inReplyTo) {
     NoteEntity note = new NoteEntity(7L, "n" + id, inReplyTo, null);
@@ -461,7 +479,7 @@ class NoteQueryServiceTest {
     org.mockito.Mockito.verifyNoInteractions(notes);
 
     NoteEntity hit = note(4L, null);
-    when(notes.search("헥사고날", null, 7L, 0, 21)).thenReturn(List.of(hit));
+    when(notes.search("+(헥사고날)", null, 7L, 0, 21)).thenReturn(List.of(hit));
     when(views.ofFeed(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
     assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
         .extracting(NoteView::id)

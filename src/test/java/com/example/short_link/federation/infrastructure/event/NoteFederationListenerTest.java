@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.event;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
@@ -22,12 +23,20 @@ class NoteFederationListenerTest {
   private final NoteFederationListener listener = new NoteFederationListener(notes, leaving);
 
   @Test
+  void aNoteThatNeverLeftThisServerIsNotDeletedElsewhere() {
+    listener.onDeleted(
+        new NoteDeletedEvent(3L, 7L, List.of(), 41L, List.of("a@m.example"), 60L, false));
+
+    verifyNoInteractions(notes);
+  }
+
+  @Test
   void eachEventReachesItsHandler() {
     listener.onPublished(new NotePublishedEvent(1L, 7L));
     listener.onEdited(new NoteEditedEvent(1L, 7L));
     listener.onEdited(new NoteEditedEvent(2L, 7L, true));
     listener.onDeleted(new NoteDeletedEvent(1L, 7L, List.of()));
-    listener.onDeleted(new NoteDeletedEvent(2L, 7L, List.of(), 41L, List.of("a@m.example")));
+    listener.onDeleted(new NoteDeletedEvent(2L, 7L, List.of(), 41L, List.of("a@m.example"), 60L));
     listener.onReposted(new NoteRepostedEvent(900L, 1L, 8L));
     listener.onUnreposted(new NoteUnrepostedEvent(900L, 1L, 8L));
     listener.onAccountDeleted(new AccountDeletedEvent(7L));
@@ -35,8 +44,8 @@ class NoteFederationListenerTest {
     verify(notes).created(1L, 7L);
     verify(notes).edited(1L, 7L, false);
     verify(notes).edited(2L, 7L, true);
-    verify(notes).deleted(1L, 7L, null, List.of());
-    verify(notes).deleted(2L, 7L, 41L, List.of("a@m.example"));
+    verify(notes).deleted(1L, 7L, null, List.of(), null);
+    verify(notes).deleted(2L, 7L, 41L, List.of("a@m.example"), 60L);
     verify(notes).reposted(900L, 1L, 8L);
     verify(notes).unreposted(900L, 1L, 8L);
     verify(leaving).leave(7L);

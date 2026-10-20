@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application.trends;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
@@ -38,6 +39,7 @@ public class TrendingPosts {
   private static final int MAX_FAILURES = 4;
 
   private final TrendsProperties props;
+  private final TrendingSpread spread;
   private final FederationHttp http;
   private final SigningKeys signingKeys;
   private final FederationDomainBlockRepository serverBlocks;
@@ -54,17 +56,20 @@ public class TrendingPosts {
   @Autowired
   public TrendingPosts(
       TrendsProperties props,
+      TrendingSpread spread,
       FederationHttp http,
       SigningKeys signingKeys,
       FederationDomainBlockRepository serverBlocks,
       RemoteAccountStandingReader standings,
       TrendingStatusReader reader,
       JsonMapper json) {
-    this(props, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
+    this(
+        props, spread, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
   }
 
   TrendingPosts(
       TrendsProperties props,
+      TrendingSpread spread,
       FederationHttp http,
       SigningKeys signingKeys,
       FederationDomainBlockRepository serverBlocks,
@@ -73,6 +78,7 @@ public class TrendingPosts {
       JsonMapper json,
       Clock clock) {
     this.props = props;
+    this.spread = spread;
     this.http = http;
     this.signingKeys = signingKeys;
     this.serverBlocks = serverBlocks;
@@ -82,7 +88,13 @@ public class TrendingPosts {
     this.clock = clock;
   }
 
+  public record Page(List<TrendingNote> items, boolean more, List<String> unknownAuthors) {}
+
   public List<TrendingNote> list(Long viewerId, int limit) {
+    return page(viewerId, 0, limit).items();
+  }
+
+  public Page page(Long viewerId, int offset, int limit) {
     int size = Math.clamp(limit, 1, MAX_LIMIT);
     List<TrendingStatusReader.Read> all = trending;
     RemoteAccountStandingReader.Hidden hidden =
@@ -93,14 +105,44 @@ public class TrendingPosts {
                 all.stream().map(TrendingStatusReader.Read::actorUri).distinct().toList(),
                 all.stream().map(TrendingStatusReader.Read::domain).distinct().toList(),
                 clock.instant());
-    return all.stream()
-        .filter(
-            read ->
-                !hidden.actorUris().contains(read.actorUri())
-                    && !hidden.domains().contains(read.domain()))
-        .limit(size)
-        .map(read -> read.note().seenBy(viewerId != null))
-        .toList();
+    List<TrendingStatusReader.Read> shown =
+        inRounds(
+            all.stream()
+                .filter(
+                    read ->
+                        !hidden.actorUris().contains(read.actorUri())
+                            && !hidden.domains().contains(read.domain()))
+                .toList());
+    int from = Math.clamp(offset, 0, shown.size());
+    List<TrendingStatusReader.Read> page = shown.subList(from, Math.min(from + size, shown.size()));
+    return new Page(
+        page.stream().map(read -> read.note().seenBy(viewerId != null)).toList(),
+        from + page.size() < shown.size(),
+        page.stream()
+            .filter(read -> read.note().author().remoteId() == null)
+            .map(TrendingStatusReader.Read::actorUri)
+            .distinct()
+            .toList());
+  }
+
+  public Optional<JsonNode> object(String address) {
+    return trending.stream()
+        .filter(read -> address.equals(read.note().uri()) || address.equals(read.note().url()))
+        .map(TrendingStatusReader.Read::object)
+        .findFirst();
+  }
+
+  private List<TrendingStatusReader.Read> inRounds(List<TrendingStatusReader.Read> reads) {
+    Map<String, Integer> placed = new HashMap<>();
+    List<List<TrendingStatusReader.Read>> rounds = new ArrayList<>();
+    for (TrendingStatusReader.Read read : reads) {
+      int round = (placed.merge(read.actorUri(), 1, Integer::sum) - 1) / spread.perAuthor();
+      while (rounds.size() <= round) {
+        rounds.add(new ArrayList<>());
+      }
+      rounds.get(round).add(read);
+    }
+    return rounds.stream().flatMap(List::stream).toList();
   }
 
   public void refresh() {
@@ -139,7 +181,8 @@ public class TrendingPosts {
                     ? new TrendingStatusReader.Read(
                         read.note().by(read.note().author().known(ids.get(read.actorUri()))),
                         read.actorUri(),
-                        read.domain())
+                        read.domain(),
+                        read.object())
                     : read)
         .toList();
   }
@@ -152,8 +195,34 @@ public class TrendingPosts {
             .toList();
   }
 
+  // Mastodon answers at most 40 a request; the next ones come by offset. A short page is the last.
   private Optional<List<TrendingStatusReader.Read>> ask(String server, Signer signer) {
-    URI uri = URI.create("https://" + server + "/api/v1/trends/statuses?limit=" + props.perHost());
+    List<TrendingStatusReader.Read> reads = new ArrayList<>();
+    for (int page = 0; page < props.pages(); page++) {
+      Optional<JsonNode> statuses = askPage(server, signer, page * props.perHost());
+      if (statuses.isEmpty()) {
+        return page == 0 ? Optional.empty() : Optional.of(reads);
+      }
+      for (JsonNode status : statuses.get()) {
+        if (status.isObject()) {
+          reader.read(status, server).ifPresent(reads::add);
+        }
+      }
+      if (statuses.get().size() < props.perHost()) {
+        break;
+      }
+    }
+    return Optional.of(reads);
+  }
+
+  private Optional<JsonNode> askPage(String server, Signer signer, int offset) {
+    URI uri =
+        URI.create(
+            "https://"
+                + server
+                + "/api/v1/trends/statuses?limit="
+                + props.perHost()
+                + (offset == 0 ? "" : "&offset=" + offset));
     FederationHttp.Result result = http.getJson(uri, signer, props.patience());
     if (!(result instanceof FederationHttp.Result.Ok ok)) {
       log.info("federation trends unanswered host={} outcome={}", server, result);
@@ -170,16 +239,7 @@ public class TrendingPosts {
       log.info("federation trends malformed host={}", server);
       return Optional.empty();
     }
-    List<TrendingStatusReader.Read> reads = new ArrayList<>();
-    for (JsonNode status : statuses) {
-      if (status.isObject()) {
-        reader.read(status, server).ifPresent(reads::add);
-      }
-      if (reads.size() == props.perHost()) {
-        break;
-      }
-    }
-    return Optional.of(reads);
+    return Optional.of(statuses);
   }
 
   private boolean waiting(String server) {
@@ -262,7 +322,8 @@ public class TrendingPosts {
       return new TrendingStatusReader.Read(
           first.note().on(List.copyOf(servers), likes, reposts, replies),
           first.actorUri(),
-          first.domain());
+          first.domain(),
+          first.object());
     }
   }
 }

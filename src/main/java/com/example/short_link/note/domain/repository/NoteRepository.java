@@ -7,6 +7,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
@@ -43,6 +44,20 @@ public interface NoteRepository {
 
   Set<Long> visibleTo(Long viewerId, Collection<Long> restrictedIds);
 
+  Set<Long> readersAmong(Long noteId, Collection<Long> userIds);
+
+  List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit);
+
+  List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit);
+
+  List<Long> roomNoteIdsBy(Long authorId, Long roomId, int limit);
+
+  void requestRoomErasure(Long userId, Long roomId, Instant at);
+
+  List<RoomErasure> pendingRoomErasures(int limit);
+
+  void finishRoomErasure(Long userId, Long roomId);
+
   void addRecipients(Long noteId, Collection<Long> userIds);
 
   List<NoteEntity> direct(Long viewerId, int offset, int limit);
@@ -50,6 +65,8 @@ public interface NoteRepository {
   List<NoteEntity> trending(Long viewerId, int offset, int limit);
 
   List<NoteEntity> federated(Long viewerId, int offset, int limit);
+
+  List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
@@ -109,5 +126,5 @@ public interface NoteRepository {
 
   void retag(Long noteId, List<String> tags);
 
-  long countByAuthor(Long userId);
+  long countForFollowersByAuthor(Long userId);
 }

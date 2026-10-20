@@ -113,7 +113,8 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
   }
 
   @Test
-  void replacesTwoBlocksWithSixInOneInsertAndReturnsCommittedIds() throws Exception {
+  void replacesTwoBlocksWithSixRewritingTheTwoInPlaceAndInsertingFourInOneStatement()
+      throws Exception {
     PostFixture fixture = commitPostWithBlocks(List.of("old first", "old second"));
     List<String> contents = paragraphContents("replacement", 6);
     ReplaceBlocksRequest request =
@@ -139,19 +140,17 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
         .doesNotContainNull()
         .doesNotHaveDuplicates();
     assertThat(response).containsExactlyElementsOf(committed);
-    String searchText =
-        jdbc.queryForObject(
-            "SELECT search_text FROM post_search_text WHERE post_id = ?",
-            String.class,
-            fixture.postId());
-    assertThat(searchText).contains(contents).doesNotContain("old first", "old second");
-    for (PostBlockView oldBlock : fixture.blocks()) {
-      assertThat(
-              jdbc.queryForObject(
-                  "SELECT COUNT(*) FROM post_block WHERE id = ?", Long.class, oldBlock.id()))
-          .isZero();
-    }
-    assertOneBlockInsertAfterDelete(captured);
+    assertThat(committed.subList(0, 2))
+        .extracting(PostBlockView::id)
+        .containsExactlyElementsOf(fixture.blocks().stream().map(PostBlockView::id).toList());
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?",
+                Long.class,
+                fixture.postId()))
+        .as("a draft's search text waits for publishing")
+        .isZero();
+    assertOneBlockInsertAndNoDelete(captured);
     contracts.verify(captured);
   }
 
@@ -244,7 +243,7 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
     assertThat(captured.queries()).isNotEmpty();
   }
 
-  private void assertOneBlockInsertAfterDelete(CapturedRequest<?> captured) {
+  private void assertOneBlockInsertAndNoDelete(CapturedRequest<?> captured) {
     List<String> sql = captured.queries().stream().map(QueryRecord::sql).toList();
     List<String> inserts =
         sql.stream()
@@ -256,9 +255,8 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
             .filter(SqlParser::isDeleteQuery)
             .filter(statement -> SqlParser.extractTableNames(statement).contains("post_block"))
             .toList();
-    assertThat(inserts).as("All six blocks must use one post_block INSERT").hasSize(1);
-    assertThat(deletes).as("The previous body must be deleted once").hasSize(1);
-    assertThat(sql.indexOf(deletes.getFirst())).isLessThan(sql.indexOf(inserts.getFirst()));
+    assertThat(inserts).as("The four new blocks use one post_block INSERT").hasSize(1);
+    assertThat(deletes).as("No block is deleted when the body only grows").isEmpty();
   }
 
   private static List<String> paragraphContents(String prefix, int count) {

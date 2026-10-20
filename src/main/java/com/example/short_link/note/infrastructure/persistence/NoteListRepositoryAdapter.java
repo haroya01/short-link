@@ -1,5 +1,6 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteListEntity;
 import com.example.short_link.note.domain.NoteListSummary;
@@ -129,11 +130,10 @@ class NoteListRepositoryAdapter implements NoteListRepository {
                 + " ON m.member_id = n.user_id AND m.list_id = :list"
                 + " WHERE "
                 + NoteRepositoryAdapter.notReply("n")
-                + " AND (n.visibility IN ('PUBLIC', 'UNLISTED')"
-                + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM user_follow f"
-                + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id))"
-                + " OR EXISTS (SELECT 1 FROM note_recipient r"
-                + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
+                + " AND "
+                + NoteAccessSql.readable("n")
+                + " AND "
+                + NoteAccessSql.outsideRooms("n")
                 + NoteRepositoryAdapter.heard("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)

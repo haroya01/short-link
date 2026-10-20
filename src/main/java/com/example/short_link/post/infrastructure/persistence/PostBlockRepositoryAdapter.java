@@ -5,6 +5,7 @@ import com.example.short_link.post.domain.repository.PostBlockRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -53,5 +54,12 @@ class PostBlockRepositoryAdapter implements PostBlockRepository {
   @Override
   public void deleteAllByPostId(Long postId) {
     jpa.deleteAllByPostId(postId);
+  }
+
+  @Override
+  public void deleteAllById(Collection<Long> ids) {
+    if (!ids.isEmpty()) {
+      jpa.deleteAllByIdInBatch(ids);
+    }
   }
 }

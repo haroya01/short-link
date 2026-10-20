@@ -24,9 +24,11 @@ import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -36,7 +38,6 @@ import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -44,6 +45,7 @@ import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -84,6 +86,7 @@ class NoteCommandServiceTest {
   @Mock private NoteImages images;
   @Mock private NoteViews views;
   @Mock private UserModerationGuard moderation;
+  @Mock private NoteRoomReader rooms;
   @Mock private UserBlockChecker blocks;
   @Mock private CollectionConnectionCleaner connections;
   @Mock private SeriesItemCleaner seriesItems;
@@ -100,6 +103,8 @@ class NoteCommandServiceTest {
         people,
         images,
         views,
+        new NoteAccess(notes),
+        rooms,
         moderation,
         blocks,
         connections,
@@ -510,7 +515,7 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void aNoteFromAnotherServerIsLikedRepostedAndAnsweredWithItsServerToldButNotQuotedYet() {
+  void aNoteFromAnotherServerIsLikedRepostedAndAnsweredWithItsServerTold() {
     NoteEntity remote = note(1L, null, "from afar");
     ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
     when(notes.findById(1L)).thenReturn(Optional.of(remote));
@@ -535,11 +540,42 @@ class NoteCommandServiceTest {
     verify(events).publishEvent(new NoteRepostedEvent(77L, 1L, 8L, true));
     verify(events).publishEvent(new NoteUnrepostedEvent(77L, 1L, 8L, true));
     verify(events).publishEvent(new NotePublishedEvent(100L, 8L, true));
-    assertThatThrownBy(() -> service().create(8L, new NoteDraft("hi", null, null, null, 1L)))
+    verify(blocks, never()).isBlocked(any(), any());
+  }
+
+  @Test
+  void aNoteFromAnotherServerIsQuotedWithItsAuthorFromThereAndItsServerTold() {
+    NoteEntity remote = note(1L, null, "from afar");
+    ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
+    when(notes.findById(1L)).thenReturn(Optional.of(remote));
+    NoteAuthor alice =
+        NoteAuthor.remote(42L, "alice@mastodon.social", null, "Alice", "https://m.example/@alice");
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
+    when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of(42L, alice));
+    saving();
+
+    NoteView quoting = service().create(8L, new NoteDraft("look", null, null, null, 1L));
+
+    assertThat(quoting.quotedNote().id()).isEqualTo(1L);
+    assertThat(quoting.quotedNote().author()).isEqualTo(alice);
+    verify(events).publishEvent(new NotePublishedEvent(100L, 8L, true));
+    verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
+    verify(blocks, never()).isBlocked(any(), any());
+  }
+
+  @Test
+  void aNoteFromAnotherServerWhoseAccountIsGoneCannotBeQuoted() {
+    NoteEntity remote = note(1L, null, "from afar");
+    ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
+    when(notes.findById(1L)).thenReturn(Optional.of(remote));
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
+    when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of());
+
+    assertThatThrownBy(() -> service().create(8L, new NoteDraft("look", null, null, null, 1L)))
         .isInstanceOfSatisfying(
             NoteException.class,
-            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED));
-    verify(blocks, never()).isBlocked(any(), any());
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
+    verify(notes, never()).save(any());
   }
 
   @Test
@@ -786,7 +822,7 @@ class NoteCommandServiceTest {
     NoteAuthor other = new NoteAuthor(8L, "other", null);
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
-    when(notes.visibleTo(8L, List.of(100L))).thenReturn(Set.of());
+    when(notes.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
 
     service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
 
@@ -943,7 +979,7 @@ class NoteCommandServiceTest {
 
     service().delete(7L, 6L);
     verify(notes).delete(members);
-    verify(events).publishEvent(new NoteDeletedEvent(6L, 8L, List.of(), 5L, List.of()));
+    verify(events).publishEvent(new NoteDeletedEvent(6L, 8L, List.of(), 5L, List.of(), null));
   }
 
   @Test
@@ -1029,7 +1065,7 @@ class NoteCommandServiceTest {
     service().delete(7L, 2L);
 
     verify(events).publishEvent(new NoteEditedEvent(2L, 7L, true));
-    verify(events).publishEvent(new NoteDeletedEvent(2L, 7L, List.of(), 50L, List.of()));
+    verify(events).publishEvent(new NoteDeletedEvent(2L, 7L, List.of(), 50L, List.of(), null));
   }
 
   @Test

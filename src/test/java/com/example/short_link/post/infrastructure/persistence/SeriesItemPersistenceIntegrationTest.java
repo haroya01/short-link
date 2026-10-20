@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.groups.Tuple.tuple;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteSeries;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.post.domain.FollowingFeedRef;

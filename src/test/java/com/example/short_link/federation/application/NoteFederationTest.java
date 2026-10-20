@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
@@ -186,7 +187,7 @@ class NoteFederationTest {
   private static final LocalActor WRITER =
       new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB");
 
-  private static NoteSnapshot reply(NoteSnapshotReader.Visibility visibility) {
+  private static NoteSnapshot reply(NoteVisibility visibility) {
     return new NoteSnapshot(
         43L,
         7L,
@@ -206,7 +207,7 @@ class NoteFederationTest {
   @Test
   void aReplyToANoteElsewhereReachesItsAuthorsServerEvenWithoutFollowers() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
     when(followers.deliveryInboxes(7L)).thenReturn(List.of());
 
@@ -229,7 +230,7 @@ class NoteFederationTest {
   @Test
   void aDirectReplyElsewhereGoesToThatAuthorAloneAndNothingLeavesWithoutAnActor() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER), Optional.empty());
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.DIRECT)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.DIRECT)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
 
     service().createdElsewhere(43L, 7L);
@@ -251,7 +252,7 @@ class NoteFederationTest {
   @Test
   void anEditedReplyElsewhereReachesThatServerAsWellAsTheFollowers() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
     when(followers.deliveryInboxes(7L))
         .thenReturn(List.of("https://a.example/inbox", "https://m.example/inbox"));
@@ -275,7 +276,7 @@ class NoteFederationTest {
   @Test
   void anEditThatOwesNoOneElsewhereGoesToTheFollowersAloneOrNowhere() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteVisibility.PUBLIC)));
     when(remoteParents.of(41L)).thenReturn(Optional.empty());
     when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"), List.of());
 
@@ -290,6 +291,95 @@ class NoteFederationTest {
             org.mockito.ArgumentMatchers.eq(List.of("https://a.example/inbox")));
   }
 
+  private static NoteSnapshot quotingAlice() {
+    return new NoteSnapshot(
+        44L,
+        7L,
+        "yuki",
+        "look",
+        Instant.parse("2026-10-06T00:00:00Z"),
+        null,
+        null,
+        null,
+        List.of(),
+        new NoteSnapshotReader.QuotedNote(
+            41L, null, ALICE_NOTE.uri(), "https://m.example/@alice/9"),
+        null,
+        false,
+        NoteVisibility.PUBLIC);
+  }
+
+  @Test
+  void aQuoteOfANoteElsewhereReachesItsServerCopyingItsAuthorWithoutNamingThem() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(quotingAlice()));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
+
+    service().createdElsewhere(44L, 7L);
+    service().edited(44L, 7L, true);
+    service().deleted(44L, 7L, null, List.of(), 41L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries, org.mockito.Mockito.times(3))
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://a.example/inbox", "https://m.example/inbox")));
+    var create = JSON.readTree(body.getAllValues().get(0));
+    assertThat(create.path("type").asString()).isEqualTo("Create");
+    assertThat(create.path("object").path("quoteUri").asString()).isEqualTo(ALICE_NOTE.uri());
+    assertThat(create.path("object").path("_misskey_quote").asString()).isEqualTo(ALICE_NOTE.uri());
+    assertThat(create.path("object").path("content").asString())
+        .contains("RE: <a href=\"https://m.example/@alice/9\">");
+    assertThat(create.path("cc").toString()).contains("https://m.example/users/alice");
+    assertThat(create.path("object").path("cc").toString())
+        .contains("https://m.example/users/alice");
+    assertThat(create.path("object").path("tag").size()).isZero();
+    assertThat(create.path("object").path("inReplyTo").isNull()).isTrue();
+    assertThat(JSON.readTree(body.getAllValues().get(1)).path("type").asString())
+        .isEqualTo("Update");
+    assertThat(JSON.readTree(body.getAllValues().get(2)).path("type").asString())
+        .isEqualTo("Delete");
+  }
+
+  @Test
+  void aQuoteOfAMembersNoteTakesTheUsualPathAndNamesNoServer() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    NoteSnapshot quotingMio =
+        new NoteSnapshot(
+            44L,
+            7L,
+            "yuki",
+            "look",
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            null,
+            null,
+            List.of(),
+            new NoteSnapshotReader.QuotedNote(9L, "mio"),
+            null,
+            false,
+            NoteVisibility.PUBLIC);
+    when(notes.find(44L)).thenReturn(Optional.of(quotingMio));
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
+
+    service().edited(44L, 7L, true);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://a.example/inbox")));
+    verify(remoteParents, never()).of(9L);
+    assertThat(JSON.readTree(body.getValue()).path("object").path("quoteUri").asString())
+        .isEqualTo("https://kurl.me/ap/notes/9");
+  }
+
   @Test
   void aDeletedReplyElsewhereTellsThatServerAndTheOnesItNamed() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
@@ -297,7 +387,7 @@ class NoteFederationTest {
     when(finder.find("bob@b.example")).thenReturn(Optional.empty());
     when(followers.deliveryInboxes(7L)).thenReturn(List.of());
 
-    service().deleted(43L, 7L, 41L, List.of("bob@b.example"));
+    service().deleted(43L, 7L, 41L, List.of("bob@b.example"), null);
 
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
     verify(deliveries)
@@ -314,7 +404,7 @@ class NoteFederationTest {
     when(notes.find(42L)).thenReturn(Optional.of(NOTE));
     federating();
 
-    service().deleted(42L, 7L, null, List.of());
+    service().deleted(42L, 7L, null, List.of(), null);
     service().edited(42L, 7L, false);
 
     verify(localActors, never()).byUserId(any());
@@ -434,7 +524,7 @@ class NoteFederationTest {
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 
-  private static NoteSnapshot naming(NoteSnapshotReader.Visibility visibility) {
+  private static NoteSnapshot naming(NoteVisibility visibility) {
     return new NoteSnapshot(
         44L,
         7L,
@@ -454,8 +544,7 @@ class NoteFederationTest {
   @Test
   void aNoteNamingSomeoneElsewhereMentionsThemAndReachesTheirServer() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
-    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
     when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
@@ -484,8 +573,7 @@ class NoteFederationTest {
   @Test
   void aDirectNoteNamingSomeoneElsewhereGoesToThemAlone() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.DIRECT)));
-    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.DIRECT)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
 
@@ -506,8 +594,7 @@ class NoteFederationTest {
   @Test
   void aNoteWhoseHandlesResolveToNoOneTakesTheUsualPath() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
-    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find(any())).thenReturn(Optional.empty());
     federating();
 
@@ -527,8 +614,7 @@ class NoteFederationTest {
     var suspended = bob();
     org.springframework.test.util.ReflectionTestUtils.setField(suspended, "serverBlock", "SUSPEND");
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
-    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
-    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(suspended));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
     federating();

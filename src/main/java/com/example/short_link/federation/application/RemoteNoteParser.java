@@ -3,6 +3,7 @@ package com.example.short_link.federation.application;
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Kind;
 import com.example.short_link.common.note.RemoteNotes.Shape;
@@ -69,7 +70,7 @@ public class RemoteNoteParser {
       String body,
       String contentWarning,
       boolean sensitive,
-      String visibility,
+      NoteVisibility visibility,
       Instant publishedAt,
       Optional<Long> inReplyToLocalId,
       String inReplyToUri,
@@ -280,17 +281,12 @@ public class RemoteNoteParser {
     return false;
   }
 
-  static String visibility(Set<String> to, Set<String> cc) {
-    if (to.stream().anyMatch(PUBLIC::contains)) {
-      return "public";
-    }
-    if (cc.stream().anyMatch(PUBLIC::contains)) {
-      return "unlisted";
-    }
-    boolean followers =
+  static NoteVisibility visibility(Set<String> to, Set<String> cc) {
+    return NoteVisibility.addressed(
+        to.stream().anyMatch(PUBLIC::contains),
+        cc.stream().anyMatch(PUBLIC::contains),
         to.stream().anyMatch(address -> address.endsWith("/followers"))
-            || cc.stream().anyMatch(address -> address.endsWith("/followers"));
-    return followers ? "private" : "direct";
+            || cc.stream().anyMatch(address -> address.endsWith("/followers")));
   }
 
   String body(JsonNode object) {

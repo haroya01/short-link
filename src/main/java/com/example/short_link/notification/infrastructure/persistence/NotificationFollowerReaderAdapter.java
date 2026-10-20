@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
 import jakarta.persistence.EntityManager;
@@ -102,7 +103,8 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     List<?> rows =
         em.createNativeQuery(
                 "SELECT DISTINCT n.user_id FROM note n WHERE n.id IN (:ids)"
-                    + " AND n.user_id IS NOT NULL AND n.visibility IN ('PUBLIC', 'UNLISTED')")
+                    + " AND n.user_id IS NOT NULL AND "
+                    + NoteAccessSql.shareable("n"))
             .setParameter("ids", noteIds)
             .getResultList();
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();

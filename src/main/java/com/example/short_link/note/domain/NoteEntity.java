@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.common.note.NoteVisibility;
 import jakarta.persistence.Column;
 import jakarta.persistence.ColumnResult;
 import jakarta.persistence.Entity;
@@ -95,11 +96,14 @@ public class NoteEntity extends BaseCreatedEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
-  private NoteVisibility visibility = NoteVisibility.PUBLIC;
+  private NoteVisibility visibility = NoteVisibility.DEFAULT;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "reply_policy", nullable = false, length = 16)
   private NoteReplyPolicy replyPolicy = NoteReplyPolicy.EVERYONE;
+
+  @Column(name = "room_id")
+  private Long roomId;
 
   @Column(name = "reply_hidden_at")
   private Instant replyHiddenAt;
@@ -168,6 +172,12 @@ public class NoteEntity extends BaseCreatedEntity {
   public void answer(NoteEntity parent) {
     this.conversationId = parent.conversation();
     this.replyPolicy = parent.replyPolicy;
+    this.roomId = parent.roomId;
+  }
+
+  public void postIn(Long roomId) {
+    this.roomId = roomId;
+    this.visibility = NoteVisibility.IN_ROOM;
   }
 
   public void limitReplies(NoteReplyPolicy policy) {

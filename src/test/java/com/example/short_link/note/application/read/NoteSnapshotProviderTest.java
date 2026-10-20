@@ -1,6 +1,8 @@
 package com.example.short_link.note.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
@@ -86,6 +88,34 @@ class NoteSnapshotProviderTest {
   }
 
   @Test
+  void aQuotedNoteFromElsewhereCarriesItsIdAndPageThereWithoutAMembersLookup() {
+    NoteEntity quoting = note(null);
+    ReflectionTestUtils.setField(quoting, "quotedNoteId", 50L);
+    NoteEntity quoted = new NoteEntity(null, "from afar", null, null);
+    ReflectionTestUtils.setField(quoted, "id", 50L);
+    ReflectionTestUtils.setField(quoted, "remoteActorId", 9L);
+    ReflectionTestUtils.setField(quoted, "uri", "https://m.example/users/alice/statuses/1");
+    ReflectionTestUtils.setField(quoted, "remoteUrl", "https://m.example/@alice/1");
+    when(notes.findById(42L)).thenReturn(Optional.of(quoting));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
+    when(media.findByNoteIds(List.of(42L))).thenReturn(List.of());
+    when(notes.findById(50L)).thenReturn(Optional.of(quoted));
+
+    QuotedNote snapshot = provider.find(42L).orElseThrow().quotedNote();
+
+    assertThat(snapshot)
+        .isEqualTo(
+            new QuotedNote(
+                50L,
+                null,
+                "https://m.example/users/alice/statuses/1",
+                "https://m.example/@alice/1"));
+    assertThat(snapshot.remote()).isTrue();
+    verify(people).activeAuthors(Set.of(7L));
+    verifyNoMoreInteractions(people);
+  }
+
+  @Test
   void anUnpublishedQuoteIsDroppedAndAGoneAuthorOrNoteResolvesToNothing() {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
@@ -99,8 +129,8 @@ class NoteSnapshotProviderTest {
     when(notes.findById(1L)).thenReturn(Optional.empty());
     assertThat(provider.find(1L)).isEmpty();
 
-    when(notes.countByAuthor(7L)).thenReturn(2L);
-    assertThat(provider.countByAuthor(7L)).isEqualTo(2L);
+    when(notes.countForFollowersByAuthor(7L)).thenReturn(2L);
+    assertThat(provider.countForFollowersByAuthor(7L)).isEqualTo(2L);
   }
 
   @Test

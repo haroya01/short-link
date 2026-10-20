@@ -48,9 +48,10 @@ services:
     image: ghcr.io/haroya01/short-link:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
-    # 단일 박스에서 MySQL 과 동거 — 상한이 없으면 ENTRYPOINT 의 MaxRAMPercentage=75 가
-    # 호스트 전체 RAM 의 75% 를 힙 상한으로 계산해, 힙이 자라며 mysqld 를 스왑으로 밀어낸다.
-    # 1100m 이면 힙 상한 = 그 75% 인 825m — mysqld 상주분이 RAM 에 남는다.
+    # 단일 박스에서 MySQL 과 동거 — 상한이 없으면 ENTRYPOINT 의 MaxRAMPercentage 가
+    # 호스트 전체 RAM 을 기준으로 힙 상한을 잡아, 힙이 자라며 mysqld 를 스왑으로 밀어낸다.
+    # 1100m 이면 힙 상한 = 그 55% 인 605m. 나머지 ~500m 는 힙 밖(메타스페이스·코드 캐시·
+    # 스레드 스택, 실측 ~410m)이 쓴다 — 힙이 상한까지 자라도 1100m 를 넘지 않는다.
     mem_limit: 1100m
     depends_on:
       mysql:
@@ -120,6 +121,14 @@ services:
       FEDERATION_DIRECTORY_CONSENT: ${FEDERATION_DIRECTORY_CONSENT:-P3D}
       FEDERATION_TRENDS_ENABLED: ${FEDERATION_TRENDS_ENABLED:-false}
       FEDERATION_TRENDS_HOSTS: ${FEDERATION_TRENDS_HOSTS:-mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
+      FEDERATION_TRENDS_PER_HOST: ${FEDERATION_TRENDS_PER_HOST:-40}
+      FEDERATION_TRENDS_PAGES: ${FEDERATION_TRENDS_PAGES:-2}
+      FEDERATION_LATEST_ENABLED: ${FEDERATION_LATEST_ENABLED:-true}
+      FEDERATION_LATEST_HOSTS: ${FEDERATION_LATEST_HOSTS:-mstdn.jp,qdon.space,planet.moe,social.silicon.moe}
+      FEDERATION_LATEST_PER_HOST: ${FEDERATION_LATEST_PER_HOST:-40}
+      FEDERATION_LATEST_MAX_ITEMS: ${FEDERATION_LATEST_MAX_ITEMS:-600}
+      FEDERATION_LATEST_FRESH_FOR: ${FEDERATION_LATEST_FRESH_FOR:-5m}
+      FEDERATION_LATEST_PATIENCE: ${FEDERATION_LATEST_PATIENCE:-3s}
     networks: [internal]
 
   nginx:

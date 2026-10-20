@@ -72,10 +72,9 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
                 .asText())
         .contains("Clear responsibilities", "explicit rules");
     assertThat(count("post_block", "post_id = ?", postId)).isEqualTo(2);
-    assertThat(
-            jdbc.queryForObject(
-                "SELECT search_text FROM post_search_text WHERE post_id = ?", String.class, postId))
-        .contains("Readable architecture", "explicit rules");
+    assertThat(count("post_search_text", "post_id = ?", postId))
+        .as("a draft's search text waits for publishing")
+        .isZero();
     String token =
         step(
                 "author-preview-token-issue",

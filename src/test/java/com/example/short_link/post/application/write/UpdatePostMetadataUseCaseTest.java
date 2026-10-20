@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -583,5 +584,40 @@ class UpdatePostMetadataUseCaseTest {
 
     verify(revisionCapture, never()).capture(any(PostEntity.class));
     verify(revisionCapture, never()).capture(any(PostEntity.class), any());
+  }
+
+  private UpdatePostMetadataCommand autosave(String title, List<String> tags) {
+    return new UpdatePostMetadataCommand(
+        7L, 42L, title, null, "요약", "", null, false, null, tags, null, false);
+  }
+
+  @Test
+  void anAutosaveThatChangesNoSearchFieldLeavesTheSearchTextAlone() {
+    PostEntity post = ownedPost();
+    post.updateExcerpt("요약");
+    post.updateTags(List.of("java"));
+    post.publish();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(autosave(post.getTitle(), List.of("java")));
+
+    verify(postSearchTextRepository, never()).upsert(any(), any());
+    verify(postBlockRepository, never()).findAllByPostIdOrderByBlockOrderAsc(any());
+
+    useCase.execute(autosave("Retitled", List.of("java")));
+    verify(postSearchTextRepository).upsert(any(), contains("Retitled"));
+  }
+
+  @Test
+  void aDraftsNewTitleWaitsForPublishingToReachTheSearchText() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(autosave("Retitled", List.of("java")));
+
+    assertThat(post.getTitle()).isEqualTo("Retitled");
+    verify(postSearchTextRepository, never()).upsert(any(), any());
   }
 }

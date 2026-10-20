@@ -1188,6 +1188,173 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMemberRepostsTakesBackAndQuotesANoteFromElsewhere() throws Exception {
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    String status = alice + "/statuses/77";
+    String page = remote + "/@alice/77";
+    jdbc.update(
+        "INSERT INTO note (remote_actor_id, uri, remote_url, body, created_at, visibility)"
+            + " VALUES (?, ?, ?, 'worth sharing', NOW(6), 'PUBLIC')",
+        aliceId,
+        status,
+        page);
+    Long noteId = jdbc.queryForObject("SELECT id FROM note WHERE uri = ?", Long.class, status);
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        stranger.getId(),
+        owner.getId());
+    String inbox = remote + "/inbox";
+
+    var reposted =
+        body(
+            call(
+                "federation-remote-share-repost",
+                "PUT",
+                "/api/v1/notes/" + noteId + "/repost",
+                null,
+                token,
+                200));
+    assertThat(reposted.path("reposted").asBoolean()).isTrue();
+    assertThat(reposted.path("repostCount").asLong()).isEqualTo(1);
+    var first =
+        body(call(
+                "federation-remote-share-following",
+                "GET",
+                "/api/v1/notes/following",
+                null,
+                strangerToken,
+                200))
+            .path("items")
+            .get(0);
+    assertThat(first.path("id").asLong()).isEqualTo(noteId);
+    assertThat(first.path("repostedBy").path("username").asString()).isEqualTo(owner.getUsername());
+    assertThat(first.path("author").path("remoteId").asLong()).isEqualTo(aliceId);
+    assertThat(first.path("repostCount").asLong()).isEqualTo(1);
+    assertThat(
+            body(call(
+                    "federation-remote-share-profile-reposts",
+                    "GET",
+                    "/api/v1/public/profiles/" + owner.getUsername() + "/reposts",
+                    null,
+                    null,
+                    200))
+                .path("items")
+                .get(0)
+                .path("id")
+                .asLong())
+        .isEqualTo(noteId);
+
+    var undone =
+        body(
+            call(
+                "federation-remote-share-unrepost",
+                "DELETE",
+                "/api/v1/notes/" + noteId + "/repost",
+                null,
+                token,
+                200));
+    assertThat(undone.path("reposted").asBoolean()).isFalse();
+    assertThat(undone.path("repostCount").asLong()).isZero();
+    List<String> shared =
+        jdbc.queryForList(
+            "SELECT body FROM federation_delivery WHERE signer_user_id = ? AND inbox = ?"
+                + " ORDER BY id",
+            String.class,
+            owner.getId(),
+            inbox);
+    assertThat(shared).hasSize(2);
+    var announce = json.readTree(shared.get(0));
+    assertThat(announce.path("type").asString()).isEqualTo("Announce");
+    assertThat(announce.path("object").asString()).isEqualTo(status);
+    assertThat(announce.path("cc").toString()).contains(alice);
+    var undo = json.readTree(shared.get(1));
+    assertThat(undo.path("type").asString()).isEqualTo("Undo");
+    assertThat(undo.path("object").path("id").asString()).isEqualTo(announce.path("id").asString());
+    assertThat(undo.path("object").path("object").asString()).isEqualTo(status);
+    assertThat(
+            body(
+                    call(
+                        "federation-remote-share-following-undone",
+                        "GET",
+                        "/api/v1/notes/following",
+                        null,
+                        strangerToken,
+                        200))
+                .path("items")
+                .findValues("id")
+                .stream()
+                .map(JsonNode::asLong)
+                .toList())
+        .doesNotContain(noteId);
+
+    var quote =
+        body(
+            call(
+                "federation-remote-share-quote",
+                "POST",
+                "/api/v1/notes",
+                Map.of("body", "this, from elsewhere", "quotedNoteId", noteId),
+                token,
+                201));
+    long quoteId = quote.path("id").asLong();
+    assertThat(quote.path("quotedNote").path("id").asLong()).isEqualTo(noteId);
+    assertThat(quote.path("quotedNote").path("author").path("remoteId").asLong())
+        .isEqualTo(aliceId);
+    var created =
+        json.readTree(
+            jdbc.queryForObject(
+                "SELECT body FROM federation_delivery WHERE signer_user_id = ? AND inbox = ?"
+                    + " AND activity_id = ?",
+                String.class,
+                owner.getId(),
+                inbox,
+                urls.note(quoteId) + "/activity"));
+    assertThat(created.path("object").path("quoteUri").asString()).isEqualTo(status);
+    assertThat(created.path("object").path("_misskey_quote").asString()).isEqualTo(status);
+    assertThat(created.path("object").path("content").asString())
+        .contains("RE: <a href=\"" + page + "\">");
+    assertThat(created.path("cc").toString()).contains(alice);
+    assertThat(created.path("object").path("tag").size()).isZero();
+    assertThat(
+            body(call(
+                    "federation-remote-share-quotes",
+                    "GET",
+                    "/api/v1/public/notes/" + noteId + "/quotes",
+                    null,
+                    null,
+                    200))
+                .path("items")
+                .get(0)
+                .path("id")
+                .asLong())
+        .isEqualTo(quoteId);
+
+    call(
+        "federation-remote-share-quote-delete",
+        "DELETE",
+        "/api/v1/notes/" + quoteId,
+        null,
+        token,
+        204);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT JSON_UNQUOTE(JSON_EXTRACT(body, '$.type')) FROM federation_delivery"
+                    + " WHERE signer_user_id = ? AND inbox = ? ORDER BY id",
+                String.class,
+                owner.getId(),
+                inbox))
+        .containsExactly("Announce", "Undo", "Create", "Delete");
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE actor_user_id = ?"
+                    + " AND type IN ('NOTE_REPOST', 'NOTE_QUOTE')",
+                owner.getId()))
+        .isZero();
+  }
+
+  @Test
   void anAdminSubscribesToARelayThatAcceptsAndAnnouncesUntilUnsubscribed() throws Exception {
     String admin = jwt.createAccessToken(createUser().getId(), "ADMIN");
     String relay = remote + "/tag/dev";

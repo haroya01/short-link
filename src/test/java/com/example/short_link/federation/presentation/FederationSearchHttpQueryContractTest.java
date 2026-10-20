@@ -3,6 +3,7 @@ package com.example.short_link.federation.presentation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
 
@@ -203,13 +205,14 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
     String dave = trendingStatus(host("td"), "dave", 0);
     String erin = trendingStatus(host("te"), "erin", 10);
     when(http.getJson(
-            eq(URI.create("https://mastodon.social/api/v1/trends/statuses?limit=20")),
+            eq(URI.create("https://mastodon.social/api/v1/trends/statuses?limit=40")),
             any(),
             any()))
         .thenReturn(ok("[" + String.join(",", alice, bob, carol, dave) + "]"));
     when(http.getJson(
-            eq(URI.create("https://mstdn.jp/api/v1/trends/statuses?limit=20")), any(), any()))
+            eq(URI.create("https://mstdn.jp/api/v1/trends/statuses?limit=40")), any(), any()))
         .thenReturn(ok("[" + String.join(",", alice, erin) + "]"));
+    when(http.get(any(), any())).thenReturn(new FederationHttp.Result.Failed(404, "gone"));
     long bobHere = seed("bob", host("tb"));
     jdbc.update(
         "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
@@ -284,6 +287,148 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 200));
     assertThat(trendingUris(mine))
         .containsExactly(post.formatted(host("ta"), "alice"), post.formatted(host("te"), "erin"));
+    assertThat(mine.path("next").asString()).isEqualTo("r");
+  }
+
+  private String person(String host, String user, String publicKey) {
+    String actor = "https://" + host + "/users/" + user;
+    return """
+        {"@context":["https://www.w3.org/ns/activitystreams","https://w3id.org/security/v1"],
+         "id":"%1$s","type":"Person","preferredUsername":"%2$s","inbox":"%1$s/inbox",
+         "endpoints":{"sharedInbox":"https://%3$s/inbox"},"url":"https://%3$s/@%2$s",
+         "discoverable":true,
+         "publicKey":{"id":"%1$s#main-key","owner":"%1$s","publicKeyPem":%4$s}}"""
+        .formatted(actor, user, host, json.writeValueAsString(publicKey));
+  }
+
+  @Test
+  void aMemberBringsATrendingPostOverFromMemoryRepostsItAndScrollsOnToKeptNotes() throws Exception {
+    String alice = trendingStatus(host("ra"), "alice", 3);
+    String status = "https://" + host("ra") + "/users/alice/statuses/1";
+    String actor = "https://" + host("ra") + "/users/alice";
+    when(http.getJson(
+            eq(URI.create("https://mastodon.social/api/v1/trends/statuses?limit=40")),
+            any(),
+            any()))
+        .thenReturn(ok("[" + alice + "]"));
+    when(http.getJson(
+            eq(URI.create("https://mstdn.jp/api/v1/trends/statuses?limit=40")), any(), any()))
+        .thenReturn(ok("[]"));
+    when(http.get(eq(URI.create(actor)), any()))
+        .thenReturn(ok(person(host("ra"), "alice", KEYS.publicKey())));
+    long kept = seed(tag + "k", host("rk"));
+    jdbc.update(
+        "INSERT INTO note (remote_actor_id, uri, body, created_at) VALUES (?, ?, 'kept here', NOW(6))",
+        kept,
+        "https://" + host("rk") + "/notes/" + tag);
+    Long keptId =
+        jdbc.queryForObject(
+            "SELECT id FROM note WHERE uri = ?",
+            Long.class,
+            "https://" + host("rk") + "/notes/" + tag);
+    captureBackgroundWork("federation-trending-pool-refresh", trending::refresh);
+
+    var first =
+        body(
+            call(
+                "federation-trending-pool-member",
+                "GET",
+                "/api/v1/federation/trending?limit=20",
+                null,
+                token,
+                200));
+    assertThat(trendingUris(first)).containsExactly(status);
+    assertThat(first.path("next").asString()).isEqualTo("r");
+    var onward =
+        body(
+            call(
+                "federation-trending-kept",
+                "GET",
+                "/api/v1/federation/trending?limit=20&cursor=r",
+                null,
+                token,
+                200));
+    assertThat(onward.path("items").findValues("id").stream().map(JsonNode::asLong).toList())
+        .contains(keptId);
+
+    var resolved =
+        body(
+            call(
+                "federation-trending-resolve",
+                "GET",
+                "/api/v1/federation/resolve?q=" + query(status),
+                null,
+                token,
+                200));
+    long noteId = resolved.path("note").path("id").asLong();
+    assertThat(resolved.path("note").path("body").asString()).isEqualTo("alice says hi");
+    verify(http, never()).get(eq(URI.create(status)), any());
+
+    call(
+        "federation-trending-repost",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/repost",
+        null,
+        token,
+        200);
+    call(
+        "federation-trending-unrepost",
+        "DELETE",
+        "/api/v1/notes/" + noteId + "/repost",
+        null,
+        token,
+        200);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT JSON_UNQUOTE(JSON_EXTRACT(body, '$.type')) FROM federation_delivery"
+                    + " WHERE signer_user_id = ? AND inbox = ? ORDER BY id",
+                String.class,
+                owner.getId(),
+                "https://" + host("ra") + "/inbox"))
+        .containsExactly("Announce", "Undo");
+  }
+
+  @Test
+  void anyoneReadsTheLatestPostsOfTheChosenServersAndAMemberBringsOneOverFromMemory()
+      throws Exception {
+    ObjectNode fresh = (ObjectNode) json.readTree(trendingStatus("mstdn.jp", "yui" + tag, 0));
+    fresh.put("id", "101");
+    ObjectNode warned = (ObjectNode) json.readTree(trendingStatus("mstdn.jp", "rin" + tag, 0));
+    warned.put("id", "100");
+    warned.put("spoiler_text", "ネタバレ");
+    when(http.getJson(
+            eq(URI.create("https://mstdn.jp/api/v1/timelines/public?local=true&limit=40")),
+            any(),
+            any()))
+        .thenReturn(
+            ok("[" + json.writeValueAsString(fresh) + "," + json.writeValueAsString(warned) + "]"));
+    String status = "https://mstdn.jp/users/yui" + tag + "/statuses/1";
+    when(http.get(eq(URI.create("https://mstdn.jp/users/yui" + tag)), any()))
+        .thenReturn(ok(person("mstdn.jp", "yui" + tag, KEYS.publicKey())));
+
+    var latest =
+        body(
+            call(
+                "federation-latest-first",
+                "GET",
+                "/api/v1/federation/latest?limit=20",
+                null,
+                null,
+                200));
+    assertThat(trendingUris(latest)).containsExactly(status);
+    assertThat(latest.path("next").isNull()).isTrue();
+
+    var resolved =
+        body(
+            call(
+                "federation-latest-resolve",
+                "GET",
+                "/api/v1/federation/resolve?q=" + query(status),
+                null,
+                token,
+                200));
+    assertThat(resolved.path("note").path("id").asLong()).isPositive();
+    verify(http, never()).get(eq(URI.create(status)), any());
   }
 
   @Test

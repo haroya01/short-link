@@ -14,9 +14,12 @@ import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NotePolls;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
@@ -28,7 +31,6 @@ import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -36,6 +38,7 @@ import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -71,6 +74,8 @@ public class NoteCommandService {
   private final NotePeopleReader people;
   private final NoteImages images;
   private final NoteViews views;
+  private final NoteAccess access;
+  private final NoteRoomReader rooms;
   private final UserModerationGuard moderation;
   private final UserBlockChecker blocks;
   private final CollectionConnectionCleaner connections;
@@ -89,6 +94,8 @@ public class NoteCommandService {
       NotePeopleReader people,
       NoteImages images,
       NoteViews views,
+      NoteAccess access,
+      NoteRoomReader rooms,
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
@@ -104,6 +111,8 @@ public class NoteCommandService {
         people,
         images,
         views,
+        access,
+        rooms,
         moderation,
         blocks,
         connections,
@@ -122,6 +131,8 @@ public class NoteCommandService {
       NotePeopleReader people,
       NoteImages images,
       NoteViews views,
+      NoteAccess access,
+      NoteRoomReader rooms,
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
@@ -137,6 +148,8 @@ public class NoteCommandService {
     this.people = people;
     this.images = images;
     this.views = views;
+    this.access = access;
+    this.rooms = rooms;
     this.moderation = moderation;
     this.blocks = blocks;
     this.connections = connections;
@@ -152,11 +165,13 @@ public class NoteCommandService {
       NoteVisibility requested,
       NoteEntity parent,
       NoteEntity quotedNote,
+      NoteAuthor quotedAuthor,
       QuotedPost quoted,
       List<String> handles,
       Map<Long, NoteAuthor> authors,
       String language,
-      NoteReplyPolicy replyPolicy) {}
+      NoteReplyPolicy replyPolicy,
+      Long roomId) {}
 
   @Transactional(readOnly = true)
   public void validate(Long userId, NoteDraft draft) {
@@ -206,7 +221,6 @@ public class NoteCommandService {
                       new NoteException(
                           NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
       requireReadable(userId, quotedNote);
-      requireLocal(quotedNote);
       if (!quotedNote.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
@@ -223,7 +237,7 @@ public class NoteCommandService {
         attached.stream().map(image -> images.verify(userId, image)).toList();
 
     Set<Long> authorIds = new HashSet<>(Set.of(userId));
-    if (quotedNote != null) {
+    if (quotedNote != null && !quotedNote.isRemote()) {
       authorIds.add(quotedNote.getUserId());
     }
     List<String> handles = Mentions.of(body);
@@ -231,12 +245,22 @@ public class NoteCommandService {
         handles.isEmpty()
             ? people.activeAuthors(authorIds)
             : people.activeAuthors(authorIds, handles);
-    if (quotedNote != null && !authors.containsKey(quotedNote.getUserId())) {
-      throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
+    NoteAuthor quotedAuthor = null;
+    if (quotedNote != null) {
+      quotedAuthor =
+          quotedNote.isRemote()
+              ? people
+                  .remoteAuthors(Set.of(quotedNote.getRemoteActorId()), userId)
+                  .get(quotedNote.getRemoteActorId())
+              : authors.get(quotedNote.getUserId());
+      if (quotedAuthor == null) {
+        throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
+      }
     }
     if (parent != null) {
       requireMayAnswer(userId, parent, authors.get(userId));
     }
+    Long roomId = room(userId, draft.roomId(), requested, parent);
 
     return new Checked(
         body,
@@ -245,11 +269,28 @@ public class NoteCommandService {
         requested,
         parent,
         quotedNote,
+        quotedAuthor,
         quoted,
         handles,
         authors,
         language(draft.language()),
-        replyPolicy(draft.replyPolicy()));
+        replyPolicy(draft.replyPolicy()),
+        roomId);
+  }
+
+  // A reply stays in its parent's room; a room note is posted by a member and is a room note only.
+  private Long room(Long userId, Long asked, NoteVisibility requested, NoteEntity parent) {
+    Long roomId = parent != null ? parent.getRoomId() : asked;
+    if (asked != null && !asked.equals(roomId)) {
+      throw new NoteException(NoteErrorCode.NOTE_ROOM_MISMATCH);
+    }
+    if (requested != null && requested.inRoom() != (roomId != null)) {
+      throw new NoteException(NoteErrorCode.NOTE_VISIBILITY_INVALID, requested.apiName());
+    }
+    if (roomId != null && !rooms.isMember(roomId, userId)) {
+      throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
+    }
+    return roomId;
   }
 
   private static NoteReplyPolicy replyPolicy(String raw) {
@@ -332,7 +373,10 @@ public class NoteCommandService {
     fresh.showTo(
         requested != null
             ? requested
-            : parent != null ? parent.getVisibility() : NoteVisibility.PUBLIC);
+            : parent != null ? parent.getVisibility() : NoteVisibility.DEFAULT);
+    if (checked.roomId() != null) {
+      fresh.postIn(checked.roomId());
+    }
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     if (pollOptions != null) {
       fresh.attachPoll(
@@ -363,29 +407,29 @@ public class NoteCommandService {
         new NotePublishedEvent(
             note.getId(),
             userId,
-            (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
+            (parent != null && parent.isRemote())
+                || (quotedNote != null && quotedNote.isRemote())
+                || !Mentions.remote(body).isEmpty()));
     List<NoteAuthor> mentioned = members(authors, handles);
-    boolean restricted = note.getVisibility().restricted();
-    if (restricted) {
+    if (note.getVisibility().namesReaders()) {
       Set<Long> recipients = new LinkedHashSet<>(recipients(mentioned, userId));
       if (parent != null && parent.getUserId() != null && !parent.getUserId().equals(userId)) {
         recipients.add(parent.getUserId());
       }
       notes.addRecipients(note.getId(), recipients);
     }
-    if (parent != null) {
+    Set<Long> readers = unnamedReaders(note, mentioned, parent);
+    if (parent != null && (readers == null || readers.contains(parent.getUserId()))) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
     }
-    if (note.getVisibility() != NoteVisibility.DIRECT
+    if (note.getVisibility().followersRead()
         && (parent == null || userId.equals(parent.getUserId()))) {
       events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
     }
     boolean quoteSeen =
         quotedNote != null
-            && (!restricted
-                || notes
-                    .visibleTo(quotedNote.getUserId(), List.of(note.getId()))
-                    .contains(note.getId()));
+            && !quotedNote.isRemote()
+            && access.readable(note, quotedNote.getUserId());
     if (quoteSeen) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
@@ -404,7 +448,7 @@ public class NoteCommandService {
     if (quotesPostPublicly) {
       toldOtherwise.add(quoted.authorId());
     }
-    mention(note, userId, mentioned, toldOtherwise);
+    mention(note, userId, readersOf(mentioned, readers), toldOtherwise);
     String previewUrl =
         NoteLinks.previewUrl(
             body, !stored.isEmpty() || note.hasPoll(), quoted != null || quotedNote != null);
@@ -425,7 +469,7 @@ public class NoteCommandService {
         0L,
         0L,
         false,
-        quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())),
+        quotedNote == null ? null : quotedView(quotedNote, checked.quotedAuthor()),
         null,
         null,
         0,
@@ -441,7 +485,12 @@ public class NoteCommandService {
         null,
         note.getReplyPolicy().apiName(),
         true,
-        false);
+        false,
+        null,
+        note.getRoomId() == null
+            ? null
+            : new NoteView.Room(
+                note.getRoomId(), rooms.names(Set.of(note.getRoomId())).get(note.getRoomId())));
   }
 
   static String language(String raw) {
@@ -478,6 +527,27 @@ public class NoteCommandService {
       throw new NoteException(NoteErrorCode.NOTE_POLL_INVALID);
     }
     return options;
+  }
+
+  // Where naming someone does not make them a reader (a room), who of the named and the answered
+  // may
+  // read the note; null where it does, since they all may.
+  private Set<Long> unnamedReaders(NoteEntity note, List<NoteAuthor> named, NoteEntity parent) {
+    if (note.getVisibility().readBy(Reader.NAMED)) {
+      return null;
+    }
+    Set<Long> candidates = new HashSet<>();
+    named.forEach(member -> candidates.add(member.id()));
+    if (parent != null && parent.getUserId() != null) {
+      candidates.add(parent.getUserId());
+    }
+    return access.readersAmong(note, candidates);
+  }
+
+  private static List<NoteAuthor> readersOf(List<NoteAuthor> named, Set<Long> readers) {
+    return readers == null
+        ? named
+        : named.stream().filter(member -> readers.contains(member.id())).toList();
   }
 
   private static List<Long> recipients(List<NoteAuthor> mentioned, Long authorId) {
@@ -555,14 +625,22 @@ public class NoteCommandService {
     note.markContent(nextWarning, nextSensitive);
     if (!added.isEmpty()) {
       List<NoteAuthor> newlyMentioned = members(people.activeAuthors(List.of(), added), added);
-      if (note.getVisibility().restricted()) {
+      if (note.getVisibility().namesReaders()) {
         notes.addRecipients(noteId, recipients(newlyMentioned, userId));
       }
-      mention(note, userId, newlyMentioned, Set.of(userId));
+      mention(
+          note,
+          userId,
+          readersOf(newlyMentioned, unnamedReaders(note, newlyMentioned, null)),
+          Set.of(userId));
     }
     events.publishEvent(
         new NoteEditedEvent(
-            noteId, userId, note.getInReplyToId() != null || !Mentions.remote(body).isEmpty()));
+            noteId,
+            userId,
+            note.getInReplyToId() != null
+                || note.getQuotedNoteId() != null
+                || !Mentions.remote(body).isEmpty()));
     events.publishEvent(new NoteRevisedEvent(noteId, userId, null, note.excerpt()));
     String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
@@ -586,7 +664,7 @@ public class NoteCommandService {
     if (!note.isTopLevel()) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
     }
-    if (note.getVisibility() == NoteVisibility.DIRECT) {
+    if (note.getVisibility().direct()) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_DIRECT);
     }
     if (notes.countPinned(userId) >= NoteEntity.MAX_PINS) {
@@ -680,8 +758,27 @@ public class NoteCommandService {
               note.getUserId(),
               keys,
               note.getInReplyToId(),
-              Mentions.remote(note.getBody())));
+              Mentions.remote(note.getBody()),
+              note.getQuotedNoteId(),
+              note.getVisibility().federates()));
     }
+  }
+
+  @Transactional
+  public void requestRoomNoteErasure(Long userId, Long roomId) {
+    notes.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+  }
+
+  // One chunk of a requested erasure, each note through the usual delete; the request is done once
+  // a chunk comes back short. Running it again after a crash only finds what is left.
+  @Transactional
+  public int eraseRoomNotes(Long userId, Long roomId, int chunk) {
+    List<Long> ids = notes.roomNoteIdsBy(userId, roomId, chunk);
+    notes.findAllByIdIn(ids).forEach(this::remove);
+    if (ids.size() < chunk) {
+      notes.finishRoomErasure(userId, roomId);
+    }
+    return ids.size();
   }
 
   @Transactional
@@ -791,16 +888,8 @@ public class NoteCommandService {
   }
 
   private void requireReadable(Long userId, NoteEntity note) {
-    if (note.getVisibility().restricted()
-        && !note.isOwnedBy(userId)
-        && !notes.visibleTo(userId, Set.of(note.getId())).contains(note.getId())) {
+    if (!access.readable(note, userId)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
-    }
-  }
-
-  private static void requireLocal(NoteEntity note) {
-    if (note.isRemote()) {
-      throw new NoteException(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED);
     }
   }
 

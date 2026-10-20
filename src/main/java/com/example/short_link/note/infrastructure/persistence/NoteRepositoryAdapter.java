@@ -1,6 +1,9 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.note.NoteAccessSql;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
@@ -10,8 +13,8 @@ import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
@@ -26,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +39,11 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class NoteRepositoryAdapter implements NoteRepository {
 
-  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
-
-  private static final List<NoteVisibility> SHAREABLE =
-      List.of(NoteVisibility.PUBLIC, NoteVisibility.UNLISTED);
+  static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaNoteRepository jpa;
+  private final TrendingSpread spread;
+  private final TrendingNoteRanking ranking;
 
   @PersistenceContext private EntityManager em;
 
@@ -126,13 +129,19 @@ class NoteRepositoryAdapter implements NoteRepository {
     return alias + ".in_reply_to_id IS NULL AND NOT " + alias + ".reply";
   }
 
+  // Without the forced index MySQL walks the primary key backwards through every reply and received
+  // note above the page, since a small LIMIT makes it prefer the id order.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevel(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE "
+            "SELECT n.* FROM note n FORCE INDEX (idx_note_local_top_level) WHERE "
                 + notReply("n")
-                + " AND n.visibility = 'PUBLIC' AND n.remote_actor_id IS NULL"
+                + " AND (("
+                + NoteAccessSql.listed("n")
+                + " AND n.remote_actor_id IS NULL) OR ("
+                + NoteAccessSql.inFeedRooms("n")
+                + "))"
                 + heard("n")
                 + inLanguages("n")
                 + " ORDER BY n.id DESC",
@@ -152,7 +161,9 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE "
                 + notReply("n")
-                + " AND n.visibility = 'PUBLIC' AND n.remote_actor_id IS NOT NULL"
+                + " AND "
+                + NoteAccessSql.listed("n")
+                + " AND n.remote_actor_id IS NOT NULL"
                 + heardNote("n")
                 + unlimited("n")
                 + inLanguages("n")
@@ -165,26 +176,30 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
-  // A profile shows what this viewer may read: public and unlisted to anyone, followers-only to
-  // followers and mentioned members, and direct notes to no one but their author.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.listed("n")
+                + " AND n.remote_actor_id IS NOT NULL"
+                + " AND n.id < :before"
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   static String onProfile(String alias) {
-    return " AND ("
-        + alias
-        + ".user_id = :viewer OR "
-        + alias
-        + ".visibility IN ('PUBLIC', 'UNLISTED')"
-        + " OR ("
-        + alias
-        + ".visibility = 'PRIVATE' AND ("
-        + "EXISTS (SELECT 1 FROM user_follow f"
-        + " WHERE f.follower_id = :viewer AND f.following_id = "
-        + alias
-        + ".user_id)"
-        + " OR EXISTS (SELECT 1 FROM note_recipient r"
-        + " WHERE r.note_id = "
-        + alias
-        + ".id AND r.user_id = :viewer))))"
-        + HeardSql.unblocked(alias + ".user_id");
+    return " AND " + NoteAccessSql.onProfile(alias) + HeardSql.unblocked(alias + ".user_id");
   }
 
   @Override
@@ -262,14 +277,7 @@ class NoteRepositoryAdapter implements NoteRepository {
     }
     List<?> rows =
         em.createNativeQuery(
-                "SELECT n.id FROM note n WHERE n.id IN (:ids) AND (n.user_id = :viewer"
-                    + " OR EXISTS (SELECT 1 FROM note_recipient r"
-                    + " WHERE r.note_id = n.id AND r.user_id = :viewer)"
-                    + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM user_follow f"
-                    + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id))"
-                    + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM federation_following ff"
-                    + " WHERE ff.user_id = :viewer AND ff.remote_actor_id = n.remote_actor_id"
-                    + " AND ff.accepted_at IS NOT NULL)))")
+                "SELECT n.id FROM note n WHERE n.id IN (:ids) AND " + NoteAccessSql.readable("n"))
             .setParameter("ids", restrictedIds)
             .setParameter("viewer", viewerId)
             .getResultList();
@@ -278,6 +286,107 @@ class NoteRepositoryAdapter implements NoteRepository {
       visible.add(((Number) id).longValue());
     }
     return visible;
+  }
+
+  // Of the given members, those who may read the note, in one statement whatever its visibility.
+  @Override
+  public Set<Long> readersAmong(Long noteId, Collection<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return Set.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT u.id FROM users u JOIN note n ON n.id = :note WHERE u.id IN (:users) AND "
+                    + NoteAccessSql.readable("n", "u.id"))
+            .setParameter("note", noteId)
+            .setParameter("users", userIds)
+            .getResultList();
+    Set<Long> readers = new HashSet<>();
+    for (Object id : rows) {
+      readers.add(((Number) id).longValue());
+    }
+    return readers;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.room_id = :room AND "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.readable("n")
+                + heard("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("room", roomId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.user_id = :author AND "
+                + NoteAccessSql.inRoom("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("author", authorId)
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  public List<Long> roomNoteIdsBy(Long authorId, Long roomId, int limit) {
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT n.id FROM note n WHERE n.user_id = :author AND n.room_id = :room AND "
+                    + NoteAccessSql.inRoom("n")
+                    + " ORDER BY n.id DESC")
+            .setParameter("author", authorId)
+            .setParameter("room", roomId)
+            .setMaxResults(limit)
+            .getResultList();
+    return rows.stream().map(id -> ((Number) id).longValue()).toList();
+  }
+
+  @Override
+  public void requestRoomErasure(Long userId, Long roomId, Instant at) {
+    em.createNativeQuery(
+            "INSERT IGNORE INTO room_note_erasure (user_id, room_id, requested_at)"
+                + " VALUES (:user, :room, :at)")
+        .setParameter("user", userId)
+        .setParameter("room", roomId)
+        .setParameter("at", at)
+        .executeUpdate();
+  }
+
+  @Override
+  public List<RoomErasure> pendingRoomErasures(int limit) {
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT user_id, room_id FROM room_note_erasure ORDER BY requested_at, user_id")
+            .setMaxResults(limit)
+            .getResultList();
+    List<RoomErasure> pending = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      pending.add(new RoomErasure(((Number) cols[0]).longValue(), ((Number) cols[1]).longValue()));
+    }
+    return pending;
+  }
+
+  @Override
+  public void finishRoomErasure(Long userId, Long roomId) {
+    em.createNativeQuery("DELETE FROM room_note_erasure WHERE user_id = :user AND room_id = :room")
+        .setParameter("user", userId)
+        .setParameter("room", roomId)
+        .executeUpdate();
   }
 
   @Override
@@ -307,9 +416,10 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> direct(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.visibility = 'DIRECT' AND (n.user_id = :viewer"
-                + " OR EXISTS (SELECT 1 FROM note_recipient r"
-                + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
+            "SELECT n.* FROM note n WHERE "
+                + NoteAccessSql.direct("n")
+                + " AND "
+                + NoteAccessSql.readable("n")
                 + HeardSql.unblockedRemote("n.remote_actor_id")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -320,42 +430,97 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   // Top-level notes written in the window, by reactions from people other than the author: likes,
-  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. A note
+  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. Each
+  // author places perAuthor notes per round, and within a round members' notes and notes from
+  // elsewhere take turns. A note
   // received from elsewhere joins once a member liked, reposted or answered it — Mastodon trends
   // such notes too, with a member's touch standing in for its moderator review.
   @Override
-  @SuppressWarnings("unchecked")
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
+    List<Long> ranked = ranking.ids();
+    List<Long> shown = shownOf(ranked, viewerId);
+    if (offset + limit > shown.size() && ranked.size() >= TrendingNoteRanking.SIZE) {
+      return trendingLive(viewerId, offset, limit);
+    }
+    List<Long> page =
+        shown.subList(Math.min(offset, shown.size()), Math.min(offset + limit, shown.size()));
+    Map<Long, NoteEntity> found = new HashMap<>();
+    findAllByIdIn(page).forEach(note -> found.put(note.getId(), note));
+    return page.stream().map(found::get).filter(Objects::nonNull).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Long> shownOf(List<Long> ranked, Long viewerId) {
+    if (ranked.isEmpty()) {
+      return List.of();
+    }
+    Set<Long> shown =
+        new HashSet<>(
+            ((List<Number>)
+                    em.createNativeQuery(
+                            "SELECT n.id FROM note n WHERE n.id IN (:ids) AND "
+                                + notReply("n")
+                                + " AND "
+                                + NoteAccessSql.listed("n")
+                                + " AND n.created_at >= :since"
+                                + heardNote("n")
+                                + unlimited("n")
+                                + inLanguages("n"))
+                        .setParameter("ids", ranked)
+                        .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
+                        .setParameter("viewer", viewer(viewerId))
+                        .setParameter("now", Instant.now())
+                        .getResultList())
+                .stream().map(Number::longValue).toList());
+    return ranked.stream().filter(shown::contains).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<NoteEntity> trendingLive(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n"
-                + " WHERE "
-                + notReply("n")
-                + " AND n.visibility = 'PUBLIC' AND n.created_at >= :since"
-                + " AND (n.remote_actor_id IS NULL"
-                + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
-                + " AND mc.user_id IS NOT NULL))"
-                + heardNote("n")
-                + unlimited("n")
-                + inLanguages("n")
-                + " ORDER BY ("
-                + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
-                + " AND NOT (l.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
-                + " AND NOT (r.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
-                + " AND c.reply_hidden_at IS NULL"
-                + " AND NOT (c.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
-                + ") DESC, n.id DESC",
-            NoteEntity.class)
+            trendingSql("o.*", unlimited("n") + inLanguages("n")), NoteEntity.class)
+        .setParameter("perAuthor", spread.perAuthor())
         .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  static String trendingSql(String columns, String filters) {
+    return "SELECT "
+        + columns
+        + " FROM note o JOIN ("
+        + "SELECT a.id, a.score, a.round, ROW_NUMBER() OVER ("
+        + "PARTITION BY a.round, a.remote ORDER BY a.score DESC, a.id DESC) AS turn"
+        + " FROM (SELECT s.id, s.score, s.remote, CEIL(ROW_NUMBER() OVER ("
+        + "PARTITION BY s.author ORDER BY s.score DESC, s.id DESC) / :perAuthor) AS round"
+        + " FROM (SELECT n.id, n.remote_actor_id IS NOT NULL AS remote,"
+        + " COALESCE(n.user_id, -n.remote_actor_id) AS author, ("
+        + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
+        + " AND NOT (l.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
+        + " AND NOT (r.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
+        + " AND c.reply_hidden_at IS NULL"
+        + " AND NOT (c.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
+        + ") AS score FROM note n"
+        + " WHERE "
+        + notReply("n")
+        + " AND "
+        + NoteAccessSql.listed("n")
+        + " AND n.created_at >= :since"
+        + " AND (n.remote_actor_id IS NULL"
+        + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
+        + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
+        + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
+        + " AND mc.user_id IS NOT NULL))"
+        + heardNote("n")
+        + filters
+        + ") s) a) t ON t.id = o.id"
+        + " ORDER BY t.round, t.turn, t.score DESC, t.id DESC";
   }
 
   // Top-level notes by the authors and their reposts, one row per note at its newest activity; the
@@ -382,18 +547,28 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " WHERE o.user_id IN (:authors) AND "
                     + notReply("o")
                     + heard("o")
-                    + " AND (o.visibility <> 'DIRECT' OR o.user_id = :viewer"
-                    + " OR EXISTS (SELECT 1 FROM note_recipient dr"
-                    + " WHERE dr.note_id = o.id AND dr.user_id = :viewer))"
+                    + " AND "
+                    + NoteAccessSql.readable("o")
+                    + " AND "
+                    + NoteAccessSql.outsideRooms("o")
+                    + " UNION ALL"
+                    + " SELECT rn.id, rn.created_at, NULL FROM note rn WHERE "
+                    + NoteAccessSql.inFeedRooms("rn")
+                    + " AND "
+                    + notReply("rn")
+                    + heard("rn")
                     + " UNION ALL"
                     + " SELECT d.id, d.created_at, NULL FROM note_recipient dn"
                     + " JOIN note d ON d.id = dn.note_id"
-                    + " WHERE dn.user_id = :viewer AND d.visibility = 'DIRECT' AND "
+                    + " WHERE dn.user_id = :viewer AND "
+                    + NoteAccessSql.direct("d")
+                    + " AND "
                     + notReply("d")
                     + " UNION ALL"
                     + " SELECT r.note_id, r.created_at, r.user_id FROM note_repost r"
                     + " JOIN note s ON s.id = r.note_id"
-                    + " WHERE r.user_id IN (:authors) AND s.visibility IN ('PUBLIC', 'UNLISTED')"
+                    + " WHERE r.user_id IN (:authors) AND "
+                    + NoteAccessSql.shareable("s")
                     + heardNote("s")
                     + heard("r")
                     + " AND NOT EXISTS (SELECT 1 FROM note_repost_mute m"
@@ -406,7 +581,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " WHERE ff.user_id = :viewer AND ff.accepted_at IS NOT NULL"
                     + " AND "
                     + notReply("ro")
-                    + " AND ro.visibility <> 'DIRECT'"
+                    + " AND "
+                    + NoteAccessSql.readable("ro")
                     + HeardSql.heardRemote("ro.remote_actor_id")
                     + " UNION ALL"
                     + " SELECT g.note_id, gn.created_at, NULL FROM user_tag_pref f"
@@ -414,7 +590,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " JOIN note gn ON gn.id = g.note_id"
                     + " WHERE f.user_id = :viewer AND f.kind = 'FOLLOW' AND "
                     + notReply("gn")
-                    + " AND gn.visibility = 'PUBLIC'"
+                    + " AND "
+                    + NoteAccessSql.listed("gn")
                     + heardNote("gn")
                     + ") t) y WHERE y.position = 1"
                     + ") x JOIN note n ON n.id = x.note_id"
@@ -582,12 +759,8 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.remote_actor_id = :actor AND "
                 + notReply("n")
-                + " AND (n.visibility IN ('PUBLIC', 'UNLISTED')"
-                + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM federation_following ff"
-                + " WHERE ff.user_id = :viewer AND ff.remote_actor_id = n.remote_actor_id"
-                + " AND ff.accepted_at IS NOT NULL))"
-                + " OR EXISTS (SELECT 1 FROM note_recipient r"
-                + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
+                + " AND "
+                + NoteAccessSql.readable("n")
                 + " AND NOT EXISTS (SELECT 1 FROM user_domain_block hd"
                 + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
                 + " WHERE hd.user_id = :viewer AND ha.id = n.remote_actor_id)"
@@ -659,7 +832,9 @@ class NoteRepositoryAdapter implements NoteRepository {
     Object count =
         em.createNativeQuery(
                 "SELECT COUNT(*) FROM (SELECT 1 FROM note n WHERE n.remote_actor_id = :actor"
-                    + " AND n.visibility IN ('PUBLIC', 'UNLISTED') AND "
+                    + " AND "
+                    + NoteAccessSql.shareable("n")
+                    + " AND "
                     + notReply("n")
                     + " LIMIT :atMost) listed")
             .setParameter("actor", remoteActorId)
@@ -715,8 +890,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.quoted_note_id = :noteId"
-                + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+            "SELECT n.* FROM note n WHERE n.quoted_note_id = :noteId AND "
+                + NoteAccessSql.shareable("n")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -732,8 +907,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> quotesOfPost(Long postId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.quoted_post_id = :postId"
-                + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+            "SELECT n.* FROM note n WHERE n.quoted_post_id = :postId AND "
+                + NoteAccessSql.shareable("n")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -749,8 +924,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   public long countQuotesOfPost(Long postId, Long viewerId) {
     return ((Number)
             em.createNativeQuery(
-                    "SELECT COUNT(*) FROM note n WHERE n.quoted_post_id = :postId"
-                        + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                    "SELECT COUNT(*) FROM note n WHERE n.quoted_post_id = :postId AND "
+                        + NoteAccessSql.shareable("n")
                         + heardNote("n"))
                 .setParameter("postId", postId)
                 .setParameter("viewer", viewer(viewerId))
@@ -770,7 +945,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " COUNT(*) AS uses"
                 + perDay(days)
                 + " FROM note_tag g JOIN note n ON n.id = g.note_id"
-                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
+                + " WHERE n.created_at >= :d0 AND "
+                + NoteAccessSql.listed("n")
                 + trendable("n")
                 + " GROUP BY g.tag HAVING accounts >= :minAccounts"
                 + " ORDER BY accounts DESC, uses DESC, g.tag LIMIT :limit");
@@ -801,7 +977,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " COUNT(*) AS uses"
                 + perDay(days)
                 + " FROM note_link_preview p JOIN note n ON n.id = p.note_id"
-                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
+                + " WHERE n.created_at >= :d0 AND "
+                + NoteAccessSql.listed("n")
                 + trendable("n")
                 + " GROUP BY p.url HAVING accounts >= :minAccounts"
                 + " ORDER BY accounts DESC, uses DESC, p.url LIMIT :limit");
@@ -881,7 +1058,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   public List<NoteEntity> linked(String url, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note_link_preview p JOIN note n ON n.id = p.note_id"
-                + " WHERE p.url = :url AND n.visibility = 'PUBLIC'"
+                + " WHERE p.url = :url AND "
+                + NoteAccessSql.listed("n")
                 + heardNote("n")
                 + unlimited("n")
                 + " ORDER BY n.id DESC LIMIT :limit OFFSET :offset",
@@ -899,7 +1077,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   public List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note_tag g JOIN note n ON n.id = g.note_id"
-                + " WHERE g.tag = :tag AND n.visibility = 'PUBLIC'"
+                + " WHERE g.tag = :tag AND "
+                + NoteAccessSql.listed("n")
                 + heardNote("n")
                 + unlimited("n")
                 + " ORDER BY g.note_id DESC LIMIT :limit OFFSET :offset",
@@ -920,7 +1099,9 @@ class NoteRepositoryAdapter implements NoteRepository {
             ? "MATCH(n.body) AGAINST(:term IN BOOLEAN MODE)"
             : "LOWER(n.body) LIKE :term ESCAPE '!'";
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.visibility = 'PUBLIC' AND "
+            "SELECT n.* FROM note n WHERE "
+                + NoteAccessSql.listed("n")
+                + " AND "
                 + term
                 + " AND (n.remote_actor_id IS NULL OR EXISTS (SELECT 1 FROM federation_remote_actor ia"
                 + " WHERE ia.id = n.remote_actor_id AND ia.indexable))"
@@ -996,12 +1177,13 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " and n.visibility in :shareable order by n.pinnedAt desc",
             Long.class)
         .setParameter("userId", userId)
-        .setParameter("shareable", SHAREABLE)
+        .setParameter("shareable", NoteVisibility.where(NoteVisibility::shareable))
         .getResultList();
   }
 
   @Override
-  public long countByAuthor(Long userId) {
-    return jpa.countByUserId(userId);
+  public long countForFollowersByAuthor(Long userId) {
+    return jpa.countByUserIdAndVisibilityIn(
+        userId, NoteVisibility.where(NoteVisibility::followersRead));
   }
 }

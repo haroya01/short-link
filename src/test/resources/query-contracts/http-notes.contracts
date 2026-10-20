@@ -104,8 +104,10 @@
 @junit | note-unpin | 1 | 0 | 1 | 0 | 2
 @junit | note-profile-pinned | 6 | 0 | 0 | 0 | 6
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
-# subqueries inside it), then builds the page like the public feed.
-@junit | note-trending | 7 | 0 | 0 | 0 | 7
+# subqueries inside it) that every reader shares for 20s (the test profile ranks on every read),
+# then one statement drops what this reader may not see and one loads the page's notes; the page is
+# built like the public feed.
+@junit | note-trending | 9 | 0 | 0 | 0 | 9
 # Trending hashtags (Mastodon's): one statement — a week of public notes grouped by tag, the
 # accounts and the notes per day counted in it, blocked servers left out.
 @junit | note-trending-tags | 1 | 0 | 0 | 0 | 1
@@ -124,7 +126,7 @@
 # A reply whose parent was deleted stays a reply: the replier's profile and trending leave it out
 # inside their one query, at the same cost as before.
 @junit | note-profile-orphan | 6 | 0 | 0 | 0 | 6
-@junit | note-trending-orphan | 5 | 0 | 0 | 0 | 5
+@junit | note-trending-orphan | 7 | 0 | 0 | 0 | 7
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 8 | 3 | 0 | 0 | 11
@@ -214,6 +216,10 @@
 @junit | note-search-seed-private | 4 | 1 | 0 | 0 | 5
 @junit | note-search | 5 | 0 | 0 | 0 | 5
 @junit | note-search-short | 5 | 0 | 0 | 0 | 5
+@junit | note-search-hashtag | 5 | 0 | 0 | 0 | 5
+# Related tags: one statement takes the newest listed posts and public notes the words find, their
+# tags, and ranks them by how many people used each.
+@junit | search-related | 1 | 0 | 0 | 0 | 1
 # Mastodon's mute conversation. A reply joins its thread's root (no extra write: a top-level note is
 # its own conversation). Muting reads the note for its conversation and INSERT IGNOREs the mute;
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
@@ -285,3 +291,12 @@
 # first note, then the usual delete; after commit the Delete goes out as the replier's actor (made
 # on first use here), to the server of what it answered and their followers.
 @junit | note-reply-removed-by-thread-writer | 9 | 1 | 0 | 4 | 14
+# The home feed: a page of notes and a page of posts cut from the same lists their own feeds use,
+# each built as those feeds build them, merged in memory; a page with posts adds one statement for
+# their comment counts and the reader's likes. Following also reads whom the reader follows, their
+# series and tags.
+@junit | home-latest | 11 | 0 | 0 | 0 | 11
+@junit | home-trending | 11 | 0 | 0 | 0 | 11
+@junit | home-following | 14 | 0 | 0 | 0 | 14
+@junit | home-following-next | 9 | 0 | 0 | 0 | 9
+@junit | home-latest-since | 11 | 0 | 0 | 0 | 11

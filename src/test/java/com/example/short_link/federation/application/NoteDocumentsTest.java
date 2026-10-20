@@ -7,6 +7,7 @@ import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
+import com.example.short_link.common.note.NoteVisibility;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.UNLISTED);
+            NoteVisibility.UNLISTED);
     NoteSnapshot followersOnly =
         new NoteSnapshot(
             42L,
@@ -72,7 +73,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.PRIVATE);
+            NoteVisibility.PRIVATE);
 
     Map<String, Object> quiet = documents.create(unlisted, "pid");
     assertThat(quiet.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
@@ -98,7 +99,7 @@ class NoteDocumentsTest {
             null,
             null,
             false,
-            NoteSnapshotReader.Visibility.PUBLIC,
+            NoteVisibility.PUBLIC,
             null,
             "ko");
 
@@ -199,6 +200,52 @@ class NoteDocumentsTest {
                 + "https://blog.kurl.me/@mio/notes/9</a></p>");
     assertThat(documents.note(note("x", null, List.of(), null), "pid"))
         .doesNotContainKeys("quoteUrl", "quoteUri", "_misskey_quote");
+  }
+
+  @Test
+  void aQuotedNoteFromElsewhereIsNamedByItsIdThereAndLinkedToItsPageOrElseItsId() {
+    NoteSnapshot quoting =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "agreed",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            new QuotedNote(
+                9L, null, "https://m.example/users/alice/statuses/1", "https://m.example/@alice/1"),
+            null,
+            false);
+
+    Map<String, Object> note = documents.note(quoting, "pid");
+
+    assertThat(note.get("quoteUri")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("quoteUrl")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("_misskey_quote")).isEqualTo("https://m.example/users/alice/statuses/1");
+    assertThat(note.get("content"))
+        .isEqualTo(
+            "<p>agreed</p><p class=\"quote-inline\">RE: <a href=\"https://m.example/@alice/1\">"
+                + "https://m.example/@alice/1</a></p>");
+
+    NoteSnapshot withoutPage =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "agreed",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            new QuotedNote(9L, null, "https://m.example/users/alice/statuses/1", "javascript:x"),
+            null,
+            false);
+    assertThat(documents.note(withoutPage, "pid").get("content").toString())
+        .contains("RE: <a href=\"https://m.example/users/alice/statuses/1\">");
   }
 
   @Test
@@ -314,7 +361,7 @@ class NoteDocumentsTest {
         null,
         null,
         false,
-        NoteSnapshotReader.Visibility.PUBLIC,
+        NoteVisibility.PUBLIC,
         new NoteSnapshotReader.Poll(
             List.of(
                 new NoteSnapshotReader.PollOption("강남", 3),
