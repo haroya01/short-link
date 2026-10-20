@@ -1,5 +1,6 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.note.NoteVisibility;
@@ -39,6 +40,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaNoteRepository jpa;
+  private final TrendingSpread spread;
 
   @PersistenceContext private EntityManager em;
 
@@ -298,14 +300,31 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   // Top-level notes written in the window, by reactions from people other than the author: likes,
-  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. A note
+  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. Each
+  // author places perAuthor notes per round, and within a round members' notes and notes from
+  // elsewhere take turns. A note
   // received from elsewhere joins once a member liked, reposted or answered it — Mastodon trends
   // such notes too, with a member's touch standing in for its moderator review.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n"
+            "SELECT o.* FROM note o JOIN ("
+                + "SELECT a.id, a.score, a.round, ROW_NUMBER() OVER ("
+                + "PARTITION BY a.round, a.remote ORDER BY a.score DESC, a.id DESC) AS turn"
+                + " FROM (SELECT s.id, s.score, s.remote, CEIL(ROW_NUMBER() OVER ("
+                + "PARTITION BY s.author ORDER BY s.score DESC, s.id DESC) / :perAuthor) AS round"
+                + " FROM (SELECT n.id, n.remote_actor_id IS NOT NULL AS remote,"
+                + " COALESCE(n.user_id, -n.remote_actor_id) AS author, ("
+                + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
+                + " AND NOT (l.user_id <=> n.user_id))"
+                + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
+                + " AND NOT (r.user_id <=> n.user_id))"
+                + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
+                + " AND c.reply_hidden_at IS NULL"
+                + " AND NOT (c.user_id <=> n.user_id))"
+                + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
+                + ") AS score FROM note n"
                 + " WHERE "
                 + notReply("n")
                 + " AND "
@@ -319,17 +338,10 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + heardNote("n")
                 + unlimited("n")
                 + inLanguages("n")
-                + " ORDER BY ("
-                + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
-                + " AND NOT (l.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
-                + " AND NOT (r.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
-                + " AND c.reply_hidden_at IS NULL"
-                + " AND NOT (c.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
-                + ") DESC, n.id DESC",
+                + ") s) a) t ON t.id = o.id"
+                + " ORDER BY t.round, t.turn, t.score DESC, t.id DESC",
             NoteEntity.class)
+        .setParameter("perAuthor", spread.perAuthor())
         .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())

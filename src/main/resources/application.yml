@@ -178,6 +178,8 @@ short-link:
     enabled: ${SAFETY_RESCAN_ENABLED:true}
     cron: ${SAFETY_RESCAN_CRON:0 41 */6 * * *}
     batch-size: ${SAFETY_RESCAN_BATCH_SIZE:2000}
+  trending:
+    per-author: ${TRENDING_PER_AUTHOR:2}
   destination-health:
     enabled: ${DESTINATION_HEALTH_ENABLED:true}
     cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}
