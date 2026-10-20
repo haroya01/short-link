@@ -180,6 +180,7 @@ short-link:
     batch-size: ${SAFETY_RESCAN_BATCH_SIZE:2000}
   trending:
     per-author: ${TRENDING_PER_AUTHOR:2}
+    cache-for: 20s
   destination-health:
     enabled: ${DESTINATION_HEALTH_ENABLED:true}
     cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}

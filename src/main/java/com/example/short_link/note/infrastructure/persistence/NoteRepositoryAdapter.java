@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -37,10 +38,11 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class NoteRepositoryAdapter implements NoteRepository {
 
-  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
+  static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaNoteRepository jpa;
   private final TrendingSpread spread;
+  private final TrendingNoteRanking ranking;
 
   @PersistenceContext private EntityManager em;
 
@@ -330,41 +332,49 @@ class NoteRepositoryAdapter implements NoteRepository {
   // received from elsewhere joins once a member liked, reposted or answered it — Mastodon trends
   // such notes too, with a member's touch standing in for its moderator review.
   @Override
-  @SuppressWarnings("unchecked")
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
+    List<Long> ranked = ranking.ids();
+    List<Long> shown = shownOf(ranked, viewerId);
+    if (offset + limit > shown.size() && ranked.size() >= TrendingNoteRanking.SIZE) {
+      return trendingLive(viewerId, offset, limit);
+    }
+    List<Long> page =
+        shown.subList(Math.min(offset, shown.size()), Math.min(offset + limit, shown.size()));
+    Map<Long, NoteEntity> found = new HashMap<>();
+    findAllByIdIn(page).forEach(note -> found.put(note.getId(), note));
+    return page.stream().map(found::get).filter(Objects::nonNull).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Long> shownOf(List<Long> ranked, Long viewerId) {
+    if (ranked.isEmpty()) {
+      return List.of();
+    }
+    Set<Long> shown =
+        new HashSet<>(
+            ((List<Number>)
+                    em.createNativeQuery(
+                            "SELECT n.id FROM note n WHERE n.id IN (:ids) AND "
+                                + notReply("n")
+                                + " AND "
+                                + NoteAccessSql.listed("n")
+                                + " AND n.created_at >= :since"
+                                + heardNote("n")
+                                + unlimited("n")
+                                + inLanguages("n"))
+                        .setParameter("ids", ranked)
+                        .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
+                        .setParameter("viewer", viewer(viewerId))
+                        .setParameter("now", Instant.now())
+                        .getResultList())
+                .stream().map(Number::longValue).toList());
+    return ranked.stream().filter(shown::contains).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<NoteEntity> trendingLive(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT o.* FROM note o JOIN ("
-                + "SELECT a.id, a.score, a.round, ROW_NUMBER() OVER ("
-                + "PARTITION BY a.round, a.remote ORDER BY a.score DESC, a.id DESC) AS turn"
-                + " FROM (SELECT s.id, s.score, s.remote, CEIL(ROW_NUMBER() OVER ("
-                + "PARTITION BY s.author ORDER BY s.score DESC, s.id DESC) / :perAuthor) AS round"
-                + " FROM (SELECT n.id, n.remote_actor_id IS NOT NULL AS remote,"
-                + " COALESCE(n.user_id, -n.remote_actor_id) AS author, ("
-                + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
-                + " AND NOT (l.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
-                + " AND NOT (r.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
-                + " AND c.reply_hidden_at IS NULL"
-                + " AND NOT (c.user_id <=> n.user_id))"
-                + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
-                + ") AS score FROM note n"
-                + " WHERE "
-                + notReply("n")
-                + " AND "
-                + NoteAccessSql.listed("n")
-                + " AND n.created_at >= :since"
-                + " AND (n.remote_actor_id IS NULL"
-                + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
-                + " AND mc.user_id IS NOT NULL))"
-                + heardNote("n")
-                + unlimited("n")
-                + inLanguages("n")
-                + ") s) a) t ON t.id = o.id"
-                + " ORDER BY t.round, t.turn, t.score DESC, t.id DESC",
-            NoteEntity.class)
+            trendingSql("o.*", unlimited("n") + inLanguages("n")), NoteEntity.class)
         .setParameter("perAuthor", spread.perAuthor())
         .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
         .setParameter("viewer", viewer(viewerId))
@@ -372,6 +382,41 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  static String trendingSql(String columns, String filters) {
+    return "SELECT "
+        + columns
+        + " FROM note o JOIN ("
+        + "SELECT a.id, a.score, a.round, ROW_NUMBER() OVER ("
+        + "PARTITION BY a.round, a.remote ORDER BY a.score DESC, a.id DESC) AS turn"
+        + " FROM (SELECT s.id, s.score, s.remote, CEIL(ROW_NUMBER() OVER ("
+        + "PARTITION BY s.author ORDER BY s.score DESC, s.id DESC) / :perAuthor) AS round"
+        + " FROM (SELECT n.id, n.remote_actor_id IS NOT NULL AS remote,"
+        + " COALESCE(n.user_id, -n.remote_actor_id) AS author, ("
+        + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
+        + " AND NOT (l.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
+        + " AND NOT (r.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
+        + " AND c.reply_hidden_at IS NULL"
+        + " AND NOT (c.user_id <=> n.user_id))"
+        + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
+        + ") AS score FROM note n"
+        + " WHERE "
+        + notReply("n")
+        + " AND "
+        + NoteAccessSql.listed("n")
+        + " AND n.created_at >= :since"
+        + " AND (n.remote_actor_id IS NULL"
+        + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
+        + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
+        + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
+        + " AND mc.user_id IS NOT NULL))"
+        + heardNote("n")
+        + filters
+        + ") s) a) t ON t.id = o.id"
+        + " ORDER BY t.round, t.turn, t.score DESC, t.id DESC";
   }
 
   // Top-level notes by the authors and their reposts, one row per note at its newest activity; the

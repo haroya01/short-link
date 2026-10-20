@@ -29,6 +29,8 @@ spring:
 short-link:
   scheduling:
     enabled: false
+  trending:
+    cache-for: 0s
   image-variants:
     enabled: false
   cache:
