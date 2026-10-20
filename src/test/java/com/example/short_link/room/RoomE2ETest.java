@@ -334,6 +334,148 @@ class RoomE2ETest {
   }
 
   @Test
+  void aMemberInvitesPeopleByNameAndTheyAcceptOrDecline() throws Exception {
+    long room = room(owner);
+    send(friend, post("/api/v1/room-invites/" + code(owner, room, "{}") + "/join"), null);
+    Person picked = person("p");
+    Person blocker = person("b");
+    Person removed = person("r");
+    send(removed, post("/api/v1/room-invites/" + code(owner, room, "{}") + "/join"), null);
+    send(owner, delete("/api/v1/rooms/" + room + "/members/" + removed.id()), null);
+    jdbc.update(
+        "INSERT INTO user_block (blocker_id, blocked_id, created_at) VALUES (?, ?, NOW(6))",
+        blocker.id(),
+        friend.id());
+
+    Answer sent =
+        send(
+            friend,
+            post("/api/v1/rooms/" + room + "/invitations"),
+            "{\"userIds\":["
+                + picked.id()
+                + ","
+                + stranger.id()
+                + ","
+                + blocker.id()
+                + ","
+                + removed.id()
+                + ","
+                + owner.id()
+                + ","
+                + picked.id()
+                + "]}");
+    assertThat(sent.status()).isEqualTo(200);
+    List<String> invited = sent.at("$[*].person.username");
+    assertThat(invited).containsExactlyInAnyOrder(picked.username(), stranger.username());
+    assertThat(
+            send(picked, post("/api/v1/rooms/" + room + "/invitations"), "{\"userIds\":[1]}")
+                .status())
+        .isEqualTo(404);
+    assertThat(
+            send(friend, post("/api/v1/rooms/" + room + "/invitations"), "{\"userIds\":[]}")
+                .status())
+        .isEqualTo(400);
+    List<?> seen = send(owner, get("/api/v1/rooms/" + room + "/invitations"), null).at("$");
+    assertThat(seen).hasSize(2);
+
+    Answer mine = send(picked, get("/api/v1/rooms/invitations"), null);
+    assertThat((String) mine.at("$[0].roomName")).isEqualTo(tag);
+    assertThat((String) mine.at("$[0].inviter.username")).isEqualTo(friend.username());
+    assertThat(((Number) mine.at("$[0].memberCount")).intValue()).isEqualTo(2);
+    assertThat((Boolean) mine.at("$[0].approvalRequired")).isFalse();
+    assertThat(send(picked, get("/api/v1/rooms/" + room + "/notes"), null).status()).isEqualTo(404);
+    Answer accepted = send(picked, post("/api/v1/rooms/invitations/" + room + "/accept"), null);
+    assertThat((String) accepted.at("$.status")).isEqualTo("joined");
+    assertThat(send(picked, get("/api/v1/rooms/" + room + "/notes"), null).status()).isEqualTo(200);
+    assertThat(send(picked, post("/api/v1/rooms/invitations/" + room + "/accept"), null).status())
+        .isEqualTo(404);
+    List<?> pickedLeft = send(picked, get("/api/v1/rooms/invitations"), null).at("$");
+    assertThat(pickedLeft).isEmpty();
+
+    assertThat(
+            send(stranger, post("/api/v1/rooms/invitations/" + room + "/decline"), null).status())
+        .isEqualTo(204);
+    List<?> strangerLeft = send(stranger, get("/api/v1/rooms/invitations"), null).at("$");
+    assertThat(strangerLeft).isEmpty();
+    List<?> again =
+        send(
+                owner,
+                post("/api/v1/rooms/" + room + "/invitations"),
+                "{\"userIds\":[" + stranger.id() + "]}")
+            .at("$");
+    assertThat(again).isEmpty();
+    assertThat(send(stranger, post("/api/v1/rooms/invitations/" + room + "/accept"), null).status())
+        .isEqualTo(404);
+
+    Person late = person("l");
+    send(
+        friend,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + late.id() + "]}");
+    assertThat(
+            send(picked, delete("/api/v1/rooms/" + room + "/invitations/" + late.id()), null)
+                .status())
+        .isEqualTo(404);
+    assertThat(
+            send(owner, delete("/api/v1/rooms/" + room + "/invitations/" + late.id()), null)
+                .status())
+        .isEqualTo(204);
+    List<?> lateLeft = send(late, get("/api/v1/rooms/invitations"), null).at("$");
+    assertThat(lateLeft).isEmpty();
+
+    send(owner, patch("/api/v1/rooms/" + room), "{\"approvalRequired\":true}");
+    Person asked = person("a");
+    Person welcomed = person("w");
+    send(
+        friend,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + asked.id() + "]}");
+    send(
+        owner,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + welcomed.id() + "]}");
+    assertThat(
+            (Boolean)
+                send(asked, get("/api/v1/rooms/invitations"), null).at("$[0].approvalRequired"))
+        .isTrue();
+    assertThat(
+            (String)
+                send(asked, post("/api/v1/rooms/invitations/" + room + "/accept"), null)
+                    .at("$.status"))
+        .isEqualTo("requested");
+    assertThat(
+            (String)
+                send(owner, get("/api/v1/rooms/" + room + "/requests"), null)
+                    .at("$[0].person.username"))
+        .isEqualTo(asked.username());
+    assertThat(
+            (String)
+                send(welcomed, post("/api/v1/rooms/invitations/" + room + "/accept"), null)
+                    .at("$.status"))
+        .isEqualTo("joined");
+  }
+
+  @Test
+  void invitationsByNameStopAtFiftyWaiting() throws Exception {
+    long room = room(owner);
+    for (int i = 0; i < 50; i++) {
+      jdbc.update(
+          "INSERT INTO room_invitation (room_id, user_id, inviter_id, created_at)"
+              + " VALUES (?, ?, ?, NOW(6))",
+          room,
+          person("q" + i).id(),
+          owner.id());
+    }
+    assertThat(
+            send(
+                    owner,
+                    post("/api/v1/rooms/" + room + "/invitations"),
+                    "{\"userIds\":[" + friend.id() + "]}")
+                .status())
+        .isEqualTo(409);
+  }
+
+  @Test
   void mutualFollowsWithoutARoomAreSuggestedUntilWavedOff() throws Exception {
     follows.save(new FollowEntity(owner.id(), friend.id()));
     follows.save(new FollowEntity(friend.id(), owner.id()));

@@ -56,3 +56,14 @@
 @junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
 @junit | room-suggestions | 1 | 0 | 0 | 0 | 1
 @junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1
+# Inviting by name: the room locked, membership, the waiting count against the cap, one insert for
+# everyone asked (whoever cannot be asked is left out inside it), then who waits now.
+@junit | room-invitation-send | 4 | 1 | 0 | 0 | 5
+@junit | room-invitees | 3 | 0 | 0 | 0 | 3
+# The invitee's own invitations, with room, inviter and member count, in one statement.
+@junit | room-invitations-mine | 1 | 0 | 0 | 0 | 1
+# Accepting is joining: lock, the invitation taken, then the same membership, removal, request
+# and seat checks as an invite link before the member is added.
+@junit | room-invitation-accept | 6 | 1 | 0 | 1 | 8
+@junit | room-invitation-decline | 0 | 0 | 1 | 0 | 1
+@junit | room-invitation-cancel | 3 | 0 | 0 | 1 | 4

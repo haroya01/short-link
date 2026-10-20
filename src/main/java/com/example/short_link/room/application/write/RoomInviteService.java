@@ -118,7 +118,7 @@ public class RoomInviteService {
     if (rooms.isRemoved(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REMOVED);
     }
-    if (rooms.requestedThrough(roomId, userId).isPresent()) {
+    if (rooms.hasRequested(roomId, userId)) {
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     Instant now = now();

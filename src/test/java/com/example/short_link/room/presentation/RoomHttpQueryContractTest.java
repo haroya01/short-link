@@ -142,6 +142,54 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void peopleInvitedByNameAcceptOrDecline() throws Exception {
+    Actor owner = actor("room-namer", false);
+    Actor picked = actor("room-picked", false);
+    Actor other = actor("room-other", false);
+    Actor taken = actor("room-taken", false);
+    long roomId =
+        step("room-create", "POST", "/api/v1/rooms", owner, Map.of("name", "이름 방"), 201)
+            .path("id")
+            .asLong();
+
+    var sent =
+        step(
+            "room-invitation-send",
+            "POST",
+            "/api/v1/rooms/" + roomId + "/invitations",
+            owner,
+            Map.of("userIds", List.of(picked.id(), other.id(), taken.id())),
+            200);
+    assertThat(sent).hasSize(3);
+    step("room-invitees", "GET", "/api/v1/rooms/" + roomId + "/invitations", owner, null, 200);
+    var mine = step("room-invitations-mine", "GET", "/api/v1/rooms/invitations", picked, null, 200);
+    assertThat(mine.get(0).path("roomId").asLong()).isEqualTo(roomId);
+    var accepted =
+        step(
+            "room-invitation-accept",
+            "POST",
+            "/api/v1/rooms/invitations/" + roomId + "/accept",
+            picked,
+            null,
+            200);
+    assertThat(accepted.path("status").asText()).isEqualTo("joined");
+    step(
+        "room-invitation-decline",
+        "POST",
+        "/api/v1/rooms/invitations/" + roomId + "/decline",
+        other,
+        null,
+        204);
+    step(
+        "room-invitation-cancel",
+        "DELETE",
+        "/api/v1/rooms/" + roomId + "/invitations/" + taken.id(),
+        owner,
+        null,
+        204);
+  }
+
+  @Test
   void mutualFollowsAreSuggestedForARoomUntilDismissed() throws Exception {
     Actor me = actor("room-nudge", false);
     Actor friend = actor("room-nudge-friend", false);

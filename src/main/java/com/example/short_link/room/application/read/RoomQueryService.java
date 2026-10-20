@@ -1,8 +1,10 @@
 package com.example.short_link.room.application.read;
 
 import com.example.short_link.room.domain.RoomEntity;
+import com.example.short_link.room.domain.RoomInvitation;
 import com.example.short_link.room.domain.RoomInviteEntity;
 import com.example.short_link.room.domain.RoomInviteUnusable;
+import com.example.short_link.room.domain.RoomInvitee;
 import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.domain.RoomPerson;
 import com.example.short_link.room.domain.repository.RoomRepository;
@@ -21,6 +23,7 @@ public class RoomQueryService {
 
   static final int LANDING_FACES = 8;
   static final int SUGGESTED_FRIENDS = 3;
+  static final int SHOWN_INVITATIONS = 20;
 
   private final RoomRepository rooms;
   private final RoomInviteUrls urls;
@@ -111,6 +114,17 @@ public class RoomQueryService {
   @Transactional(readOnly = true)
   public RoomSuggestions suggestions(Long userId) {
     return new RoomSuggestions(rooms.friendsWithoutARoom(userId, SUGGESTED_FRIENDS));
+  }
+
+  @Transactional(readOnly = true)
+  public List<RoomInvitee> invitees(Long roomId, Long userId) {
+    joined(roomId, userId);
+    return rooms.invitees(roomId);
+  }
+
+  @Transactional(readOnly = true)
+  public List<RoomInvitation> invitations(Long userId) {
+    return rooms.invitationsFor(userId, SHOWN_INVITATIONS);
   }
 
   private RoomEntity joined(Long roomId, Long userId) {
