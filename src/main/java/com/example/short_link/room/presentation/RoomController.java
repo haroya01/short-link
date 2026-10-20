@@ -118,6 +118,18 @@ public class RoomController {
     return new FeedHiddenResponse(command.hideFromFeed(userId, id, false));
   }
 
+  @PutMapping("/{id}/pin")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void pin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    command.pin(userId, id, true);
+  }
+
+  @DeleteMapping("/{id}/pin")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void unpin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    command.pin(userId, id, false);
+  }
+
   @PostMapping("/{id}/leave")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void leave(

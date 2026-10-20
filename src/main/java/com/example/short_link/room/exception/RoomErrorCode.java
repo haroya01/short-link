@@ -18,7 +18,8 @@ public enum RoomErrorCode {
   ROOM_SUGGESTION_INVALID(HttpStatus.BAD_REQUEST, "dismiss 1 to %s suggested friends at once"),
   ROOM_INVITATION_INVALID(HttpStatus.BAD_REQUEST, "invite 1 to %s people at once"),
   ROOM_INVITATIONS_PILED(HttpStatus.CONFLICT, "a room waits on at most %s invitations at once"),
-  ROOM_INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "no invitation to room: %s");
+  ROOM_INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "no invitation to room: %s"),
+  ROOM_PINS_FULL(HttpStatus.CONFLICT, "pin at most %s rooms");
 
   private final HttpStatus status;
   private final String template;

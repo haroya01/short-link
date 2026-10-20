@@ -480,6 +480,31 @@ class RoomE2ETest {
   }
 
   @Test
+  void aMemberPinsUpToFiveRoomsAndPinnedComeFirst() throws Exception {
+    long older = room(owner);
+    long newer = room(owner);
+    assertThat(((Number) send(owner, get("/api/v1/rooms"), null).at("$[0].id")).longValue())
+        .isEqualTo(newer);
+    assertThat(send(owner, put("/api/v1/rooms/" + older + "/pin"), null).status()).isEqualTo(204);
+    assertThat(send(owner, put("/api/v1/rooms/" + older + "/pin"), null).status()).isEqualTo(204);
+    Answer list = send(owner, get("/api/v1/rooms"), null);
+    assertThat(((Number) list.at("$[0].id")).longValue()).isEqualTo(older);
+    assertThat((Boolean) list.at("$[0].pinned")).isTrue();
+    assertThat((Boolean) list.at("$[1].pinned")).isFalse();
+    assertThat(send(stranger, put("/api/v1/rooms/" + older + "/pin"), null).status())
+        .isEqualTo(404);
+
+    for (int i = 0; i < 4; i++) {
+      send(owner, put("/api/v1/rooms/" + room(owner) + "/pin"), null);
+    }
+    Answer full = send(owner, put("/api/v1/rooms/" + newer + "/pin"), null);
+    assertThat(full.status()).isEqualTo(409);
+    assertThat(send(owner, delete("/api/v1/rooms/" + older + "/pin"), null).status())
+        .isEqualTo(204);
+    assertThat(send(owner, put("/api/v1/rooms/" + newer + "/pin"), null).status()).isEqualTo(204);
+  }
+
+  @Test
   void mutualFollowsWithoutARoomAreSuggestedUntilWavedOff() throws Exception {
     follows.save(new FollowEntity(owner.id(), friend.id()));
     follows.save(new FollowEntity(friend.id(), owner.id()));

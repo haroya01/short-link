@@ -37,6 +37,12 @@ public interface RoomRepository {
 
   void hideFromFeed(Long roomId, Long userId, boolean hidden);
 
+  long countPinned(Long userId);
+
+  boolean isPinned(Long roomId, Long userId);
+
+  void pin(Long roomId, Long userId, Instant at);
+
   void readUpTo(Long roomId, Long userId, Long noteId);
 
   long unread(Long roomId, Long userId);

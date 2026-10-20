@@ -63,6 +63,8 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
             200);
     assertThat(read.path("unreadCount").asLong()).isZero();
     step("room-detail", "GET", "/api/v1/rooms/" + roomId, friend, null, 200);
+    step("room-pin", "PUT", "/api/v1/rooms/" + roomId + "/pin", friend, null, 204);
+    step("room-unpin", "DELETE", "/api/v1/rooms/" + roomId + "/pin", friend, null, 204);
     step("room-feed-hide", "PUT", "/api/v1/rooms/" + roomId + "/feed-hidden", friend, null, 200);
     step("room-feed-show", "DELETE", "/api/v1/rooms/" + roomId + "/feed-hidden", friend, null, 200);
 

@@ -39,6 +39,10 @@
 @junit | room-list | 2 | 0 | 0 | 0 | 2
 @junit | room-read | 2 | 0 | 1 | 0 | 3
 @junit | room-detail | 4 | 0 | 0 | 0 | 4
+# Pinning: membership, whether it is pinned already, the member's pin count against five, the
+# update. Unpinning skips the count.
+@junit | room-pin | 3 | 0 | 1 | 0 | 4
+@junit | room-unpin | 2 | 0 | 1 | 0 | 3
 @junit | room-feed-hide | 1 | 0 | 1 | 0 | 2
 @junit | room-feed-show | 1 | 0 | 1 | 0 | 2
 # The owner's changes run under the room's row lock, then the room is read back as on detail.

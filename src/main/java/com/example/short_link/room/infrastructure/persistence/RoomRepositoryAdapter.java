@@ -141,6 +141,37 @@ class RoomRepositoryAdapter implements RoomRepository {
   }
 
   @Override
+  public long countPinned(Long userId) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM room_member WHERE user_id = :user AND pinned_at IS NOT NULL")
+                .setParameter("user", userId)
+                .getSingleResult())
+        .longValue();
+  }
+
+  @Override
+  public boolean isPinned(Long roomId, Long userId) {
+    return !em.createNativeQuery(
+            "SELECT 1 FROM room_member WHERE room_id = :room AND user_id = :user"
+                + " AND pinned_at IS NOT NULL")
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .getResultList()
+        .isEmpty();
+  }
+
+  @Override
+  public void pin(Long roomId, Long userId, Instant at) {
+    em.createNativeQuery(
+            "UPDATE room_member SET pinned_at = :at WHERE room_id = :room AND user_id = :user")
+        .setParameter("at", at)
+        .setParameter("room", roomId)
+        .setParameter("user", userId)
+        .executeUpdate();
+  }
+
+  @Override
   public void readUpTo(Long roomId, Long userId, Long noteId) {
     em.createNativeQuery(
             "UPDATE room_member SET last_read_note_id = GREATEST(last_read_note_id, :note)"
@@ -200,6 +231,7 @@ class RoomRepositoryAdapter implements RoomRepository {
     List<Object[]> rows =
         em.createNativeQuery(
                 "SELECT r.id AS id, r.name AS name, r.owner_id AS owner, m.hidden_from_feed AS hidden,"
+                    + " m.pinned_at IS NOT NULL AS pinned,"
                     + " (SELECT COUNT(*) FROM room_member c WHERE c.room_id = r.id) AS members,"
                     + " (SELECT COUNT(*) FROM note un WHERE un.room_id = r.id"
                     + " AND un.id > m.last_read_note_id AND NOT (un.user_id <=> m.user_id))"
@@ -213,13 +245,14 @@ class RoomRepositoryAdapter implements RoomRepository {
                     + " (SELECT MAX(x.id) FROM note x WHERE x.room_id = r.id)"
                     + " LEFT JOIN users lu ON lu.id = ln.user_id"
                     + " WHERE m.user_id = :user"
-                    + " ORDER BY active_at DESC, r.id DESC")
+                    + " ORDER BY m.pinned_at IS NULL, active_at DESC, r.id DESC")
             .setParameter("user", userId)
             .unwrap(NativeQuery.class)
             .addScalar("id", Long.class)
             .addScalar("name", String.class)
             .addScalar("owner", Long.class)
             .addScalar("hidden", Boolean.class)
+            .addScalar("pinned", Long.class)
             .addScalar("members", Long.class)
             .addScalar("unread", Long.class)
             .addScalar("active_at", Instant.class)
@@ -235,25 +268,26 @@ class RoomRepositoryAdapter implements RoomRepository {
     List<RoomSummary> summaries = new ArrayList<>(rows.size());
     for (Object[] c : rows) {
       RoomSummary.LastNote last =
-          c[7] == null
+          c[8] == null
               ? null
               : new RoomSummary.LastNote(
-                  (Long) c[7],
-                  excerpt((String) c[8], (String) c[9]),
-                  c[11] == null
+                  (Long) c[8],
+                  excerpt((String) c[9], (String) c[10]),
+                  c[12] == null
                       ? null
                       : new RoomPerson(
-                          (Long) c[11], (String) c[12], (String) c[13], (String) c[14]),
-                  (Instant) c[10]);
+                          (Long) c[12], (String) c[13], (String) c[14], (String) c[15]),
+                  (Instant) c[11]);
       summaries.add(
           new RoomSummary(
               (Long) c[0],
               (String) c[1],
               userId.equals(c[2]),
-              (Long) c[4],
-              Boolean.TRUE.equals(c[3]),
               (Long) c[5],
-              (Instant) c[6],
+              Boolean.TRUE.equals(c[3]),
+              truth(c[4]),
+              (Long) c[6],
+              (Instant) c[7],
               last));
     }
     return summaries;
