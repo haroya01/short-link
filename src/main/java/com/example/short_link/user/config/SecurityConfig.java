@@ -162,7 +162,8 @@ public class SecurityConfig {
                         "/.well-known/nodeinfo",
                         "/ap/**")
                     .permitAll()
-                    .requestMatchers(GET, "/api/v1/federation/trending")
+                    .requestMatchers(
+                        GET, "/api/v1/federation/trending", "/api/v1/federation/latest")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/federation/accounts/search")
                     .permitAll()
