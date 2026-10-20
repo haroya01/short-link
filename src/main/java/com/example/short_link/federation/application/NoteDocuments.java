@@ -170,10 +170,10 @@ public class NoteDocuments {
   }
 
   private List<String> to(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
-    if (!addressed.isEmpty() && note.visibility() == NoteSnapshotReader.Visibility.DIRECT) {
+    if (!addressed.isEmpty() && note.visibility().direct()) {
       return addressed.stream().map(Addressee::actorUri).toList();
     }
-    return note.visibility() == NoteSnapshotReader.Visibility.PUBLIC
+    return note.visibility().listed()
         ? List.of(ActivityStreams.PUBLIC)
         : List.of(urls.followers(actorPublicId));
   }
@@ -183,14 +183,13 @@ public class NoteDocuments {
   }
 
   private List<String> cc(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
-    List<String> cc =
-        new ArrayList<>(
-            switch (note.visibility()) {
-              case PUBLIC -> List.of(urls.followers(actorPublicId));
-              case UNLISTED -> List.of(ActivityStreams.PUBLIC);
-              case PRIVATE, DIRECT -> List.<String>of();
-            });
-    if (note.visibility() != NoteSnapshotReader.Visibility.DIRECT) {
+    List<String> cc = new ArrayList<>();
+    if (note.visibility().listed()) {
+      cc.add(urls.followers(actorPublicId));
+    } else if (note.visibility().shareable()) {
+      cc.add(ActivityStreams.PUBLIC);
+    }
+    if (!note.visibility().direct()) {
       addressed.forEach(person -> cc.add(person.actorUri()));
     }
     return cc;

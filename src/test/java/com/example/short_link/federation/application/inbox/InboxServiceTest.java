@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
@@ -443,7 +444,7 @@ class InboxServiceTest {
   }
 
   private static Optional<NoteSnapshotReader.NoteSnapshot> noteOne(
-      NoteSnapshotReader.Visibility visibility, String body) {
+      NoteVisibility visibility, String body) {
     return Optional.of(
         new NoteSnapshotReader.NoteSnapshot(
             1L,
@@ -461,7 +462,7 @@ class InboxServiceTest {
             visibility));
   }
 
-  private void noteOneIs(NoteSnapshotReader.Visibility visibility, String body) {
+  private void noteOneIs(NoteVisibility visibility, String body) {
     when(notes.find(1L)).thenReturn(noteOne(visibility, body));
   }
 
@@ -471,7 +472,7 @@ class InboxServiceTest {
 
   @Test
   void onlyAPublicOrUnlistedNoteIsBoostedFromElsewhere() {
-    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    noteOneIs(NoteVisibility.PRIVATE, "for followers");
     when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
 
     assertThat(
@@ -489,7 +490,7 @@ class InboxServiceTest {
 
   @Test
   void aFollowersOnlyNoteIsLikedOnlyByAnAcceptedFollowerOrSomeoneItNames() {
-    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    noteOneIs(NoteVisibility.PRIVATE, "for followers");
     when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
     verifiedAs(ALICE_ACTOR);
     when(followers.accepts(7L, 42L)).thenReturn(false, true);
@@ -507,12 +508,10 @@ class InboxServiceTest {
   @Test
   void aDirectNoteIsLikedOrVotedOnOnlyBySomeoneItNames() {
     Optional<NoteSnapshotReader.NoteSnapshot> toBob =
-        noteOne(NoteSnapshotReader.Visibility.DIRECT, "just us @bob@mastodon.example");
+        noteOne(NoteVisibility.DIRECT, "just us @bob@mastodon.example");
     when(notes.find(1L))
         .thenReturn(
-            toBob,
-            toBob,
-            noteOne(NoteSnapshotReader.Visibility.DIRECT, "just us @Alice@Mastodon.example"));
+            toBob, toBob, noteOne(NoteVisibility.DIRECT, "just us @Alice@Mastodon.example"));
     when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
     verifiedAs(ALICE_ACTOR);
     InboxService service = service();
@@ -533,7 +532,7 @@ class InboxServiceTest {
 
   @Test
   void aReplyToANoteTheSenderMayNotReadIsKeptWithoutItsParent() {
-    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    noteOneIs(NoteVisibility.PRIVATE, "for followers");
     verifiedAs(ALICE_ACTOR);
     when(actorRows.findByPublicIds(Set.of("owner1")))
         .thenReturn(List.of(new FederationActorEntity(7L, "owner1", "PUB", "enc")));
@@ -925,7 +924,7 @@ class InboxServiceTest {
     assertThat(first.remoteActorId()).isEqualTo(42L);
     assertThat(first.uri()).isEqualTo(ALICE + "/statuses/9");
     assertThat(first.body()).isEqualTo("hi @bob@other.example\n\nbye");
-    assertThat(first.visibility()).isEqualTo("public");
+    assertThat(first.visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(first.publishedAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00Z"));
     assertThat(first.addressedUserIds()).isEmpty();
   }

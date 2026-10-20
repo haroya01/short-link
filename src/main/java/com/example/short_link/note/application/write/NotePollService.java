@@ -3,6 +3,7 @@ package com.example.short_link.note.application.write;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NotePolls;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteEntity;
@@ -15,7 +16,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -28,6 +28,7 @@ public class NotePollService implements RemoteNotePollVotes {
   private static final int CLOSE_BATCH = 100;
 
   private final NoteRepository notes;
+  private final NoteAccess access;
   private final NotePollRepository polls;
   private final UserBlockChecker blocks;
   private final ApplicationEventPublisher events;
@@ -39,9 +40,7 @@ public class NotePollService implements RemoteNotePollVotes {
         notes
             .findById(noteId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    if (note.getVisibility().restricted()
-        && !note.isOwnedBy(userId)
-        && !notes.visibleTo(userId, Set.of(noteId)).contains(noteId)) {
+    if (!access.readable(note, userId)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
     }
     if (!note.hasPoll()) {

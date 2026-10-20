@@ -2,9 +2,9 @@ package com.example.short_link.note.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.FollowEntity;

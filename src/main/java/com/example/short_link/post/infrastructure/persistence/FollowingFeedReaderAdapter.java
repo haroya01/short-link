@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.FollowingFeedRef;
@@ -30,8 +31,8 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
   private static final String NOTES =
       "SELECT 'NOTE', n.id, i.series_id, n.created_at FROM series_item i"
           + " JOIN note n ON n.id = i.ref_id"
-          + " WHERE i.item_type = 'NOTE' AND i.series_id IN (:series)"
-          + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+          + " WHERE i.item_type = 'NOTE' AND i.series_id IN (:series) AND "
+          + NoteAccessSql.shareable("n")
           + HeardSql.heard("n.user_id");
 
   @PersistenceContext private EntityManager em;

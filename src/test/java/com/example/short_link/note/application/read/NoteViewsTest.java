@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinkPreviewEntity;
@@ -15,7 +17,6 @@ import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
-import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
@@ -30,9 +31,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -46,7 +47,21 @@ class NoteViewsTest {
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NoteLinkPreviewRepository linkPreviews;
   @Mock private NotePollRepository polls;
-  @InjectMocks private NoteViews views;
+  private NoteViews views;
+
+  @BeforeEach
+  void views() {
+    views =
+        new NoteViews(
+            notes,
+            new NoteAccess(notes),
+            media,
+            people,
+            quotedPosts,
+            linkPreviews,
+            polls,
+            Clock.systemUTC());
+  }
 
   private static NoteEntity note(Long id, Long userId, Long quotedPostId) {
     NoteEntity note = new NoteEntity(userId, "n" + id, null, quotedPostId);
@@ -294,6 +309,7 @@ class NoteViewsTest {
     NoteViews clocked =
         new NoteViews(
             notes,
+            new NoteAccess(notes),
             media,
             people,
             quotedPosts,
@@ -337,6 +353,7 @@ class NoteViewsTest {
     NoteViews clocked =
         new NoteViews(
             notes,
+            new NoteAccess(notes),
             media,
             people,
             quotedPosts,
