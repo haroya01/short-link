@@ -12,6 +12,7 @@ import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.note.application.write.NotePollService;
 import com.example.short_link.note.application.write.NoteScheduleService;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -1008,18 +1009,29 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note_filter", "user_id = ?", owner.id())).isZero();
   }
 
-  private long postAt(Actor author, String title, int minutesAgo) {
+  private long postAt(Actor author, String title, Instant at) {
     String slug = "home-" + UUID.randomUUID().toString().substring(0, 8);
     jdbc.update(
         "INSERT INTO posts (user_id, slug, title, created_at, updated_at, status, audience,"
             + " published_at, body_text_length, language_tag)"
-            + " VALUES (?, ?, ?, NOW(6), NOW(6), 'PUBLISHED', 'PUBLIC',"
-            + " NOW(6) - INTERVAL ? MINUTE, 500, 'ko')",
+            + " VALUES (?, ?, ?, ?, ?, 'PUBLISHED', 'PUBLIC', ?, 500, 'ko')",
         author.id(),
         slug,
         title,
-        minutesAgo);
+        Timestamp.from(at),
+        Timestamp.from(at),
+        Timestamp.from(at));
     return jdbc.queryForObject("SELECT id FROM posts WHERE slug = ?", Long.class, slug);
+  }
+
+  private long noteWrittenAt(Actor author, String body, Instant at) {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, ?, ?)",
+        author.id(),
+        body,
+        Timestamp.from(at));
+    return jdbc.queryForObject(
+        "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, author.id());
   }
 
   private static List<String> homeKeys(JsonNode page) {
@@ -1040,13 +1052,14 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
         reader.id(),
         writer.id());
-    long newest = noteAt(writer, "홈 노트 하나", 1);
-    long post = postAt(writer, "홈에 실린 글", 2);
-    long older = noteAt(stranger, "모르는 사람의 노트", 3);
+    Instant ahead = Instant.now().plusSeconds(12 * 3_600);
+    long older = noteWrittenAt(stranger, "모르는 사람의 노트", ahead.minusSeconds(180));
+    long post = postAt(writer, "홈에 실린 글", ahead.minusSeconds(120));
+    long newest = noteWrittenAt(writer, "홈 노트 하나", ahead.minusSeconds(60));
 
     var latest =
-        step("home-latest", "GET", "/api/v1/public/home?tab=latest&limit=2", null, null, 200);
-    assertThat(homeKeys(latest)).containsSubsequence("note:" + newest, "post:" + post);
+        step("home-latest", "GET", "/api/v1/public/home?tab=latest&limit=3", null, null, 200);
+    assertThat(homeKeys(latest)).containsExactly("note:" + newest, "post:" + post, "note:" + older);
     var trending =
         step("home-trending", "GET", "/api/v1/public/home?tab=trending&limit=2", null, null, 200);
     assertThat(homeKeys(trending).getFirst()).startsWith("note:");

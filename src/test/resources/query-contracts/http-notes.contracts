@@ -286,9 +286,10 @@
 # on first use here), to the server of what it answered and their followers.
 @junit | note-reply-removed-by-thread-writer | 9 | 1 | 0 | 4 | 14
 # The home feed: a page of notes and a page of posts cut from the same lists their own feeds use,
-# each built as those feeds build them, merged in memory; following also reads whom the reader
-# follows, their series and tags.
-@junit | home-latest | 9 | 0 | 0 | 0 | 9
+# each built as those feeds build them, merged in memory; a page with posts adds one statement for
+# their comment counts and the reader's likes. Following also reads whom the reader follows, their
+# series and tags.
+@junit | home-latest | 10 | 0 | 0 | 0 | 10
 @junit | home-trending | 9 | 0 | 0 | 0 | 9
 @junit | home-following | 12 | 0 | 0 | 0 | 12
 @junit | home-following-next | 12 | 0 | 0 | 0 | 12
