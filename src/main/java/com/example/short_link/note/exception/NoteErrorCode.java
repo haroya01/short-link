@@ -56,7 +56,6 @@ public enum NoteErrorCode {
       HttpStatus.BAD_REQUEST, "who can reply is set on the first note of a thread"),
   NOTE_NOT_A_REPLY(HttpStatus.BAD_REQUEST, "only a reply can be hidden"),
   NOTE_INTERACTION_BLOCKED(HttpStatus.FORBIDDEN, "cannot repost or quote this note"),
-  NOTE_REMOTE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "notes from other servers cannot be quoted yet"),
   NOTE_SCHEDULE_TOO_SOON(
       HttpStatus.UNPROCESSABLE_ENTITY, "schedule a note at least 5 minutes ahead"),
   NOTE_SCHEDULE_LIMIT(HttpStatus.UNPROCESSABLE_ENTITY, "too many scheduled notes: %s"),

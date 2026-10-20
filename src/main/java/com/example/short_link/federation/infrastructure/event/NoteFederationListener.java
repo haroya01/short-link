@@ -53,7 +53,12 @@ public class NoteFederationListener {
     if (!event.federated()) {
       return;
     }
-    notes.deleted(event.noteId(), event.authorId(), event.inReplyToId(), event.remoteHandles());
+    notes.deleted(
+        event.noteId(),
+        event.authorId(),
+        event.inReplyToId(),
+        event.remoteHandles(),
+        event.quotedNoteId());
   }
 
   @Async("webhookExecutor")
