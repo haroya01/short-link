@@ -55,4 +55,10 @@ public class PostBlockEntity extends BaseTimeEntity {
   public void updateBlockOrder(int blockOrder) {
     this.blockOrder = blockOrder;
   }
+
+  public void rewrite(PostBlockType type, String content, int blockOrder) {
+    this.type = type;
+    this.content = content;
+    this.blockOrder = blockOrder;
+  }
 }
