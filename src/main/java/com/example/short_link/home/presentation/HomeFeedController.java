@@ -18,7 +18,8 @@ public class HomeFeedController {
       @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "latest") String tab,
       @RequestParam(defaultValue = "20") int limit,
-      @RequestParam(required = false) String cursor) {
-    return home.page(viewerId, tab, cursor, limit);
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) String since) {
+    return home.page(viewerId, tab, cursor, since, limit);
   }
 }

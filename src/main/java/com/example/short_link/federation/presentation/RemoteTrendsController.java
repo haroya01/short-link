@@ -27,7 +27,8 @@ public class RemoteTrendsController {
   public RemoteTrendingFeed.Page latest(
       @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "20") int limit,
-      @RequestParam(required = false) String cursor) {
-    return trending.latest(viewerId, cursor, limit);
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) String since) {
+    return trending.latest(viewerId, cursor, since, limit);
   }
 }

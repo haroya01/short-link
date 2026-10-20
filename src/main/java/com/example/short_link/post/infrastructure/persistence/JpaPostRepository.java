@@ -221,6 +221,28 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("viewer") long viewer,
       @Param("now") Instant now);
 
+  String AUTHORS_PREDICATE =
+      "WHERE "
+          + PostAccessSql.LISTED
+          + " AND p.user_id IN (:authorIds)"
+          + HeardSql.POST_AUTHOR
+          + " ";
+
+  @Query(
+      nativeQuery = true,
+      value = "SELECT p.* FROM posts p " + AUTHORS_PREDICATE + "ORDER BY p.published_at DESC")
+  List<PostEntity> findPublishedByAuthors(
+      @Param("authorIds") Collection<Long> authorIds,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      Pageable pageable);
+
+  @Query(nativeQuery = true, value = "SELECT COUNT(*) FROM posts p " + AUTHORS_PREDICATE)
+  long countPublishedByAuthors(
+      @Param("authorIds") Collection<Long> authorIds,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now);
+
   // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
   String FOR_YOU_PREDICATE =
       "JOIN post_tag t ON t.post_id = p.id "

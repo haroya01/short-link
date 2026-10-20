@@ -66,4 +66,43 @@ class RemoteTrendingFeedTest {
     verify(authors, never()).warm(any());
     verifyNoInteractions(notes);
   }
+
+  private static TrendingNote item(String uri) {
+    TrendingNote note = mock(TrendingNote.class);
+    when(note.uri()).thenReturn(uri);
+    return note;
+  }
+
+  @Test
+  void aRefreshSinceTheTopItemGetsOnlyWhatCameAboveIt() {
+    TrendingNote newest = item("https://x/s/3");
+    TrendingNote seen = item("https://x/s/2");
+    TrendingNote older = item("https://x/s/1");
+    when(latest.page(7L, 0, TrendingPosts.MAX_LIMIT))
+        .thenReturn(new LatestPosts.Page(List.of(newest, seen, older), false, List.of()));
+
+    RemoteTrendingFeed.Page fresh = feed.latest(7L, null, "https://x/s/2", 20);
+    RemoteTrendingFeed.Page none = feed.latest(7L, null, "https://x/s/3", 20);
+
+    assertThat(fresh.items()).containsExactly(newest);
+    assertThat(fresh.next()).isNull();
+    assertThat(fresh.gap()).isFalse();
+    assertThat(none.items()).isEmpty();
+    assertThat(none.gap()).isFalse();
+  }
+
+  @Test
+  void aMarkerOutOfReachStartsTheListOverWithAGap() {
+    TrendingNote newest = item("https://x/s/9");
+    when(latest.page(7L, 0, TrendingPosts.MAX_LIMIT))
+        .thenReturn(new LatestPosts.Page(List.of(newest), true, List.of()));
+    when(latest.page(7L, 0, 20)).thenReturn(new LatestPosts.Page(List.of(newest), true, List.of()));
+
+    RemoteTrendingFeed.Page page = feed.latest(7L, null, "https://x/s/1", 20);
+
+    assertThat(page.items()).containsExactly(newest);
+    assertThat(page.next()).isEqualTo("t1");
+    assertThat(page.gap()).isTrue();
+    assertThat(feed.latest(7L, null, null, 20).gap()).isNull();
+  }
 }

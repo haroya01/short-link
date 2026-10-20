@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -224,13 +225,26 @@ class PostRepositoryAdapter implements PostRepository {
       Collection<String> tags,
       int offset,
       int limit) {
+    return followed(viewerId, authorIds, seriesIds, tags, new OffsetLimit(offset, limit));
+  }
+
+  private List<PostEntity> followed(
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      Pageable pageable) {
+    if (seriesIds.isEmpty() && tags.isEmpty()) {
+      return jpa.findPublishedByAuthors(
+          idsForIn(authorIds), HeardSql.viewer(viewerId), Instant.now(), pageable);
+    }
     return jpa.findPublishedByAuthorsSeriesOrTags(
         idsForIn(authorIds),
         idsForIn(seriesIds),
         tagsForIn(tags),
         HeardSql.viewer(viewerId),
         Instant.now(),
-        new OffsetLimit(offset, limit));
+        pageable);
   }
 
   @Override
@@ -464,13 +478,7 @@ class PostRepositoryAdapter implements PostRepository {
       Collection<String> tags,
       int page,
       int size) {
-    return jpa.findPublishedByAuthorsSeriesOrTags(
-        idsForIn(authorIds),
-        idsForIn(seriesIds),
-        tagsForIn(tags),
-        HeardSql.viewer(viewerId),
-        Instant.now(),
-        PageRequest.of(page, size));
+    return followed(viewerId, authorIds, seriesIds, tags, PageRequest.of(page, size));
   }
 
   @Override
@@ -479,6 +487,10 @@ class PostRepositoryAdapter implements PostRepository {
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags) {
+    if (seriesIds.isEmpty() && tags.isEmpty()) {
+      return jpa.countPublishedByAuthors(
+          idsForIn(authorIds), HeardSql.viewer(viewerId), Instant.now());
+    }
     return jpa.countPublishedByAuthorsSeriesOrTags(
         idsForIn(authorIds),
         idsForIn(seriesIds),
