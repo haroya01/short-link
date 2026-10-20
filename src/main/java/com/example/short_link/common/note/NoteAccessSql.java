@@ -24,6 +24,10 @@ public final class NoteAccessSql {
   }
 
   public static String readable(String alias) {
+    return readable(alias, ":viewer");
+  }
+
+  public static String readable(String alias, String viewer) {
     StringBuilder readable = new StringBuilder("(").append(shareable(alias));
     for (Reader reader : Reader.values()) {
       List<NoteVisibility> beyondAnyone =
@@ -34,39 +38,68 @@ public final class NoteAccessSql {
             .append(" OR (")
             .append(in(alias, beyondAnyone::contains))
             .append(" AND ")
-            .append(holds(reader, alias))
+            .append(holds(reader, alias, viewer))
             .append(")");
       }
     }
     return readable.append(")").toString();
   }
 
-  private static String holds(Reader reader, String alias) {
+  private static String holds(Reader reader, String alias, String viewer) {
     return switch (reader) {
       case ANYONE -> "TRUE";
-      case AUTHOR -> alias + ".user_id = :viewer";
+      case AUTHOR -> alias + ".user_id = " + viewer;
       case NAMED ->
           "EXISTS (SELECT 1 FROM note_recipient vr WHERE vr.note_id = "
               + alias
-              + ".id AND vr.user_id = :viewer)";
+              + ".id AND vr.user_id = "
+              + viewer
+              + ")";
       case FOLLOWER ->
-          "(EXISTS (SELECT 1 FROM user_follow vf WHERE vf.follower_id = :viewer"
+          "(EXISTS (SELECT 1 FROM user_follow vf WHERE vf.follower_id = "
+              + viewer
               + " AND vf.following_id = "
               + alias
               + ".user_id) OR EXISTS (SELECT 1 FROM federation_following vff"
-              + " WHERE vff.user_id = :viewer AND vff.remote_actor_id = "
+              + " WHERE vff.user_id = "
+              + viewer
+              + " AND vff.remote_actor_id = "
               + alias
               + ".remote_actor_id AND vff.accepted_at IS NOT NULL))";
+      case MEMBER ->
+          "EXISTS (SELECT 1 FROM room_member vm WHERE vm.room_id = "
+              + alias
+              + ".room_id AND vm.user_id = "
+              + viewer
+              + ")";
     };
+  }
+
+  public static String inRoom(String alias) {
+    return in(alias, NoteVisibility::inRoom);
+  }
+
+  public static String outsideRooms(String alias) {
+    return in(alias, visibility -> !visibility.inRoom());
+  }
+
+  public static String inFeedRooms(String alias) {
+    return inRoom(alias)
+        + " AND "
+        + alias
+        + ".room_id IN (SELECT fr.room_id FROM room_member fr"
+        + " WHERE fr.user_id = :viewer AND NOT fr.hidden_from_feed)";
   }
 
   public static String onProfile(String alias) {
     return readable(alias)
         + " AND ("
+        + in(alias, visibility -> visibility.onProfile(false))
+        + " OR ("
+        + in(alias, visibility -> visibility.onProfile(true))
+        + " AND "
         + alias
-        + ".user_id = :viewer OR NOT ("
-        + direct(alias)
-        + "))";
+        + ".user_id = :viewer))";
   }
 
   private static String in(String alias, Predicate<NoteVisibility> question) {

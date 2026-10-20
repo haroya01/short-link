@@ -24,6 +24,7 @@ import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -47,6 +48,7 @@ class NoteViewsTest {
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NoteLinkPreviewRepository linkPreviews;
   @Mock private NotePollRepository polls;
+  @Mock private NoteRoomReader rooms;
   private NoteViews views;
 
   @BeforeEach
@@ -55,6 +57,7 @@ class NoteViewsTest {
         new NoteViews(
             notes,
             new NoteAccess(notes),
+            rooms,
             media,
             people,
             quotedPosts,
@@ -310,6 +313,7 @@ class NoteViewsTest {
         new NoteViews(
             notes,
             new NoteAccess(notes),
+            rooms,
             media,
             people,
             quotedPosts,
@@ -354,6 +358,7 @@ class NoteViewsTest {
         new NoteViews(
             notes,
             new NoteAccess(notes),
+            rooms,
             media,
             people,
             quotedPosts,

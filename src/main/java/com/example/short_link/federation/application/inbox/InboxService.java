@@ -394,7 +394,9 @@ public class InboxService {
   // The same rule that serves the note document: it exists and its author federates. A personal
   // inbox already resolved its owner, who is usually the author.
   private Optional<NoteSnapshot> federated(Long noteId, Optional<LocalActor> owner) {
-    return notes.find(noteId).filter(note -> federates(note, owner));
+    return notes
+        .find(noteId)
+        .filter(note -> note.visibility().federates() && federates(note, owner));
   }
 
   private boolean federates(NoteSnapshot note, Optional<LocalActor> owner) {

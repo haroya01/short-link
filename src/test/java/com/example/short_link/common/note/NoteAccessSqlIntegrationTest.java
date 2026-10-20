@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteAccessSqlIntegrationTest {
 
-  record Reader(String name, long id, boolean follows, boolean named) {}
+  record Reader(String name, long id, boolean follows, boolean named, boolean member) {}
 
   record Written(long id, NoteVisibility visibility, boolean remote) {}
 
@@ -35,6 +35,7 @@ class NoteAccessSqlIntegrationTest {
 
   private long author;
   private long elsewhere;
+  private long room;
   private final List<Reader> readers = new ArrayList<>();
   private final List<Written> written = new ArrayList<>();
 
@@ -46,7 +47,17 @@ class NoteAccessSqlIntegrationTest {
     long named = member("na" + tag);
     long pending = member("pe" + tag);
     long stranger = member("st" + tag);
+    long roommate = member("ro" + tag);
     elsewhere = remoteActor(tag);
+    update(
+        "INSERT INTO room (owner_id, name, created_at, updated_at) VALUES (:o, :n, NOW(6), NOW(6))",
+        Map.of("o", author, "n", tag));
+    room =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM room WHERE name = :n", Map.of("n", tag), Long.class);
+    update(
+        "INSERT INTO room_member (room_id, user_id, joined_at) VALUES (:r, :a, NOW(6)), (:r, :m, NOW(6))",
+        Map.of("r", room, "a", author, "m", roommate));
     update(
         "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (:a, :b, NOW(6))",
         Map.of("a", follower, "b", author));
@@ -64,12 +75,13 @@ class NoteAccessSqlIntegrationTest {
         written.add(new Written(id, visibility, remote));
       }
     }
-    readers.add(new Reader("anonymous", -1L, false, false));
-    readers.add(new Reader("author", author, false, false));
-    readers.add(new Reader("follower", follower, true, false));
-    readers.add(new Reader("named", named, false, true));
-    readers.add(new Reader("pending", pending, false, false));
-    readers.add(new Reader("stranger", stranger, false, false));
+    readers.add(new Reader("anonymous", -1L, false, false, false));
+    readers.add(new Reader("author", author, false, false, true));
+    readers.add(new Reader("follower", follower, true, false, false));
+    readers.add(new Reader("named", named, false, true, false));
+    readers.add(new Reader("pending", pending, false, false, false));
+    readers.add(new Reader("stranger", stranger, false, false, false));
+    readers.add(new Reader("roommate", roommate, false, false, true));
   }
 
   @Test
@@ -80,13 +92,29 @@ class NoteAccessSqlIntegrationTest {
       compare(
           differ, "shareable", NoteAccessSql::shareable, reader, n -> n.visibility().shareable());
       compare(differ, "direct", NoteAccessSql::direct, reader, n -> n.visibility().direct());
+      compare(differ, "inRoom", NoteAccessSql::inRoom, reader, n -> n.visibility().inRoom());
+      compare(
+          differ,
+          "outsideRooms",
+          NoteAccessSql::outsideRooms,
+          reader,
+          n -> !n.visibility().inRoom());
+      compare(
+          differ,
+          "inFeedRooms",
+          NoteAccessSql::inFeedRooms,
+          reader,
+          n -> n.visibility().inRoom() && reader.member());
       compare(differ, "readable", NoteAccessSql::readable, reader, n -> readable(reader, n));
       compare(
           differ,
           "onProfile",
           NoteAccessSql::onProfile,
           reader,
-          n -> readable(reader, n) && (owns(reader, n) || !n.visibility().direct()));
+          n ->
+              readable(reader, n)
+                  && (n.visibility().onProfile(false)
+                      || (n.visibility().onProfile(true) && owns(reader, n))));
     }
 
     assertThat(differ).isEmpty();
@@ -101,6 +129,7 @@ class NoteAccessSqlIntegrationTest {
                   case AUTHOR -> owns(reader, note);
                   case NAMED -> reader.named();
                   case FOLLOWER -> reader.follows();
+                  case MEMBER -> reader.member();
                 });
   }
 
@@ -159,10 +188,11 @@ class NoteAccessSqlIntegrationTest {
             .addValue("actor", remote ? elsewhere : null)
             .addValue("uri", uri)
             .addValue("visibility", visibility.name())
+            .addValue("room", room)
             .addValue("body", body);
     jdbc.update(
-        "INSERT INTO note (user_id, remote_actor_id, uri, body, created_at, visibility)"
-            + " VALUES (:user, :actor, :uri, :body, NOW(6), :visibility)",
+        "INSERT INTO note (user_id, remote_actor_id, uri, body, created_at, visibility, room_id)"
+            + " VALUES (:user, :actor, :uri, :body, NOW(6), :visibility, :room)",
         row);
     return jdbc.queryForObject(
         "SELECT id FROM note WHERE body = :body", Map.of("body", body), Long.class);

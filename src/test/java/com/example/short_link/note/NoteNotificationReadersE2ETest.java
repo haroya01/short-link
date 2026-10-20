@@ -47,6 +47,7 @@ class NoteNotificationReadersE2ETest {
     BLOCKED,
     MUTER,
     SHARER,
+    ROOMMATE,
     AUTHOR
   }
 
@@ -54,7 +55,8 @@ class NoteNotificationReadersE2ETest {
     PUBLIC,
     UNLISTED,
     PRIVATE,
-    DIRECT
+    DIRECT,
+    ROOM
   }
 
   @Autowired private MockMvc mvc;
@@ -73,9 +75,13 @@ class NoteNotificationReadersE2ETest {
   private final Map<Viewer, Long> ids = new EnumMap<>(Viewer.class);
   private final Map<Vis, Long> written = new EnumMap<>(Vis.class);
   private final Map<Vis, String> markers = new EnumMap<>(Vis.class);
+  private Long room;
 
   @AfterEach
   void deleteCommittedRows() {
+    if (room != null) {
+      jdbc.update("DELETE FROM room WHERE id = ?", room);
+    }
     for (Long note : written.values()) {
       jdbc.update("DELETE FROM note_repost WHERE note_id = ?", note);
       jdbc.update("DELETE FROM note_edit WHERE note_id = ?", note);
@@ -109,6 +115,18 @@ class NoteNotificationReadersE2ETest {
     mutes.save(new UserMuteEntity(ids.get(Viewer.MUTER), author, false, null));
     blocks.save(new UserBlockEntity(author, ids.get(Viewer.BLOCKED)));
     String mentioned = users.findById(ids.get(Viewer.MENTIONED)).orElseThrow().getUsername();
+    String roommate = users.findById(ids.get(Viewer.ROOMMATE)).orElseThrow().getUsername();
+    jdbc.update(
+        "INSERT INTO room (owner_id, name, created_at, updated_at) VALUES (?, ?, NOW(6), NOW(6))",
+        author,
+        tag);
+    room = jdbc.queryForObject("SELECT id FROM room WHERE name = ?", Long.class, tag);
+    jdbc.update(
+        "INSERT INTO room_member (room_id, user_id, joined_at) VALUES (?, ?, NOW(6)), (?, ?, NOW(6))",
+        room,
+        author,
+        room,
+        ids.get(Viewer.ROOMMATE));
 
     for (Vis vis : Vis.values()) {
       String marker = tag + "m" + vis.ordinal() + "q";
@@ -119,21 +137,29 @@ class NoteNotificationReadersE2ETest {
               .create(
                   author,
                   new NoteDraft(
-                      marker + " @" + mentioned,
+                      marker + " @" + mentioned + (vis == Vis.ROOM ? " @" + roommate : ""),
                       null,
                       null,
                       null,
                       null,
                       null,
                       false,
-                      vis.name().toLowerCase(Locale.ROOT)))
+                      vis.name().toLowerCase(Locale.ROOT),
+                      null,
+                      null,
+                      null,
+                      vis == Vis.ROOM ? room : null))
               .id());
     }
     command.setRepost(ids.get(Viewer.SHARER), written.get(Vis.PUBLIC), true);
     drain();
     for (Vis vis : Vis.values()) {
       command.edit(
-          author, written.get(vis), markers.get(vis) + " edited @" + mentioned, null, null);
+          author,
+          written.get(vis),
+          markers.get(vis) + " edited @" + mentioned + (vis == Vis.ROOM ? " @" + roommate : ""),
+          null,
+          null);
     }
     drain();
     mvc.perform(
@@ -172,7 +198,9 @@ class NoteNotificationReadersE2ETest {
     }
 
     assertThat(failures).isEmpty();
-    assertThat(told.get(Viewer.MENTIONED)).containsExactly(Vis.values());
+    assertThat(told.get(Viewer.MENTIONED))
+        .containsExactly(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE, Vis.DIRECT);
+    assertThat(told.get(Viewer.ROOMMATE)).contains(Vis.ROOM);
     assertThat(told.get(Viewer.FOLLOWER)).containsExactly(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE);
     assertThat(told.get(Viewer.MUTER)).containsExactly(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE);
     assertThat(told.get(Viewer.SHARER)).containsExactly(Vis.PUBLIC);
@@ -189,6 +217,7 @@ class NoteNotificationReadersE2ETest {
               || viewer == Viewer.MENTIONED
               || viewer == Viewer.AUTHOR;
       case DIRECT -> viewer == Viewer.MENTIONED || viewer == Viewer.AUTHOR;
+      case ROOM -> viewer == Viewer.ROOMMATE || viewer == Viewer.AUTHOR;
     };
   }
 

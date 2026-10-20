@@ -112,6 +112,29 @@ public class NoteController {
     return query.history(id, viewerId);
   }
 
+  @GetMapping("/api/v1/rooms/{id}/notes")
+  public NoteFeedView room(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.room(id, viewerId, page, size);
+  }
+
+  @GetMapping("/api/v1/rooms/my-notes")
+  public NoteFeedView myRoomNotes(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.roomNotesBy(viewerId, page, size);
+  }
+
+  @DeleteMapping("/api/v1/rooms/my-notes")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void deleteMyRoomNotes(@AuthenticationPrincipal Long viewerId, @RequestParam Long roomId) {
+    command.requestRoomNoteErasure(viewerId, roomId);
+  }
+
   @GetMapping("/api/v1/notes/direct")
   public NoteFeedView direct(
       @AuthenticationPrincipal Long viewerId,

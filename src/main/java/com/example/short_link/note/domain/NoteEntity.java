@@ -102,6 +102,9 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "reply_policy", nullable = false, length = 16)
   private NoteReplyPolicy replyPolicy = NoteReplyPolicy.EVERYONE;
 
+  @Column(name = "room_id")
+  private Long roomId;
+
   @Column(name = "reply_hidden_at")
   private Instant replyHiddenAt;
 
@@ -169,6 +172,12 @@ public class NoteEntity extends BaseCreatedEntity {
   public void answer(NoteEntity parent) {
     this.conversationId = parent.conversation();
     this.replyPolicy = parent.replyPolicy;
+    this.roomId = parent.roomId;
+  }
+
+  public void postIn(Long roomId) {
+    this.roomId = roomId;
+    this.visibility = NoteVisibility.IN_ROOM;
   }
 
   public void limitReplies(NoteReplyPolicy policy) {

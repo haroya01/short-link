@@ -13,7 +13,35 @@ public record NoteDraft(
     String visibility,
     Poll poll,
     String language,
-    String replyPolicy) {
+    String replyPolicy,
+    Long roomId) {
+
+  public NoteDraft(
+      String body,
+      List<Image> images,
+      Long quotedPostId,
+      Long inReplyToId,
+      Long quotedNoteId,
+      String contentWarning,
+      boolean sensitive,
+      String visibility,
+      Poll poll,
+      String language,
+      String replyPolicy) {
+    this(
+        body,
+        images,
+        quotedPostId,
+        inReplyToId,
+        quotedNoteId,
+        contentWarning,
+        sensitive,
+        visibility,
+        poll,
+        language,
+        replyPolicy,
+        null);
+  }
 
   public NoteDraft(
       String body,
@@ -37,7 +65,7 @@ public record NoteDraft(
         visibility,
         poll,
         language,
-        null);
+        (String) null);
   }
 
   public NoteDraft(
@@ -98,6 +126,7 @@ public record NoteDraft(
         null,
         poll,
         language,
+        null,
         null);
   }
 

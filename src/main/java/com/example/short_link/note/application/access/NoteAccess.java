@@ -39,8 +39,15 @@ public class NoteAccess {
     return switch (reader) {
       case ANYONE -> true;
       case AUTHOR -> owner;
-      case NAMED, FOLLOWER -> false;
+      case NAMED, FOLLOWER, MEMBER -> false;
     };
+  }
+
+  public Set<Long> readersAmong(NoteEntity note, Collection<Long> userIds) {
+    if (userIds.isEmpty() || note.getVisibility().shareable()) {
+      return Set.copyOf(userIds);
+    }
+    return notes.readersAmong(note.getId(), userIds);
   }
 
   public boolean readable(NoteEntity note, Long viewerId) {

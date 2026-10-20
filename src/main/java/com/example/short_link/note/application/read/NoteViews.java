@@ -19,6 +19,7 @@ import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -46,6 +47,7 @@ public class NoteViews {
 
   private final NoteRepository notes;
   private final NoteAccess access;
+  private final NoteRoomReader rooms;
   private final NoteMediaRepository media;
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
@@ -115,6 +117,12 @@ public class NoteViews {
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
     Map<Long, NoteView.Poll> pollViews = polls(visible, viewerId);
     Set<Long> closedThreads = closedTo(viewerId, limitedRoots, members);
+    Map<Long, String> roomNames =
+        rooms.names(
+            visible.stream()
+                .map(NoteEntity::getRoomId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
@@ -151,7 +159,10 @@ public class NoteViews {
               note.getReplyPolicy().apiName(),
               viewerId == null ? null : !closedThreads.contains(note.conversation()),
               note.isReplyHidden(),
-              remote(note)));
+              remote(note),
+              note.getRoomId() == null
+                  ? null
+                  : new NoteView.Room(note.getRoomId(), roomNames.get(note.getRoomId()))));
     }
     return views;
   }

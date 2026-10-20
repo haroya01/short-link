@@ -140,6 +140,7 @@ public class RemoteNoteIntake {
                   case AUTHOR -> false;
                   case NAMED -> named;
                   case FOLLOWER -> followers.accepts(note.authorId(), actor.getId());
+                  case MEMBER -> false;
                 });
   }
 }

@@ -40,7 +40,75 @@ public record NoteView(
     String replyPolicy,
     Boolean canReply,
     boolean hidden,
-    Remote remote) {
+    Remote remote,
+    Room room) {
+
+  public NoteView(
+      Long id,
+      String body,
+      Instant createdAt,
+      Instant editedAt,
+      Long likeCount,
+      Boolean likedByMe,
+      NoteAuthor author,
+      List<Media> media,
+      QuotedPost quotedPost,
+      Long inReplyToId,
+      long replyCount,
+      Long repostCount,
+      Boolean repostedByMe,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview,
+      NoteAuthor repostedBy,
+      long quoteCount,
+      Boolean bookmarkedByMe,
+      List<String> mentions,
+      String contentWarning,
+      boolean sensitive,
+      boolean pinned,
+      String visibility,
+      Poll poll,
+      Boolean conversationMuted,
+      String language,
+      SelfThread thread,
+      String replyPolicy,
+      Boolean canReply,
+      boolean hidden,
+      Remote remote) {
+    this(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        repostedBy,
+        quoteCount,
+        bookmarkedByMe,
+        mentions,
+        contentWarning,
+        sensitive,
+        pinned,
+        visibility,
+        poll,
+        conversationMuted,
+        language,
+        thread,
+        replyPolicy,
+        canReply,
+        hidden,
+        remote,
+        null);
+  }
 
   public NoteView(
       Long id,
@@ -359,6 +427,8 @@ public record NoteView(
   // ARTICLE, PAGE or VIDEO; title and community are null where the kind has none.
   public record Remote(String kind, String title, String url, String community) {}
 
+  public record Room(Long id, String name) {}
+
   // A thread the author wrote in parts: how many parts there are, counting this one, and the parts
   // a feed shows right under it.
   public record SelfThread(int total, List<NoteView> preview) {}
@@ -404,7 +474,8 @@ public record NoteView(
         replyPolicy,
         canReply,
         hidden,
-        remote);
+        remote,
+        room);
   }
 
   NoteView withThread(SelfThread selfThread) {
@@ -439,6 +510,7 @@ public record NoteView(
         replyPolicy,
         canReply,
         hidden,
-        remote);
+        remote,
+        room);
   }
 }

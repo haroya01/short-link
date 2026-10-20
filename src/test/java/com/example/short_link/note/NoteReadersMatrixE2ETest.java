@@ -63,6 +63,7 @@ class NoteReadersMatrixE2ETest {
     MENTIONED,
     BLOCKED,
     MUTER,
+    ROOMMATE,
     AUTHOR
   }
 
@@ -70,14 +71,16 @@ class NoteReadersMatrixE2ETest {
     ANYONE,
     AUTHOR,
     NAMED,
-    FOLLOWER
+    FOLLOWER,
+    MEMBER
   }
 
   enum Vis {
     PUBLIC(Relation.ANYONE),
     UNLISTED(Relation.ANYONE),
     PRIVATE(Relation.AUTHOR, Relation.NAMED, Relation.FOLLOWER),
-    DIRECT(Relation.AUTHOR, Relation.NAMED);
+    DIRECT(Relation.AUTHOR, Relation.NAMED),
+    ROOM(Relation.AUTHOR, Relation.MEMBER);
 
     final Set<Relation> readers;
 
@@ -138,6 +141,8 @@ class NoteReadersMatrixE2ETest {
   private long rootByOther;
   private long quotedByOther;
   private long embedRoot;
+  private long room;
+  private String inviteCode;
   private long postByOther;
   private long collection;
   private String seriesSlug;
@@ -170,6 +175,23 @@ class NoteReadersMatrixE2ETest {
     mutes.save(new UserMuteEntity(ids.get(Viewer.MUTER), author, false, null));
     blocks.save(new UserBlockEntity(author, ids.get(Viewer.BLOCKED)));
     em.flush();
+    jdbc.update(
+        "INSERT INTO room (owner_id, name, created_at, updated_at) VALUES (?, ?, NOW(6), NOW(6))",
+        author,
+        tag + " room");
+    room = jdbc.queryForObject("SELECT MAX(id) FROM room WHERE owner_id = ?", Long.class, author);
+    jdbc.update(
+        "INSERT INTO room_member (room_id, user_id, joined_at) VALUES (?, ?, NOW(6)), (?, ?, NOW(6))",
+        room,
+        author,
+        room,
+        ids.get(Viewer.ROOMMATE));
+    inviteCode = tag + "inv";
+    jdbc.update(
+        "INSERT INTO room_invite (room_id, creator_id, code, created_at) VALUES (?, ?, ?, NOW(6))",
+        room,
+        author,
+        inviteCode);
 
     rootByOther = otherNote(Vis.PUBLIC, "root", null).id();
     quotedByOther = otherNote(Vis.PUBLIC, "quoted", null).id();
@@ -195,13 +217,18 @@ class NoteReadersMatrixE2ETest {
           top.id(),
           link,
           top.marker());
-      Note reply = write("reply", vis, rootByOther, null, null, false);
-      Note hidden = write("hidden", vis, rootByOther, null, null, false);
-      notes.findById(hidden.id()).orElseThrow().hideReply(Instant.now());
+      if (vis == Vis.ROOM) {
+        write("roomReply", vis, top.id(), null, null, false);
+        otherNote(Vis.PUBLIC, "embedRoom", top.id());
+      } else {
+        Note reply = write("reply", vis, rootByOther, null, null, false);
+        Note hidden = write("hidden", vis, rootByOther, null, null, false);
+        notes.findById(hidden.id()).orElseThrow().hideReply(Instant.now());
+        otherNote(Vis.PUBLIC, "embed", reply.id());
+      }
       write("quoting", vis, null, quotedByOther, null, false);
       write("postQuoting", vis, null, null, postByOther, false);
       write("poll", vis, null, null, null, true);
-      otherNote(Vis.PUBLIC, "embed", reply.id());
       Note trend = write("trend", vis, null, null, null, false);
       Note otherTrend = otherNote(vis, "otherTrend", null);
       notes.tag(trend.id(), List.of(tag + vis.api()));
@@ -215,14 +242,14 @@ class NoteReadersMatrixE2ETest {
             trending.marker());
       }
     }
-    for (Vis vis : List.of(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE)) {
+    for (Vis vis : List.of(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE, Vis.ROOM)) {
       command.setPin(author, note("top", vis).id(), true);
     }
     notes.findById(note("top", Vis.DIRECT).id()).orElseThrow().pin(Instant.now());
     em.flush();
 
     elsewhere = remoteAccount();
-    for (Vis vis : Vis.values()) {
+    for (Vis vis : List.of(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE, Vis.DIRECT)) {
       Note remote = remoteNote(vis);
       otherNote(Vis.PUBLIC, "embedElsewhere", remote.id());
     }
@@ -337,7 +364,11 @@ class NoteReadersMatrixE2ETest {
     for (Viewer viewer : Viewer.values()) {
       Predicate<Note> heard = note -> viewer != Viewer.BLOCKED && viewer != Viewer.MUTER;
       Predicate<Note> listed = note -> note.vis() == Vis.PUBLIC;
-      expect("/api/v1/public/notes?size=50", viewer, top, listed.and(heard));
+      expect(
+          "/api/v1/public/notes?size=50",
+          viewer,
+          top,
+          listed.and(heard).or(note -> note.vis() == Vis.ROOM && member(viewer)));
       expect("/api/v1/public/notes?size=50", viewer, remote, note -> false);
       expect("/api/v1/public/notes?sort=trending&size=50", viewer, both, listed.and(heard));
       expect("/api/v1/public/notes/tags/" + tag + "?size=50", viewer, both, listed.and(heard));
@@ -430,8 +461,18 @@ class NoteReadersMatrixE2ETest {
             "/api/v1/notes/lists/" + lists.get(viewer) + "/notes?size=50",
             viewer,
             top,
-            readableBy(viewer).and(heard));
+            readableBy(viewer).and(heard).and(note -> note.vis() != Vis.ROOM));
       }
+      expect(
+          "/api/v1/rooms/" + room + "/notes?size=50",
+          viewer,
+          top,
+          note -> note.vis() == Vis.ROOM && member(viewer));
+      expect(
+          "/api/v1/rooms/my-notes?size=50",
+          viewer,
+          top,
+          note -> note.vis() == Vis.ROOM && viewer == Viewer.AUTHOR);
     }
     Seen featured = activity("/ap/actors/" + authorPublicId + "/featured");
     Set<String> pinned =
@@ -444,7 +485,11 @@ class NoteReadersMatrixE2ETest {
     }
     long shared =
         all.stream()
-            .filter(note -> note.writer() == Writer.MEMBER && note.vis() != Vis.DIRECT)
+            .filter(
+                note ->
+                    note.writer() == Writer.MEMBER
+                        && note.vis() != Vis.DIRECT
+                        && note.vis() != Vis.ROOM)
             .count();
     String outbox = activity("/ap/actors/" + authorPublicId + "/outbox").body();
     if (!outbox.contains("\"totalItems\":" + shared + ",")) {
@@ -577,7 +622,13 @@ class NoteReadersMatrixE2ETest {
                 "/api/v1/feed/following?size=50",
                 "/api/v1/feed/connections",
                 "/api/v1/series",
-                "/api/v1/notifications"));
+                "/api/v1/notifications",
+                "/api/v1/rooms",
+                "/api/v1/rooms/" + room,
+                "/api/v1/rooms/" + room + "/notes?size=50",
+                "/api/v1/rooms/my-notes?size=50",
+                "/api/v1/rooms/suggestions",
+                "/api/v1/public/room-invites/" + inviteCode));
     lists.values().forEach(list -> paths.add("/api/v1/notes/lists/" + list + "/notes?size=50"));
     return paths;
   }
@@ -645,7 +696,14 @@ class NoteReadersMatrixE2ETest {
     if ((viewer == Viewer.FOLLOWER || viewer == Viewer.MUTER) && note.writer() != Writer.OTHER) {
       held.add(Relation.FOLLOWER);
     }
+    if ((viewer == Viewer.ROOMMATE || viewer == Viewer.AUTHOR) && note.writer() == Writer.MEMBER) {
+      held.add(Relation.MEMBER);
+    }
     return held;
+  }
+
+  private static boolean member(Viewer viewer) {
+    return viewer == Viewer.ROOMMATE || viewer == Viewer.AUTHOR;
   }
 
   private static Predicate<Note> shareable() {
@@ -655,6 +713,7 @@ class NoteReadersMatrixE2ETest {
   private Predicate<Note> onProfile(Viewer viewer) {
     return note ->
         viewer != Viewer.BLOCKED
+            && note.vis() != Vis.ROOM
             && (viewer == Viewer.AUTHOR
                 || note.vis().shareable()
                 || (note.vis() == Vis.PRIVATE
@@ -667,8 +726,9 @@ class NoteReadersMatrixE2ETest {
     return note ->
         switch (viewer) {
           case AUTHOR -> note.writer() == Writer.MEMBER;
-          case FOLLOWER -> note.vis() != Vis.DIRECT;
+          case FOLLOWER -> note.vis() != Vis.DIRECT && note.vis() != Vis.ROOM;
           case MENTIONED -> note.vis() == Vis.DIRECT;
+          case ROOMMATE -> note.vis() == Vis.ROOM;
           default -> false;
         };
   }
@@ -723,7 +783,10 @@ class NoteReadersMatrixE2ETest {
                     null,
                     false,
                     vis.api(),
-                    poll ? new NoteDraft.Poll(List.of("yes", "no"), 3600L, false) : null))
+                    poll ? new NoteDraft.Poll(List.of("yes", "no"), 3600L, false) : null,
+                    null,
+                    null,
+                    vis == Vis.ROOM && inReplyTo == null ? room : null))
             .id();
     em.flush();
     return remember(new Note(kind, vis, Writer.MEMBER, id, marker));

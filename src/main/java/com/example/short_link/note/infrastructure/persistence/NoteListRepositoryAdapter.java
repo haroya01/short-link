@@ -132,6 +132,8 @@ class NoteListRepositoryAdapter implements NoteListRepository {
                 + NoteRepositoryAdapter.notReply("n")
                 + " AND "
                 + NoteAccessSql.readable("n")
+                + " AND "
+                + NoteAccessSql.outsideRooms("n")
                 + NoteRepositoryAdapter.heard("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)

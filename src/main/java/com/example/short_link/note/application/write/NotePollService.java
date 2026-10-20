@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.event.NotePollEndedEvent;
+import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -16,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -90,12 +92,13 @@ public class NotePollService implements RemoteNotePollVotes {
     polls.close(ids, now);
     Map<Long, List<Long>> voters = polls.voterIds(ids);
     for (NoteEntity note : due) {
+      List<Long> voted = voters.getOrDefault(note.getId(), List.of());
+      if (!note.getVisibility().readBy(Reader.NAMED)) {
+        Set<Long> readers = access.readersAmong(note, voted);
+        voted = voted.stream().filter(readers::contains).toList();
+      }
       events.publishEvent(
-          new NotePollEndedEvent(
-              note.getId(),
-              note.getUserId(),
-              note.excerpt(),
-              voters.getOrDefault(note.getId(), List.of())));
+          new NotePollEndedEvent(note.getId(), note.getUserId(), note.excerpt(), voted));
     }
     return due.size();
   }

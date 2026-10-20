@@ -14,6 +14,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
@@ -132,9 +133,11 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE "
                 + notReply("n")
-                + " AND "
+                + " AND (("
                 + NoteAccessSql.listed("n")
-                + " AND n.remote_actor_id IS NULL"
+                + " AND n.remote_actor_id IS NULL) OR ("
+                + NoteAccessSql.inFeedRooms("n")
+                + "))"
                 + heard("n")
                 + inLanguages("n")
                 + " ORDER BY n.id DESC",
@@ -281,6 +284,107 @@ class NoteRepositoryAdapter implements NoteRepository {
     return visible;
   }
 
+  // Of the given members, those who may read the note, in one statement whatever its visibility.
+  @Override
+  public Set<Long> readersAmong(Long noteId, Collection<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return Set.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT u.id FROM users u JOIN note n ON n.id = :note WHERE u.id IN (:users) AND "
+                    + NoteAccessSql.readable("n", "u.id"))
+            .setParameter("note", noteId)
+            .setParameter("users", userIds)
+            .getResultList();
+    Set<Long> readers = new HashSet<>();
+    for (Object id : rows) {
+      readers.add(((Number) id).longValue());
+    }
+    return readers;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.room_id = :room AND "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.readable("n")
+                + heard("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("room", roomId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.user_id = :author AND "
+                + NoteAccessSql.inRoom("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("author", authorId)
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  public List<Long> roomNoteIdsBy(Long authorId, Long roomId, int limit) {
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT n.id FROM note n WHERE n.user_id = :author AND n.room_id = :room AND "
+                    + NoteAccessSql.inRoom("n")
+                    + " ORDER BY n.id DESC")
+            .setParameter("author", authorId)
+            .setParameter("room", roomId)
+            .setMaxResults(limit)
+            .getResultList();
+    return rows.stream().map(id -> ((Number) id).longValue()).toList();
+  }
+
+  @Override
+  public void requestRoomErasure(Long userId, Long roomId, Instant at) {
+    em.createNativeQuery(
+            "INSERT IGNORE INTO room_note_erasure (user_id, room_id, requested_at)"
+                + " VALUES (:user, :room, :at)")
+        .setParameter("user", userId)
+        .setParameter("room", roomId)
+        .setParameter("at", at)
+        .executeUpdate();
+  }
+
+  @Override
+  public List<RoomErasure> pendingRoomErasures(int limit) {
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT user_id, room_id FROM room_note_erasure ORDER BY requested_at, user_id")
+            .setMaxResults(limit)
+            .getResultList();
+    List<RoomErasure> pending = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      pending.add(new RoomErasure(((Number) cols[0]).longValue(), ((Number) cols[1]).longValue()));
+    }
+    return pending;
+  }
+
+  @Override
+  public void finishRoomErasure(Long userId, Long roomId) {
+    em.createNativeQuery("DELETE FROM room_note_erasure WHERE user_id = :user AND room_id = :room")
+        .setParameter("user", userId)
+        .setParameter("room", roomId)
+        .executeUpdate();
+  }
+
   @Override
   public void addRecipients(Long noteId, Collection<Long> userIds) {
     if (userIds.isEmpty()) {
@@ -398,6 +502,14 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + heard("o")
                     + " AND "
                     + NoteAccessSql.readable("o")
+                    + " AND "
+                    + NoteAccessSql.outsideRooms("o")
+                    + " UNION ALL"
+                    + " SELECT rn.id, rn.created_at, NULL FROM note rn WHERE "
+                    + NoteAccessSql.inFeedRooms("rn")
+                    + " AND "
+                    + notReply("rn")
+                    + heard("rn")
                     + " UNION ALL"
                     + " SELECT d.id, d.created_at, NULL FROM note_recipient dn"
                     + " JOIN note d ON d.id = dn.note_id"

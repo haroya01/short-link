@@ -71,8 +71,9 @@ class NoteAccessSqlTest {
     assertThat(NoteAccessSql.readable("o"))
         .startsWith(
             "(o.visibility IN ('PUBLIC', 'UNLISTED')"
-                + " OR (o.visibility IN ('PRIVATE', 'DIRECT') AND o.user_id = :viewer)")
+                + " OR (o.visibility IN ('PRIVATE', 'DIRECT', 'ROOM') AND o.user_id = :viewer)")
         .contains("(o.visibility IN ('PRIVATE') AND (EXISTS (SELECT 1 FROM user_follow")
+        .contains("(o.visibility IN ('ROOM') AND EXISTS (SELECT 1 FROM room_member")
         .doesNotContain(" n.");
   }
 

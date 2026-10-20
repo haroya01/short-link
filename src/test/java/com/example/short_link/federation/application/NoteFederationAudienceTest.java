@@ -42,7 +42,8 @@ class NoteFederationAudienceTest {
   void aNoteLeavesForTheServersOfThoseWhoMayReadIt(NoteVisibility visibility) {
     boolean shareable =
         visibility == NoteVisibility.PUBLIC || visibility == NoteVisibility.UNLISTED;
-    boolean followers = visibility != NoteVisibility.DIRECT;
+    boolean followers = shareable || visibility == NoteVisibility.PRIVATE;
+    boolean leaves = visibility != NoteVisibility.ROOM;
 
     List<Sent> created = sent(visibility, federation -> federation.created(42L, 7L));
     List<Sent> edited = sent(visibility, federation -> federation.edited(42L, 7L));
@@ -53,13 +54,11 @@ class NoteFederationAudienceTest {
       assertThat(plain).hasSize(followers ? 1 : 0);
       plain.forEach(sent -> assertThat(sent.inboxes()).containsExactly(FOLLOWERS));
     }
-    assertThat(elsewhere)
-        .singleElement()
-        .satisfies(
-            sent ->
-                assertThat(sent.inboxes())
-                    .containsExactlyElementsOf(
-                        followers ? List.of(FOLLOWERS, ALICE) : List.of(ALICE)));
+    assertThat(elsewhere).hasSize(leaves ? 1 : 0);
+    elsewhere.forEach(
+        sent ->
+            assertThat(sent.inboxes())
+                .containsExactlyElementsOf(followers ? List.of(FOLLOWERS, ALICE) : List.of(ALICE)));
     assertThat(reposted).hasSize(shareable ? 1 : 0);
     reposted.forEach(sent -> assertThat(sent.inboxes()).containsExactly(REPOSTERS));
     List<Sent> all = new ArrayList<>(created);
