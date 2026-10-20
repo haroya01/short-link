@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class FederationDeployEnvTest {
 
   private static final Pattern READ =
-      Pattern.compile("\\$\\{(FEDERATION_(?:RELAY|DIRECTORY|TRENDS)_[A-Z_]+):([^}]*)}");
+      Pattern.compile("\\$\\{(FEDERATION_(?:RELAY|DIRECTORY|TRENDS|LATEST)_[A-Z_]+):([^}]*)}");
 
   @Test
   void everyRelayDirectoryAndTrendsSettingTheAppReadsIsPassedByComposeWithTheSameDefault()
@@ -32,7 +32,8 @@ class FederationDeployEnvTest {
             "FEDERATION_RELAY_ENABLED",
             "FEDERATION_RELAY_MODE",
             "FEDERATION_RELAY_SUBSCRIPTIONS",
-            "FEDERATION_TRENDS_HOSTS");
+            "FEDERATION_TRENDS_HOSTS",
+            "FEDERATION_LATEST_HOSTS");
     read.forEach(
         (name, fallback) -> {
           assertThat(compose)
