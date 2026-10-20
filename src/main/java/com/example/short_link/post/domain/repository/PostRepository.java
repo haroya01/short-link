@@ -7,6 +7,7 @@ import com.example.short_link.post.domain.TagCount;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface PostRepository {
@@ -70,6 +71,22 @@ public interface PostRepository {
   List<PostEntity> findPublishedRecent(Long viewerId, String lang, int page, int size);
 
   List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size);
+
+  List<PostEntity> findPublishedRecentAt(Long viewerId, int offset, int limit);
+
+  record CardMarks(long comments, boolean liked) {}
+
+  Map<Long, CardMarks> cardMarks(Collection<Long> postIds, Long viewerId);
+
+  List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit);
+
+  List<PostEntity> findPublishedByAuthorsSeriesOrTagsAt(
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      int offset,
+      int limit);
 
   long countPublished(Long viewerId, String lang);
 

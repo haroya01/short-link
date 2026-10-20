@@ -12,6 +12,7 @@ import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.note.application.write.NotePollService;
 import com.example.short_link.note.application.write.NoteScheduleService;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -1006,6 +1007,88 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         404);
     step("note-filter-delete", "DELETE", filter, owner, null, 204);
     assertThat(count("note_filter", "user_id = ?", owner.id())).isZero();
+  }
+
+  private long postAt(Actor author, String title, Instant at) {
+    String slug = "home-" + UUID.randomUUID().toString().substring(0, 8);
+    jdbc.update(
+        "INSERT INTO posts (user_id, slug, title, created_at, updated_at, status, audience,"
+            + " published_at, body_text_length, language_tag)"
+            + " VALUES (?, ?, ?, ?, ?, 'PUBLISHED', 'PUBLIC', ?, 500, 'ko')",
+        author.id(),
+        slug,
+        title,
+        Timestamp.from(at),
+        Timestamp.from(at),
+        Timestamp.from(at));
+    return jdbc.queryForObject("SELECT id FROM posts WHERE slug = ?", Long.class, slug);
+  }
+
+  private long noteWrittenAt(Actor author, String body, Instant at) {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, ?, ?)",
+        author.id(),
+        body,
+        Timestamp.from(at));
+    return jdbc.queryForObject(
+        "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, author.id());
+  }
+
+  private static List<String> homeKeys(JsonNode page) {
+    List<String> keys = new ArrayList<>();
+    for (JsonNode item : page.path("items")) {
+      String kind = item.path("kind").asText();
+      keys.add(kind + ":" + item.path(kind).path("id").asLong());
+    }
+    return keys;
+  }
+
+  @Test
+  void theHomeFeedRunsNotesAndPostsTogetherAndPagesAcrossBoth() throws Exception {
+    Actor reader = actor("home-reader", false);
+    Actor writer = actor("home-writer", false);
+    Actor stranger = actor("home-stranger", false);
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        writer.id());
+    Instant ahead = Instant.now().plusSeconds(12 * 3_600);
+    long older = noteWrittenAt(stranger, "모르는 사람의 노트", ahead.minusSeconds(180));
+    long post = postAt(writer, "홈에 실린 글", ahead.minusSeconds(120));
+    long newest = noteWrittenAt(writer, "홈 노트 하나", ahead.minusSeconds(60));
+
+    var latest =
+        step("home-latest", "GET", "/api/v1/public/home?tab=latest&limit=3", null, null, 200);
+    assertThat(homeKeys(latest)).containsExactly("note:" + newest, "post:" + post, "note:" + older);
+    var trending =
+        step("home-trending", "GET", "/api/v1/public/home?tab=trending&limit=2", null, null, 200);
+    assertThat(homeKeys(trending).getFirst()).startsWith("note:");
+
+    var following =
+        step(
+            "home-following",
+            "GET",
+            "/api/v1/public/home?tab=following&limit=1",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(following)).containsExactly("note:" + newest);
+    String next = following.path("next").asText();
+    var onward =
+        step(
+            "home-following-next",
+            "GET",
+            "/api/v1/public/home?tab=following&limit=1&cursor=" + next,
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(onward)).containsExactly("post:" + post);
+    JsonNode card = onward.path("items").get(0).path("post");
+    assertThat(card.path("title").asText()).isEqualTo("홈에 실린 글");
+    assertThat(card.path("readMinutes").asInt()).isEqualTo(1);
+    assertThat(card.path("commentCount").asLong()).isZero();
+    assertThat(card.path("likedByMe").asBoolean()).isFalse();
+    assertThat(homeKeys(onward)).doesNotContain("note:" + older);
   }
 
   @Test
