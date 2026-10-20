@@ -117,7 +117,7 @@
 @junit | author-revision-restore-first | 7 | 2 | 1 | 2 | 12
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
-@junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
+@junit | author-second-draft-markdown-write | 3 | 1 | 1 | 0 | 5
 @junit | author-second-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | author-second-publish | 7 | 2 | 1 | 0 | 10
 @junit | author-series-analytics-detail | 7 | 0 | 0 | 0 | 7
@@ -138,7 +138,9 @@
 @junit | author-series-reader-stats | 19 | 0 | 0 | 0 | 19
 @junit | author-unblock-reader | 2 | 0 | 0 | 1 | 3
 # A post taken down still keeps the notes its body carries current for a republish (one delete).
-@junit | author-unpublished-body-edit | 3 | 2 | 1 | 2 | 8
+# Its search text waits for the republish, which builds it again; the changed block is rewritten in
+# place and the dropped one deleted.
+@junit | author-unpublished-body-edit | 2 | 0 | 2 | 2 | 6
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
 @junit | campaign-archive | 2 | 0 | 1 | 0 | 3
 @junit | campaign-batch-bulk | 11 | 14 | 4 | 0 | 29
