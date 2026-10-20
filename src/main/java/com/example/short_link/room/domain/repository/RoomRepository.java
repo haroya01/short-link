@@ -10,6 +10,7 @@ import com.example.short_link.room.domain.RoomSummary;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface RoomRepository {
@@ -41,6 +42,8 @@ public interface RoomRepository {
   long unread(Long roomId, Long userId);
 
   List<RoomSummary> summaries(Long userId);
+
+  Map<Long, List<RoomPerson>> faces(Collection<Long> roomIds, Long besidesUserId, int perRoom);
 
   RoomInviteEntity save(RoomInviteEntity invite);
 

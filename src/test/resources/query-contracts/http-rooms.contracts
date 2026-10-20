@@ -34,8 +34,9 @@
 # The following feed carrying a room note: the same statements as any following page plus the one
 # readable lookup and the room's name, only because the page has a room note.
 @junit | room-following | 9 | 0 | 0 | 0 | 9
-# Every room of the member, its newest note, unread count and members in one statement.
-@junit | room-list | 1 | 0 | 0 | 0 | 1
+# Every room of the member, its newest note, unread count and members in one statement, then up
+# to three faces per room besides the member in one more.
+@junit | room-list | 2 | 0 | 0 | 0 | 2
 @junit | room-read | 2 | 0 | 1 | 0 | 3
 @junit | room-detail | 4 | 0 | 0 | 0 | 4
 @junit | room-feed-hide | 1 | 0 | 1 | 0 | 2

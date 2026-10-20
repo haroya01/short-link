@@ -1,7 +1,9 @@
 package com.example.short_link.room.application.read;
 
+import com.example.short_link.room.domain.RoomPerson;
 import com.example.short_link.room.domain.RoomSummary;
 import java.time.Instant;
+import java.util.List;
 
 public record RoomListItem(
     Long id,
@@ -11,9 +13,10 @@ public record RoomListItem(
     boolean hiddenFromFeed,
     long unreadCount,
     Instant lastActivityAt,
-    RoomSummary.LastNote lastNote) {
+    RoomSummary.LastNote lastNote,
+    List<RoomPerson> faces) {
 
-  static RoomListItem of(RoomSummary summary) {
+  static RoomListItem of(RoomSummary summary, List<RoomPerson> faces) {
     return new RoomListItem(
         summary.id(),
         summary.name(),
@@ -22,6 +25,7 @@ public record RoomListItem(
         summary.hiddenFromFeed(),
         summary.unreadCount(),
         summary.lastActivityAt(),
-        summary.lastNote());
+        summary.lastNote(),
+        faces);
   }
 }

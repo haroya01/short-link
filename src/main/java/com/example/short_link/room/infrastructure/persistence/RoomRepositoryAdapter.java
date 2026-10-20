@@ -15,7 +15,9 @@ import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.hibernate.query.NativeQuery;
 import org.springframework.stereotype.Repository;
@@ -160,6 +162,34 @@ class RoomRepositoryAdapter implements RoomRepository {
                 .setParameter("user", userId)
                 .getSingleResult())
         .longValue();
+  }
+
+  // A few faces per room for the room list, besides the viewer, in one statement.
+  @Override
+  @SuppressWarnings("unchecked")
+  public Map<Long, List<RoomPerson>> faces(
+      Collection<Long> roomIds, Long besidesUserId, int perRoom) {
+    if (roomIds.isEmpty()) {
+      return Map.of();
+    }
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT f.id, f.username, f.display_name, f.avatar_url, f.room_id FROM ("
+                    + " SELECT u.id, u.username, u.display_name, u.avatar_url, m.room_id,"
+                    + " ROW_NUMBER() OVER (PARTITION BY m.room_id ORDER BY m.joined_at, u.id) AS rn"
+                    + " FROM room_member m JOIN users u ON u.id = m.user_id"
+                    + " WHERE m.room_id IN (:rooms) AND m.user_id <> :user"
+                    + " AND u.deleted_at IS NULL) f"
+                    + " WHERE f.rn <= :per ORDER BY f.room_id, f.rn")
+            .setParameter("rooms", roomIds)
+            .setParameter("user", besidesUserId)
+            .setParameter("per", perRoom)
+            .getResultList();
+    Map<Long, List<RoomPerson>> faces = new HashMap<>();
+    for (Object[] c : rows) {
+      faces.computeIfAbsent(((Number) c[4]).longValue(), room -> new ArrayList<>()).add(person(c));
+    }
+    return faces;
   }
 
   // Every room of the member in one statement: its newest note (a warned one by its warning),

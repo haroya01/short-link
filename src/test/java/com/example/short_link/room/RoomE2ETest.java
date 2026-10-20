@@ -111,6 +111,7 @@ class RoomE2ETest {
     Answer list = send(friend, get("/api/v1/rooms"), null);
     assertThat(((Number) list.at("$[0].unreadCount")).intValue()).isEqualTo(1);
     assertThat((String) list.at("$[0].lastNote.excerpt")).startsWith(tag);
+    assertThat((String) list.at("$[0].faces[0].username")).isEqualTo(owner.username());
     Answer read =
         send(friend, post("/api/v1/rooms/" + room + "/read"), "{\"noteId\":" + note + "}");
     assertThat(((Number) read.at("$.unreadCount")).intValue()).isZero();

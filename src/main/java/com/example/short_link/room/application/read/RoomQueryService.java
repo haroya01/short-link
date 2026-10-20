@@ -7,11 +7,13 @@ import com.example.short_link.room.domain.RoomInviteUnusable;
 import com.example.short_link.room.domain.RoomInvitee;
 import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.domain.RoomPerson;
+import com.example.short_link.room.domain.RoomSummary;
 import com.example.short_link.room.domain.repository.RoomRepository;
 import com.example.short_link.room.exception.RoomErrorCode;
 import com.example.short_link.room.exception.RoomException;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoomQueryService {
 
   static final int LANDING_FACES = 8;
+  static final int LIST_FACES = 3;
   static final int SUGGESTED_FRIENDS = 3;
   static final int SHOWN_INVITATIONS = 20;
 
@@ -31,7 +34,12 @@ public class RoomQueryService {
 
   @Transactional(readOnly = true)
   public List<RoomListItem> mine(Long userId) {
-    return rooms.summaries(userId).stream().map(RoomListItem::of).toList();
+    List<RoomSummary> summaries = rooms.summaries(userId);
+    Map<Long, List<RoomPerson>> faces =
+        rooms.faces(summaries.stream().map(RoomSummary::id).toList(), userId, LIST_FACES);
+    return summaries.stream()
+        .map(summary -> RoomListItem.of(summary, faces.getOrDefault(summary.id(), List.of())))
+        .toList();
   }
 
   @Transactional(readOnly = true)
