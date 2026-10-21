@@ -42,9 +42,16 @@
 @junit | room-post-publish | 8 | 2 | 1 | 0 | 11
 # A member reads it: author, the post, membership, tags, the room's name, blocks.
 @junit | room-post-read | 6 | 0 | 0 | 0 | 6
-# The room's notes and blog posts as one list: placeholder until measured.
-@junit | room-items | 1 | 0 | 0 | 0 | 1
-@junit | room-items-all | 1 | 0 | 0 | 0 | 1
+# The room's notes and blog posts as one list, measured in CI run 39559848410: the room notes page
+# exactly as room-notes (membership, the page, thread parts, authors, one readable lookup, media,
+# counts, marks, the room's name), then the room posts page, their authors, the room's name again
+# (the post slice names its own rooms), tags and comment counts with the reader's likes, then the
+# latest replies: one statement for every note's replies and one for every post's comments, so a
+# longer page costs no more statements.
+@junit | room-items | 16 | 0 | 0 | 0 | 16
+# Across every room of the member: the same without the membership check, which the notes page
+# joins to room_member and the posts page asks in its own condition.
+@junit | room-items-all | 15 | 0 | 0 | 0 | 15
 # Someone outside the room stops at membership with the not-found of a post that does not exist.
 @junit | room-post-outsider | 3 | 0 | 0 | 0 | 3
 # Every room of the member, its newest note, unread count and members in one statement, then up
