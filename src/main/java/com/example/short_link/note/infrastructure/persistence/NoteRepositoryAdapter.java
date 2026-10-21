@@ -548,7 +548,10 @@ class NoteRepositoryAdapter implements NoteRepository {
   // when the viewer turned reposts off. Top-level public notes carrying a tag the viewer follows
   // (the blog's tag follows) join in as originals, again never from someone on either side of a
   // block. A followed author's direct note shows only to its recipients, and direct notes naming
-  // the viewer join from anyone, as Mastodon's home timeline carries them.
+  // the viewer join from anyone, as Mastodon's home timeline carries them. The notes of a series
+  // the
+  // viewer subscribes to join as originals where the series page shows them, unless the viewer
+  // does not hear their writer.
   @Override
   public List<NoteFeedRow> following(
       Collection<Long> authorIds, Long viewerId, int offset, int limit) {
@@ -612,6 +615,13 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " AND "
                     + NoteAccessSql.listed("gn")
                     + heardNote("gn")
+                    + " UNION ALL"
+                    + " SELECT sn.id, sn.created_at, NULL FROM series_subscription ss"
+                    + " JOIN series_item si ON si.series_id = ss.series_id AND si.item_type = 'NOTE'"
+                    + " JOIN note sn ON sn.id = si.ref_id"
+                    + " WHERE ss.user_id = :viewer AND "
+                    + NoteAccessSql.shareable("sn")
+                    + heard("sn")
                     + ") t) y WHERE y.position = 1"
                     + ") x JOIN note n ON n.id = x.note_id"
                     + " ORDER BY x.at DESC, x.note_id DESC LIMIT :limit OFFSET :offset",
