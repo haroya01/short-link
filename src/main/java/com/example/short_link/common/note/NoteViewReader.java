@@ -9,7 +9,7 @@ public interface NoteViewReader {
 
   Optional<Object> view(Long noteId, Long viewerId);
 
-  record Listed(Long id, Object view) {}
+  record Listed(Long id, Object view, String uri) {}
 
   List<Listed> received(Long viewerId, Long beforeId, int limit);
 
