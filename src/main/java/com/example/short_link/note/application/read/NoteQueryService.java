@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -17,6 +18,7 @@ import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -245,6 +247,26 @@ public class NoteQueryService {
   @Transactional(readOnly = true)
   public NoteSlice everyoneAt(Long viewerId, int offset, int limit) {
     return slice(notes.topLevel(viewerId, offset, limit), offset, limit, viewerId);
+  }
+
+  @Transactional(readOnly = true)
+  public NoteSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
+    if (!rooms.isMember(roomId, viewerId)) {
+      throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
+    }
+    return slice(notes.inRoom(roomId, viewerId, offset, limit), offset, limit, viewerId);
+  }
+
+  @Transactional(readOnly = true)
+  public NoteSlice roomsAt(Long viewerId, int offset, int limit) {
+    return slice(notes.inRoomsOf(viewerId, offset, limit), offset, limit, viewerId);
+  }
+
+  @Transactional(readOnly = true)
+  public Map<Long, List<ReplyPreview>> latestReplies(
+      Collection<Long> noteIds, Long viewerId, int per) {
+    return notes.latestReplies(noteIds, viewerId, per).stream()
+        .collect(Collectors.groupingBy(ReplyPreview::parentId));
   }
 
   @Transactional(readOnly = true)

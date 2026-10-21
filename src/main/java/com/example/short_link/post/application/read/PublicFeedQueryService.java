@@ -156,7 +156,17 @@ public class PublicFeedQueryService {
   }
 
   public PostSlice recentAt(Long viewerId, int offset, int limit) {
-    List<PostEntity> rows = postRepository.findPublishedRecentAt(viewerId, offset, limit);
+    List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
+  }
+
+  public PostSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
+    List<PostEntity> rows = postRepository.findInRoomAt(roomId, viewerId, offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
+  }
+
+  public PostSlice roomsAt(Long viewerId, int offset, int limit) {
+    List<PostEntity> rows = postRepository.findInRoomsOfAt(viewerId, offset, limit);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
   }
 
@@ -172,14 +182,11 @@ public class PublicFeedQueryService {
         tagPrefQueryService.get(userId).followed().stream()
             .map(t -> t.toLowerCase(Locale.ROOT))
             .toList();
-    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
-      return new PostSlice(List.of(), true);
-    }
     Following following =
         new Following(
             Set.copyOf(followingIds), Set.copyOf(subscribedSeriesIds), Set.copyOf(followedTags));
     List<PostEntity> rows =
-        postRepository.findPublishedByAuthorsSeriesOrTagsAt(
+        postRepository.findHomeFollowingAt(
             userId, followingIds, subscribedSeriesIds, followedTags, offset, limit);
     return slice(rows, annotate(rows, following), offset, limit, userId);
   }
@@ -227,6 +234,7 @@ public class PublicFeedQueryService {
   }
 
   private FollowReason followReason(PostEntity post, Following following) {
+    if (post.isInRoom()) return null;
     if (following.authors().contains(post.getUserId())) return FollowReason.author();
     if (post.getSeriesId() != null && following.series().contains(post.getSeriesId())) {
       return FollowReason.series();

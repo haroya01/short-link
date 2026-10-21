@@ -257,10 +257,10 @@ class PostRoomReadersMatrixE2ETest {
               "/api/v1/public/posts?q=" + tag + "&size=50",
               "/api/v1/public/profiles/" + authorName + "/series/" + seriesSlug,
               "/api/v1/collections/" + collection,
-              "/api/v1/public/home?tab=latest&limit=40",
               "/api/v1/public/home?tab=trending&limit=40")) {
         expect(viewer, nowhere, 200, false, "title", "quote");
       }
+      expect(viewer, "/api/v1/public/home?tab=latest&limit=40", 200, member, "title");
       if (viewer == Viewer.ANONYMOUS) {
         continue;
       }
@@ -272,7 +272,10 @@ class PostRoomReadersMatrixE2ETest {
       expect(viewer, "/api/v1/users/me/comments", 200, roommate, "title");
       expect(viewer, "/api/v1/users/me/highlights", 200, false, "title");
       expect(viewer, "/api/v1/feed/following?size=50", 200, false, "title");
-      expect(viewer, "/api/v1/public/home?tab=following&limit=40", 200, false, "title");
+      expect(viewer, "/api/v1/public/home?tab=following&limit=40", 200, member, "title");
+      expect(viewer, "/api/v1/rooms/" + room + "/items", member ? 200 : 404, member, "title");
+      expect(viewer, "/api/v1/rooms/" + room + "/items", member ? 200 : 404, member, "comment");
+      expect(viewer, "/api/v1/rooms/items", 200, member, "title");
     }
 
     assertThat(failures).as("%d paths differ", failures.size()).isEmpty();
@@ -499,6 +502,8 @@ class PostRoomReadersMatrixE2ETest {
         "/api/v1/public/home?tab=latest&limit=40",
         "/api/v1/public/home?tab=trending&limit=40",
         "/api/v1/public/home?tab=following&limit=40",
+        "/api/v1/rooms/" + room + "/items",
+        "/api/v1/rooms/items",
         "/api/v1/feed/following?size=50",
         "/api/v1/feed/for-you?size=50",
         "/api/v1/public/posts/" + roomPost + "/comments",

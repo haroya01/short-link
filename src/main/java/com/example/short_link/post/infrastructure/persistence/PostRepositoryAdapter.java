@@ -173,13 +173,56 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedRecentAt(Long viewerId, int offset, int limit) {
-    return jpa.findPublishedRecent(
-        null,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        HeardSql.viewer(viewerId),
-        Instant.now(),
-        new OffsetLimit(offset, limit));
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE ("
+                + JpaPostRepository.BROWSE_CONDITION
+                + ") OR ("
+                + PostAccessSql.inFeedRooms("p")
+                + HeardSql.POST_AUTHOR
+                + ") ORDER BY p.published_at DESC",
+            PostEntity.class)
+        .setParameter("lang", null)
+        .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + PostAccessSql.inRoom("p", ":room")
+                + HeardSql.POST_AUTHOR
+                + " ORDER BY p.published_at DESC, p.id DESC",
+            PostEntity.class)
+        .setParameter("room", roomId)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findInRoomsOfAt(Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + PostAccessSql.inRoomsOf("p")
+                + HeardSql.POST_AUTHOR
+                + " ORDER BY p.published_at DESC, p.id DESC",
+            PostEntity.class)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
   }
 
   @Override
@@ -221,14 +264,39 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedByAuthorsSeriesOrTagsAt(
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findHomeFollowingAt(
       Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags,
       int offset,
       int limit) {
-    return followed(viewerId, authorIds, seriesIds, tags, new OffsetLimit(offset, limit));
+    boolean byAuthorsOnly = seriesIds.isEmpty() && tags.isEmpty();
+    var query =
+        em.createNativeQuery(
+                (byAuthorsOnly
+                        ? "SELECT p.* FROM posts p WHERE (("
+                            + PostAccessSql.LISTED
+                            + " AND p.user_id IN (:authorIds))"
+                        : "SELECT DISTINCT p.* FROM posts p LEFT JOIN post_tag t ON t.post_id = p.id"
+                            + " WHERE (("
+                            + PostAccessSql.LISTED
+                            + " AND (p.user_id IN (:authorIds) OR p.series_id IN (:seriesIds)"
+                            + " OR LOWER(t.tag) IN (:tags)))")
+                    + " OR ("
+                    + PostAccessSql.inFeedRooms("p")
+                    + "))"
+                    + HeardSql.POST_AUTHOR
+                    + " ORDER BY p.published_at DESC",
+                PostEntity.class)
+            .setParameter("authorIds", idsForIn(authorIds))
+            .setParameter("viewer", HeardSql.viewer(viewerId))
+            .setParameter("now", Instant.now());
+    if (!byAuthorsOnly) {
+      query.setParameter("seriesIds", idsForIn(seriesIds)).setParameter("tags", tagsForIn(tags));
+    }
+    return query.setFirstResult(offset).setMaxResults(limit).getResultList();
   }
 
   private List<PostEntity> followed(

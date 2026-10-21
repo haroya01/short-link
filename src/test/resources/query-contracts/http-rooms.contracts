@@ -42,6 +42,9 @@
 @junit | room-post-publish | 8 | 2 | 1 | 0 | 11
 # A member reads it: author, the post, membership, tags, the room's name, blocks.
 @junit | room-post-read | 6 | 0 | 0 | 0 | 6
+# The room's notes and blog posts as one list: placeholder until measured.
+@junit | room-items | 1 | 0 | 0 | 0 | 1
+@junit | room-items-all | 1 | 0 | 0 | 0 | 1
 # Someone outside the room stops at membership with the not-found of a post that does not exist.
 @junit | room-post-outsider | 3 | 0 | 0 | 0 | 3
 # Every room of the member, its newest note, unread count and members in one statement, then up

@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.CommentEntity;
@@ -9,6 +10,7 @@ import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -68,6 +70,11 @@ public class PostCommentQueryService {
                         likeCounts.getOrDefault(c.getId(), 0L),
                         mentioned.apply(c.getBody())))
         .toList();
+  }
+
+  public Map<Long, List<ReplyPreview>> latest(Collection<Long> postIds, Long viewerId, int per) {
+    return commentRepository.latestHeard(postIds, viewerId, per).stream()
+        .collect(Collectors.groupingBy(ReplyPreview::parentId));
   }
 
   public List<MyCommentView> listMyComments(Long userId) {

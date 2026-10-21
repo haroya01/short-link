@@ -1,5 +1,6 @@
 package com.example.short_link.note.domain.repository;
 
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteReplyPolicy;
@@ -49,6 +50,10 @@ public interface NoteRepository {
   List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit);
 
   List<NoteEntity> inRoomsOf(Long viewerId, int offset, int limit);
+
+  // The newest replies to each note, at most perNote each, oldest first, in one statement: only
+  // replies the viewer may read and hears, and not hidden by the note's writer.
+  List<ReplyPreview> latestReplies(Collection<Long> noteIds, Long viewerId, int perNote);
 
   List<NoteEntity> roomNotesBy(Long authorId, int offset, int limit);
 
