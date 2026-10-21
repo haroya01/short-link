@@ -27,7 +27,16 @@ class NoteViewProvider implements NoteViewReader {
   @Override
   @Transactional(readOnly = true)
   public List<Listed> received(Long viewerId, Long beforeId, int limit) {
-    List<NoteEntity> page = notes.federatedBefore(viewerId, beforeId, limit);
+    return listed(notes.federatedBefore(viewerId, beforeId, limit), viewerId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Listed> latest(Long viewerId, Long beforeId, int limit) {
+    return listed(notes.latestBefore(viewerId, beforeId, limit), viewerId);
+  }
+
+  private List<Listed> listed(List<NoteEntity> page, Long viewerId) {
     List<NoteView> shown = views.ofFeed(page, viewerId);
     return shown.stream().map(view -> new Listed(view.id(), view)).toList();
   }

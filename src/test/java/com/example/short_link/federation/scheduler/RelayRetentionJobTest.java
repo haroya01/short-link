@@ -41,7 +41,8 @@ class RelayRetentionJobTest {
     when(relayed.expired(before, 200)).thenReturn(ids(200), ids(200), ids(13));
     when(relayed.deleteUntouched(any())).thenReturn(200, 199, 13);
     RelayRetentionJob job =
-        new RelayRetentionJob(relayed, tally, clock, Duration.ofMillis(60), false);
+        new RelayRetentionJob(
+            relayed, tally, clock, Duration.ofDays(7), Duration.ofMillis(60), false);
 
     long started = System.nanoTime();
     assertThat(job.sweep()).isEqualTo(412);
@@ -60,13 +61,17 @@ class RelayRetentionJobTest {
   void aRunWithNothingToDeleteReadsOnce() throws Exception {
     when(relayed.expired(any(), anyInt())).thenReturn(List.of());
 
-    assertThat(new RelayRetentionJob(relayed, tally, clock, Duration.ZERO, false).sweep()).isZero();
+    assertThat(
+            new RelayRetentionJob(relayed, tally, clock, Duration.ofDays(7), Duration.ZERO, false)
+                .sweep())
+        .isZero();
     verify(relayed).expired(any(), anyInt());
   }
 
   @Test
   void noThreadRunsWhereSchedulingIsOff() {
-    new RelayRetentionJob(relayed, tally, clock, Duration.ZERO, false).scheduled();
+    new RelayRetentionJob(relayed, tally, clock, Duration.ofDays(7), Duration.ZERO, false)
+        .scheduled();
 
     verifyNoInteractions(relayed);
     assertThat(Thread.getAllStackTraces().keySet())

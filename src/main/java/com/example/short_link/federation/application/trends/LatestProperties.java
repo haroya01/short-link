@@ -12,7 +12,11 @@ public record LatestProperties(
     int perHost,
     int maxItems,
     Duration freshFor,
-    Duration patience) {
+    Duration patience,
+    boolean pull,
+    Duration every,
+    int backfillPages,
+    int perDay) {
 
   static final int MAX_PER_HOST = 40;
 
@@ -29,5 +33,12 @@ public record LatestProperties(
     maxItems = maxItems <= 0 ? 600 : maxItems;
     freshFor = freshFor == null ? Duration.ofMinutes(5) : freshFor;
     patience = patience == null ? Duration.ofSeconds(3) : patience;
+    every = every == null || every.isNegative() || every.isZero() ? Duration.ofMinutes(5) : every;
+    backfillPages = backfillPages <= 0 ? 5 : Math.min(backfillPages, 20);
+    perDay = perDay <= 0 ? 2_000 : perDay;
+  }
+
+  public boolean pulling() {
+    return enabled && pull;
   }
 }

@@ -37,6 +37,8 @@ short-link:
     key-prefix: "test:${random.uuid}:"
   safe-browsing:
     enabled: false
+  user-agent:
+    warm-up: false
   pow:
     enforce: false
   rate-limit:

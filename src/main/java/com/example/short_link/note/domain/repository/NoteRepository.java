@@ -75,6 +75,9 @@ public interface NoteRepository {
 
   List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
 
+  // The notes a relay brought or a pull kept, newest first, as the federated feed filters them.
+  List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
+
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, Long viewerId, int limit);

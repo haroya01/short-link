@@ -130,25 +130,33 @@ class NoteRepositoryAdapter implements NoteRepository {
     return alias + ".in_reply_to_id IS NULL AND NOT " + alias + ".reply";
   }
 
-  // Without the forced index MySQL walks the primary key backwards through every reply and received
-  // note above the page, since a small LIMIT makes it prefer the id order.
+  // Without the forced indexes MySQL walks the primary key backwards through every reply and
+  // received note above the page, since a small LIMIT makes it prefer the id order. Each source
+  // stays its own branch: an OR across them leaves no index to read in id order, and MySQL scans
+  // the whole table. A branch can hold no more than offset + limit of the page.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevel(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n FORCE INDEX (idx_note_local_top_level) WHERE "
+            "SELECT u.* FROM ((SELECT n.* FROM note n FORCE INDEX (idx_note_local_top_level) WHERE "
                 + notReply("n")
-                + " AND (("
+                + " AND "
                 + NoteAccessSql.listed("n")
-                + " AND n.remote_actor_id IS NULL) OR ("
-                + NoteAccessSql.inFeedRooms("n")
-                + "))"
+                + " AND n.remote_actor_id IS NULL"
                 + heard("n")
                 + inLanguages("n")
-                + " ORDER BY n.id DESC",
+                + " ORDER BY n.id DESC LIMIT :reach) UNION ALL (SELECT n.* FROM note n"
+                + " FORCE INDEX (idx_note_room) WHERE "
+                + NoteAccessSql.inFeedRooms("n")
+                + " AND "
+                + notReply("n")
+                + heard("n")
+                + inLanguages("n")
+                + " ORDER BY n.id DESC LIMIT :reach)) u ORDER BY u.id DESC",
             NoteEntity.class)
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
+        .setParameter("reach", (int) Math.min((long) offset + limit, Integer.MAX_VALUE))
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
@@ -191,6 +199,30 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + unlimited("n")
                 + inLanguages("n")
                 + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  // STRAIGHT_JOIN walks federation_relayed_note's primary key down from the cursor, so a page reads
+  // about as many rows as it shows. Left to itself MySQL starts from note's reply index and sorts
+  // every kept note for each page.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM federation_relayed_note r STRAIGHT_JOIN note n ON n.id = r.note_id"
+                + " WHERE r.note_id < :before AND "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.listed("n")
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY r.note_id DESC",
             NoteEntity.class)
         .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
         .setParameter("viewer", viewer(viewerId))
@@ -328,12 +360,14 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  // Without the join order and index pinned, MySQL walks the primary key backwards through every
+  // note on the server until the member's page fills.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> inRoomsOf(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM room_member m JOIN note n ON n.room_id = m.room_id"
-                + " WHERE m.user_id = :viewer AND "
+            "SELECT n.* FROM room_member m STRAIGHT_JOIN note n FORCE INDEX (idx_note_room)"
+                + " ON n.room_id = m.room_id WHERE m.user_id = :viewer AND "
                 + notReply("n")
                 + " AND "
                 + NoteAccessSql.readable("n")
