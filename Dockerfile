@@ -21,7 +21,9 @@ RUN if [ -n "${MAXMIND_LICENSE_KEY:-}" ]; then \
       MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2 --no-daemon; \
       MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2Asn --no-daemon || echo "ASN download failed, continuing without it"; \
     fi \
-    && ./gradlew bootJar -x test -x spotlessCheck --no-daemon
+    && ./gradlew bootJar -x test -x spotlessCheck --no-daemon \
+    && java -Djarmode=tools -jar build/libs/*.jar extract \
+      --destination build/extracted --application-filename app.jar
 
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
@@ -29,11 +31,23 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r app && useradd -r -g app app
+    && groupadd -r app && useradd -r -g app app \
+    && chown app:app /app
 
-COPY --from=build /workspace/build/libs/*.jar app.jar
-RUN chown -R app:app /app
+COPY --from=build --chown=app:app /workspace/build/extracted/ ./
 USER app
+
+# A CDS archive maps only into the JVM and class path that wrote it, so it is written here. Training
+# exits once the context has refreshed, before anything opens a connection, so it needs no database
+# or Redis: Flyway and Hibernate's schema checks are off and the prod placeholders get dummy values.
+RUN java -XX:ArchiveClassesAtExit=app.jsa -Xlog:cds=error -Xlog:cds+dynamic=error \
+      -Dspring.context.exit=onRefresh -Dspring.profiles.active=prod \
+      -Dspring.flyway.enabled=false -Dspring.jpa.hibernate.ddl-auto=none \
+      -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false \
+      -DDB_URL=jdbc:mysql://localhost:3306/cds -DDB_USERNAME=cds -DDB_PASSWORD=cds \
+      -DREDIS_HOST=localhost -DSHORT_LINK_BASE_URL=http://localhost \
+      -DJWT_PRIVATE_KEY= -DJWT_PUBLIC_KEY= \
+      -jar app.jar
 
 EXPOSE 8080
 
@@ -43,5 +57,6 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=55", \
+  "-XX:SharedArchiveFile=app.jsa", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", "app.jar"]
