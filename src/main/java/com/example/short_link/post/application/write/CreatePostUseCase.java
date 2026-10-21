@@ -18,6 +18,7 @@ public class CreatePostUseCase {
   private final PostRepository postRepository;
   private final UserModerationGuard moderationGuard;
   private final PostWriteViewAssembler writeViews;
+  private final PostAccessSettings accessSettings;
 
   @Transactional
   public PostView execute(CreatePostCommand cmd) {
@@ -33,6 +34,9 @@ public class CreatePostUseCase {
     // Title column is NOT NULL; a draft may be untitled, so coalesce a missing title to blank.
     String title = cmd.title() == null ? "" : cmd.title();
     PostEntity post = new PostEntity(cmd.userId(), slug, title, cmd.languageTag());
+    if (cmd.access().any()) {
+      accessSettings.apply(post, cmd.access());
+    }
     return writeViews.fromSaved(postRepository.save(post));
   }
 

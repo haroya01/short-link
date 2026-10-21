@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostRoomReader;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ public class PublishScheduledPostUseCase {
   private final PostPublicationCompletion publicationCompletion;
   private final UserModerationGuard moderation;
   private final PostNumbering numbering;
+  private final PostRoomReader rooms;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public boolean execute(Long postId, Instant now) {
@@ -27,6 +29,15 @@ public class PublishScheduledPostUseCase {
     if (!moderation.canWrite(post.getUserId())) {
       log.info(
           "scheduled publish withheld, author cannot write: postId={}, userId={}",
+          postId,
+          post.getUserId());
+      post.backToDraft();
+      postRepository.save(post);
+      return false;
+    }
+    if (post.isInRoom() && !rooms.isMember(post.getRoomId(), post.getUserId())) {
+      log.info(
+          "scheduled publish withheld, author left the room: postId={}, userId={}",
           postId,
           post.getUserId());
       post.backToDraft();

@@ -7,4 +7,11 @@ public record CreatePostRequest(
     @NotBlank @Size(min = 1, max = 200) String slug,
     // Title may be blank while drafting; it's required only at publish (PostEntity.publish()).
     @Size(max = 200) String title,
-    @Size(max = 16) String languageTag) {}
+    @Size(max = 16) String languageTag,
+    @Size(max = 16) String audience,
+    Long roomId) {
+
+  public CreatePostRequest(String slug, String title, String languageTag) {
+    this(slug, title, languageTag, null, null);
+  }
+}

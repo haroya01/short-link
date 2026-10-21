@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -23,6 +24,7 @@ public class PostBookmarkQueryService {
   private final PostBookmarkRepository postBookmarkRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final PostAccessPolicy access;
 
   public PostBookmarkStatus status(Long userId, Long postId) {
     boolean bookmarked =
@@ -35,10 +37,11 @@ public class PostBookmarkQueryService {
         postBookmarkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (bookmarks.isEmpty()) return List.of();
 
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     List<Long> postIds = bookmarks.stream().map(PostBookmarkEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostAccessPolicy::isCard)
+            .filter(post -> !lists.card(post).hidden())
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     Map<Long, UserEntity> authors =
         userRepository

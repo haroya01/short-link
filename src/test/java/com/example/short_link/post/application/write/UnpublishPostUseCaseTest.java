@@ -35,7 +35,8 @@ class UnpublishPostUseCaseTest {
             postOwnership,
             postRepository,
             cacheEviction,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()));
   }
 
   @Test

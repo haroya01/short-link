@@ -12,6 +12,7 @@ import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.PostLock;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.support.TestEntities;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +35,8 @@ class PostAccessPolicyTest {
   private static final long FOLLOWER = 2L;
   private static final long PENDING = 3L;
   private static final long STRANGER = 4L;
+  private static final long MEMBER = 5L;
+  private static final long ROOM = 77L;
   private static final String BLOCKED_HERE = "JP";
 
   private enum Viewer {
@@ -43,20 +47,23 @@ class PostAccessPolicyTest {
     OWNER,
     GRANT_HOLDER,
     WRONG_KEY,
-    RIGHT_KEY
+    RIGHT_KEY,
+    MEMBER
   }
 
   private static final List<Viewer> COLUMNS = List.of(Viewer.values());
 
   private static final String[][] TABLE = {
-    {"PUBLIC", "open", "F F F F F F F F"},
-    {"UNLISTED", "open", "H H H H F H H F"},
-    {"FOLLOWERS", "open", "Lf Lf F Lf F Lf Lf Lf"},
-    {"PASSWORD", "open", "Lp Lp Lp Lp F F Lp Lp"},
-    {"PUBLIC", "blocked", "Lr Lr Lr Lr F Lr Lr Lr"},
-    {"UNLISTED", "blocked", "H H H H F H H Lr"},
-    {"FOLLOWERS", "blocked", "Lr Lr Lr Lr F Lr Lr Lr"},
-    {"PASSWORD", "blocked", "Lr Lr Lr Lr F Lr Lr Lr"},
+    {"PUBLIC", "open", "F F F F F F F F F"},
+    {"UNLISTED", "open", "H H H H F H H F H"},
+    {"FOLLOWERS", "open", "Lf Lf F Lf F Lf Lf Lf Lf"},
+    {"PASSWORD", "open", "Lp Lp Lp Lp F F Lp Lp Lp"},
+    {"ROOM", "open", "H H H H F H H H F"},
+    {"PUBLIC", "blocked", "Lr Lr Lr Lr F Lr Lr Lr Lr"},
+    {"UNLISTED", "blocked", "H H H H F H H Lr H"},
+    {"FOLLOWERS", "blocked", "Lr Lr Lr Lr F Lr Lr Lr Lr"},
+    {"PASSWORD", "blocked", "Lr Lr Lr Lr F Lr Lr Lr Lr"},
+    {"ROOM", "blocked", "H H H H F H H H Lr"},
   };
 
   private final FollowRepository follows = mock(FollowRepository.class);
@@ -64,8 +71,9 @@ class PostAccessPolicyTest {
   private final PostGrants grants =
       new PostGrants(
           "signing-secret", Clock.fixed(Instant.parse("2026-10-16T00:00:00Z"), ZoneOffset.UTC));
+  private final PostRoomReader rooms = mock(PostRoomReader.class);
   private final PostAccessPolicy policy =
-      new PostAccessPolicy(follows, grants, new ReaderCountryResolver(geo));
+      new PostAccessPolicy(follows, grants, new ReaderCountryResolver(geo), rooms);
 
   static Stream<Arguments> table() {
     List<Arguments> cells = new ArrayList<>();
@@ -89,6 +97,7 @@ class PostAccessPolicyTest {
       PostAudience audience, boolean countryBlocked, Viewer viewer, String expected) {
     when(geo.resolve(any())).thenReturn(new GeoLocation(BLOCKED_HERE, null, null));
     when(follows.existsByFollowerIdAndFollowingId(FOLLOWER, AUTHOR)).thenReturn(true);
+    when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
     PostEntity post = post(audience, countryBlocked ? List.of(BLOCKED_HERE) : List.of());
 
     assertThat(code(policy.decide(post, reader(viewer, post)))).isEqualTo(expected);
@@ -100,6 +109,8 @@ class PostAccessPolicyTest {
       PostAudience audience, boolean countryBlocked, Viewer viewer, String ignored) {
     when(geo.resolve(any())).thenReturn(new GeoLocation(BLOCKED_HERE, null, null));
     when(follows.existsByFollowerIdAndFollowingId(FOLLOWER, AUTHOR)).thenReturn(true);
+    when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
+    when(rooms.roomsOf(MEMBER)).thenReturn(Set.of(ROOM));
     PostEntity post = post(audience, countryBlocked ? List.of(BLOCKED_HERE) : List.of());
     PostReader reader = reader(viewer, post);
 
@@ -209,6 +220,7 @@ class PostAccessPolicyTest {
   void cardsAreTheSameForEveryViewer() {
     assertThat(PostAccessPolicy.card(post(PostAudience.PUBLIC, List.of())).full()).isTrue();
     assertThat(PostAccessPolicy.card(post(PostAudience.UNLISTED, List.of())).hidden()).isTrue();
+    assertThat(PostAccessPolicy.card(post(PostAudience.ROOM, List.of())).hidden()).isTrue();
     assertThat(PostAccessPolicy.card(post(PostAudience.FOLLOWERS, List.of())).lock())
         .isEqualTo(PostLock.FOLLOWERS);
     assertThat(PostAccessPolicy.card(post(PostAudience.PASSWORD, List.of())).lock())
@@ -228,6 +240,9 @@ class PostAccessPolicyTest {
     assertThat(PostAccessPolicy.isListed(post(PostAudience.PASSWORD, List.of()))).isFalse();
     assertThat(PostAccessPolicy.isCard(post(PostAudience.FOLLOWERS, List.of()))).isTrue();
     assertThat(PostAccessPolicy.isCard(post(PostAudience.UNLISTED, List.of()))).isFalse();
+    assertThat(PostAccessPolicy.isOpen(post(PostAudience.ROOM, List.of()))).isFalse();
+    assertThat(PostAccessPolicy.isListed(post(PostAudience.ROOM, List.of()))).isFalse();
+    assertThat(PostAccessPolicy.isCard(post(PostAudience.ROOM, List.of()))).isFalse();
   }
 
   @Test
@@ -245,11 +260,45 @@ class PostAccessPolicyTest {
         .isTrue();
   }
 
+  @Test
+  void aRoomPostTellsOnlyItsMembersAndAuthorThatItExists() {
+    when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
+    PostEntity room = post(PostAudience.ROOM, List.of());
+
+    assertThat(policy.revealsExistence(room, PostReader.of(STRANGER))).isFalse();
+    assertThat(policy.revealsExistence(room, PostReader.of(null))).isFalse();
+    assertThat(policy.revealsExistence(room, PostReader.of(MEMBER))).isTrue();
+    assertThat(policy.revealsExistence(room, PostReader.of(AUTHOR))).isTrue();
+  }
+
+  @Test
+  void onlyARoomPostNarrowsWhoHearsAboutIt() {
+    when(rooms.membersAmong(ROOM, List.of(MEMBER, STRANGER, AUTHOR))).thenReturn(Set.of(MEMBER));
+    PostEntity room = post(PostAudience.ROOM, List.of());
+    PostEntity followers = post(PostAudience.FOLLOWERS, List.of());
+
+    assertThat(policy.readersAmong(room, List.of(MEMBER, STRANGER, AUTHOR)))
+        .containsExactlyInAnyOrder(MEMBER, AUTHOR);
+    assertThat(policy.readersAmong(followers, List.of(STRANGER))).containsExactly(STRANGER);
+    verifyNoInteractions(follows);
+  }
+
+  @Test
+  void whatWasSaidInARoomIsHeardOnlyThere() {
+    when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
+
+    assertThat(policy.hears(null, null)).isTrue();
+    assertThat(policy.hears(ROOM, MEMBER)).isTrue();
+    assertThat(policy.hears(ROOM, STRANGER)).isFalse();
+    assertThat(policy.hears(ROOM, null)).isFalse();
+  }
+
   private PostEntity post(PostAudience audience, List<String> blocked) {
     PostEntity post = TestEntities.withId(new PostEntity(AUTHOR, "p", "Title", "ko"), 42L);
     post.publish();
     post.protectWith("$2a$10$abcdefghijklmnopqrstuuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY");
-    post.changeAudience(audience, "the-unlisted-key-of-this-post-00");
+    post.changeAudience(
+        audience, audience.inRoom() ? ROOM : null, "the-unlisted-key-of-this-post-00");
     post.blockCountries(blocked);
     return post;
   }
@@ -265,6 +314,7 @@ class PostAccessPolicyTest {
       case GRANT_HOLDER -> new PostReader(STRANGER, null, grants.issue(post).grant(), ip, false);
       case WRONG_KEY -> new PostReader(STRANGER, "not-the-key", null, ip, false);
       case RIGHT_KEY -> new PostReader(null, "the-unlisted-key-of-this-post-00", null, ip, false);
+      case MEMBER -> new PostReader(MEMBER, null, null, ip, false);
     };
   }
 

@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
@@ -30,7 +31,9 @@ class QuotingPostsQueryServiceTest {
   void setUp() {
     service =
         new QuotingPostsQueryService(
-            postRepository, new PostFeedItemAssembler(userRepository, seriesRepository));
+            postRepository,
+            new PostFeedItemAssembler(
+                userRepository, seriesRepository, PostAccessFixtures.rooms()));
   }
 
   private static PostEntity published(long id) {

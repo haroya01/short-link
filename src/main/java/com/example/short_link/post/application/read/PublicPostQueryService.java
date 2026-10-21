@@ -56,6 +56,7 @@ public class PublicPostQueryService {
   private final UserBlockChecker userBlocks;
   private final PostAccessPolicy access;
   private final PostUnlistedUrls unlistedUrls;
+  private final PostRooms rooms;
   private final Clock clock;
 
   public PostScoped<PublicPostListView> listPublicPosts(String username, PostReader reader) {
@@ -129,7 +130,9 @@ public class PublicPostQueryService {
       String acceptLanguage) {
     OwnerAudience owner = ownerView(post, author, reader);
     if (decided.full()) {
-      return buildDetail(author, post, PublicPostListItem.of(post, decided, owner));
+      PublicPostListItem item = PublicPostListItem.of(post, decided, owner);
+      PostRoomView room = rooms.of(post);
+      return buildDetail(author, post, room == null ? item : item.in(room));
     }
     return new PublicPostDetail(
         PublicAuthorView.from(author),

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -30,7 +31,9 @@ class ReadingHistoryQueryServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ReadingHistoryQueryService(postReadRepository, postRepository, userRepository);
+    service =
+        new ReadingHistoryQueryService(
+            postReadRepository, postRepository, userRepository, PostAccessFixtures.policy());
   }
 
   private PostEntity publishedPost(long id, long authorId) {

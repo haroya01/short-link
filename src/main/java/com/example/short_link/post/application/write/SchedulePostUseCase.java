@@ -17,11 +17,13 @@ public class SchedulePostUseCase {
   private final PostNumbering numbering;
   private final PostRepository postRepository;
   private final PostWriteViewAssembler writeViews;
+  private final PostAccessSettings accessSettings;
 
   @Transactional
   public PostView execute(SchedulePostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     moderation.requireCanWrite(cmd.userId());
+    accessSettings.requireStillInRoom(post);
     numbering.numberIfClientMade(post);
     post.schedule(cmd.scheduledAt());
     return writeViews.fromSaved(postRepository.save(post));

@@ -439,7 +439,14 @@ class NoteReadersMatrixE2ETest {
           viewer,
           remote,
           readableBy(viewer).and(note -> viewer != Viewer.BLOCKED));
-      expect("/api/v1/notes/following?size=50", viewer, both, following(viewer));
+      Predicate<Note> subscribed =
+          note -> note.kind().equals("top") && note.vis().shareable() && heard.test(note);
+      expect("/api/v1/notes/following?size=50", viewer, both, following(viewer).or(subscribed));
+      expect(
+          "/api/v1/public/home?tab=following&limit=40",
+          viewer,
+          both,
+          following(viewer).or(subscribed));
       List<Note> withReplies = new ArrayList<>(both);
       withReplies.addAll(kind("reply"));
       expect(
@@ -616,6 +623,7 @@ class NoteReadersMatrixE2ETest {
                 "/api/v1/notes/federated?size=50",
                 "/api/v1/federation/accounts/" + elsewhere + "/notes?size=50",
                 "/api/v1/notes/following?size=50",
+                "/api/v1/public/home?tab=following&limit=40",
                 "/api/v1/notes/direct?size=50",
                 "/api/v1/notes/bookmarks?size=50",
                 "/api/v1/notes/scheduled",

@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.CommentEntity;
@@ -9,6 +10,7 @@ import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -70,11 +72,18 @@ public class PostCommentQueryService {
         .toList();
   }
 
+  public Map<Long, List<ReplyPreview>> latest(Collection<Long> postIds, Long viewerId, int per) {
+    return commentRepository.latestHeard(postIds, viewerId, per).stream()
+        .collect(Collectors.groupingBy(ReplyPreview::parentId));
+  }
+
   public List<MyCommentView> listMyComments(Long userId) {
     List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
+            .filter(lists::keeps)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> authors =

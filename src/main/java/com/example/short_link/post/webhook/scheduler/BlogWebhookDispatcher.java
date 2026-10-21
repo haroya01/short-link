@@ -39,7 +39,7 @@ public class BlogWebhookDispatcher {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onBlogInteraction(BlogInteractionEvent event) {
-    if (event.isSelfAction() || event.recipientUserId() == null) {
+    if (event.isSelfAction() || event.recipientUserId() == null || event.roomPost()) {
       return;
     }
     List<BlogWebhookEntity> hooks =

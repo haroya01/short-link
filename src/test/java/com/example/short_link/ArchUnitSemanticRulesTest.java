@@ -7,10 +7,15 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.write.PostAccessSettings;
+import com.example.short_link.post.application.write.PublishScheduledPostUseCase;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
@@ -134,6 +139,25 @@ class ArchUnitSemanticRulesTest {
           .callMethod(NoteRepository.class, "visibleTo", Long.class, Collection.class);
 
   @ArchTest
+  static final ArchRule postAudienceIsAskedOfItsQuestions =
+      classes()
+          .that(DescribedPredicate.not(JavaClass.Predicates.belongToAnyOf(PostAudience.class)))
+          .should(leaveWhoReadsAPostToItsAudience());
+
+  @ArchTest
+  static final ArchRule whoIsInAPostsRoomIsAskedOfThePolicy =
+      noClasses()
+          .that()
+          .doNotBelongToAnyOf(
+              PostAccessPolicy.class, PostAccessSettings.class, PublishScheduledPostUseCase.class)
+          .should()
+          .callMethod(PostRoomReader.class, "isMember", Long.class, Long.class)
+          .orShould()
+          .callMethod(PostRoomReader.class, "roomsOf", Long.class)
+          .orShould()
+          .callMethod(PostRoomReader.class, "membersAmong", Long.class, Collection.class);
+
+  @ArchTest
   static final ArchRule transactionsDoNotCallOutboundClients =
       methods().that(areTransactional()).should(notCallOutboundClients());
 
@@ -216,6 +240,24 @@ class ArchUnitSemanticRulesTest {
           boolean named =
               NoteVisibility.where(visibility -> true).stream()
                   .anyMatch(visibility -> visibility.name().equals(target.getName()));
+          if (named || target.getName().equals("ordinal")) {
+            events.add(SimpleConditionEvent.violated(access, access.getDescription()));
+          }
+        }
+      }
+    };
+  }
+
+  private static ArchCondition<JavaClass> leaveWhoReadsAPostToItsAudience() {
+    return new ArchCondition<>("leave who reads a post to the questions PostAudience answers") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        for (JavaAccess<?> access : javaClass.getAccessesFromSelf()) {
+          AccessTarget target = access.getTarget();
+          if (!target.getOwner().isEquivalentTo(PostAudience.class)) continue;
+          boolean named =
+              PostAudience.where(audience -> true).stream()
+                  .anyMatch(audience -> audience.name().equals(target.getName()));
           if (named || target.getName().equals("ordinal")) {
             events.add(SimpleConditionEvent.violated(access, access.getDescription()));
           }

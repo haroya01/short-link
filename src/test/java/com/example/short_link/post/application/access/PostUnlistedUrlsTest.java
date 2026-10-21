@@ -53,7 +53,7 @@ class PostUnlistedUrlsTest {
 
   private static PostEntity post(String slug, PostAudience audience) {
     PostEntity post = new PostEntity(7L, slug, "Title", "ko");
-    post.changeAudience(audience, "key-" + slug);
+    post.changeAudience(audience, null, "key-" + slug);
     return post;
   }
 }

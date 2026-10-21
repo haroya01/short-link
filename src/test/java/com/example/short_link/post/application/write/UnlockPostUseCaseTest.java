@@ -55,7 +55,7 @@ class UnlockPostUseCaseTest {
     post = TestEntities.withId(new PostEntity(7L, "secret", "Secret", "ko"), 42L);
     post.publish();
     post.protectWith(passwords.hash(PASSWORD));
-    post.changeAudience(PostAudience.PASSWORD, "unused");
+    post.changeAudience(PostAudience.PASSWORD, null, "unused");
     when(posts.findUnblockedByUserIdAndSlug(eq(7L), eq("secret"), any()))
         .thenReturn(Optional.of(post));
     when(attempts.tryAttempt(42L, IP)).thenReturn(true);
@@ -116,12 +116,12 @@ class UnlockPostUseCaseTest {
 
   @Test
   void onlyAPublishedPasswordPostCanBeUnlocked() {
-    post.changeAudience(PostAudience.FOLLOWERS, null);
+    post.changeAudience(PostAudience.FOLLOWERS, null, null);
     assertCode(
         () -> useCase.unlock("john", "secret", PASSWORD, reader(null)),
         PostErrorCode.POST_NOT_FOUND);
 
-    post.changeAudience(PostAudience.PASSWORD, null);
+    post.changeAudience(PostAudience.PASSWORD, null, null);
     post.unpublish();
     assertCode(
         () -> useCase.unlock("john", "secret", PASSWORD, reader(null)),

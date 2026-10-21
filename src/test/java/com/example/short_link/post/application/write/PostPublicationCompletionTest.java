@@ -42,7 +42,7 @@ class PostPublicationCompletionTest {
   private static PostEntity post(PostAudience audience) {
     PostEntity post = TestEntities.withId(new PostEntity(7L, "p", "Title", "ko"), 42L);
     post.publish();
-    post.changeAudience(audience, "key");
+    post.changeAudience(audience, null, "key");
     return post;
   }
 }

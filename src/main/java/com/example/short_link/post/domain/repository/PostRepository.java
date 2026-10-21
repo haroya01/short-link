@@ -72,7 +72,13 @@ public interface PostRepository {
 
   List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size);
 
-  List<PostEntity> findPublishedRecentAt(Long viewerId, int offset, int limit);
+  // The home's latest: what discovery lists, and the room posts of the viewer's rooms they keep in
+  // their feed.
+  List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit);
+
+  List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit);
+
+  List<PostEntity> findInRoomsOfAt(Long viewerId, int offset, int limit);
 
   record CardMarks(long comments, boolean liked) {}
 
@@ -80,7 +86,8 @@ public interface PostRepository {
 
   List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit);
 
-  List<PostEntity> findPublishedByAuthorsSeriesOrTagsAt(
+  // The home's following: what the viewer follows, and the room posts of their feed rooms.
+  List<PostEntity> findHomeFollowingAt(
       Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,

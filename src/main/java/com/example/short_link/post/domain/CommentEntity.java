@@ -41,11 +41,18 @@ public class CommentEntity extends BaseTimeEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  @Column(name = "room_id")
+  private Long roomId;
+
   public CommentEntity(Long postId, Long userId, Long parentId, String body) {
     this.postId = postId;
     this.userId = userId;
     this.parentId = parentId;
     this.body = body;
+  }
+
+  public void saidIn(Long roomId) {
+    this.roomId = roomId;
   }
 
   public boolean isOwnedBy(Long userId) {

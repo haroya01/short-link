@@ -34,6 +34,26 @@
 # The following feed carrying a room note: the same statements as any following page plus the one
 # readable lookup and the room's name, only because the page has a room note.
 @junit | room-following | 9 | 0 | 0 | 0 | 9
+# A blog post written into a room: moderation (user), the slug, membership of the room, the insert,
+# and the room's name for the answer.
+@junit | room-post-create | 4 | 1 | 0 | 0 | 5
+# Publishing it: the post locked, moderation, whether the author is still in the room, the
+# revision and search text as for any publish, the room's name. No follower or note author is told.
+@junit | room-post-publish | 8 | 2 | 1 | 0 | 11
+# A member reads it: author, the post, membership, tags, the room's name, blocks.
+@junit | room-post-read | 6 | 0 | 0 | 0 | 6
+# The room's notes and blog posts as one list, measured in CI run 39559848410: the room notes page
+# exactly as room-notes (membership, the page, thread parts, authors, one readable lookup, media,
+# counts, marks, the room's name), then the room posts page, their authors, the room's name again
+# (the post slice names its own rooms), tags and comment counts with the reader's likes, then the
+# latest replies: one statement for every note's replies and one for every post's comments, so a
+# longer page costs no more statements.
+@junit | room-items | 16 | 0 | 0 | 0 | 16
+# Across every room of the member: the same without the membership check, which the notes page
+# joins to room_member and the posts page asks in its own condition.
+@junit | room-items-all | 15 | 0 | 0 | 0 | 15
+# Someone outside the room stops at membership with the not-found of a post that does not exist.
+@junit | room-post-outsider | 3 | 0 | 0 | 0 | 3
 # Every room of the member, its newest note, unread count and members in one statement, then up
 # to three faces per room besides the member in one more.
 @junit | room-list | 2 | 0 | 0 | 0 | 2
@@ -62,6 +82,9 @@
 # Deleting one's notes in a room only records the request; RoomNoteErasureJob deletes them later
 # in chunks, so the request stays one statement however many notes there are.
 @junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
+# Deleting one's room posts and what one said on room posts only records the request, as for notes;
+# RoomPostErasureJob deletes them later in chunks.
+@junit | room-my-posts-delete | 0 | 1 | 0 | 0 | 1
 @junit | room-suggestions | 1 | 0 | 0 | 0 | 1
 @junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1
 # Inviting by name: the room locked, membership, the waiting count against the cap, one insert for

@@ -19,11 +19,13 @@ public class PublishPostUseCase {
   private final PostRepository postRepository;
   private final PostPublicationCompletion publicationCompletion;
   private final PostWriteViewAssembler writeViews;
+  private final PostAccessSettings accessSettings;
 
   @Transactional
   public PostView execute(PublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     moderation.requireCanWrite(cmd.userId());
+    accessSettings.requireStillInRoom(post);
     // publishedAt은 재발행에도 유지되므로 null일 때만 최초 발행 알림을 보낸다.
     boolean firstPublish = post.getPublishedAt() == null;
     numbering.numberIfClientMade(post);

@@ -1,6 +1,5 @@
 package com.example.short_link.post.application.write;
 
-import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostGrants;
@@ -42,7 +41,7 @@ public class UnlockPostUseCase {
             .findUnblockedByUserIdAndSlug(author.getId(), slug, reader.viewerId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, slug));
     PostAccess decided = access.decide(post, reader.withoutCredentials());
-    if (decided.hidden() || post.getAudience() != PostAudience.PASSWORD) {
+    if (decided.hidden() || !post.getAudience().needsPassword()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, slug);
     }
     if (decided.redacted() && decided.lock() != post.getAudience().lock()) {

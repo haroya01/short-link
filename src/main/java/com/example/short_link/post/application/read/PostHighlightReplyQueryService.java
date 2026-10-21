@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository.Likes;
@@ -36,12 +37,12 @@ public class PostHighlightReplyQueryService {
 
   public PostScoped<List<HighlightReplyView>> listForHighlight(
       Long highlightId, PostReader reader) {
+    PostHighlightEntity highlight = highlightRepository.findById(highlightId).orElse(null);
     PostEntity post =
-        highlightRepository
-            .findById(highlightId)
-            .flatMap(highlight -> postRepository.findById(highlight.getPostId()))
-            .orElse(null);
-    if (post == null || !access.readable(post, reader)) {
+        highlight == null ? null : postRepository.findById(highlight.getPostId()).orElse(null);
+    if (post == null
+        || !access.readable(post, reader)
+        || !access.hears(highlight.getRoomId(), reader.viewerId())) {
       return new PostScoped<>(List.of(), false);
     }
     return new PostScoped<>(

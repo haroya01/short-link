@@ -51,6 +51,43 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(feed.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
     var following = step("room-following", "GET", "/api/v1/notes/following", friend, null, 200);
     assertThat(following.path("items").get(0).path("room").path("id").asLong()).isEqualTo(roomId);
+    var roomPost =
+        step(
+            "room-post-create",
+            "POST",
+            "/api/v1/posts",
+            owner,
+            Map.of("slug", "room-diary", "title", "방 일기", "audience", "ROOM", "roomId", roomId),
+            201);
+    assertThat(roomPost.path("room").path("id").asLong()).isEqualTo(roomId);
+    step(
+        "room-post-publish",
+        "POST",
+        "/api/v1/posts/" + roomPost.path("id").asLong() + "/publish",
+        owner,
+        null,
+        200);
+    var roomPostRead =
+        step(
+            "room-post-read",
+            "GET",
+            "/api/v1/public/profiles/" + owner.username() + "/posts/room-diary",
+            friend,
+            null,
+            200);
+    assertThat(roomPostRead.path("post").path("room").path("name").asText()).isEqualTo("우리 방");
+    var items = step("room-items", "GET", "/api/v1/rooms/" + roomId + "/items", friend, null, 200);
+    assertThat(items.path("items").get(0).path("kind").asText()).isEqualTo("post");
+    assertThat(items.path("items").get(1).path("note").path("id").asLong()).isEqualTo(noteId);
+    var allItems = step("room-items-all", "GET", "/api/v1/rooms/items", friend, null, 200);
+    assertThat(allItems.path("items")).hasSize(2);
+    step(
+        "room-post-outsider",
+        "GET",
+        "/api/v1/public/profiles/" + owner.username() + "/posts/room-diary",
+        asker,
+        null,
+        404);
     var list = step("room-list", "GET", "/api/v1/rooms", friend, null, 200);
     assertThat(list.get(0).path("unreadCount").asLong()).isEqualTo(1);
     var read =
@@ -142,6 +179,15 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
         null,
         202);
     assertThat(count("room_note_erasure", "room_id = ? AND user_id = ?", roomId, friend.id()))
+        .isOne();
+    step(
+        "room-my-posts-delete",
+        "DELETE",
+        "/api/v1/rooms/my-posts?roomId=" + roomId,
+        friend,
+        null,
+        202);
+    assertThat(count("room_post_erasure", "room_id = ? AND user_id = ?", roomId, friend.id()))
         .isOne();
   }
 

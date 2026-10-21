@@ -1,7 +1,6 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.NotesEmbeddedEvent;
-import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -76,7 +75,7 @@ public class PostNoteQuotes {
   }
 
   private void announce(PostEntity post, Set<Long> noteIds) {
-    if (!noteIds.isEmpty() && post.getAudience() != PostAudience.UNLISTED) {
+    if (!noteIds.isEmpty() && post.getAudience().shownAsCard()) {
       events.publishEvent(
           new NotesEmbeddedEvent(
               post.getUserId(),

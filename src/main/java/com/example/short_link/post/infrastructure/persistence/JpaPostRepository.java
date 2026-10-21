@@ -108,9 +108,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   String TRENDING_ORDER =
       "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC";
 
-  String BROWSE_PREDICATE =
-      "WHERE "
-          + PostAccessSql.LISTED
+  String BROWSE_CONDITION =
+      PostAccessSql.LISTED
           + " AND (:lang IS NULL OR p.language_tag = :lang) "
           + "AND p.body_text_length >= :minBody"
           + HeardSql.POST_AUTHOR
@@ -121,6 +120,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "AND (:lang IS NULL OR q.language_tag = :lang) "
           + "AND (q.published_at > p.published_at "
           + "OR (q.published_at = p.published_at AND q.id > p.id)))) ";
+
+  String BROWSE_PREDICATE = "WHERE " + BROWSE_CONDITION;
 
   @Query(
       nativeQuery = true,

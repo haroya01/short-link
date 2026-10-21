@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.post.PostAudience;
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.access.PostPasswords;
 import com.example.short_link.post.application.access.PostUnlistedUrls;
 import com.example.short_link.post.domain.PostEntity;
@@ -23,7 +24,7 @@ class RotateUnlistedKeyUseCaseTest {
   private final RotateUnlistedKeyUseCase useCase =
       new RotateUnlistedKeyUseCase(
           ownership,
-          new PostAccessSettings(new PostPasswords()),
+          new PostAccessSettings(new PostPasswords(), PostAccessFixtures.roomReader()),
           posts,
           new PostUnlistedUrls("https://blog.kurl.me", users));
 
@@ -33,7 +34,7 @@ class RotateUnlistedKeyUseCaseTest {
     john.claimUsername("john");
     when(users.findById(7L)).thenReturn(Optional.of(john));
     PostEntity post = new PostEntity(7L, "p", "Title", "ko");
-    post.changeAudience(PostAudience.UNLISTED, "old-key");
+    post.changeAudience(PostAudience.UNLISTED, null, "old-key");
     when(ownership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     String url = useCase.rotate(7L, 42L);

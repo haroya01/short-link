@@ -1,10 +1,16 @@
 package com.example.short_link.post.domain.repository;
 
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.domain.CommentEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface CommentRepository {
+
+  // The newest comments of each post, at most perPost each, oldest first, in one statement: only
+  // what the viewer hears and, for what was said in a room, only for its members.
+  List<ReplyPreview> latestHeard(Collection<Long> postIds, Long viewerId, int perPost);
 
   CommentEntity save(CommentEntity comment);
 

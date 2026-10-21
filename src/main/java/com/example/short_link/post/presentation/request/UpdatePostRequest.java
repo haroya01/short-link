@@ -18,4 +18,5 @@ public record UpdatePostRequest(
     Boolean overwrite,
     @Size(max = 16) String audience,
     String password,
-    @Size(max = 300) List<@Size(max = 8) String> blockedCountries) {}
+    @Size(max = 300) List<@Size(max = 8) String> blockedCountries,
+    Long roomId) {}

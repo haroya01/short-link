@@ -35,7 +35,13 @@ public class LikePostUseCase {
       if (!post.getUserId().equals(userId)) {
         events.publishEvent(
             BlogInteractionEvent.like(
-                post.getUserId(), userId, postId, post.getSlug(), post.getTitle(), Instant.now()));
+                    post.getUserId(),
+                    userId,
+                    postId,
+                    post.getSlug(),
+                    post.getTitle(),
+                    Instant.now())
+                .onRoomPost(post.isInRoom()));
       }
     }
     return new PostLikeStatus(postLikeRepository.countByPostId(postId), true);

@@ -54,7 +54,8 @@ class LikeHighlightReplyUseCaseTest {
                 Mockito.mock(UserModerationGuard.class),
                 Mockito.mock(UserBlockChecker.class),
                 PostAccessFixtures.policy()),
-            events);
+            events,
+            PostAccessFixtures.notifications());
   }
 
   private void replyOnPublishedPost() {
