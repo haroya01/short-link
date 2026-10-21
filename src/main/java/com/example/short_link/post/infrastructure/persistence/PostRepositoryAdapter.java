@@ -381,8 +381,8 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> searchPublishedByRelevance(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedByRelevanceAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedByRelevance(
         booleanMatch(query),
         matchWordBoundaries(query),
@@ -392,12 +392,12 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         Instant.now(),
-        PageRequest.of(page, size));
+        new OffsetLimit(offset, limit));
   }
 
   @Override
-  public List<PostEntity> searchPublished(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedRecent(
         booleanMatch(query),
         matchWordBoundaries(query),
@@ -407,12 +407,12 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         Instant.now(),
-        PageRequest.of(page, size));
+        new OffsetLimit(offset, limit));
   }
 
   @Override
-  public List<PostEntity> searchPublishedTrending(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedTrendingAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     Instant now = Instant.now();
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
@@ -424,20 +424,7 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         now,
-        PageRequest.of(page, size));
-  }
-
-  @Override
-  public long countSearchPublished(Long viewerId, String query, String lang) {
-    return jpa.countSearchPublished(
-        booleanMatch(query),
-        matchWordBoundaries(query),
-        likePattern(query),
-        titleLikeFallback(query),
-        titleWordFallback(query),
-        normLang(lang),
-        HeardSql.viewer(viewerId),
-        Instant.now());
+        new OffsetLimit(offset, limit));
   }
 
   private static String normLang(String lang) {
