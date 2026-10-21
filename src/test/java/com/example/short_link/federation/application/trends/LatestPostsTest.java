@@ -30,6 +30,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -120,14 +122,16 @@ class LatestPostsTest {
   }
 
   private void answers(URI uri, ObjectNode... statuses) {
+    when(http.getJson(uri, instance, PATIENCE)).thenReturn(ok(statuses));
+  }
+
+  private static FederationHttp.Result ok(ObjectNode... statuses) {
     ArrayNode array = JSON.createArrayNode();
     for (ObjectNode status : statuses) {
       array.add(status);
     }
-    when(http.getJson(uri, instance, PATIENCE))
-        .thenReturn(
-            new FederationHttp.Result.Ok(
-                200, JSON.writeValueAsString(array).getBytes(StandardCharsets.UTF_8)));
+    return new FederationHttp.Result.Ok(
+        200, JSON.writeValueAsString(array).getBytes(StandardCharsets.UTF_8));
   }
 
   private static List<String> uris(List<TrendingNote> notes) {
@@ -166,9 +170,15 @@ class LatestPostsTest {
   }
 
   @Test
-  void aReadWithinFreshForAnswersFromMemoryAndALaterOneAsksOnlyForWhatIsNew() {
+  void aReadWithinFreshForAnswersFromMemoryAndALaterOneAsksOnlyForWhatIsNew() throws Exception {
+    CountDownLatch staleRead = new CountDownLatch(1);
     answers(timeline("a.example", 2, ""), post("a.example", 9, "2026-10-19T23:50:00Z"));
-    answers(timeline("a.example", 2, "&since_id=9"), post("a.example", 12, "2026-10-19T23:59:00Z"));
+    when(http.getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE))
+        .thenAnswer(
+            asked -> {
+              staleRead.await(2, TimeUnit.SECONDS);
+              return ok(post("a.example", 12, "2026-10-19T23:59:00Z"));
+            });
     LatestPosts latest = latest(true, 2, 100, "a.example");
 
     latest.page(null, 0, 20);
@@ -179,6 +189,7 @@ class LatestPostsTest {
     clock.pass(Duration.ofMinutes(2));
     assertThat(uris(latest.page(null, 0, 20).items()))
         .containsExactly("https://a.example/users/u9/statuses/9");
+    staleRead.countDown();
     verify(http, timeout(2_000))
         .getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE);
     clock.pass(Duration.ofSeconds(1));
