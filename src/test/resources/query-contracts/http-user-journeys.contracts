@@ -245,9 +245,9 @@
 @junit | discovery-popular-tags | 1 | 0 | 0 | 0 | 1
 @junit | discovery-read-recommended-post | 2 | 1 | 0 | 0 | 3
 @junit | discovery-recent-feed | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-recent-language | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-relevance | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-trending | 4 | 0 | 0 | 0 | 4
+@junit | discovery-search-recent-language | 3 | 0 | 0 | 0 | 3
+@junit | discovery-search-relevance | 3 | 0 | 0 | 0 | 3
+@junit | discovery-search-trending | 3 | 0 | 0 | 0 | 3
 @junit | discovery-suggested-authors | 2 | 0 | 0 | 0 | 2
 @junit | discovery-tag-feed | 4 | 0 | 0 | 0 | 4
 # A signed-in reader's topic on the trending tab: blocks and mutes ride inside the page and count
