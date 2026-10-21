@@ -98,6 +98,10 @@ class FollowListWithRemoteIntegrationTest {
     follower(targetId, r1, 2, true);
     follower(targetId, pending, 3, false);
     follower(targetId, suspended, 4, true);
+    follower(targetId, blocked, 5, true);
+    follower(targetId, onBlockedDomain, 6, true);
+    localFollow(cat, targetId, 7);
+    follower(targetId, r5, 7, true);
   }
 
   @Test
@@ -184,26 +188,55 @@ class FollowListWithRemoteIntegrationTest {
   }
 
   @Test
-  void followersFromElsewhereMixInTheSameWay() {
-    MixedFollowListView page = lists.followersWithRemote(viewer, target, 0, 20);
+  void followersFromHereAndElsewhereMixNewestFirstWithTiesLocalFirst() {
+    MixedFollowListView page = lists.followersWithRemote(null, target, 0, 20);
 
-    assertThat(names(page)).containsExactly("r1@" + domain("r1"), "a" + tag);
+    assertThat(names(page))
+        .containsExactly(
+            "c" + tag,
+            "r5@" + domain("r5"),
+            "domainblocked@" + domain("domainblocked"),
+            "blocked@" + domain("blocked"),
+            "r1@" + domain("r1"),
+            "a" + tag);
+    assertThat(page.hasNext()).isFalse();
+  }
+
+  @Test
+  void aViewerDoesNotSeeFollowersTheyBlockedAndAPageBoundaryFallsBetweenKinds() {
+    MixedFollowListView first = lists.followersWithRemote(viewer, target, 0, 2);
+    MixedFollowListView second = lists.followersWithRemote(viewer, target, 1, 2);
+
+    assertThat(names(first)).containsExactly("c" + tag, "r5@" + domain("r5"));
+    assertThat(first.hasNext()).isTrue();
+    assertThat(names(second)).containsExactly("r1@" + domain("r1"), "a" + tag);
+    assertThat(second.hasNext()).isFalse();
+  }
+
+  @Test
+  void theFollowButtonsOnFollowersShowTheViewersOwnFollows() {
+    List<FollowListItem> items = lists.followersWithRemote(viewer, target, 0, 20).items();
+
+    assertThat(remote(items, r1).following()).isFalse();
+    assertThat(remote(items, r1).requested()).isTrue();
+    assertThat(remote(items, r5).following()).isFalse();
+    assertThat(remote(items, r5).requested()).isFalse();
   }
 
   @Test
   void theProfileCountsAcceptedFollowsElsewhereLeavingOutSuspendedServers() {
     FollowStatus counts = status.status(viewer, target);
 
-    assertThat(counts.followerCount()).isEqualTo(1);
+    assertThat(counts.followerCount()).isEqualTo(2);
     assertThat(counts.followingCount()).isEqualTo(3);
-    assertThat(counts.remoteFollowerCount()).isEqualTo(1);
+    assertThat(counts.remoteFollowerCount()).isEqualTo(4);
     assertThat(counts.remoteFollowingCount()).isEqualTo(5);
   }
 
   @Test
   void followingAndUnfollowingCountInTheSameTransaction() {
-    assertThat(follows.follow(viewer, target, null).followerCount()).isEqualTo(2);
-    assertThat(follows.unfollow(viewer, target).followerCount()).isEqualTo(1);
+    assertThat(follows.follow(viewer, target, null).followerCount()).isEqualTo(3);
+    assertThat(follows.unfollow(viewer, target).followerCount()).isEqualTo(2);
   }
 
   @Test
@@ -214,7 +247,12 @@ class FollowListWithRemoteIntegrationTest {
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.FOLLOW_LIST_HIDDEN);
+    assertThatThrownBy(() -> lists.followersWithRemote(null, target, 0, 20))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.FOLLOW_LIST_HIDDEN);
     assertThat(lists.followingWithRemote(targetId, target, 0, 20).items()).hasSize(8);
+    assertThat(lists.followersWithRemote(targetId, target, 0, 20).items()).hasSize(6);
     assertThat(status.status(viewer, target).remoteFollowingCount()).isNull();
     assertThat(status.status(viewer, target).remoteFollowerCount()).isNull();
   }
