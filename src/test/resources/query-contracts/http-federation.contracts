@@ -458,3 +458,17 @@
 # Asking for a run hands it to the directory thread; where scheduling is off there is none.
 @junit | admin-directory-run | 0 | 0 | 0 | 0 | 0
 @junit | admin-directory-delete | 1 | 0 | 0 | 1 | 2
+# Pulling the chosen servers' newest posts (pulling on): the instance key, whether the server is
+# blocked, the newest post kept from it, the day's pulled count once; per new post its author
+# (lookup, suspended-server check before the fetch, lookup and insert), the note's INSERT IGNORE
+# and id, and its mark. A later pull asks only since the newest post, and its author is fresh.
+@junit | federation-latest-pull-first | 9 | 3 | 0 | 0 | 12
+@junit | federation-latest-pull-since | 4 | 2 | 0 | 0 | 6
+# The latest from the store, for anyone: one statement walks the pulled and relayed notes down from
+# the cursor with the viewer's blocks, mutes and server blocks applied, then the page as any note
+# page. A refresh since a note reads the top page once. Trending's r cursor reads the same notes.
+@junit | federation-latest-stored | 5 | 0 | 0 | 0 | 5
+@junit | federation-latest-stored-next | 7 | 0 | 0 | 0 | 7
+@junit | federation-latest-stored-since | 7 | 0 | 0 | 0 | 7
+@junit | federation-latest-stored-muted | 1 | 0 | 0 | 0 | 1
+@junit | federation-trending-kept-pulled | 7 | 0 | 0 | 0 | 7

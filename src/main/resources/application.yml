@@ -208,6 +208,7 @@ short-link:
       queue: ${FEDERATION_RELAY_QUEUE:500}
       mode: ${FEDERATION_RELAY_MODE:}
       subscriptions: ${FEDERATION_RELAY_SUBSCRIPTIONS:}
+      keep-for: ${FEDERATION_RELAY_KEEP_FOR:7d}
     trends:
       enabled: ${FEDERATION_TRENDS_ENABLED:false}
       hosts: ${FEDERATION_TRENDS_HOSTS:mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
@@ -220,6 +221,10 @@ short-link:
       max-items: ${FEDERATION_LATEST_MAX_ITEMS:600}
       fresh-for: ${FEDERATION_LATEST_FRESH_FOR:5m}
       patience: ${FEDERATION_LATEST_PATIENCE:3s}
+      pull: ${FEDERATION_LATEST_PULL:false}
+      every: ${FEDERATION_LATEST_EVERY:5m}
+      backfill-pages: ${FEDERATION_LATEST_BACKFILL_PAGES:5}
+      per-day: ${FEDERATION_LATEST_PER_DAY:2000}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

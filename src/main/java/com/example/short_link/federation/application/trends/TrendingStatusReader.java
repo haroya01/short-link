@@ -21,7 +21,7 @@ import tools.jackson.databind.node.ObjectNode;
 // A status from Mastodon's REST API is rewritten as the ActivityPub object its server would
 // publish and read by RemoteNoteParser, so its text, warning, media and poll come out exactly as a
 // kept remote note's do. Only a public post that is not a reply or a boost, by an account that
-// lets itself be found and indexed, is taken.
+// lets itself be found and indexed and whose profile does not say #nobot, is taken.
 @Component
 @RequiredArgsConstructor
 class TrendingStatusReader {
@@ -31,6 +31,7 @@ class TrendingStatusReader {
   private static final int MAX_CARD_TITLE = 300;
   private static final int MAX_CARD_DESCRIPTION = 500;
   private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9_.-]{1,128}");
+  private static final Pattern NO_BOT = Pattern.compile("#nobot\\b", Pattern.CASE_INSENSITIVE);
 
   private final RemoteNoteParser parser;
   private final JsonMapper json;
@@ -49,7 +50,8 @@ class TrendingStatusReader {
         || status.hasNonNull("reblog")
         || status.hasNonNull("in_reply_to_id")
         || !account.path("discoverable").asBoolean(false)
-        || account.path("noindex").asBoolean(false)) {
+        || account.path("noindex").asBoolean(false)
+        || NO_BOT.matcher(account.path("note").asString("")).find()) {
       return Optional.empty();
     }
     String username = username(text(account.get("acct")), server);

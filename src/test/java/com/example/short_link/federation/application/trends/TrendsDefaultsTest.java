@@ -24,4 +24,22 @@ class TrendsDefaultsTest {
     assertThat(String.valueOf(application.getProperty("short-link.federation.trends.hosts")))
         .isEqualTo("${FEDERATION_TRENDS_HOSTS:" + HOSTS + "}");
   }
+
+  @Test
+  void pullingTheLatestIsOffUntilTheServerIsToldAndKeepsTwoThousandADayEveryFiveMinutes()
+      throws Exception {
+    PropertySource<?> application =
+        new YamlPropertySourceLoader()
+            .load("application", new ClassPathResource("application.yml"))
+            .getFirst();
+
+    assertThat(String.valueOf(application.getProperty("short-link.federation.latest.pull")))
+        .isEqualTo("${FEDERATION_LATEST_PULL:false}");
+    assertThat(String.valueOf(application.getProperty("short-link.federation.latest.every")))
+        .isEqualTo("${FEDERATION_LATEST_EVERY:5m}");
+    assertThat(String.valueOf(application.getProperty("short-link.federation.latest.per-day")))
+        .isEqualTo("${FEDERATION_LATEST_PER_DAY:2000}");
+    assertThat(String.valueOf(application.getProperty("short-link.federation.relay.keep-for")))
+        .isEqualTo("${FEDERATION_RELAY_KEEP_FOR:7d}");
+  }
 }

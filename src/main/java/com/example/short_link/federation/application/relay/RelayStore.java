@@ -68,7 +68,7 @@ public class RelayStore {
   @EventListener(ApplicationReadyEvent.class)
   public void load() {
     if (props.enabled()) {
-      tally.seed(STORED, relayed.receivedSince(tally.dayStart()));
+      tally.seed(STORED, relayed.relayedSince(tally.dayStart()));
     }
   }
 

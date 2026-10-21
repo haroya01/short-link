@@ -273,7 +273,7 @@ class RelayedNoteRetentionIntegrationTest {
   }
 
   @Test
-  void keptNotesAreCountedByTheRelayThatBroughtThemAndByTheDay() {
+  void relayedAndPulledNotesAreCountedApartAndByTheDay() {
     update(
         "INSERT INTO federation_relay (actor_uri, inbox, follow_activity_id, state, created_at,"
             + " updated_at) VALUES (?1, ?1, ?2, 'ACCEPTED', NOW(6), NOW(6))",
@@ -284,14 +284,51 @@ class RelayedNoteRetentionIntegrationTest {
             "SELECT id FROM federation_relay WHERE actor_uri = ?1",
             "https://relay-" + tag + ".example/tag/dev");
     Map<Long, Long> before = relayed.countByRelay();
-    long since = relayed.receivedSince(BEFORE);
+    long relayedSince = relayed.relayedSince(BEFORE);
+    long pulledSince = relayed.pulledSince(BEFORE);
 
     relayed.mark(remoteNote(alice), relay, BEFORE);
     relayed.mark(remoteNote(alice), relay, OLD);
     relayed.mark(remoteNote(alice), null, BEFORE.plusSeconds(1));
+    relayed.markPulled(remoteNote(alice), "alice-" + tag + ".example", BEFORE);
+    relayed.markPulled(remoteNote(bob), "bob-" + tag + ".example", OLD);
 
     assertThat(relayed.countByRelay()).containsEntry(relay, 2L);
     assertThat(relayed.countByRelay().get(0L)).isEqualTo(before.getOrDefault(0L, 0L) + 1);
-    assertThat(relayed.receivedSince(BEFORE)).isEqualTo(since + 2);
+    assertThat(relayed.relayedSince(BEFORE)).isEqualTo(relayedSince + 2);
+    assertThat(relayed.pulledSince(BEFORE)).isEqualTo(pulledSince + 1);
+  }
+
+  @Test
+  void theNewestNotePulledFromAServerIsTheLastOneKeptFromIt() {
+    String server = "alice-" + tag + ".example";
+    assertThat(relayed.newestPulled(server)).isEmpty();
+
+    Long older = remoteNote(alice);
+    relayed.markPulled(older, server, BEFORE);
+    Long newer = remoteNote(alice);
+    update("UPDATE note SET created_at = ?1 WHERE id = ?2", BEFORE, newer);
+    relayed.markPulled(newer, server, BEFORE);
+    relayedNote(alice, BEFORE);
+    relayed.markPulled(remoteNote(bob), "bob-" + tag + ".example", BEFORE);
+
+    assertThat(relayed.newestPulled(server)).contains(BEFORE);
+  }
+
+  @Test
+  void aPulledNoteGoesAfterItsTimeAsARelayedOneDoesUnlessAMemberTouchedIt() {
+    Long untouched = remoteNote(alice);
+    relayed.markPulled(untouched, "alice-" + tag + ".example", OLD);
+    Long liked = remoteNote(alice);
+    relayed.markPulled(liked, "alice-" + tag + ".example", OLD);
+    update(
+        "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?1, ?2, NOW(6))",
+        liked,
+        member);
+
+    List<Long> expired = relayed.expired(BEFORE, 200);
+    assertThat(expired).contains(untouched).doesNotContain(liked);
+    relayed.deleteUntouched(expired);
+    assertThat(left(untouched, liked)).containsExactly(liked);
   }
 }

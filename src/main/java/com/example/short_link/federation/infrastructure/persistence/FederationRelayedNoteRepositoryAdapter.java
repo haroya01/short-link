@@ -5,8 +5,10 @@ import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.NativeQuery;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,10 +74,32 @@ class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRep
   }
 
   @Override
-  public long receivedSince(Instant since) {
+  public void markPulled(Long noteId, String host, Instant receivedAt) {
+    em.createNativeQuery(
+            "INSERT INTO federation_relayed_note (note_id, pulled_from, received_at)"
+                + " VALUES (:note, :host, :at)")
+        .setParameter("note", noteId)
+        .setParameter("host", host)
+        .setParameter("at", receivedAt)
+        .executeUpdate();
+  }
+
+  @Override
+  public long relayedSince(Instant since) {
+    return receivedSince(since, "IS NULL");
+  }
+
+  @Override
+  public long pulledSince(Instant since) {
+    return receivedSince(since, "IS NOT NULL");
+  }
+
+  private long receivedSince(Instant since, String pulled) {
     return ((Number)
             em.createNativeQuery(
-                    "SELECT COUNT(*) FROM federation_relayed_note WHERE received_at >= :since")
+                    "SELECT COUNT(*) FROM federation_relayed_note WHERE received_at >= :since"
+                        + " AND pulled_from "
+                        + pulled)
                 .setParameter("since", since)
                 .getSingleResult())
         .longValue();
@@ -83,10 +107,25 @@ class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRep
 
   @Override
   @SuppressWarnings("unchecked")
+  public Optional<Instant> newestPulled(String host) {
+    List<Instant> at =
+        em.createNativeQuery(
+                "SELECT n.created_at FROM note n WHERE n.id = (SELECT MAX(r.note_id)"
+                    + " FROM federation_relayed_note r WHERE r.pulled_from = :host)")
+            .setParameter("host", host)
+            .unwrap(NativeQuery.class)
+            .addScalar("created_at", Instant.class)
+            .getResultList();
+    return at.stream().findFirst();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
   public Map<Long, Long> countByRelay() {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT relay_id, COUNT(*) FROM federation_relayed_note GROUP BY relay_id")
+                "SELECT relay_id, COUNT(*) FROM federation_relayed_note"
+                    + " WHERE pulled_from IS NULL GROUP BY relay_id")
             .getResultList();
     return rows.stream()
         .collect(

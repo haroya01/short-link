@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,20 @@ class RemoteTrendingFeedTest {
   private final TrendingAuthors authors = mock(TrendingAuthors.class);
   private final NoteViewReader notes = mock(NoteViewReader.class);
   private final LatestPosts latest = mock(LatestPosts.class);
-  private final RemoteTrendingFeed feed = new RemoteTrendingFeed(trending, latest, authors, notes);
+  private final RemoteTrendingFeed feed = feed(false);
+
+  private RemoteTrendingFeed feed(boolean pulling) {
+    return new RemoteTrendingFeed(
+        trending,
+        latest,
+        new LatestProperties(true, List.of(), 0, 0, null, null, pulling, null, 0, 0),
+        authors,
+        notes);
+  }
+
+  private static List<NoteViewReader.Listed> listed(long... ids) {
+    return Arrays.stream(ids).mapToObj(id -> new NoteViewReader.Listed(id, "n" + id)).toList();
+  }
 
   private static TrendingNote item() {
     return mock(TrendingNote.class);
@@ -104,5 +118,42 @@ class RemoteTrendingFeedTest {
     assertThat(page.next()).isEqualTo("t1");
     assertThat(page.gap()).isTrue();
     assertThat(feed.latest(7L, null, null, 20).gap()).isNull();
+  }
+
+  @Test
+  void oncePullingIsOnAnyonePagesTheKeptLatestByTheLastNoteShownAndMemoryIsNotRead() {
+    RemoteTrendingFeed stored = feed(true);
+    when(notes.latest(null, null, 3)).thenReturn(listed(30, 29, 28));
+    when(notes.latest(null, 29L, 3)).thenReturn(listed(28));
+
+    RemoteTrendingFeed.Page first = stored.latest(null, null, null, 2);
+    RemoteTrendingFeed.Page last = stored.latest(null, first.next(), null, 2);
+
+    assertThat(first.items()).containsExactly("n30", "n29");
+    assertThat(first.next()).isEqualTo("r29");
+    assertThat(first.gap()).isNull();
+    assertThat(last.items()).containsExactly("n28");
+    assertThat(last.next()).isNull();
+    verifyNoInteractions(latest, authors);
+  }
+
+  @Test
+  void oncePullingIsOnARefreshSinceTheNewestNoteGetsWhatCameAboveItOrStartsOverWithAGap() {
+    RemoteTrendingFeed stored = feed(true);
+    when(notes.latest(7L, null, TrendingPosts.MAX_LIMIT)).thenReturn(listed(33, 32, 31, 30));
+    when(notes.latest(7L, null, 3)).thenReturn(listed(33, 32, 31));
+
+    RemoteTrendingFeed.Page fresh = stored.latest(7L, null, "31", 2);
+    RemoteTrendingFeed.Page none = stored.latest(7L, null, "33", 2);
+    RemoteTrendingFeed.Page gap = stored.latest(7L, null, "12", 2);
+
+    assertThat(fresh.items()).containsExactly("n33", "n32");
+    assertThat(fresh.next()).isNull();
+    assertThat(fresh.gap()).isFalse();
+    assertThat(none.items()).isEmpty();
+    assertThat(none.gap()).isFalse();
+    assertThat(gap.items()).containsExactly("n33", "n32");
+    assertThat(gap.next()).isEqualTo("r32");
+    assertThat(gap.gap()).isTrue();
   }
 }

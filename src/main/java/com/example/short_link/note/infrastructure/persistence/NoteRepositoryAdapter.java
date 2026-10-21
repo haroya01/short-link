@@ -199,6 +199,30 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  // STRAIGHT_JOIN walks federation_relayed_note's primary key down from the cursor, so a page reads
+  // about as many rows as it shows. Left to itself MySQL starts from note's reply index and sorts
+  // every kept note for each page.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM federation_relayed_note r STRAIGHT_JOIN note n ON n.id = r.note_id"
+                + " WHERE r.note_id < :before AND "
+                + notReply("n")
+                + " AND "
+                + NoteAccessSql.listed("n")
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY r.note_id DESC",
+            NoteEntity.class)
+        .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   static String onProfile(String alias) {
     return " AND " + NoteAccessSql.onProfile(alias) + HeardSql.unblocked(alias + ".user_id");
   }

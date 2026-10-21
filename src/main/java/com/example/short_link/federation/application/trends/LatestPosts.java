@@ -1,6 +1,8 @@
 package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.federation.application.FederationHttp;
+import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
@@ -9,6 +11,7 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -35,6 +38,10 @@ import tools.jackson.databind.json.JsonMapper;
 // only for what came after the newest post kept from that server; scrolling past the oldest asks
 // for the page before it. Posts marked sensitive or behind a warning, and posts by bots, are left
 // out, as is everything trending leaves out.
+//
+// Where pulling is on, nothing is held: a worker pulls whether or not anyone reads, and the posts
+// are kept as notes. A pulled post that names a member is left to the delivery its server makes
+// to them, which would otherwise find it kept and be dropped as a duplicate.
 @Slf4j
 @Service
 public class LatestPosts {
@@ -45,6 +52,8 @@ public class LatestPosts {
   private final FederationDomainBlockRepository serverBlocks;
   private final RemoteAccountStandingReader standings;
   private final TrendingStatusReader reader;
+  private final LatestStore store;
+  private final FederationUrls urls;
   private final JsonMapper json;
   private final Clock clock;
   private final ExecutorService askers = Executors.newVirtualThreadPerTaskExecutor();
@@ -65,7 +74,12 @@ public class LatestPosts {
   static final Duration LONGEST_QUIET = Duration.ofHours(24);
 
   private record Answer(
-      String host, List<TrendingStatusReader.Read> reads, String first, String last, int raw) {}
+      String host,
+      List<TrendingStatusReader.Read> reads,
+      String first,
+      String last,
+      Instant lastAt,
+      int raw) {}
 
   public record Page(List<TrendingNote> items, boolean more, List<String> unknownAuthors) {}
 
@@ -77,8 +91,20 @@ public class LatestPosts {
       FederationDomainBlockRepository serverBlocks,
       RemoteAccountStandingReader standings,
       TrendingStatusReader reader,
+      LatestStore store,
+      FederationUrls urls,
       JsonMapper json) {
-    this(props, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
+    this(
+        props,
+        http,
+        signingKeys,
+        serverBlocks,
+        standings,
+        reader,
+        store,
+        urls,
+        json,
+        Clock.systemUTC());
   }
 
   LatestPosts(
@@ -88,6 +114,8 @@ public class LatestPosts {
       FederationDomainBlockRepository serverBlocks,
       RemoteAccountStandingReader standings,
       TrendingStatusReader reader,
+      LatestStore store,
+      FederationUrls urls,
       JsonMapper json,
       Clock clock) {
     this.props = props;
@@ -96,6 +124,8 @@ public class LatestPosts {
     this.serverBlocks = serverBlocks;
     this.standings = standings;
     this.reader = reader;
+    this.store = store;
+    this.urls = urls;
     this.json = json;
     this.clock = clock;
   }
@@ -161,6 +191,86 @@ public class LatestPosts {
     } finally {
       refreshing.set(false);
     }
+  }
+
+  // Each server is asked for what came after the newest post seen from it; the first time, for its
+  // newest pages back to the newest post kept from it, at most backfillPages. Past the day's cap
+  // the newest posts are the ones kept, and they are kept oldest first, so note ids follow the
+  // order they were written in.
+  public int pull() {
+    if (!props.pulling() || !refreshing.compareAndSet(false, true)) {
+      return 0;
+    }
+    try {
+      Signer signer = signingKeys.forInstance();
+      Map<String, Boolean> blocked = new HashMap<>();
+      List<CompletableFuture<List<Kept>>> asks = new ArrayList<>();
+      for (String host : props.hosts()) {
+        if (!resting(host) && !blocked(host, blocked)) {
+          asks.add(CompletableFuture.supplyAsync(() -> pullFrom(host, signer), askers));
+        }
+      }
+      Map<String, Kept> byUri = new LinkedHashMap<>();
+      for (CompletableFuture<List<Kept>> ask : asks) {
+        for (Kept kept : ask.join()) {
+          if (!blocked(kept.read().domain(), blocked)) {
+            byUri.putIfAbsent(kept.read().note().uri(), kept);
+          }
+        }
+      }
+      List<Kept> newest =
+          byUri.values().stream()
+              .sorted(
+                  Comparator.comparing((Kept kept) -> kept.read().note().createdAt()).reversed())
+              .limit(store.room())
+              .toList();
+      int stored = 0;
+      for (Kept kept : newest.reversed()) {
+        if (LatestStore.PULLED.equals(store.keep(kept.host(), kept.read()))) {
+          stored++;
+        }
+      }
+      return stored;
+    } finally {
+      refreshing.set(false);
+    }
+  }
+
+  private List<Kept> pullFrom(String host, Signer signer) {
+    Edge edge = edges.get(host);
+    if (edge != null) {
+      Optional<Answer> answer = ask(host, "&since_id=" + edge.newest(), signer);
+      answer
+          .filter(newer -> newer.first() != null)
+          .ifPresent(
+              newer -> edges.put(host, new Edge(newer.first(), edge.oldest(), edge.bottom())));
+      return answer.map(LatestPosts::kept).orElse(List.of());
+    }
+    Instant reached = store.newest(host).orElse(null);
+    List<Kept> pulled = new ArrayList<>();
+    String window = "";
+    for (int page = 0; page < props.backfillPages(); page++) {
+      Optional<Answer> answer = ask(host, window, signer);
+      if (answer.isEmpty() || answer.get().first() == null) {
+        break;
+      }
+      Answer older = answer.get();
+      pulled.addAll(kept(older));
+      boolean bottom = older.raw() < props.perHost();
+      Edge before = edges.get(host);
+      edges.put(
+          host, new Edge(before == null ? older.first() : before.newest(), older.last(), bottom));
+      if (bottom
+          || (reached != null && older.lastAt() != null && !older.lastAt().isAfter(reached))) {
+        break;
+      }
+      window = "&max_id=" + older.last();
+    }
+    return pulled;
+  }
+
+  private static List<Kept> kept(Answer answer) {
+    return answer.reads().stream().map(read -> new Kept(read, answer.host())).toList();
   }
 
   private boolean canDeepen() {
@@ -234,6 +344,7 @@ public class LatestPosts {
     List<TrendingStatusReader.Read> reads = new ArrayList<>();
     String first = null;
     String last = null;
+    Instant lastAt = null;
     for (JsonNode status : statuses) {
       String id = status.path("id").asString(null);
       if (id == null) {
@@ -241,7 +352,8 @@ public class LatestPosts {
       }
       first = first == null ? id : first;
       last = id;
-      if (safe(status)) {
+      lastAt = instant(status.path("created_at").asString(null));
+      if (safe(status) && !(props.pulling() && namesUs(status))) {
         reader.read(status, host).ifPresent(reads::add);
       }
     }
@@ -250,7 +362,7 @@ public class LatestPosts {
       return Optional.empty();
     }
     quiet.remove(host);
-    return Optional.of(new Answer(host, reads, first, last, statuses.size()));
+    return Optional.of(new Answer(host, reads, first, last, lastAt, statuses.size()));
   }
 
   // A server that keeps its public timeline from visitors answers 4xx, or 200 with nothing at all
@@ -269,6 +381,27 @@ public class LatestPosts {
   private boolean resting(String host) {
     Quiet rest = quiet.get(host);
     return rest != null && rest.until().isAfter(clock.instant());
+  }
+
+  private boolean namesUs(JsonNode status) {
+    for (JsonNode mention : status.path("mentions")) {
+      String acct = mention.path("acct").asString("");
+      int at = acct.lastIndexOf('@');
+      String host = at < 0 ? null : RemoteActorParser.host("https://" + acct.substring(at + 1));
+      if (urls.isOurs(mention.path("url").asString(null))
+          || (host != null && host.equals(urls.domain()))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Instant instant(String at) {
+    try {
+      return at == null ? null : Instant.parse(at);
+    } catch (DateTimeParseException malformed) {
+      return null;
+    }
   }
 
   private static boolean safe(JsonNode status) {
