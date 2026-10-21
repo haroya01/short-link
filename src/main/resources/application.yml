@@ -14,6 +14,10 @@ spring:
     init-sqls: SET SESSION innodb_ft_enable_stopword = OFF
   cache:
     type: redis
+  data:
+    redis:
+      repositories:
+        enabled: false
   jpa:
     # open-session-in-view 를 끈다. 기본값(true)이면 EntityManager 와 그것이 잡은 JDBC 커넥션이
     # 요청 스레드에 요청 끝까지 묶인다 — 보통 요청은 밀리초라 문제없지만, /api/v1/links/{code}/stream
