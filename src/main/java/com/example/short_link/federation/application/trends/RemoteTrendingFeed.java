@@ -10,12 +10,18 @@ import org.springframework.stereotype.Service;
 // Pages through what other servers trend on, then, for a member, on through the notes from
 // elsewhere this server keeps, newest first. A cursor is t<offset> in the first part and r<id>
 // (the last note shown) in the second.
+//
+// The latest are what the chosen servers posted last. Once pulling is on they are the notes relays
+// brought and pulls kept, newest first, for anyone: a cursor is r<id> and since is the id of the
+// newest note the reader has. Until then they are read from memory, a cursor is t<offset> and
+// since is a post's uri.
 @Service
 @RequiredArgsConstructor
 public class RemoteTrendingFeed {
 
   private final TrendingPosts trending;
   private final LatestPosts latest;
+  private final LatestProperties latestProps;
   private final TrendingAuthors authors;
   private final NoteViewReader notes;
 
@@ -43,6 +49,9 @@ public class RemoteTrendingFeed {
 
   public Page latest(Long viewerId, String cursor, String since, int limit) {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
+    if (latestProps.pulling()) {
+      return stored(viewerId, cursor, since, size);
+    }
     if (since != null && cursor == null) {
       LatestPosts.Page top = latest.page(viewerId, 0, TrendingPosts.MAX_LIMIT);
       List<String> uris = top.items().stream().map(TrendingNote::uri).toList();
@@ -66,13 +75,35 @@ public class RemoteTrendingFeed {
     }
   }
 
+  private Page stored(Long viewerId, String cursor, String since, int size) {
+    boolean fresh = since != null && cursor == null;
+    if (fresh) {
+      List<NoteViewReader.Listed> top = notes.latest(viewerId, null, TrendingPosts.MAX_LIMIT);
+      for (int at = 0; at < top.size(); at++) {
+        if (String.valueOf(top.get(at).id()).equals(since)) {
+          return new Page(views(top.subList(0, at)), null, false);
+        }
+      }
+    }
+    Long beforeId = cursor != null && cursor.startsWith("r") ? id(cursor) : null;
+    Page page = paged(notes.latest(viewerId, beforeId, size + 1), size);
+    return fresh ? new Page(page.items(), page.next(), true) : page;
+  }
+
   private Page kept(Long viewerId, Long beforeId, int size) {
-    List<NoteViewReader.Listed> rows = notes.received(viewerId, beforeId, size + 1);
+    return paged(notes.received(viewerId, beforeId, size + 1), size);
+  }
+
+  private static Page paged(List<NoteViewReader.Listed> rows, int size) {
     boolean more = rows.size() > size;
     List<NoteViewReader.Listed> shown = more ? rows.subList(0, size) : rows;
-    List<Object> items = new ArrayList<>(shown.size());
-    shown.forEach(row -> items.add(row.view()));
-    return new Page(items, more ? "r" + shown.getLast().id() : null);
+    return new Page(views(shown), more ? "r" + shown.getLast().id() : null);
+  }
+
+  private static List<Object> views(List<NoteViewReader.Listed> rows) {
+    List<Object> items = new ArrayList<>(rows.size());
+    rows.forEach(row -> items.add(row.view()));
+    return items;
   }
 
   private static int offset(String cursor) {

@@ -33,6 +33,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,11 +45,14 @@ class LatestPostsTest {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final Duration PATIENCE = Duration.ofSeconds(3);
+  private static final FederationUrls URLS =
+      new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me"));
 
   @Mock private FederationHttp http;
   @Mock private SigningKeys signingKeys;
   @Mock private FederationDomainBlockRepository serverBlocks;
   @Mock private RemoteAccountStandingReader standings;
+  @Mock private LatestStore store;
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
   private final MovingClock clock = new MovingClock(Instant.parse("2026-10-20T00:00:00Z"));
@@ -87,19 +91,18 @@ class LatestPostsTest {
   }
 
   private LatestPosts latest(boolean enabled, int perHost, int maxItems, String... hosts) {
+    return latest(
+        new LatestProperties(
+            enabled, List.of(hosts), perHost, maxItems, null, PATIENCE, false, null, 0, 0));
+  }
+
+  private LatestPosts latest(LatestProperties props) {
     return new LatestPosts(
-        new LatestProperties(enabled, List.of(hosts), perHost, maxItems, null, PATIENCE),
-        http,
-        signingKeys,
-        serverBlocks,
-        standings,
-        new TrendingStatusReader(
-            new RemoteNoteParser(
-                new FederationUrls(
-                    new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
-            JSON),
-        JSON,
-        clock);
+        props, http, signingKeys, serverBlocks, standings, reader(), store, URLS, JSON, clock);
+  }
+
+  private static TrendingStatusReader reader() {
+    return new TrendingStatusReader(new RemoteNoteParser(URLS), JSON);
   }
 
   private static URI timeline(String host, int limit, String window) {
@@ -270,5 +273,152 @@ class LatestPostsTest {
     latest.refresh();
 
     verify(http, times(2)).getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE);
+  }
+
+  private LatestPosts pulling(int perHost, int backfillPages, String... hosts) {
+    return latest(
+        new LatestProperties(
+            true, List.of(hosts), perHost, 0, null, PATIENCE, true, null, backfillPages, 0));
+  }
+
+  private List<String> keptInOrder(int times) {
+    ArgumentCaptor<TrendingStatusReader.Read> reads =
+        ArgumentCaptor.forClass(TrendingStatusReader.Read.class);
+    verify(store, times(times)).keep(anyString(), reads.capture());
+    return reads.getAllValues().stream().map(read -> read.note().uri()).toList();
+  }
+
+  @Test
+  void pullingIsOffUnlessTurnedOnAndAsksNothing() {
+    assertThat(latest(true, 2, 100, "a.example").pull()).isZero();
+
+    verifyNoInteractions(http, store);
+  }
+
+  @Test
+  void theFirstPullFillsBackPageByPageUntilItMeetsTheNewestPostKeptFromThatServer() {
+    when(store.newest("a.example")).thenReturn(Optional.of(Instant.parse("2026-10-19T23:47:00Z")));
+    when(store.newest("b.example")).thenReturn(Optional.empty());
+    when(store.leftToday()).thenReturn(100L);
+    when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
+    answers(
+        timeline("a.example", 2, ""),
+        post("a.example", 9, "2026-10-19T23:50:00Z"),
+        post("a.example", 8, "2026-10-19T23:49:00Z"));
+    answers(
+        timeline("a.example", 2, "&max_id=8"),
+        post("a.example", 7, "2026-10-19T23:48:00Z"),
+        post("a.example", 6, "2026-10-19T23:47:00Z"));
+    answers(
+        timeline("b.example", 2, ""),
+        post("b.example", 30, "2026-10-19T23:55:00Z"),
+        post("b.example", 29, "2026-10-19T23:30:00Z"));
+    answers(
+        timeline("b.example", 2, "&max_id=29"),
+        post("b.example", 28, "2026-10-19T23:20:00Z"),
+        post("b.example", 27, "2026-10-19T23:10:00Z"));
+    answers(
+        timeline("b.example", 2, "&max_id=27"),
+        post("b.example", 26, "2026-10-19T23:05:00Z"),
+        post("b.example", 25, "2026-10-19T23:00:00Z"));
+
+    assertThat(pulling(2, 3, "a.example", "b.example").pull()).isEqualTo(10);
+
+    assertThat(keptInOrder(10))
+        .containsExactly(
+            "https://b.example/users/u25/statuses/25",
+            "https://b.example/users/u26/statuses/26",
+            "https://b.example/users/u27/statuses/27",
+            "https://b.example/users/u28/statuses/28",
+            "https://b.example/users/u29/statuses/29",
+            "https://a.example/users/u6/statuses/6",
+            "https://a.example/users/u7/statuses/7",
+            "https://a.example/users/u8/statuses/8",
+            "https://a.example/users/u9/statuses/9",
+            "https://b.example/users/u30/statuses/30");
+    verify(http, never()).getJson(eq(timeline("a.example", 2, "&max_id=6")), any(), any());
+    verify(http, never()).getJson(eq(timeline("b.example", 2, "&max_id=25")), any(), any());
+  }
+
+  @Test
+  void laterPullsAskOnlyForWhatCameAfterTheNewestPostSeenWhetherOrNotAnyoneReads() {
+    when(store.newest("a.example")).thenReturn(Optional.empty());
+    when(store.leftToday()).thenReturn(100L);
+    when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
+    answers(timeline("a.example", 2, ""), post("a.example", 9, "2026-10-19T23:50:00Z"));
+    answers(
+        timeline("a.example", 2, "&since_id=9"),
+        post("a.example", 12, "2026-10-19T23:59:00Z"),
+        post("a.example", 11, "2026-10-19T23:58:00Z"));
+    answers(timeline("a.example", 2, "&since_id=12"));
+    LatestPosts latest = pulling(2, 5, "a.example");
+
+    latest.pull();
+    latest.pull();
+    latest.pull();
+
+    verify(http, times(1)).getJson(eq(timeline("a.example", 2, "")), any(), any());
+    verify(http, times(1)).getJson(eq(timeline("a.example", 2, "&since_id=9")), any(), any());
+    verify(http, times(1)).getJson(eq(timeline("a.example", 2, "&since_id=12")), any(), any());
+    verify(store, times(1)).newest("a.example");
+    assertThat(keptInOrder(3))
+        .containsExactly(
+            "https://a.example/users/u9/statuses/9",
+            "https://a.example/users/u11/statuses/11",
+            "https://a.example/users/u12/statuses/12");
+    assertThat(latest.page(null, 0, 20).items()).isEmpty();
+  }
+
+  @Test
+  void pastTheDaysCapTheNewestAreKeptOldestFirst() {
+    when(store.newest("a.example")).thenReturn(Optional.empty());
+    when(store.leftToday()).thenReturn(2L);
+    when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
+    answers(
+        timeline("a.example", 3, ""),
+        post("a.example", 9, "2026-10-19T23:50:00Z"),
+        post("a.example", 8, "2026-10-19T23:49:00Z"),
+        post("a.example", 7, "2026-10-19T23:48:00Z"));
+
+    assertThat(pulling(3, 1, "a.example").pull()).isEqualTo(2);
+
+    assertThat(keptInOrder(2))
+        .containsExactly(
+            "https://a.example/users/u8/statuses/8", "https://a.example/users/u9/statuses/9");
+  }
+
+  @Test
+  void aPullKeepsNothingFromABlockedServerOrAnAccountThatAsksNotToBeFoundOrNamesAMember() {
+    when(serverBlocks.severityFor("b.example")).thenReturn(Optional.of(ServerBlockSeverity.LIMIT));
+    when(store.newest("a.example")).thenReturn(Optional.empty());
+    when(store.leftToday()).thenReturn(100L);
+    when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
+    ObjectNode hidden = post("a.example", 8, "2026-10-19T23:49:00Z");
+    ((ObjectNode) hidden.path("account")).put("discoverable", false);
+    ObjectNode unindexed = post("a.example", 7, "2026-10-19T23:48:00Z");
+    ((ObjectNode) unindexed.path("account")).put("noindex", true);
+    ObjectNode nobot = post("a.example", 6, "2026-10-19T23:47:00Z");
+    ((ObjectNode) nobot.path("account")).put("note", "<p>no crawlers <a>#NoBot</a></p>");
+    ObjectNode naming = post("a.example", 5, "2026-10-19T23:46:00Z");
+    naming
+        .putArray("mentions")
+        .addObject()
+        .put("acct", "yuki@kurl.me")
+        .put("url", "https://blog.kurl.me/@yuki");
+    ObjectNode warned = post("a.example", 4, "2026-10-19T23:45:00Z");
+    warned.put("spoiler_text", "spoilers");
+    answers(
+        timeline("a.example", 6, ""),
+        post("a.example", 9, "2026-10-19T23:50:00Z"),
+        hidden,
+        unindexed,
+        nobot,
+        naming,
+        warned);
+
+    assertThat(pulling(6, 1, "a.example", "b.example").pull()).isEqualTo(1);
+
+    assertThat(keptInOrder(1)).containsExactly("https://a.example/users/u9/statuses/9");
+    verify(http, never()).getJson(eq(timeline("b.example", 6, "")), any(), any());
   }
 }

@@ -133,7 +133,7 @@ class RelayStoreTest {
 
   @Test
   void noMoreAreKeptOnceADaysWorthHasBeenEvenAcrossARestart() {
-    when(relayed.receivedSince(Instant.parse("2026-10-16T15:00:00Z"))).thenReturn(2L);
+    when(relayed.relayedSince(Instant.parse("2026-10-16T15:00:00Z"))).thenReturn(2L);
     RelayStore store = store(true, 2);
 
     store.load();

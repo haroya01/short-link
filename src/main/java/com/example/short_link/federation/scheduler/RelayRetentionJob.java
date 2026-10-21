@@ -24,13 +24,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class RelayRetentionJob {
 
-  static final Duration KEEP_FOR = Duration.ofDays(7);
   static final int BATCH = 200;
   private static final Duration PAUSE = Duration.ofSeconds(1);
 
   private final FederationRelayedNoteRepository relayed;
   private final RelayTally tally;
   private final Clock clock;
+  private final Duration keepFor;
   private final Duration pause;
   private final ExecutorService executor;
   private final AtomicBoolean running = new AtomicBoolean();
@@ -39,19 +39,22 @@ public class RelayRetentionJob {
   public RelayRetentionJob(
       FederationRelayedNoteRepository relayed,
       RelayTally tally,
+      @Value("${short-link.federation.relay.keep-for:7d}") Duration keepFor,
       @Value("${short-link.scheduling.enabled:true}") boolean scheduling) {
-    this(relayed, tally, Clock.systemUTC(), PAUSE, scheduling);
+    this(relayed, tally, Clock.systemUTC(), keepFor, PAUSE, scheduling);
   }
 
   RelayRetentionJob(
       FederationRelayedNoteRepository relayed,
       RelayTally tally,
       Clock clock,
+      Duration keepFor,
       Duration pause,
       boolean scheduling) {
     this.relayed = relayed;
     this.tally = tally;
     this.clock = clock;
+    this.keepFor = keepFor;
     this.pause = pause;
     this.executor =
         scheduling
@@ -88,7 +91,7 @@ public class RelayRetentionJob {
 
   public int sweep() throws InterruptedException {
     long started = System.nanoTime();
-    Instant before = clock.instant().minus(KEEP_FOR);
+    Instant before = clock.instant().minus(keepFor);
     int deleted = 0;
     int batches = 0;
     while (true) {

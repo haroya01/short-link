@@ -12,4 +12,6 @@ public interface NoteViewReader {
   record Listed(Long id, Object view) {}
 
   List<Listed> received(Long viewerId, Long beforeId, int limit);
+
+  List<Listed> latest(Long viewerId, Long beforeId, int limit);
 }
