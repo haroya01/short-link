@@ -106,7 +106,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "AND e.is_bot = FALSE AND e.visitor_hash IS NOT NULL ";
 
   String TRENDING_ORDER =
-      "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC";
+      "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC, p.id DESC";
 
   String BROWSE_CONDITION =
       PostAccessSql.LISTED
@@ -128,6 +128,32 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value = "SELECT p.* FROM posts p " + RECENT_HUMAN_VIEWS + BROWSE_PREDICATE + TRENDING_ORDER)
   List<PostEntity> findPublishedTrendingSince(
       @Param("since") Instant since,
+      @Param("lang") String lang,
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      Pageable pageable);
+
+  @Query(
+      nativeQuery = true,
+      value = "SELECT p.id FROM posts p " + RECENT_HUMAN_VIEWS + BROWSE_PREDICATE + TRENDING_ORDER)
+  List<Long> findPublishedTrendingIdsSince(
+      @Param("since") Instant since,
+      @Param("lang") String lang,
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      Pageable pageable);
+
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.id IN (:ids) AND "
+              + BROWSE_CONDITION
+              + "ORDER BY FIND_IN_SET(p.id, :order)")
+  List<PostEntity> findPublishedRankedAmong(
+      @Param("ids") Collection<Long> ids,
+      @Param("order") String order,
       @Param("lang") String lang,
       @Param("minBody") int minBody,
       @Param("viewer") long viewer,

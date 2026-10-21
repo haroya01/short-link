@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,9 +30,10 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class PostRepositoryAdapter implements PostRepository {
 
-  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
+  static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
+  private final TrendingPostRanking ranking;
 
   @PersistenceContext private EntityManager em;
 
@@ -253,14 +255,33 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit) {
+    return trending(viewerId, null, offset, limit);
+  }
+
+  private List<PostEntity> trending(Long viewerId, String lang, long offset, int limit) {
     Instant now = Instant.now();
-    return jpa.findPublishedTrendingSince(
-        now.minus(TRENDING_WINDOW),
-        null,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        HeardSql.viewer(viewerId),
-        now,
-        new OffsetLimit(offset, limit));
+    List<Long> ranked = ranking.ids(lang);
+    List<PostEntity> shown =
+        ranked.isEmpty()
+            ? List.of()
+            : jpa.findPublishedRankedAmong(
+                ranked,
+                ranked.stream().map(String::valueOf).collect(Collectors.joining(",")),
+                lang,
+                DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+                HeardSql.viewer(viewerId),
+                now,
+                new OffsetLimit(offset, limit));
+    if (shown.size() < limit && ranked.size() >= TrendingPostRanking.SIZE) {
+      return jpa.findPublishedTrendingSince(
+          now.minus(TRENDING_WINDOW),
+          lang,
+          DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+          HeardSql.viewer(viewerId),
+          now,
+          new OffsetLimit(offset, limit));
+    }
+    return shown;
   }
 
   @Override
@@ -320,14 +341,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size) {
-    Instant now = Instant.now();
-    return jpa.findPublishedTrendingSince(
-        now.minus(TRENDING_WINDOW),
-        normLang(lang),
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        HeardSql.viewer(viewerId),
-        now,
-        PageRequest.of(page, size));
+    return trending(viewerId, normLang(lang), (long) page * size, size);
   }
 
   @Override

@@ -17,7 +17,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void followingListAndCountTranslateOnlyEmptyOperands() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of(), 0, 20);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of());
     verify(jpa)
@@ -36,7 +36,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void followingOnlyAuthorsSkipsTheTagJoin() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of(), 0, 20);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of());
     verify(jpa)
@@ -49,7 +49,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void unreadFeedAcceptsAnEmptyExclusionList() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
     adapter.findForYouCandidates(7L, List.of("java"), List.of(), 0, 20);
     adapter.countForYouCandidates(7L, List.of("java"), List.of());
     verify(jpa)
@@ -72,7 +72,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void anAnonymousReaderIsBoundAsNobodyAndASignedInOneAsThemselves() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
     adapter.findPublishedRecent(null, null, 0, 20);
     adapter.findPublishedRecent(7L, null, 0, 20);
     verify(jpa)
