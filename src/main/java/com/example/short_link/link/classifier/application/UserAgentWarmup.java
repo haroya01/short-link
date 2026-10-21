@@ -3,6 +3,7 @@ package com.example.short_link.link.classifier.application;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+    prefix = "short-link.user-agent",
+    name = "warm-up",
+    havingValue = "true",
+    matchIfMissing = true)
 class UserAgentWarmup {
 
   static final List<String> AGENTS =
