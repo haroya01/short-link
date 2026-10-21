@@ -62,12 +62,26 @@ class PostAccessSqlTest {
   }
 
   @Test
-  void eachFragmentIsTheSameSqlUnderAnotherAlias() {
-    assertThat(PostAccessSql.listed("q")).isEqualTo(PostAccessSql.LISTED_AS_Q);
-    assertThat(PostAccessSql.open("rp"))
-        .isEqualTo(PostAccessSql.OPEN.replace("p.", "rp."))
-        .startsWith("rp.status = 'PUBLISHED'");
-    assertThat(PostAccessSql.card("po")).startsWith("po.status = 'PUBLISHED'");
+  void eachSpelledOutFragmentIsWhatTheAudienceQuestionsBuild() {
+    assertThat(PostAccessSql.LISTED).isEqualTo(PostAccessSql.listed("p"));
+    assertThat(PostAccessSql.LISTED_AS_Q).isEqualTo(PostAccessSql.listed("q"));
+    assertThat(PostAccessSql.OPEN).isEqualTo(PostAccessSql.open("p"));
+    assertThat(PostAccessSql.CARD).isEqualTo(PostAccessSql.card("p"));
+    assertThat(PostAccessSql.PROFILE).isEqualTo(PostAccessSql.profile("p"));
+  }
+
+  @Test
+  void aRoomPostIsNeverListedCardedOrOnAProfile() {
+    for (String fragment :
+        List.of(
+            PostAccessSql.LISTED, PostAccessSql.OPEN, PostAccessSql.CARD, PostAccessSql.PROFILE)) {
+      assertThat(fragment).doesNotContain("'ROOM'");
+    }
+    assertThat(PostAccessSql.inRoomsOf("rp"))
+        .isEqualTo(
+            "rp.status = 'PUBLISHED' AND rp.audience IN ('ROOM') AND EXISTS (SELECT 1 FROM"
+                + " room_member pm WHERE pm.room_id = rp.room_id AND pm.user_id = :viewer)");
+    assertThat(PostAccessSql.inFeedRooms("p")).contains("NOT fr.hidden_from_feed");
   }
 
   private static List<String> findings(String source) {

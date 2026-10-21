@@ -21,6 +21,7 @@ public class PostFeedItemAssembler {
 
   private final UserRepository userRepository;
   private final SeriesRepository seriesRepository;
+  private final PostRooms rooms;
 
   public List<PublicFeedItem> assemble(List<PostEntity> posts) {
     List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
@@ -31,11 +32,14 @@ public class PostFeedItemAssembler {
     List<PostEntity> visible =
         posts.stream().filter(p -> authors.containsKey(p.getUserId())).toList();
     Map<Long, FeedSeriesRef> series = seriesOf(visible);
+    Map<Long, PostRoomView> roomOf = rooms.of(visible);
     return visible.stream()
         .map(
             p -> {
               PublicFeedItem item = toItem(p, authors.get(p.getUserId()));
               FeedSeriesRef ref = p.getSeriesId() == null ? null : series.get(p.getSeriesId());
+              PostRoomView room = roomOf.get(p.getId());
+              item = room == null ? item : item.in(room);
               return ref == null ? item : item.withSeries(ref);
             })
         .toList();

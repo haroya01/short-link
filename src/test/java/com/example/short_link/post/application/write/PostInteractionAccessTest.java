@@ -117,7 +117,7 @@ class PostInteractionAccessTest {
     prepareTarget(interaction);
     PostEntity post = new PostEntity(7L, "followers", "Followers", "ko");
     post.publish();
-    post.changeAudience(PostAudience.FOLLOWERS, null);
+    post.changeAudience(PostAudience.FOLLOWERS, null, null);
     preparePost(interaction, post);
 
     assertThatThrownBy(() -> access(interaction))
@@ -146,7 +146,7 @@ class PostInteractionAccessTest {
     prepareTarget(interaction);
     PostEntity post = new PostEntity(7L, "region", "Region", "ko");
     post.publish();
-    post.changeAudience(PostAudience.FOLLOWERS, null);
+    post.changeAudience(PostAudience.FOLLOWERS, null, null);
     post.blockCountries(List.of("JP"));
     preparePost(interaction, post);
 
@@ -162,7 +162,7 @@ class PostInteractionAccessTest {
     prepareTarget(interaction);
     PostEntity post = new PostEntity(7L, "unlisted", "Unlisted", "ko");
     post.publish();
-    post.changeAudience(PostAudience.UNLISTED, "the-key");
+    post.changeAudience(PostAudience.UNLISTED, null, "the-key");
     preparePost(interaction, post);
 
     assertThatThrownBy(() -> access(interaction))

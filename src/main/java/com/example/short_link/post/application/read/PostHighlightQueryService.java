@@ -76,15 +76,23 @@ public class PostHighlightQueryService {
         highlightRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds =
         highlights.stream().map(PostHighlightEntity::getPostId).distinct().toList();
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+    Set<Long> left =
+        posts.values().stream()
+            .filter(post -> !lists.keeps(post))
+            .map(PostEntity::getId)
+            .collect(Collectors.toSet());
+    posts.keySet().removeAll(left);
     List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
 
     return highlights.stream()
+        .filter(h -> !left.contains(h.getPostId()))
         .map(
             h -> {
               PostEntity post = posts.get(h.getPostId());

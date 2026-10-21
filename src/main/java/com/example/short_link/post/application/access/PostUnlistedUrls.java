@@ -1,6 +1,5 @@
 package com.example.short_link.post.application.access;
 
-import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -55,6 +54,6 @@ public class PostUnlistedUrls {
   }
 
   private static boolean unlisted(PostEntity post) {
-    return post.getAudience() == PostAudience.UNLISTED && post.getUnlistedKey() != null;
+    return post.getAudience().keyed() && post.getUnlistedKey() != null;
   }
 }

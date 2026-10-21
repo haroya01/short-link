@@ -57,8 +57,9 @@ class UpdatePostMetadataUseCaseTest {
             postRepository,
             searchTextUpdater,
             revisionCapture,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()),
-            new PostAccessSettings(new PostPasswords()),
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()),
+            new PostAccessSettings(new PostPasswords(), PostAccessFixtures.roomReader()),
             profileCache,
             events);
   }

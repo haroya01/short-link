@@ -73,13 +73,13 @@ public class CollectionContentReader {
 
   private CollectionContentSnapshot loadPreviewContent(
       List<CollectionConnectionEntity> connections, boolean publishedOnly) {
-    var candidates = postRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.POST));
+    var candidates =
+        postRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.POST)).stream()
+            .filter(post -> !post.isInRoom())
+            .toList();
     if (publishedOnly) candidates = candidates.stream().filter(PostAccessPolicy::isOpen).toList();
     var posts = indexedBy(candidates, PostEntity::getId);
-    var highlights =
-        indexedBy(
-            highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
-            PostHighlightEntity::getId);
+    var highlights = indexedBy(openHighlights(connections), PostHighlightEntity::getId);
     if (publishedOnly && !highlights.isEmpty()) keepHighlightsOfPublishedPosts(highlights);
     var notes = noteBodies.blocksByIds(refIds(connections, ConnectionBlockType.NOTE));
     return new CollectionContentSnapshot(posts, highlights, notes, Map.of());
@@ -100,10 +100,7 @@ public class CollectionContentReader {
 
   private CollectionContentSnapshot loadPublishedContent(
       List<CollectionConnectionEntity> connections) {
-    var highlights =
-        indexedBy(
-            highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
-            PostHighlightEntity::getId);
+    var highlights = indexedBy(openHighlights(connections), PostHighlightEntity::getId);
     var notes = noteBodies.blocksByIds(refIds(connections, ConnectionBlockType.NOTE));
 
     Set<Long> postIds = new HashSet<>(refIds(connections, ConnectionBlockType.POST));
@@ -118,6 +115,14 @@ public class CollectionContentReader {
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());
     var authors = indexedBy(userRepository.findAllByIdIn(authorIds), UserEntity::getId);
     return new CollectionContentSnapshot(posts, highlights, notes, authors);
+  }
+
+  private List<PostHighlightEntity> openHighlights(List<CollectionConnectionEntity> connections) {
+    return highlightRepository
+        .findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT))
+        .stream()
+        .filter(PostAccessPolicy::saidOpenly)
+        .toList();
   }
 
   private static List<Long> refIds(

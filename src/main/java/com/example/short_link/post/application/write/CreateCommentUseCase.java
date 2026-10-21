@@ -35,14 +35,16 @@ public class CreateCommentUseCase {
           commentRepository
               .findById(cmd.parentId())
               .orElseThrow(() -> new PostException(PostErrorCode.COMMENT_PARENT_INVALID));
-      if (!parent.acceptsReplyOn(cmd.postId())) {
+      if (!parent.acceptsReplyOn(cmd.postId()) || !access.hears(parent, reader)) {
         throw new PostException(PostErrorCode.COMMENT_PARENT_INVALID);
       }
     }
 
-    CommentEntity saved =
-        commentRepository.save(
-            new CommentEntity(cmd.postId(), cmd.userId(), cmd.parentId(), cmd.body().trim()));
+    CommentEntity comment =
+        new CommentEntity(cmd.postId(), cmd.userId(), cmd.parentId(), cmd.body().trim());
+    comment.saidIn(
+        parent != null && parent.getRoomId() != null ? parent.getRoomId() : post.getRoomId());
+    CommentEntity saved = commentRepository.save(comment);
 
     notifications.commentCreated(post, parent, saved, cmd.body());
 

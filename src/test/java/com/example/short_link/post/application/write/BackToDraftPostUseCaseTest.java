@@ -34,7 +34,8 @@ class BackToDraftPostUseCaseTest {
         new BackToDraftPostUseCase(
             postOwnership,
             postRepository,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()));
   }
 
   @Test

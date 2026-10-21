@@ -41,7 +41,7 @@ public record ReadingHistoryEntryView(
         ogImageUrl,
         thumbnailUrl,
         readAt,
-        PostAudience.PUBLIC.name(),
+        PostAudience.DEFAULT.name(),
         null,
         null);
   }

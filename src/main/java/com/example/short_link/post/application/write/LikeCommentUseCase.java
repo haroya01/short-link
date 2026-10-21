@@ -22,12 +22,14 @@ public class LikeCommentUseCase {
   private final CommentLikeRepository commentLikeRepository;
   private final PostInteractionAccess access;
   private final ApplicationEventPublisher events;
+  private final CommentNotifications notifications;
 
   @Transactional
   public CommentLikeStatus like(PostReader reader, Long commentId) {
     Long userId = reader.viewerId();
     PostInteractionAccess.LikeableComment target = access.requireLikeableComment(reader, commentId);
-    if (commentLikeRepository.insertIgnore(commentId, userId) > 0) {
+    if (commentLikeRepository.insertIgnore(commentId, userId) > 0
+        && notifications.reads(target.post(), target.comment().getUserId())) {
       PostEntity post = target.post();
       events.publishEvent(
           new CommentLikedEvent(

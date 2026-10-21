@@ -51,6 +51,9 @@ public class PostHighlightEntity extends BaseCreatedEntity {
   @Column(name = "note", length = MAX_NOTE)
   private String note;
 
+  @Column(name = "room_id")
+  private Long roomId;
+
   public PostHighlightEntity(
       Long postId,
       Long userId,
@@ -68,5 +71,9 @@ public class PostHighlightEntity extends BaseCreatedEntity {
     this.endOffset = endOffset;
     this.quote = quote;
     this.note = note;
+  }
+
+  public void saidIn(Long roomId) {
+    this.roomId = roomId;
   }
 }

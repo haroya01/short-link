@@ -16,7 +16,7 @@ public record QuotedPost(
     @JsonInclude(JsonInclude.Include.NON_NULL) Locked locked) {
 
   public QuotedPost(Long id, String title, String slug, String authorUsername, Long authorId) {
-    this(id, title, slug, authorUsername, authorId, PostAudience.PUBLIC, false);
+    this(id, title, slug, authorUsername, authorId, PostAudience.DEFAULT, false);
   }
 
   public QuotedPost(

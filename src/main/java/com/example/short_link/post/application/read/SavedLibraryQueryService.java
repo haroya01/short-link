@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.FolderBookmarkCount;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -26,6 +27,7 @@ public class SavedLibraryQueryService {
   private final BookmarkFolderRepository bookmarkFolderRepository;
   private final PostRepository postRepository;
   private final PostFeedItemAssembler feedItemAssembler;
+  private final PostAccessPolicy access;
 
   public List<SavedView> saved(Long userId) {
     List<PostBookmarkEntity> bookmarks =
@@ -37,10 +39,11 @@ public class SavedLibraryQueryService {
       folderByPost.put(b.getPostId(), b.getFolderId());
     }
 
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     List<Long> postIds = bookmarks.stream().map(PostBookmarkEntity::getPostId).toList();
     Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostAccessPolicy::isCard)
+            .filter(post -> !lists.card(post).hidden())
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     List<PostEntity> ordered =

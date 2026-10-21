@@ -37,7 +37,7 @@ class PostLikeQueryServiceTest {
         new PostLikeQueryService(
             postRepository,
             postLikeRepository,
-            new PostFeedItemAssembler(userRepository, seriesRepository),
+            new PostFeedItemAssembler(userRepository, seriesRepository, PostAccessFixtures.rooms()),
             PostAccessFixtures.policy());
   }
 

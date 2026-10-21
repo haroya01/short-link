@@ -45,7 +45,7 @@ public class HomeFeedQueryService {
     }
   }
 
-  private record Merged(List<Item> items, int notesTaken, int postsTaken) {}
+  record Merged(List<Item> items, int notesTaken, int postsTaken) {}
 
   public Page page(Long viewerId, String tab, String cursor, String since, int limit) {
     Tab chosen = tab(tab);
@@ -167,7 +167,7 @@ public class HomeFeedQueryService {
     };
   }
 
-  private static Merged merge(
+  static Merged merge(
       Tab chosen, List<NoteSlice.At> noteQueue, List<PostSlice.At> postQueue, int size) {
     List<Item> items = new ArrayList<>(size);
     int n = 0;
@@ -199,8 +199,7 @@ public class HomeFeedQueryService {
     return new Merged(items, n, p);
   }
 
-  private static int next(
-      int from, List<Integer> positions, int taken, int size, boolean exhausted) {
+  static int next(int from, List<Integer> positions, int taken, int size, boolean exhausted) {
     if (taken > 0) {
       return positions.get(taken - 1) + 1;
     }
@@ -218,7 +217,7 @@ public class HomeFeedQueryService {
     }
   }
 
-  private static int[] positions(String cursor) {
+  static int[] positions(String cursor) {
     if (cursor == null) {
       return new int[] {0, 0};
     }

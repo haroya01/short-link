@@ -5,6 +5,7 @@ import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAccessSql;
+import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
@@ -344,6 +345,41 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<ReplyPreview> latestReplies(Collection<Long> noteIds, Long viewerId, int perNote) {
+    if (noteIds.isEmpty()) {
+      return List.of();
+    }
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT x.in_reply_to_id, x.id, x.user_id, x.username, x.display_name,"
+                    + " x.avatar_url, x.body FROM (SELECT n.in_reply_to_id, n.id, n.body,"
+                    + " u.id AS user_id, u.username, u.display_name, u.avatar_url, ROW_NUMBER()"
+                    + " OVER (PARTITION BY n.in_reply_to_id ORDER BY n.id DESC) AS rn FROM note n"
+                    + " JOIN users u ON u.id = n.user_id AND u.deleted_at IS NULL"
+                    + " WHERE n.in_reply_to_id IN (:ids) AND n.reply_hidden_at IS NULL AND "
+                    + NoteAccessSql.readable("n")
+                    + heardNote("n")
+                    + ") x WHERE x.rn <= :per ORDER BY x.in_reply_to_id, x.rn DESC")
+            .setParameter("ids", noteIds)
+            .setParameter("per", perNote)
+            .setParameter("viewer", viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .getResultList();
+    List<ReplyPreview> previews = new ArrayList<>(rows.size());
+    for (Object[] row : rows) {
+      previews.add(
+          new ReplyPreview(
+              ((Number) row[0]).longValue(),
+              ((Number) row[1]).longValue(),
+              new ReplyPreview.Author(
+                  ((Number) row[2]).longValue(), (String) row[3], (String) row[4], (String) row[5]),
+              (String) row[6]));
+    }
+    return previews;
   }
 
   @Override

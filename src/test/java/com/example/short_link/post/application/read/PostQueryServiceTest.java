@@ -41,7 +41,8 @@ class PostQueryServiceTest {
             postBlockRepository,
             postRevisionRepository,
             postOwnership,
-            PostAccessFixtures.unlistedUrls());
+            PostAccessFixtures.unlistedUrls(),
+            PostAccessFixtures.rooms());
   }
 
   @Test

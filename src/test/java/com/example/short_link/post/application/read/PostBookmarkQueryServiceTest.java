@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -28,7 +29,9 @@ class PostBookmarkQueryServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new PostBookmarkQueryService(postBookmarkRepository, postRepository, userRepository);
+    service =
+        new PostBookmarkQueryService(
+            postBookmarkRepository, postRepository, userRepository, PostAccessFixtures.policy());
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {

@@ -35,7 +35,9 @@ class CreatePostUseCaseTest {
         new CreatePostUseCase(
             postRepository,
             moderationGuard,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()),
+            PostAccessFixtures.accessSettings());
   }
 
   @Test

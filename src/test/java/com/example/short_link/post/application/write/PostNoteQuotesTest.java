@@ -185,7 +185,7 @@ class PostNoteQuotesTest {
   @Test
   void anUnlistedPostTellsNoNoteAuthorThatItQuotesThem() {
     PostEntity post = post(true);
-    post.changeAudience(PostAudience.UNLISTED, "the-key");
+    post.changeAudience(PostAudience.UNLISTED, null, "the-key");
 
     quotes.indexFirstPublish(post, List.of(embed("https://blog.kurl.me/@alice/notes/11")));
 

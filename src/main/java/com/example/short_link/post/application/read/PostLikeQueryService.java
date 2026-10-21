@@ -43,10 +43,11 @@ public class PostLikeQueryService {
     List<PostLikeEntity> likes = postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (likes.isEmpty()) return List.of();
 
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     List<Long> postIds = likes.stream().map(PostLikeEntity::getPostId).toList();
     Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostAccessPolicy::isCard)
+            .filter(post -> !lists.card(post).hidden())
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     List<PostEntity> ordered =

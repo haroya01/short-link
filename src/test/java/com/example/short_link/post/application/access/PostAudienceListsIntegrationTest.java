@@ -71,6 +71,8 @@ class PostAudienceListsIntegrationTest {
   private UserEntity author;
   private long reader;
   private long follower;
+  private long member;
+  private long room;
   private final Map<String, PostEntity> byName = new LinkedHashMap<>();
 
   @BeforeEach
@@ -80,6 +82,8 @@ class PostAudienceListsIntegrationTest {
     follower = user("aud-follower").getId();
     follows.save(new FollowEntity(follower, author.getId()));
     follows.save(new FollowEntity(reader, author.getId()));
+    member = user("aud-member").getId();
+    room = room(author.getId(), member);
     for (PostAudience audience : PostAudience.values()) {
       for (boolean blocked : List.of(false, true)) {
         String name = audience.name().toLowerCase() + (blocked ? "-gb" : "");
@@ -96,7 +100,10 @@ class PostAudienceListsIntegrationTest {
     assertSameAs(PostAccessSql.OPEN, PostAccessPolicy::isOpen, null);
     assertSameAs(PostAccessSql.CARD, PostAccessPolicy::isCard, null);
     assertSameAs(PostAccessSql.PROFILE, post -> PostAccessPolicy.isCard(post), reader);
-    assertSameAs(PostAccessSql.PROFILE, PostEntity::isPublished, author.getId());
+    assertSameAs(
+        PostAccessSql.PROFILE,
+        post -> post.isPublished() && post.getAudience().onProfile(true),
+        author.getId());
   }
 
   @Test
@@ -158,7 +165,10 @@ class PostAudienceListsIntegrationTest {
     assertThat(followerElsewhere.get("public-gb").blockedCountries()).isNull();
 
     Map<String, PublicPostListItem> owner = profileList(PostReader.of(author.getId()));
-    assertThat(owner.keySet()).contains("unlisted", "unlisted-gb").doesNotContain("draft");
+    assertThat(owner.keySet())
+        .contains("unlisted", "unlisted-gb")
+        .doesNotContain("draft", "room", "room-gb");
+    assertThat(profileList(PostReader.of(member)).keySet()).doesNotContain("room", "room-gb");
     assertThat(owner.values()).allSatisfy(item -> assertThat(item.locked()).isNull());
     assertThat(owner.get("unlisted").unlistedUrl())
         .isEqualTo(
@@ -208,6 +218,32 @@ class PostAudienceListsIntegrationTest {
         .filteredOn(entry -> entry.slug().equals("password"))
         .singleElement()
         .satisfies(entry -> assertThat(entry.excerpt()).isNull());
+  }
+
+  @Test
+  void aRoomPostIsInItsMembersOwnListsAndNoOneElses() {
+    for (long who : List.of(member, reader)) {
+      for (String name : List.of("room", "public")) {
+        likes.insertIgnore(byName.get(name).getId(), who);
+        bookmarks.insertIgnore(byName.get(name).getId(), who);
+        reads.save(new PostReadEntity(who, byName.get(name).getId(), Instant.now()));
+      }
+    }
+    em.flush();
+
+    assertThat(bySlug(liked.likedPosts(member)).keySet())
+        .containsExactlyInAnyOrder("room", "public");
+    assertThat(bySlug(liked.likedPosts(member)).get("room").room().id()).isEqualTo(room);
+    assertThat(saved.saved(member)).extracting(s -> s.slug()).contains("room");
+    assertThat(history.list(member, 0, 50).items())
+        .extracting(entry -> entry.slug())
+        .contains("room");
+
+    assertThat(bySlug(liked.likedPosts(reader)).keySet()).containsExactly("public");
+    assertThat(saved.saved(reader)).extracting(s -> s.slug()).doesNotContain("room");
+    assertThat(history.list(reader, 0, 50).items())
+        .extracting(entry -> entry.slug())
+        .doesNotContain("room");
   }
 
   @Test
@@ -278,9 +314,27 @@ class PostAudienceListsIntegrationTest {
     post.updateTags(List.of(TOPIC));
     if (publish) post.publish();
     post.protectWith("$2a$10$abcdefghijklmnopqrstuuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY");
-    post.changeAudience(audience, "key-" + slug);
+    post.changeAudience(audience, audience.inRoom() ? room : null, "key-" + slug);
     post.blockCountries(blocked ? List.of("GB") : List.of());
     return posts.save(post);
+  }
+
+  private long room(long owner, long otherMember) {
+    em.createNativeQuery(
+            "INSERT INTO room (owner_id, name, approval_required, created_at, updated_at)"
+                + " VALUES (:owner, 'aud room', FALSE, NOW(6), NOW(6))")
+        .setParameter("owner", owner)
+        .executeUpdate();
+    long id =
+        ((Number) em.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
+    for (long who : List.of(owner, otherMember)) {
+      em.createNativeQuery(
+              "INSERT INTO room_member (room_id, user_id, joined_at) VALUES (:room, :user, NOW(6))")
+          .setParameter("room", id)
+          .setParameter("user", who)
+          .executeUpdate();
+    }
+    return id;
   }
 
   private UserEntity user(String handle) {

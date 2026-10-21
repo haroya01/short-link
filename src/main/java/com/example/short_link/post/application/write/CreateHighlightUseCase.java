@@ -37,17 +37,18 @@ public class CreateHighlightUseCase {
 
     String note = normalizeNote(cmd.note());
 
-    PostHighlightEntity saved =
-        highlightRepository.save(
-            new PostHighlightEntity(
-                post.getId(),
-                cmd.userId(),
-                cmd.blockOrder(),
-                cmd.endBlockOrder(),
-                cmd.startOffset(),
-                cmd.endOffset(),
-                quote,
-                note));
+    PostHighlightEntity highlight =
+        new PostHighlightEntity(
+            post.getId(),
+            cmd.userId(),
+            cmd.blockOrder(),
+            cmd.endBlockOrder(),
+            cmd.startOffset(),
+            cmd.endOffset(),
+            quote,
+            note);
+    highlight.saidIn(post.getRoomId());
+    PostHighlightEntity saved = highlightRepository.save(highlight);
     if (!post.getUserId().equals(cmd.userId())) {
       events.publishEvent(
           new PostHighlightedEvent(

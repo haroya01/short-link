@@ -38,14 +38,10 @@ class PostRepositoryAdapterFeedParametersTest {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
     PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of(), 0, 20);
-    adapter.findPublishedByAuthorsSeriesOrTagsAt(9L, List.of(4L), List.of(), List.of(), 20, 21);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of());
     verify(jpa)
         .findPublishedByAuthors(
             eq(List.of(4L)), eq(9L), any(Instant.class), eq(PageRequest.of(0, 20)));
-    verify(jpa)
-        .findPublishedByAuthors(
-            eq(List.of(4L)), eq(9L), any(Instant.class), eq(new OffsetLimit(20, 21)));
     verify(jpa).countPublishedByAuthors(eq(List.of(4L)), eq(9L), any(Instant.class));
     verifyNoMoreInteractions(jpa);
   }

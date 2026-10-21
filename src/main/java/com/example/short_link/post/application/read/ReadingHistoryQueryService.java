@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -24,22 +25,24 @@ public class ReadingHistoryQueryService {
   private final PostReadRepository postReadRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final PostAccessPolicy access;
 
   public ReadingHistoryView list(Long userId, int page, int size) {
     List<PostReadEntity> reads =
         postReadRepository.findByUserIdOrderByReadAtDesc(userId, page, size);
     boolean hasNext = (long) (page + 1) * size < postReadRepository.countByUserId(userId);
-    return new ReadingHistoryView(hydrate(reads), page, size, hasNext);
+    return new ReadingHistoryView(hydrate(userId, reads), page, size, hasNext);
   }
 
-  private List<ReadingHistoryEntryView> hydrate(List<PostReadEntity> reads) {
+  private List<ReadingHistoryEntryView> hydrate(Long userId, List<PostReadEntity> reads) {
     if (reads.isEmpty()) {
       return List.of();
     }
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     List<Long> postIds = reads.stream().map(PostReadEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostAccessPolicy::isCard)
+            .filter(post -> !lists.card(post).hidden())
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     Map<Long, UserEntity> authors =
         userRepository
