@@ -1,6 +1,7 @@
 package com.example.short_link.room.application.write;
 
 import com.example.short_link.common.room.RoomNoteRemover;
+import com.example.short_link.common.room.RoomPostRemover;
 import com.example.short_link.room.application.read.RoomQueryService;
 import com.example.short_link.room.application.read.RoomView;
 import com.example.short_link.room.domain.RoomEntity;
@@ -26,6 +27,7 @@ public class RoomCommandService {
   private final RoomRepository rooms;
   private final RoomQueryService query;
   private final RoomNoteRemover notes;
+  private final RoomPostRemover posts;
   private final Clock clock;
 
   @Transactional
@@ -47,8 +49,8 @@ public class RoomCommandService {
     return query.detail(roomId, userId);
   }
 
-  // Leaving keeps the member's notes unless they ask otherwise; their invites stop working, and an
-  // owner hands the room to whoever has been in it longest.
+  // Leaving keeps the member's notes and room posts unless they ask otherwise; their invites stop
+  // working, and an owner hands the room to whoever has been in it longest.
   @Transactional
   public void leave(Long userId, Long roomId, boolean deleteMyNotes) {
     RoomEntity room = locked(roomId);
@@ -60,6 +62,7 @@ public class RoomCommandService {
     }
     if (deleteMyNotes) {
       notes.eraseNotesBy(userId, roomId);
+      posts.erasePostsBy(userId, roomId);
     }
   }
 

@@ -22,7 +22,47 @@ public record PublicFeedItem(
     FeedSeriesRef series,
     String audience,
     @JsonInclude(JsonInclude.Include.NON_NULL) Boolean regionRestricted,
-    @JsonInclude(JsonInclude.Include.NON_NULL) PostLockView locked) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostLockView locked,
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostRoomView room) {
+
+  public PublicFeedItem(
+      long id,
+      PublicAuthorView author,
+      String slug,
+      String title,
+      String excerpt,
+      String ogImageUrl,
+      String thumbnailUrl,
+      String languageTag,
+      List<String> tags,
+      Instant publishedAt,
+      long viewCount,
+      long likeCount,
+      FollowReason followReason,
+      FeedSeriesRef series,
+      String audience,
+      Boolean regionRestricted,
+      PostLockView locked) {
+    this(
+        id,
+        author,
+        slug,
+        title,
+        excerpt,
+        ogImageUrl,
+        thumbnailUrl,
+        languageTag,
+        tags,
+        publishedAt,
+        viewCount,
+        likeCount,
+        followReason,
+        series,
+        audience,
+        regionRestricted,
+        locked,
+        null);
+  }
 
   public PublicFeedItem(
       long id,
@@ -52,7 +92,7 @@ public record PublicFeedItem(
         likeCount,
         null,
         null,
-        PostAudience.PUBLIC.name(),
+        PostAudience.DEFAULT.name(),
         null,
         null);
   }
@@ -80,7 +120,8 @@ public record PublicFeedItem(
         series,
         audience,
         regionRestricted,
-        locked);
+        locked,
+        room);
   }
 
   public PublicFeedItem withSeries(FeedSeriesRef ref) {
@@ -101,6 +142,29 @@ public record PublicFeedItem(
         redacted() ? null : ref,
         audience,
         regionRestricted,
-        locked);
+        locked,
+        room);
+  }
+
+  public PublicFeedItem in(PostRoomView room) {
+    return new PublicFeedItem(
+        id,
+        author,
+        slug,
+        title,
+        excerpt,
+        ogImageUrl,
+        thumbnailUrl,
+        languageTag,
+        tags,
+        publishedAt,
+        viewCount,
+        likeCount,
+        followReason,
+        series,
+        audience,
+        regionRestricted,
+        locked,
+        room);
   }
 }

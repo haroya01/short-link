@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.BookmarkFolderEntity;
 import com.example.short_link.post.domain.FolderBookmarkCount;
 import com.example.short_link.post.domain.PostBookmarkEntity;
@@ -40,7 +41,8 @@ class SavedLibraryQueryServiceTest {
             bookmarkRepository,
             folderRepository,
             postRepository,
-            new PostFeedItemAssembler(userRepository, seriesRepository));
+            new PostFeedItemAssembler(userRepository, seriesRepository, PostAccessFixtures.rooms()),
+            PostAccessFixtures.policy());
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {

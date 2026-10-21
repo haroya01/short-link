@@ -29,13 +29,18 @@ public record PostView(
     String audience,
     boolean hasPassword,
     @JsonInclude(JsonInclude.Include.NON_NULL) String unlistedUrl,
-    List<String> blockedCountries) {
+    List<String> blockedCountries,
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostRoomView room) {
 
   public static PostView from(PostEntity post) {
     return from(post, null);
   }
 
   public static PostView from(PostEntity post, String unlistedUrl) {
+    return from(post, unlistedUrl, null);
+  }
+
+  public static PostView from(PostEntity post, String unlistedUrl, PostRoomView room) {
     return new PostView(
         post.getId(),
         post.getSlug(),
@@ -60,6 +65,7 @@ public record PostView(
         post.getAudience().name(),
         post.hasPassword(),
         unlistedUrl,
-        post.blockedCountryCodes());
+        post.blockedCountryCodes(),
+        room);
   }
 }

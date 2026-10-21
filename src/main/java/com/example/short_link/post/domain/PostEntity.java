@@ -126,7 +126,11 @@ public class PostEntity extends BaseTimeEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
-  private PostAudience audience = PostAudience.PUBLIC;
+  private PostAudience audience = PostAudience.DEFAULT;
+
+  // Set exactly while the audience is ROOM; a post never moves from one room to another.
+  @Column(name = "room_id")
+  private Long roomId;
 
   @Column(name = "password_hash", length = 60)
   private String passwordHash;
@@ -315,11 +319,25 @@ public class PostEntity extends BaseTimeEntity {
     this.scheduledAt = null;
   }
 
-  public void changeAudience(PostAudience audience, String newUnlistedKey) {
+  public void changeAudience(PostAudience audience, Long roomId, String newUnlistedKey) {
+    if (audience.inRoom() != (roomId != null)) {
+      throw new PostException(
+          audience.inRoom()
+              ? PostErrorCode.POST_ROOM_REQUIRED
+              : PostErrorCode.POST_ROOM_NOT_ALLOWED);
+    }
+    if (this.roomId != null && roomId != null && !this.roomId.equals(roomId)) {
+      throw new PostException(PostErrorCode.POST_ROOM_MOVE, this.roomId);
+    }
     this.audience = audience;
-    if (audience == PostAudience.UNLISTED && unlistedKey == null) {
+    this.roomId = roomId;
+    if (audience.keyed() && unlistedKey == null) {
       this.unlistedKey = newUnlistedKey;
     }
+  }
+
+  public boolean isInRoom() {
+    return audience.inRoom();
   }
 
   public void protectWith(String passwordHash) {

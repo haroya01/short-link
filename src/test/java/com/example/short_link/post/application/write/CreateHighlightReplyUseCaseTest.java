@@ -67,7 +67,8 @@ class CreateHighlightReplyUseCaseTest {
                 PostAccessFixtures.policy()),
             replyRepository,
             userRepository,
-            new CommentNotifications(userRepository, postRepository, events, muteReader),
+            new CommentNotifications(
+                userRepository, postRepository, events, muteReader, PostAccessFixtures.policy()),
             new CommentMentions(userRepository));
   }
 

@@ -59,7 +59,8 @@ class RestorePostRevisionUseCaseTest {
             postBlockRepository,
             searchTextUpdater,
             noteQuotes,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()));
   }
 
   private PostRevisionEntity revision(int version, String json) {

@@ -79,6 +79,7 @@ class PublicPostQueryServiceTest {
             userBlocks,
             PostAccessFixtures.policy(),
             PostAccessFixtures.unlistedUrls(),
+            PostAccessFixtures.rooms(),
             Clock.fixed(NOW, ZoneOffset.UTC));
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
@@ -559,7 +560,7 @@ class PublicPostQueryServiceTest {
     post.updateExcerpt("the excerpt");
     post.updateTags(List.of("tag"));
     post.publish();
-    post.changeAudience(audience, "the-key-of-" + slug);
+    post.changeAudience(audience, null, "the-key-of-" + slug);
     lenient().when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     lenient()
         .when(postRepository.findUnblockedByUserIdAndSlug(eq(author.getId()), eq(slug), any()))
@@ -611,6 +612,7 @@ class PublicPostQueryServiceTest {
             userBlocks,
             PostAccessFixtures.policy(mock(FollowRepository.class), "JP"),
             PostAccessFixtures.unlistedUrls(),
+            PostAccessFixtures.rooms(),
             Clock.fixed(NOW, ZoneOffset.UTC));
     PostEntity post = protectedPost(john(), "u", PostAudience.UNLISTED);
     post.blockCountries(List.of("JP"));

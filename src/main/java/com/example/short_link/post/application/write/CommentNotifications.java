@@ -7,6 +7,7 @@ import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -29,6 +30,7 @@ public class CommentNotifications {
   private final PostRepository postRepository;
   private final ApplicationEventPublisher events;
   private final BlogNotificationMuteReader muteReader;
+  private final PostAccessPolicy access;
 
   public void commentCreated(
       PostEntity post, CommentEntity parent, CommentEntity comment, String body) {
@@ -41,18 +43,20 @@ public class CommentNotifications {
     if (!ownerId.equals(actorId) && !replyToOwner) {
       events.publishEvent(
           BlogInteractionEvent.comment(
-              ownerId,
-              actorId,
-              post.getId(),
-              post.getSlug(),
-              post.getTitle(),
-              comment.getId(),
-              comment.getCreatedAt()));
+                  ownerId,
+                  actorId,
+                  post.getId(),
+                  post.getSlug(),
+                  post.getTitle(),
+                  comment.getId(),
+                  comment.getCreatedAt())
+              .onRoomPost(post.isInRoom()));
       suppressMentionUnlessMuted(
           mentionSuppressedRecipients, ownerId, BlogNotificationKind.COMMENT);
     }
     List<String> handles = MentionParser.parse(body);
-    boolean notifyParent = parentAuthorId != null && !parentAuthorId.equals(actorId);
+    boolean notifyParent =
+        parentAuthorId != null && !parentAuthorId.equals(actorId) && reads(post, parentAuthorId);
     String ownerUsername = notifyParent || !handles.isEmpty() ? ownerUsername(post) : null;
     if (notifyParent) {
       events.publishEvent(
@@ -69,6 +73,7 @@ public class CommentNotifications {
           mentionSuppressedRecipients, parentAuthorId, BlogNotificationKind.REPLY);
     }
     publishMentions(
+        post,
         handles,
         actorId,
         mentionSuppressedRecipients,
@@ -90,10 +95,10 @@ public class CommentNotifications {
     Long actorId = reply.getUserId();
     Long highlightAuthorId = highlight.getUserId();
     List<String> handles = MentionParser.parse(body);
-    boolean notifyAuthor = !highlightAuthorId.equals(actorId);
-    if (!notifyAuthor && handles.isEmpty()) return;
+    if (highlightAuthorId.equals(actorId) && handles.isEmpty()) return;
     PostEntity post = postRepository.findById(highlight.getPostId()).orElse(null);
     if (post == null) return;
+    boolean notifyAuthor = !highlightAuthorId.equals(actorId) && reads(post, highlightAuthorId);
     String ownerUsername = ownerUsername(post);
     Set<Long> mentionSuppressedRecipients = new HashSet<>();
     if (notifyAuthor) {
@@ -111,6 +116,7 @@ public class CommentNotifications {
           mentionSuppressedRecipients, highlightAuthorId, BlogNotificationKind.REPLY);
     }
     publishMentions(
+        post,
         handles,
         actorId,
         mentionSuppressedRecipients,
@@ -138,12 +144,23 @@ public class CommentNotifications {
   }
 
   private void publishMentions(
-      List<String> handles, Long actorId, Set<Long> recipients, Consumer<Long> publish) {
+      PostEntity post,
+      List<String> handles,
+      Long actorId,
+      Set<Long> recipients,
+      Consumer<Long> publish) {
     for (String handle : handles) {
       Long recipient = userRepository.findByUsername(handle).map(UserEntity::getId).orElse(null);
-      if (recipient != null && !recipient.equals(actorId) && recipients.add(recipient)) {
+      if (recipient != null
+          && !recipient.equals(actorId)
+          && reads(post, recipient)
+          && recipients.add(recipient)) {
         publish.accept(recipient);
       }
     }
+  }
+
+  public boolean reads(PostEntity post, Long userId) {
+    return access.readersAmong(post, Set.of(userId)).contains(userId);
   }
 }

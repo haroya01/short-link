@@ -39,7 +39,9 @@ class SchedulePostUseCaseTest {
             postOwnership,
             numbering,
             postRepository,
-            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
+            new PostWriteViewAssembler(
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()),
+            PostAccessFixtures.accessSettings());
   }
 
   @Test

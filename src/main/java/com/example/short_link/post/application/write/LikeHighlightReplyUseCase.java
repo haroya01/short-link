@@ -21,13 +21,15 @@ public class LikeHighlightReplyUseCase {
   private final HighlightReplyLikeRepository likeRepository;
   private final PostInteractionAccess access;
   private final ApplicationEventPublisher events;
+  private final CommentNotifications notifications;
 
   @Transactional
   public HighlightReplyLikeStatus like(PostReader reader, Long replyId) {
     Long userId = reader.viewerId();
     PostInteractionAccess.LikeableHighlightReply target =
         access.requireLikeableHighlightReply(reader, replyId);
-    if (likeRepository.insertIgnore(replyId, userId) > 0) {
+    if (likeRepository.insertIgnore(replyId, userId) > 0
+        && notifications.reads(target.post(), target.reply().getUserId())) {
       PostEntity post = target.post();
       events.publishEvent(
           new HighlightReplyLikedEvent(

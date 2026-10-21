@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.repository.PostRevisionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class PostQueryService {
   private final PostRevisionRepository postRevisionRepository;
   private final PostOwnership postOwnership;
   private final PostUnlistedUrls unlistedUrls;
+  private final PostRooms rooms;
 
   public PostView findOwnPost(Long userId, Long postId) {
     PostEntity post =
@@ -33,13 +35,15 @@ public class PostQueryService {
     if (!post.isOwnedBy(userId)) {
       throw new PostException(PostErrorCode.PERMISSION_DENIED).with("postId", postId);
     }
-    return PostView.from(post, unlistedUrls.of(post));
+    return PostView.from(post, unlistedUrls.of(post), rooms.of(post));
   }
 
   public List<PostView> listMyPosts(Long userId) {
     Function<PostEntity, String> urls = unlistedUrls.forAuthors();
-    return postRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
-        .map(post -> PostView.from(post, urls.apply(post)))
+    List<PostEntity> posts = postRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    Map<Long, PostRoomView> roomOf = rooms.of(posts);
+    return posts.stream()
+        .map(post -> PostView.from(post, urls.apply(post), roomOf.get(post.getId())))
         .toList();
   }
 

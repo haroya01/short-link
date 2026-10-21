@@ -57,7 +57,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
   @SuppressWarnings("unchecked")
   public List<PostHighlightEntity> findHeardByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
-            "SELECT h.* FROM post_highlight h WHERE h.post_id = :postId"
+            "SELECT h.* FROM post_highlight h WHERE h.post_id = :postId AND "
+                + PostAccessSql.said("h")
                 + HeardSql.heard("h.user_id")
                 + " ORDER BY h.block_order ASC, h.start_offset ASC",
             PostHighlightEntity.class)
@@ -83,6 +84,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
             ON_POST
                 + "h.user_id IN (:userIds) AND "
                 + PostAccessSql.OPEN
+                + " AND "
+                + PostAccessSql.saidOpenly("h")
                 + HEARD_WRITERS
                 + " ORDER BY h.created_at DESC",
             PostHighlightEntity.class)
@@ -100,6 +103,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
     return em.createNativeQuery(
             ON_POST
                 + PostAccessSql.OPEN
+                + " AND "
+                + PostAccessSql.saidOpenly("h")
                 + " AND p.body_text_length >= :minBody"
                 + HEARD_WRITERS
                 + " ORDER BY h.created_at DESC",

@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.DiscoveryQuality;
@@ -190,7 +191,9 @@ class PostRepositoryAdapter implements PostRepository {
     List<Object[]> rows =
         em.createNativeQuery(
                 "SELECT p.id, (SELECT COUNT(*) FROM comment c WHERE c.post_id = p.id"
-                    + " AND c.deleted_at IS NULL), EXISTS (SELECT 1 FROM post_like l"
+                    + " AND c.deleted_at IS NULL AND "
+                    + PostAccessSql.said("c")
+                    + "), EXISTS (SELECT 1 FROM post_like l"
                     + " WHERE l.post_id = p.id AND l.user_id = :viewer)"
                     + " FROM posts p WHERE p.id IN (:ids)")
             .setParameter("ids", postIds)

@@ -73,8 +73,10 @@ public class PostCommentQueryService {
   public List<MyCommentView> listMyComments(Long userId) {
     List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
+    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
+            .filter(lists::keeps)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> authors =

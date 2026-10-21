@@ -86,7 +86,12 @@ public class PostController {
   public PostView create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreatePostRequest request) {
     return createPost.execute(
-        new CreatePostCommand(userId, request.slug(), request.title(), request.languageTag()));
+        new CreatePostCommand(
+            userId,
+            request.slug(),
+            request.title(),
+            request.languageTag(),
+            new PostAccessChange(request.audience(), null, null, request.roomId())));
   }
 
   @PutMapping("/pins")
@@ -133,7 +138,10 @@ public class PostController {
             request.baseVersion(),
             Boolean.TRUE.equals(request.overwrite()),
             new PostAccessChange(
-                request.audience(), request.password(), request.blockedCountries())));
+                request.audience(),
+                request.password(),
+                request.blockedCountries(),
+                request.roomId())));
   }
 
   @PostMapping("/{id}/publish")

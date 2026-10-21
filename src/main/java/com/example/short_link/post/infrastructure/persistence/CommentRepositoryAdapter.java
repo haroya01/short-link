@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
@@ -43,7 +44,8 @@ class CommentRepositoryAdapter implements CommentRepository {
   @SuppressWarnings("unchecked")
   public List<CommentEntity> findHeardByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
-            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.deleted_at IS NULL"
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.deleted_at IS NULL AND "
+                + PostAccessSql.said("c")
                 + HeardSql.heard("c.user_id")
                 + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
                 + " WHERE pc.id = c.parent_id"
@@ -61,7 +63,9 @@ class CommentRepositoryAdapter implements CommentRepository {
   @SuppressWarnings("unchecked")
   public List<CommentEntity> findHeardWithTombstonesByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
-            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND ((c.deleted_at IS NULL"
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND "
+                + PostAccessSql.said("c")
+                + " AND ((c.deleted_at IS NULL"
                 + HeardSql.heard("c.user_id")
                 + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
                 + " WHERE pc.id = c.parent_id AND (pc.deleted_at IS NOT NULL"

@@ -46,7 +46,9 @@ public class CurationGraphQueryService {
 
     Map<Long, PostHighlightEntity> highlights =
         bulk(
-            highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),
+            highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")).stream()
+                .filter(PostAccessPolicy::saidOpenly)
+                .toList(),
             PostHighlightEntity::getId);
     Map<Long, NoteBlock> notes = noteBodies.blocksByIds(refIds(rows, "NOTE"));
 

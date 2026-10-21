@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesFeedNote;
@@ -51,7 +52,7 @@ class PublicFeedQueryServiceTest {
             followRepository,
             seriesSubscriptionRepository,
             tagPrefQueryService,
-            new PostFeedItemAssembler(userRepository, seriesRepository),
+            new PostFeedItemAssembler(userRepository, seriesRepository, PostAccessFixtures.rooms()),
             followingFeedReader,
             seriesItemReader);
   }

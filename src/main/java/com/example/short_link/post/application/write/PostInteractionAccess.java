@@ -43,6 +43,9 @@ public class PostInteractionAccess {
             .findById(highlightId)
             .orElseThrow(() -> new PostException(PostErrorCode.HIGHLIGHT_NOT_FOUND, highlightId));
     readablePost(highlight.getPostId(), reader, PostErrorCode.COMMENT_BLOCKED);
+    if (!hears(highlight, reader)) {
+      throw new PostException(PostErrorCode.HIGHLIGHT_NOT_FOUND, highlightId);
+    }
     return highlight;
   }
 
@@ -65,8 +68,20 @@ public class PostInteractionAccess {
             .findById(commentId)
             .filter(value -> !value.isDeleted())
             .orElseThrow(() -> new PostException(PostErrorCode.COMMENT_NOT_FOUND, commentId));
-    return new LikeableComment(
-        comment, readablePost(comment.getPostId(), reader, PostErrorCode.POST_INTERACTION_BLOCKED));
+    PostEntity post =
+        readablePost(comment.getPostId(), reader, PostErrorCode.POST_INTERACTION_BLOCKED);
+    if (!hears(comment, reader)) {
+      throw new PostException(PostErrorCode.COMMENT_NOT_FOUND, commentId);
+    }
+    return new LikeableComment(comment, post);
+  }
+
+  public boolean hears(CommentEntity comment, PostReader reader) {
+    return access.hears(comment.getRoomId(), reader.viewerId());
+  }
+
+  public boolean hears(PostHighlightEntity highlight, PostReader reader) {
+    return access.hears(highlight.getRoomId(), reader.viewerId());
   }
 
   public record LikeableComment(CommentEntity comment, PostEntity post) {}
@@ -82,10 +97,12 @@ public class PostInteractionAccess {
         highlights
             .findById(reply.getHighlightId())
             .orElseThrow(() -> new PostException(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND, replyId));
-    return new LikeableHighlightReply(
-        reply,
-        highlight,
-        readablePost(highlight.getPostId(), reader, PostErrorCode.POST_INTERACTION_BLOCKED));
+    PostEntity post =
+        readablePost(highlight.getPostId(), reader, PostErrorCode.POST_INTERACTION_BLOCKED);
+    if (!hears(highlight, reader)) {
+      throw new PostException(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND, replyId);
+    }
+    return new LikeableHighlightReply(reply, highlight, post);
   }
 
   public record LikeableHighlightReply(

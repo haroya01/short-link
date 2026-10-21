@@ -19,11 +19,13 @@ public class RepublishPostUseCase {
   private final PostRevisionCapture postRevisionCapture;
   private final ProfileCacheInvalidator cacheEviction;
   private final PostWriteViewAssembler writeViews;
+  private final PostAccessSettings accessSettings;
 
   @Transactional
   public PostView execute(RepublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     moderation.requireCanWrite(cmd.userId());
+    accessSettings.requireStillInRoom(post);
     post.republish();
     PostEntity saved = postRepository.save(post);
     // 비공개 중 수정한 내용도 재발행 시점의 리비전으로 남긴다.

@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.post.PostTitleReader;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.Collection;
@@ -20,7 +21,9 @@ class PostTitleProvider implements PostTitleReader {
     if (postIds == null || postIds.isEmpty()) return Map.of();
     Map<Long, String> titles = new LinkedHashMap<>();
     for (PostEntity post : postRepository.findAllByIdIn(postIds)) {
-      if (post.getId() != null) titles.put(post.getId(), post.getTitle());
+      if (PostAccessPolicy.isCard(post)) {
+        titles.put(post.getId(), post.getTitle());
+      }
     }
     return titles;
   }

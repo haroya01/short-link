@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
@@ -37,7 +38,8 @@ class PublishScheduledPostUseCaseTest {
     when(moderation.canWrite(post.getUserId())).thenReturn(true);
 
     assertThat(
-            new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
+            new PublishScheduledPostUseCase(
+                    posts, completion, moderation, numbering, PostAccessFixtures.roomReader())
                 .execute(1L, now))
         .isTrue();
 
@@ -63,7 +65,9 @@ class PublishScheduledPostUseCaseTest {
     when(posts.findByIdForUpdate(2L)).thenReturn(Optional.of(cancelled));
     when(posts.findByIdForUpdate(3L)).thenReturn(Optional.of(published));
     when(posts.findByIdForUpdate(4L)).thenReturn(Optional.of(rescheduled));
-    var useCase = new PublishScheduledPostUseCase(posts, completion, moderation, numbering);
+    var useCase =
+        new PublishScheduledPostUseCase(
+            posts, completion, moderation, numbering, PostAccessFixtures.roomReader());
 
     for (long id = 1; id <= 4; id++) assertThat(useCase.execute(id, now)).isFalse();
 
@@ -80,7 +84,8 @@ class PublishScheduledPostUseCaseTest {
 
     assertThatThrownBy(
             () ->
-                new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
+                new PublishScheduledPostUseCase(
+                        posts, completion, moderation, numbering, PostAccessFixtures.roomReader())
                     .execute(1L, post.getScheduledAt()))
         .isInstanceOf(PostException.class);
 
@@ -95,7 +100,8 @@ class PublishScheduledPostUseCaseTest {
     when(moderation.canWrite(post.getUserId())).thenReturn(false);
 
     assertThat(
-            new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
+            new PublishScheduledPostUseCase(
+                    posts, completion, moderation, numbering, PostAccessFixtures.roomReader())
                 .execute(1L, post.getScheduledAt()))
         .isFalse();
 

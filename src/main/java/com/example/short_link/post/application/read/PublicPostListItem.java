@@ -25,7 +25,8 @@ public record PublicPostListItem(
     @JsonInclude(JsonInclude.Include.NON_NULL) PostLockView locked,
     @JsonInclude(JsonInclude.Include.NON_NULL) Boolean hasPassword,
     @JsonInclude(JsonInclude.Include.NON_NULL) String unlistedUrl,
-    @JsonInclude(JsonInclude.Include.NON_NULL) List<String> blockedCountries) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) List<String> blockedCountries,
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostRoomView room) {
 
   public PublicPostListItem(
       Long id,
@@ -53,7 +54,8 @@ public record PublicPostListItem(
         publishedAt,
         lastEditedAt,
         pinned,
-        PostAudience.PUBLIC.name(),
+        PostAudience.DEFAULT.name(),
+        null,
         null,
         null,
         null,
@@ -85,6 +87,30 @@ public record PublicPostListItem(
         PostLockView.of(access),
         owner == null ? null : owner.hasPassword(),
         owner == null ? null : owner.unlistedUrl(),
-        owner == null ? null : owner.blockedCountries());
+        owner == null ? null : owner.blockedCountries(),
+        null);
+  }
+
+  public PublicPostListItem in(PostRoomView room) {
+    return new PublicPostListItem(
+        id,
+        slug,
+        title,
+        excerpt,
+        ogImageUrl,
+        thumbnailUrl,
+        languageTag,
+        tags,
+        likeCount,
+        publishedAt,
+        lastEditedAt,
+        pinned,
+        audience,
+        regionRestricted,
+        locked,
+        hasPassword,
+        unlistedUrl,
+        blockedCountries,
+        room);
   }
 }

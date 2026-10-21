@@ -4,20 +4,26 @@ import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.PostLock;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Who may read a post, for one post in Java; PostAccessSql says the same for lists in SQL.
+// Who may read a post, for one post in Java; PostAccessSql says the same for lists in SQL. Each
+// answer is one of PostAudience's questions, asked of the reader in hand.
 @Component
 @RequiredArgsConstructor
 public class PostAccessPolicy {
@@ -25,6 +31,7 @@ public class PostAccessPolicy {
   private final FollowRepository follows;
   private final PostGrants grants;
   private final ReaderCountryResolver countries;
+  private final PostRoomReader rooms;
 
   public PostAccess decide(PostEntity post, PostReader reader) {
     return decide(
@@ -33,7 +40,8 @@ public class PostAccessPolicy {
         keyMatches(post, reader.postKey()),
         () -> countries.resolve(reader),
         () -> follows(reader.viewerId(), post.getUserId()),
-        () -> grants.verify(post, reader.grant()));
+        () -> grants.verify(post, reader.grant()),
+        () -> rooms.isMember(post.getRoomId(), reader.viewerId()));
   }
 
   public boolean readable(PostEntity post, PostReader reader) {
@@ -57,9 +65,35 @@ public class PostAccessPolicy {
   }
 
   public boolean revealsExistence(PostEntity post, PostReader reader) {
-    return post.getAudience() != PostAudience.UNLISTED
+    return post.getAudience().shownAsCard()
         || isOwner(post, reader)
-        || keyMatches(post, reader.postKey());
+        || keyMatches(post, reader.postKey())
+        || (post.isInRoom() && rooms.isMember(post.getRoomId(), reader.viewerId()));
+  }
+
+  // Of the people a post would tell about something said on it, those who may read it. Only a room
+  // narrows this: every other audience shows anyone at least its card.
+  public Set<Long> readersAmong(PostEntity post, Collection<Long> userIds) {
+    if (!post.isInRoom()) {
+      return Set.copyOf(userIds);
+    }
+    Set<Long> readers = new HashSet<>(rooms.membersAmong(post.getRoomId(), userIds));
+    if (userIds.contains(post.getUserId())) {
+      readers.add(post.getUserId());
+    }
+    return readers;
+  }
+
+  // A comment or highlight made while its post was in a room stays with that room's members, its
+  // writer too only while in the room; PostAccessSql.said asks the same for lists.
+  public boolean hears(Long saidInRoom, Long viewerId) {
+    return saidInRoom == null || rooms.isMember(saidInRoom, viewerId);
+  }
+
+  // What may stand on its own outside the post (a collection, a shared feed): never something said
+  // in a room. PostAccessSql.saidOpenly asks the same for lists.
+  public static boolean saidOpenly(PostHighlightEntity highlight) {
+    return highlight.getRoomId() == null;
   }
 
   static PostAccess decide(
@@ -68,23 +102,28 @@ public class PostAccessPolicy {
       boolean rightKey,
       Supplier<ReaderCountry> country,
       BooleanSupplier follower,
-      BooleanSupplier validGrant) {
+      BooleanSupplier validGrant,
+      BooleanSupplier member) {
     if (!post.isPublished()) return PostAccess.HIDDEN;
     if (owner) return PostAccess.FULL;
     PostAudience audience = post.getAudience();
-    if (audience == PostAudience.UNLISTED && !rightKey) return PostAccess.HIDDEN;
+    boolean reads =
+        audience.readableBy(
+            reader ->
+                switch (reader) {
+                  case ANYONE -> true;
+                  case KEY_HOLDER -> rightKey;
+                  case FOLLOWER -> follower.getAsBoolean();
+                  case GRANT_HOLDER -> validGrant.getAsBoolean();
+                  case MEMBER -> member.getAsBoolean();
+                });
+    if (!reads && !audience.shownAsCard()) return PostAccess.HIDDEN;
     if (post.isRegionRestricted()) {
       ReaderCountry reader = country.get();
       if (reader.deferred()) return PostAccess.locked(PostLock.REGION_CHECK);
       if (post.blocksCountry(reader.code())) return PostAccess.locked(PostLock.REGION);
     }
-    return switch (audience) {
-      case FOLLOWERS ->
-          follower.getAsBoolean() ? PostAccess.FULL : PostAccess.locked(PostLock.FOLLOWERS);
-      case PASSWORD ->
-          validGrant.getAsBoolean() ? PostAccess.FULL : PostAccess.locked(PostLock.PASSWORD);
-      case PUBLIC, UNLISTED -> PostAccess.FULL;
-    };
+    return reads ? PostAccess.FULL : PostAccess.locked(audience.lock());
   }
 
   public static PostAccess card(PostEntity post) {
@@ -96,18 +135,16 @@ public class PostAccessPolicy {
 
   public static boolean isListed(PostEntity post) {
     return post.isPublished()
-        && post.getAudience() == PostAudience.PUBLIC
+        && post.getAudience().listed()
         && (PostAccessSql.REGION_RESTRICTED_IN_DISCOVERY || !post.isRegionRestricted());
   }
 
   public static boolean isOpen(PostEntity post) {
-    return post.isPublished()
-        && post.getAudience() == PostAudience.PUBLIC
-        && !post.isRegionRestricted();
+    return post.isPublished() && post.getAudience().listed() && !post.isRegionRestricted();
   }
 
   public static boolean isCard(PostEntity post) {
-    return post.isPublished() && post.getAudience() != PostAudience.UNLISTED;
+    return post.isPublished() && post.getAudience().shownAsCard();
   }
 
   private static boolean isOwner(PostEntity post, PostReader reader) {
@@ -131,6 +168,7 @@ public class PostAccessPolicy {
     private final PostReader reader;
     private final Map<Long, Boolean> followed = new HashMap<>();
     private ReaderCountry resolved;
+    private Set<Long> memberOf;
 
     private Lists(PostReader reader) {
       this.reader = reader;
@@ -145,7 +183,25 @@ public class PostAccessPolicy {
           () ->
               followed.computeIfAbsent(
                   post.getUserId(), author -> follows(reader.viewerId(), author)),
-          () -> false);
+          () -> false,
+          () -> memberOf().contains(post.getRoomId()));
+    }
+
+    // What a list of the reader's own (likes, bookmarks, reading history) shows for a post: its
+    // card, and a room post only while the reader is in the room.
+    public PostAccess card(PostEntity post) {
+      return post.isInRoom() ? of(post) : PostAccessPolicy.card(post);
+    }
+
+    // Whether the reader's own comments and highlights on a post still name it: always, but for a
+    // room post only while the reader is in the room.
+    public boolean keeps(PostEntity post) {
+      return !post.isInRoom() || !of(post).hidden();
+    }
+
+    private Set<Long> memberOf() {
+      if (memberOf == null) memberOf = rooms.roomsOf(reader.viewerId());
+      return memberOf;
     }
 
     private ReaderCountry country() {

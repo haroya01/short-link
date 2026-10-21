@@ -15,7 +15,51 @@ public record BlogInteractionEvent(
     Long seriesId,
     String seriesSlug,
     String seriesTitle,
-    Instant occurredAt) {
+    Instant occurredAt,
+    boolean roomPost) {
+
+  public BlogInteractionEvent(
+      BlogInteractionType type,
+      Long recipientUserId,
+      Long actorUserId,
+      Long postId,
+      String postSlug,
+      String postTitle,
+      Long commentId,
+      Long seriesId,
+      String seriesSlug,
+      String seriesTitle,
+      Instant occurredAt) {
+    this(
+        type,
+        recipientUserId,
+        actorUserId,
+        postId,
+        postSlug,
+        postTitle,
+        commentId,
+        seriesId,
+        seriesSlug,
+        seriesTitle,
+        occurredAt,
+        false);
+  }
+
+  public BlogInteractionEvent onRoomPost(boolean inRoom) {
+    return new BlogInteractionEvent(
+        type,
+        recipientUserId,
+        actorUserId,
+        postId,
+        postSlug,
+        postTitle,
+        commentId,
+        seriesId,
+        seriesSlug,
+        seriesTitle,
+        occurredAt,
+        inRoom);
+  }
 
   public boolean isSelfAction() {
     return recipientUserId != null && recipientUserId.equals(actorUserId);
