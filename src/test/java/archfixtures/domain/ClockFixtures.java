@@ -14,6 +14,12 @@ public final class ClockFixtures {
     }
   }
 
+  public static class BuildsTheSystemClock {
+    public Clock clock() {
+      return Clock.systemUTC();
+    }
+  }
+
   public static class TakesTimeFromTheClock {
     public Instant run(Clock clock) {
       return clock.instant();
