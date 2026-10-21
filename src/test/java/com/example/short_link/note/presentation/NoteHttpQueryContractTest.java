@@ -1103,6 +1103,34 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(homeKeys(refreshed)).containsExactly("note:" + arrived);
     assertThat(refreshed.path("gap").asBoolean()).isFalse();
     assertThat(refreshed.path("next").isNull()).isTrue();
+
+    Actor serial = actor("home-serial", false);
+    long episode = noteWrittenAt(serial, "구독한 시리즈의 노트", ahead.minusSeconds(150));
+    jdbc.update(
+        "INSERT INTO series (user_id, slug, title, created_at, updated_at)"
+            + " VALUES (?, 'home-series', '홈 시리즈', NOW(6), NOW(6))",
+        serial.id());
+    long series =
+        jdbc.queryForObject("SELECT id FROM series WHERE user_id = ?", Long.class, serial.id());
+    jdbc.update(
+        "INSERT INTO series_item (series_id, item_type, ref_id, position, created_at)"
+            + " VALUES (?, 'NOTE', ?, 0, NOW(6))",
+        series,
+        episode);
+    jdbc.update(
+        "INSERT INTO series_subscription (user_id, series_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        series);
+    var subscribed =
+        step(
+            "home-following-series",
+            "GET",
+            "/api/v1/public/home?tab=following&limit=4",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(subscribed))
+        .containsExactly("note:" + arrived, "note:" + newest, "post:" + post, "note:" + episode);
   }
 
   @Test
