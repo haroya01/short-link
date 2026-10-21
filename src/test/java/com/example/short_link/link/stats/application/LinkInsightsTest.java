@@ -2,6 +2,7 @@ package com.example.short_link.link.stats.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.time.LocalDate;
@@ -108,7 +109,7 @@ class LinkInsightsTest {
 
   @Test
   void messageLocalizesByRequestLocale() {
-    var heatmap = List.of(new LinkStats.HeatmapCell("TUESDAY", 21, 30L));
+    var heatmap = List.of(new HeatmapCell("TUESDAY", 21, 30L));
 
     LocaleContextHolder.setLocale(Locale.ENGLISH);
     var en =
@@ -172,10 +173,7 @@ class LinkInsightsTest {
 
   @Test
   void detectsPeakHour() {
-    var heatmap =
-        List.of(
-            new LinkStats.HeatmapCell("MONDAY", 10, 5L),
-            new LinkStats.HeatmapCell("TUESDAY", 21, 30L));
+    var heatmap = List.of(new HeatmapCell("MONDAY", 10, 5L), new HeatmapCell("TUESDAY", 21, 30L));
     List<LinkStats.Insight> result =
         insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
     var peak = result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
@@ -248,10 +246,7 @@ class LinkInsightsTest {
 
   @Test
   void peakHourSkippedWhenAllCellsTooLow() {
-    var heatmap =
-        List.of(
-            new LinkStats.HeatmapCell("MONDAY", 10, 1L),
-            new LinkStats.HeatmapCell("TUESDAY", 21, 1L));
+    var heatmap = List.of(new HeatmapCell("MONDAY", 10, 1L), new HeatmapCell("TUESDAY", 21, 1L));
     List<LinkStats.Insight> result =
         insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
     assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("PEAK_HOUR");
@@ -267,7 +262,7 @@ class LinkInsightsTest {
 
   @Test
   void unknownDayOfWeekFallsBackInPeakHour() {
-    var heatmap = List.of(new LinkStats.HeatmapCell("UNKNOWN", 5, 30L));
+    var heatmap = List.of(new HeatmapCell("UNKNOWN", 5, 30L));
     List<LinkStats.Insight> result =
         insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
     var peak = result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
@@ -298,7 +293,7 @@ class LinkInsightsTest {
   @Test
   void peakHourCoversAllKoreanWeekdayLabels() {
     for (String dow : List.of("WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")) {
-      var heatmap = List.of(new LinkStats.HeatmapCell(dow, 20, 30L));
+      var heatmap = List.of(new HeatmapCell(dow, 20, 30L));
       List<LinkStats.Insight> result =
           insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
       var peak =

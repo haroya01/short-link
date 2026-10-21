@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
@@ -43,7 +44,7 @@ class ProfileImageServiceTest {
 
   @Test
   void presignBuildsKeyUnderUserPrefix() {
-    ProfileImageService.PresignResult out = service.presignUpload(42L, "image/jpeg");
+    PresignedUpload out = service.presignUpload(42L, "image/jpeg");
     assertThat(out.key()).startsWith("profile-images/42/");
     assertThat(out.key()).endsWith(".jpg");
     assertThat(out.contentType()).isEqualTo("image/jpeg");
@@ -53,7 +54,7 @@ class ProfileImageServiceTest {
 
   @Test
   void presignNormalizesContentTypeCasingAndWhitespace() {
-    ProfileImageService.PresignResult out = service.presignUpload(7L, " IMAGE/PNG ");
+    PresignedUpload out = service.presignUpload(7L, " IMAGE/PNG ");
     assertThat(out.contentType()).isEqualTo("image/png");
     assertThat(out.key()).endsWith(".png");
   }

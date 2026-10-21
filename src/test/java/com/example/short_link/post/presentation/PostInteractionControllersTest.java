@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.application.read.CommentLikeStatus;
@@ -197,7 +198,7 @@ class PostInteractionControllersTest {
   void presignReturnsUploadUrl() throws Exception {
     when(postImageService.presignUpload(eq(USER_ID), eq(3L), eq("image/png")))
         .thenReturn(
-            new PostImageService.PresignResult(
+            new PresignedUpload(
                 "https://s3/upload", "https://cdn/x.png", "k/x.png", "image/png", 1024, 600));
 
     mvc.perform(

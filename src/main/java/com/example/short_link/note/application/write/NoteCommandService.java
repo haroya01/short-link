@@ -55,12 +55,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class NoteCommandService {
 
   private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
@@ -82,81 +83,6 @@ public class NoteCommandService {
   private final SeriesItemCleaner seriesItems;
   private final ApplicationEventPublisher events;
   private final Clock clock;
-
-  @Autowired
-  public NoteCommandService(
-      NoteRepository notes,
-      NoteLikeRepository likes,
-      NoteRepostRepository reposts,
-      NoteBookmarkRepository bookmarks,
-      NoteMediaRepository media,
-      QuotedPostReader quotedPosts,
-      NotePeopleReader people,
-      NoteImages images,
-      NoteViews views,
-      NoteAccess access,
-      NoteRoomReader rooms,
-      UserModerationGuard moderation,
-      UserBlockChecker blocks,
-      CollectionConnectionCleaner connections,
-      SeriesItemCleaner seriesItems,
-      ApplicationEventPublisher events) {
-    this(
-        notes,
-        likes,
-        reposts,
-        bookmarks,
-        media,
-        quotedPosts,
-        people,
-        images,
-        views,
-        access,
-        rooms,
-        moderation,
-        blocks,
-        connections,
-        seriesItems,
-        events,
-        Clock.systemUTC());
-  }
-
-  NoteCommandService(
-      NoteRepository notes,
-      NoteLikeRepository likes,
-      NoteRepostRepository reposts,
-      NoteBookmarkRepository bookmarks,
-      NoteMediaRepository media,
-      QuotedPostReader quotedPosts,
-      NotePeopleReader people,
-      NoteImages images,
-      NoteViews views,
-      NoteAccess access,
-      NoteRoomReader rooms,
-      UserModerationGuard moderation,
-      UserBlockChecker blocks,
-      CollectionConnectionCleaner connections,
-      SeriesItemCleaner seriesItems,
-      ApplicationEventPublisher events,
-      Clock clock) {
-    this.notes = notes;
-    this.likes = likes;
-    this.reposts = reposts;
-    this.bookmarks = bookmarks;
-    this.media = media;
-    this.quotedPosts = quotedPosts;
-    this.people = people;
-    this.images = images;
-    this.views = views;
-    this.access = access;
-    this.rooms = rooms;
-    this.moderation = moderation;
-    this.blocks = blocks;
-    this.connections = connections;
-    this.seriesItems = seriesItems;
-    this.events = events;
-    this.clock = clock;
-  }
 
   private record Checked(
       String body,
@@ -530,8 +456,7 @@ public class NoteCommandService {
   }
 
   // Where naming someone does not make them a reader (a room), who of the named and the answered
-  // may
-  // read the note; null where it does, since they all may.
+  // may read the note; null where it does, since they all may.
   private Set<Long> unnamedReaders(NoteEntity note, List<NoteAuthor> named, NoteEntity parent) {
     if (note.getVisibility().readBy(Reader.NAMED)) {
       return null;
@@ -695,8 +620,7 @@ public class NoteCommandService {
   }
 
   // As Threads' hidden replies: the thread's writer moves a reply out of the thread, where anyone
-  // who
-  // can read the thread still finds it under its hidden replies. The replier is not told.
+  // who can read the thread still finds it under its hidden replies. The replier is not told.
   @Transactional
   public ReplyHiddenStatus setReplyHidden(Long userId, Long noteId, boolean on) {
     NoteEntity reply = find(noteId);

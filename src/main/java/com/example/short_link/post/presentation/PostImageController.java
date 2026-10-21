@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.presentation.request.PostImageCommitRequest;
 import com.example.short_link.post.presentation.request.PostImageImportRequest;
@@ -21,7 +22,7 @@ public class PostImageController {
   private final PostImageService postImageService;
 
   @PostMapping("/presign")
-  public PostImageService.PresignResult presign(
+  public PresignedUpload presign(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long postId,
       @Valid @RequestBody PostImagePresignRequest request) {

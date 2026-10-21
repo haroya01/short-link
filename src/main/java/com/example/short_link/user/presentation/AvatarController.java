@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.user.application.write.avatar.AvatarService;
 import com.example.short_link.user.presentation.request.AvatarCommitRequest;
 import com.example.short_link.user.presentation.request.AvatarPresignRequest;
@@ -21,7 +22,7 @@ public class AvatarController {
   private final AvatarService service;
 
   @PostMapping("/presigned-url")
-  public AvatarService.PresignResult presign(
+  public PresignedUpload presign(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody AvatarPresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }

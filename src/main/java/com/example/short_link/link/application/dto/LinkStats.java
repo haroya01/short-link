@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.dto;
 
+import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,8 +60,6 @@ public record LinkStats(
   public record HourClick(int hour, long count) {}
 
   public record DayOfWeekClick(String dayOfWeek, long count) {}
-
-  public record HeatmapCell(String dayOfWeek, int hour, long count) {}
 
   public record ReferrerClick(String referrer, long count) {}
 

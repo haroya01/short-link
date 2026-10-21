@@ -1,6 +1,6 @@
 package com.example.short_link.post.presentation;
 
-import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesDetailView;
 import com.example.short_link.post.application.read.SeriesQueryService;
@@ -69,7 +69,7 @@ public class SeriesController {
   }
 
   @GetMapping("/{id}/stats")
-  public PostReadStats stats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+  public VisitStats stats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return readStats.forSeries(userId, id);
   }
 

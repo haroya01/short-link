@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.application;
 
+import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.time.LocalDate;
@@ -30,7 +31,6 @@ public class LinkInsights {
 
   private static final double CHANNEL_LOYALTY_THRESHOLD = 0.3;
 
-  // 적은 표본에서 비율이 크게 흔들리는 것을 막는다.
   private static final long CHANNEL_LOYALTY_MIN_VISITORS = 5;
 
   private final MessageSource messages;
@@ -45,7 +45,7 @@ public class LinkInsights {
       long total,
       long human,
       long bot,
-      List<LinkStats.HeatmapCell> heatmap,
+      List<HeatmapCell> heatmap,
       List<LinkStats.ChannelClick> channels,
       List<LinkStats.CountryClick> countries,
       LinkStats.ReturnRate returnRate,
@@ -218,10 +218,10 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("DORMANT", "warning", message, data));
   }
 
-  private Optional<LinkStats.Insight> peakHour(List<LinkStats.HeatmapCell> heatmap, long total) {
+  private Optional<LinkStats.Insight> peakHour(List<HeatmapCell> heatmap, long total) {
     if (heatmap.isEmpty()) return Optional.empty();
-    LinkStats.HeatmapCell peak = heatmap.get(0);
-    for (LinkStats.HeatmapCell cell : heatmap) {
+    HeatmapCell peak = heatmap.get(0);
+    for (HeatmapCell cell : heatmap) {
       if (cell.count() > peak.count()) peak = cell;
     }
     if (peak.count() < 2) return Optional.empty();

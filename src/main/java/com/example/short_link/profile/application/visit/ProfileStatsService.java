@@ -1,5 +1,7 @@
 package com.example.short_link.profile.application.visit;
 
+import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -29,7 +31,7 @@ public class ProfileStatsService {
   private final ProfileVisitBreakdownReader breakdowns;
 
   @Transactional(readOnly = true)
-  public ProfileStats statsForOwner(Long ownerUserId) {
+  public VisitStats statsForOwner(Long ownerUserId) {
     UserEntity owner =
         userRepository
             .findById(ownerUserId)
@@ -38,7 +40,7 @@ public class ProfileStatsService {
   }
 
   @Transactional(readOnly = true)
-  public ProfileStats publicStats(String username) {
+  public VisitStats publicStats(String username) {
     UserEntity user =
         userRepository
             .findByUsername(username)
@@ -74,7 +76,7 @@ public class ProfileStatsService {
     return new ProfileVisitSummary(today, week, month, allTime);
   }
 
-  private ProfileStats computeStats(UserEntity owner) {
+  private VisitStats computeStats(UserEntity owner) {
     Long uid = owner.getId();
     ZoneId zone = safeZone(owner.getTimezone());
     String tz = currentOffset(zone);
@@ -88,65 +90,62 @@ public class ProfileStatsService {
     Instant lastAt = visits.findLastVisitAt(uid);
 
     Instant now = Instant.now();
-    List<ProfileStats.DailyVisit> daily =
+    List<VisitStats.DailyVisit> daily =
         visits.findDailyVisits(uid, now.minus(DAILY_WINDOW), tz).stream()
-            .map(r -> new ProfileStats.DailyVisit(r.getDay(), r.getCount()))
+            .map(r -> new VisitStats.DailyVisit(r.getDay(), r.getCount()))
             .toList();
 
-    List<ProfileStats.HourVisit> hourly =
+    List<VisitStats.HourVisit> hourly =
         visits.findHourlyVisits(uid, tz).stream()
-            .map(r -> new ProfileStats.HourVisit(r.getHour(), r.getCount()))
+            .map(r -> new VisitStats.HourVisit(r.getHour(), r.getCount()))
             .toList();
     Integer peakHour =
         hourly.stream()
             .max((a, b) -> Long.compare(a.count(), b.count()))
-            .map(ProfileStats.HourVisit::hour)
+            .map(VisitStats.HourVisit::hour)
             .orElse(null);
 
-    List<ProfileStats.HeatmapCell> heatmap =
+    List<HeatmapCell> heatmap =
         visits.findHeatmap(uid, tz).stream()
-            .map(
-                r ->
-                    new ProfileStats.HeatmapCell(
-                        dayOfWeekName(r.getDow()), r.getHour(), r.getCount()))
+            .map(r -> new HeatmapCell(dayOfWeekName(r.getDow()), r.getHour(), r.getCount()))
             .toList();
 
-    List<ProfileStats.CountryVisit> countries =
+    List<VisitStats.CountryVisit> countries =
         breakdowns.topCountries(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
+            .map(r -> new VisitStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
             .toList();
 
-    List<ProfileStats.DeviceVisit> devices =
+    List<VisitStats.DeviceVisit> devices =
         visits.findDeviceVisits(uid).stream()
-            .map(r -> new ProfileStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount()))
+            .map(r -> new VisitStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount()))
             .toList();
 
-    List<ProfileStats.BrowserVisit> browsers =
+    List<VisitStats.BrowserVisit> browsers =
         breakdowns.topBrowsers(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
+            .map(r -> new VisitStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
-    List<ProfileStats.ReferrerHostVisit> referrerHosts =
+    List<VisitStats.ReferrerHostVisit> referrerHosts =
         breakdowns.topReferrerHosts(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.ReferrerHostVisit(r.getHost(), r.getCount()))
+            .map(r -> new VisitStats.ReferrerHostVisit(r.getHost(), r.getCount()))
             .toList();
 
-    List<ProfileStats.SourceChannelVisit> channels =
+    List<VisitStats.SourceChannelVisit> channels =
         breakdowns.topSourceChannels(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.SourceChannelVisit(r.getSource(), r.getCount()))
+            .map(r -> new VisitStats.SourceChannelVisit(r.getSource(), r.getCount()))
             .toList();
 
-    List<ProfileStats.UtmCampaignVisit> utmCampaigns =
+    List<VisitStats.UtmCampaignVisit> utmCampaigns =
         breakdowns.topUtmCampaigns(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
+            .map(r -> new VisitStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
             .toList();
 
-    List<ProfileStats.UtmSourceVisit> utmSources =
+    List<VisitStats.UtmSourceVisit> utmSources =
         breakdowns.topUtmSources(uid, TOP_SIZE).stream()
-            .map(r -> new ProfileStats.UtmSourceVisit(r.getSource(), r.getCount()))
+            .map(r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount()))
             .toList();
 
-    return new ProfileStats(
+    return new VisitStats(
         zone.getId(),
         total,
         human,

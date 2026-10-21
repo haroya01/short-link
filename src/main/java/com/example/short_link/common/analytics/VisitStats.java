@@ -1,10 +1,10 @@
-package com.example.short_link.profile.application.visit;
+package com.example.short_link.common.analytics;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-public record ProfileStats(
+public record VisitStats(
     String timezone,
     long totalVisits,
     long humanVisits,
@@ -28,8 +28,6 @@ public record ProfileStats(
 
   public record HourVisit(int hour, long count) {}
 
-  public record HeatmapCell(String dayOfWeek, int hour, long count) {}
-
   public record CountryVisit(String country, long count) {}
 
   public record DeviceVisit(String device, long count) {}
@@ -43,4 +41,10 @@ public record ProfileStats(
   public record UtmCampaignVisit(String campaign, long count) {}
 
   public record UtmSourceVisit(String source, long count) {}
+
+  public static VisitStats empty(String timezone) {
+    return new VisitStats(
+        timezone, 0, 0, 0, 0, null, null, null, List.of(), List.of(), List.of(), List.of(),
+        List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+  }
 }

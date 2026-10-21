@@ -14,9 +14,11 @@ import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Optional;
@@ -63,7 +65,13 @@ class AvatarServiceTest {
             objectStorage,
             new ObjectStoragePublicUrls(noBucket),
             mock(ProfileCacheInvalidator.class));
-    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.AVATAR_UNAVAILABLE);
+    assertThatThrownBy(() -> svc.commitUpload(1L, "x"))
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.AVATAR_UNAVAILABLE);
   }
 
   @Test
@@ -78,7 +86,7 @@ class AvatarServiceTest {
     when(objectStorage.presignPut(any(), eq("image/jpeg"), any(Duration.class)))
         .thenReturn("https://s3/put");
 
-    AvatarService.PresignResult r = service.presignUpload(42L, "  IMAGE/JPEG ");
+    PresignedUpload r = service.presignUpload(42L, "  IMAGE/JPEG ");
     assertThat(r.uploadUrl()).isEqualTo("https://s3/put");
     assertThat(r.key()).startsWith("avatars/42/").endsWith(".jpg");
     assertThat(r.publicUrl()).startsWith("https://cdn.example.com/avatars/42/").endsWith(".jpg");
@@ -197,7 +205,7 @@ class AvatarServiceTest {
             mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
-    AvatarService.PresignResult r = svc.presignUpload(1L, "image/png");
+    PresignedUpload r = svc.presignUpload(1L, "image/png");
     assertThat(r.publicUrl()).startsWith("https://bucket.s3.ap-northeast-2.amazonaws.com/");
   }
 
@@ -214,7 +222,7 @@ class AvatarServiceTest {
             mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/webp"), any(Duration.class)))
         .thenReturn("https://s3/put");
-    AvatarService.PresignResult r = svc.presignUpload(1L, "image/webp");
+    PresignedUpload r = svc.presignUpload(1L, "image/webp");
     assertThat(r.publicUrl()).startsWith("https://cdn.example.com/avatars/1/").endsWith(".webp");
   }
 }

@@ -1,6 +1,6 @@
 package com.example.short_link.profile.presentation.visit;
 
-import com.example.short_link.profile.application.visit.ProfileStats;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.profile.application.visit.ProfileStatsService;
 import com.example.short_link.profile.application.visit.ProfileVisitSummary;
 import com.example.short_link.profile.application.write.UpdateStatsVisibilityUseCase;
@@ -24,7 +24,7 @@ public class MyProfileStatsController {
 
   @GetMapping("/stats")
   @PreAuthorize("isAuthenticated()")
-  public ProfileStats stats(@AuthenticationPrincipal Long userId) {
+  public VisitStats stats(@AuthenticationPrincipal Long userId) {
     return stats.statsForOwner(userId);
   }
 

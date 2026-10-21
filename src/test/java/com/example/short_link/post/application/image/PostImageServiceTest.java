@@ -17,6 +17,7 @@ import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -109,7 +110,7 @@ class PostImageServiceTest {
     when(objectStorage.presignPut(anyString(), anyString(), any()))
         .thenReturn("https://s3.example/presigned");
 
-    PostImageService.PresignResult result = service.presignUpload(7L, 42L, "image/png");
+    PresignedUpload result = service.presignUpload(7L, 42L, "image/png");
 
     assertThat(result.uploadUrl()).isEqualTo("https://s3.example/presigned");
     assertThat(result.key()).startsWith("post-images/7/42/").endsWith(".png");
