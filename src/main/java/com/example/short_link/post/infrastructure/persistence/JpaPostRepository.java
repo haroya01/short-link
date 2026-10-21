@@ -311,7 +311,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + " AND p.body_text_length >= :minBody GROUP BY t.tag ORDER BY COUNT(p.id) DESC")
   List<Object[]> findPopularTags(@Param("minBody") int minBody, Pageable pageable);
 
-  // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
   // :match는 항마다 +( )로 모두 요구하는 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
   // :matchWord는 영문·숫자로 시작하거나 끝나는 항이 낱말 속(javascript의 java)에 걸리지 않게 하는 경계
   // 정규식이다(ngram은 낱말 경계를 모른다).
@@ -319,29 +318,31 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   // :titleWord는 그 폴백이 영문·숫자 낱말 속(email의 ai)에 걸리지 않게 하는 경계 정규식이다.
   // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
   // 겹쳐도 매칭되므로, 연산자 없는 BOOLEAN 항을 유지한다.
+  // 세 갈래를 한 술어의 OR로 묶으면 FULLTEXT 색인을 못 타고 공개 글 전부에 MATCH를 평가한다.
+  // STRAIGHT_JOIN: 옵티마이저는 갈래 합의 행 수를 알지 못해 posts를 먼저 훑으려 한다.
+  String SEARCH_HITS =
+      "(SELECT s.post_id AS id FROM post_search_text s "
+          + "WHERE MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
+          + "AND (:matchWord IS NULL OR REGEXP_LIKE(LOWER(s.search_text), :matchWord)) "
+          + "UNION SELECT h.id FROM users u JOIN posts h ON h.user_id = u.id "
+          + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL "
+          + "UNION SELECT t.id FROM posts t WHERE :titleLike IS NOT NULL "
+          + "AND (LOWER(t.title) LIKE :titleLike ESCAPE '!' "
+          + "OR LOWER(COALESCE(t.excerpt, '')) LIKE :titleLike ESCAPE '!') "
+          + "AND (:titleWord IS NULL "
+          + "OR REGEXP_LIKE(LOWER(CONCAT(t.title, ' ', COALESCE(t.excerpt, ''))), :titleWord))) hit "
+          + "STRAIGHT_JOIN posts p ON p.id = hit.id ";
+
   String SEARCH_PREDICATE =
       "WHERE "
           + PostAccessSql.LISTED
-          + " AND ("
-          + "(MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
-          + "AND (:matchWord IS NULL OR REGEXP_LIKE(LOWER(s.search_text), :matchWord))) "
-          + "OR p.user_id IN (SELECT u.id FROM users u "
-          + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
-          + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-          + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!') "
-          + "AND (:titleWord IS NULL "
-          + "OR REGEXP_LIKE(LOWER(CONCAT(p.title, ' ', COALESCE(p.excerpt, ''))), :titleWord)))) "
-          + "AND (:lang IS NULL OR p.language_tag = :lang)"
+          + " AND (:lang IS NULL OR p.language_tag = :lang)"
           + HeardSql.POST_AUTHOR
           + " ";
 
   @Query(
       nativeQuery = true,
-      value =
-          "SELECT p.* FROM posts p "
-              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + SEARCH_PREDICATE
-              + "ORDER BY p.published_at DESC")
+      value = "SELECT p.* FROM " + SEARCH_HITS + SEARCH_PREDICATE + "ORDER BY p.published_at DESC")
   List<PostEntity> searchPublishedRecent(
       @Param("match") String match,
       @Param("matchWord") String matchWord,
@@ -357,7 +358,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   @Query(
       nativeQuery = true,
       value =
-          "SELECT p.* FROM posts p "
+          "SELECT p.* FROM "
+              + SEARCH_HITS
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + SEARCH_PREDICATE
               + "ORDER BY MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) DESC, "
@@ -376,11 +378,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   @Query(
       nativeQuery = true,
       value =
-          "SELECT p.* FROM posts p "
-              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + RECENT_HUMAN_VIEWS
-              + SEARCH_PREDICATE
-              + TRENDING_ORDER)
+          "SELECT p.* FROM " + SEARCH_HITS + RECENT_HUMAN_VIEWS + SEARCH_PREDICATE + TRENDING_ORDER)
   List<PostEntity> searchPublishedTrendingSince(
       @Param("match") String match,
       @Param("matchWord") String matchWord,
@@ -392,22 +390,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("viewer") long viewer,
       @Param("now") Instant now,
       Pageable pageable);
-
-  @Query(
-      nativeQuery = true,
-      value =
-          "SELECT COUNT(*) FROM posts p "
-              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + SEARCH_PREDICATE)
-  long countSearchPublished(
-      @Param("match") String match,
-      @Param("matchWord") String matchWord,
-      @Param("like") String like,
-      @Param("titleLike") String titleLike,
-      @Param("titleWord") String titleWord,
-      @Param("lang") String lang,
-      @Param("viewer") long viewer,
-      @Param("now") Instant now);
 
   @Query(
       nativeQuery = true,
