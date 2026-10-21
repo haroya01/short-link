@@ -7,12 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.DailyPoint;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
 import com.example.short_link.post.application.read.PostPerformanceResult;
-import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.ReferrerPoint;
 import com.example.short_link.post.application.read.SeriesAnalyticsDetail;
@@ -176,7 +176,7 @@ class PostAnalyticsControllerTest {
   void postStatsReturnsReaderBreakdown() throws Exception {
     when(readStats.forPost(eq(USER_ID), eq(1L)))
         .thenReturn(
-            new PostReadStats(
+            new VisitStats(
                 "Asia/Seoul",
                 120,
                 100,
@@ -188,7 +188,7 @@ class PostAnalyticsControllerTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(new PostReadStats.CountryVisit("KR", 80)),
+                List.of(new VisitStats.CountryVisit("KR", 80)),
                 List.of(),
                 List.of(),
                 List.of(),

@@ -66,6 +66,7 @@ class PublicFeedSearchIntegrationTest {
     // 실 발행 경로(PublishPostUseCase)를 태우는 테스트는 발행 시 리비전 스냅샷을 남기므로 posts 를 지우기 전에 정리한다.
     jdbc.update("DELETE FROM post_revision");
     jdbc.update("DELETE FROM posts");
+    jdbc.update("DELETE FROM user_block");
     jdbc.update("DELETE FROM users");
   }
 
@@ -393,5 +394,76 @@ class PublicFeedSearchIntegrationTest {
 
     assertThat(relevanceSlugs("k-means 가속기")).containsExactly("kmeans");
     assertThat(relevanceSlugs("가속기 설계")).containsExactly("kmeans");
+  }
+
+  @Test
+  void aPostFoundByItsTextAndByItsWritersHandleIsListedOnce() {
+    long a = author("raftwriter");
+    publish(a, "raft", "Raft 합의 정리", "리더 선출", List.of("raft"));
+
+    for (String order : List.of("relevance", "recent", "trending")) {
+      assertThat(
+              service
+                  .feed(null, PublicFeedQuery.from("raft", null, order, null, 0, 20))
+                  .items()
+                  .stream()
+                  .map(PublicFeedItem::slug)
+                  .toList())
+          .containsExactly("raft");
+    }
+  }
+
+  @Test
+  void aWriterOnEitherSideOfABlockIsLeftOutWhicheverWayTheirPostMatched() {
+    long writer = author("blockedwriter");
+    long blocker = author("blockerreader");
+    long blocked = author("blockedreader");
+    long reader = author("plainreader");
+    publish(writer, "by-text", "쿠버네티스 운영기", "클러스터", List.of("k8s"));
+    publish(writer, "by-title", "AI 메모", "짧은 질의", List.of());
+    jdbc.update(
+        "INSERT INTO user_block (blocker_id, blocked_id, created_at) VALUES (?, ?, NOW(6))",
+        blocker,
+        writer);
+    jdbc.update(
+        "INSERT INTO user_block (blocker_id, blocked_id, created_at) VALUES (?, ?, NOW(6))",
+        writer,
+        blocked);
+
+    for (String query : List.of("쿠버네티스", "blockedwriter", "AI")) {
+      for (String order : List.of("relevance", "recent", "trending")) {
+        assertThat(slugsFor(blocker, query, order)).isEmpty();
+        assertThat(slugsFor(blocked, query, order)).isEmpty();
+        assertThat(slugsFor(reader, query, order)).isNotEmpty();
+      }
+    }
+  }
+
+  private List<String> slugsFor(Long viewerId, String query, String order) {
+    return service
+        .feed(viewerId, PublicFeedQuery.from(query, null, order, null, 0, 20))
+        .items()
+        .stream()
+        .map(PublicFeedItem::slug)
+        .toList();
+  }
+
+  @Test
+  void hasNextHoldsWhileAnotherMatchRemainsAndNotOnAnExactlyFullLastPage() {
+    long a = author("pager");
+    publish(a, "one", "페이징 하나", "넘기기", List.of());
+    publish(a, "two", "페이징 둘", "넘기기", List.of());
+    publish(a, "three", "페이징 셋", "넘기기", List.of());
+    publish(a, "four", "페이징 넷", "넘기기", List.of());
+
+    PublicFeedView first =
+        service.feed(null, PublicFeedQuery.from("페이징", null, "recent", null, 0, 3));
+    PublicFeedView last =
+        service.feed(null, PublicFeedQuery.from("페이징", null, "recent", null, 1, 2));
+
+    assertThat(first.items()).hasSize(3);
+    assertThat(first.hasNext()).isTrue();
+    assertThat(last.items()).extracting(PublicFeedItem::slug).containsExactly("two", "one");
+    assertThat(last.hasNext()).isFalse();
   }
 }

@@ -71,16 +71,20 @@ public class PublicFeedQueryService {
   private PublicFeedView search(Long viewerId, PublicFeedQuery.Search search, int page, int size) {
     String text = search.text();
     String language = search.language();
-    List<PostEntity> posts =
+    long offset = (long) page * size;
+    List<PostEntity> rows =
         switch (search.order()) {
           case RELEVANCE ->
-              postRepository.searchPublishedByRelevance(viewerId, text, language, page, size);
-          case RECENT -> postRepository.searchPublished(viewerId, text, language, page, size);
+              postRepository.searchPublishedByRelevanceAt(
+                  viewerId, text, language, offset, size + 1);
+          case RECENT ->
+              postRepository.searchPublishedAt(viewerId, text, language, offset, size + 1);
           case TRENDING ->
-              postRepository.searchPublishedTrending(viewerId, text, language, page, size);
+              postRepository.searchPublishedTrendingAt(viewerId, text, language, offset, size + 1);
         };
-    return assemble(
-        posts, postRepository.countSearchPublished(viewerId, text, language), page, size);
+    boolean hasNext = rows.size() > size;
+    List<PostEntity> posts = hasNext ? rows.subList(0, size) : rows;
+    return new PublicFeedView(feedItemAssembler.assemble(posts), page, size, hasNext);
   }
 
   public List<TagCount> popularTags(int limit) {

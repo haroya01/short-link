@@ -297,7 +297,7 @@
 # series and tags. The notes of a series the reader subscribes to come in inside the one note
 # statement, so a following page carrying them costs what any following page costs.
 @junit | home-latest | 11 | 0 | 0 | 0 | 11
-@junit | home-trending | 11 | 0 | 0 | 0 | 11
+@junit | home-trending | 12 | 0 | 0 | 0 | 12
 @junit | home-following | 14 | 0 | 0 | 0 | 14
 @junit | home-following-next | 9 | 0 | 0 | 0 | 9
 @junit | home-following-series | 14 | 0 | 0 | 0 | 14

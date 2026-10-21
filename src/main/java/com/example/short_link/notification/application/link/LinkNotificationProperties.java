@@ -5,20 +5,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "short-link.link-notification")
 public record LinkNotificationProperties(
     boolean digestEnabled,
-    String digestCron,
     boolean expiryEnabled,
-    String expiryCron,
     int expiryThresholdDays,
     int velocityMinClicks,
     double velocityRatio) {
 
   public LinkNotificationProperties {
-    if (digestCron == null || digestCron.isBlank()) {
-      digestCron = "0 0 8 * * *"; // 매일 08:00 KST
-    }
-    if (expiryCron == null || expiryCron.isBlank()) {
-      expiryCron = "0 0 9 * * *"; // 매일 09:00 KST
-    }
     if (expiryThresholdDays <= 0) {
       expiryThresholdDays = 7;
     }

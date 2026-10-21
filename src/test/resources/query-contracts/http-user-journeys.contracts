@@ -234,7 +234,10 @@
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-english-metadata | 2 | 1 | 1 | 0 | 4
 @junit | discovery-english-publish | 7 | 2 | 1 | 0 | 10
-@junit | discovery-for-you-cold-start | 7 | 0 | 0 | 0 | 7
+# Trending posts (the trending feed, and For You before the reader has interests) are ranked for
+# everyone, then each read cuts its page from that ranking. cache-for is 0s here, so every read
+# ranks again and carries one statement more than in production, where the ranking lasts 20s.
+@junit | discovery-for-you-cold-start | 8 | 0 | 0 | 0 | 8
 @junit | discovery-for-you-excludes-read | 7 | 0 | 0 | 0 | 7
 @junit | discovery-for-you-followed-interest | 7 | 0 | 0 | 0 | 7
 @junit | discovery-korean-body | 3 | 1 | 1 | 0 | 5
@@ -245,15 +248,15 @@
 @junit | discovery-popular-tags | 1 | 0 | 0 | 0 | 1
 @junit | discovery-read-recommended-post | 2 | 1 | 0 | 0 | 3
 @junit | discovery-recent-feed | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-recent-language | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-relevance | 4 | 0 | 0 | 0 | 4
-@junit | discovery-search-trending | 4 | 0 | 0 | 0 | 4
+@junit | discovery-search-recent-language | 3 | 0 | 0 | 0 | 3
+@junit | discovery-search-relevance | 3 | 0 | 0 | 0 | 3
+@junit | discovery-search-trending | 3 | 0 | 0 | 0 | 3
 @junit | discovery-suggested-authors | 2 | 0 | 0 | 0 | 2
 @junit | discovery-tag-feed | 4 | 0 | 0 | 0 | 4
 # A signed-in reader's topic on the trending tab: blocks and mutes ride inside the page and count
 # statements, so it stays the anonymous tag feed's four.
 @junit | discovery-tag-trending-signed-in | 4 | 0 | 0 | 0 | 4
-@junit | discovery-trending-feed | 4 | 0 | 0 | 0 | 4
+@junit | discovery-trending-feed | 5 | 0 | 0 | 0 | 5
 @junit | discovery-trending-tag-sections | 7 | 0 | 0 | 0 | 7
 @junit | event-alias-link | 6 | 7 | 2 | 0 | 15
 @junit | event-analytics | 4 | 0 | 0 | 0 | 4

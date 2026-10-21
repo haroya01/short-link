@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.user.application.write.avatar.BannerService;
 import com.example.short_link.user.presentation.request.BannerCommitRequest;
 import com.example.short_link.user.presentation.request.BannerPresignRequest;
@@ -21,7 +22,7 @@ public class BannerController {
   private final BannerService service;
 
   @PostMapping("/presigned-url")
-  public BannerService.PresignResult presign(
+  public PresignedUpload presign(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BannerPresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }

@@ -1,30 +1,29 @@
-package com.example.short_link.profile.application.visit;
+package com.example.short_link.common.analytics;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.profile.application.visit.ProfileStats.BrowserVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.CountryVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.DailyVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.DeviceVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.HeatmapCell;
-import com.example.short_link.profile.application.visit.ProfileStats.HourVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.ReferrerHostVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.SourceChannelVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.UtmCampaignVisit;
-import com.example.short_link.profile.application.visit.ProfileStats.UtmSourceVisit;
+import com.example.short_link.common.analytics.VisitStats.BrowserVisit;
+import com.example.short_link.common.analytics.VisitStats.CountryVisit;
+import com.example.short_link.common.analytics.VisitStats.DailyVisit;
+import com.example.short_link.common.analytics.VisitStats.DeviceVisit;
+import com.example.short_link.common.analytics.VisitStats.HourVisit;
+import com.example.short_link.common.analytics.VisitStats.ReferrerHostVisit;
+import com.example.short_link.common.analytics.VisitStats.SourceChannelVisit;
+import com.example.short_link.common.analytics.VisitStats.UtmCampaignVisit;
+import com.example.short_link.common.analytics.VisitStats.UtmSourceVisit;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class ProfileStatsTest {
+class VisitStatsTest {
 
   @Test
   void recordExposesAllAggregates() {
     Instant first = Instant.parse("2024-01-01T00:00:00Z");
     Instant last = Instant.parse("2024-01-02T00:00:00Z");
-    ProfileStats s =
-        new ProfileStats(
+    VisitStats s =
+        new VisitStats(
             "Asia/Seoul",
             100L,
             80L,

@@ -7,7 +7,10 @@ import archfixtures.PostAudienceFixtures;
 import archfixtures.PostVisibilityFixtures;
 import archfixtures.RedisFixtures;
 import archfixtures.TransactionFixtures;
+import archfixtures.config.SystemClockConfig;
 import archfixtures.domain.ClockFixtures;
+import archfixtures.modules.alpha.application.AlphaService;
+import archfixtures.modules.beta.application.ModuleFixtures;
 import archfixtures.post.application.write.PublishesAPost;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.List;
@@ -88,7 +91,19 @@ final class ArchRuleProofs {
               "ArchUnitSemanticRulesTest.entitySetters",
               ArchUnitSemanticRulesTest.entitySetters,
               List.of(EntityFixtures.EntityWithPublicSetter.class),
-              List.of(EntityFixtures.EntityWithNamedOperation.class)));
+              List.of(EntityFixtures.EntityWithNamedOperation.class)),
+          new Proof(
+              "ArchUnitRatchetRulesTest.moduleInternalsStayInTheirModule",
+              ArchUnitRatchetRulesTest.moduleInternalsStayInTheirModule,
+              List.of(
+                  ModuleFixtures.ReachesAnotherModulesStore.class,
+                  ModuleFixtures.ReachesAnotherModulesRepository.class),
+              List.of(ModuleFixtures.GoesThroughAnotherModulesService.class, AlphaService.class)),
+          new Proof(
+              "ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone",
+              ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone,
+              List.of(ClockFixtures.BuildsTheSystemClock.class),
+              List.of(SystemClockConfig.class, ClockFixtures.TakesTimeFromTheClock.class)));
 
   // 아직 반례로 증명하지 못한 규칙. 새 규칙은 여기 추가할 수 없고, 이 목록은 줄어들기만 한다.
   static final Set<String> RULES_WITHOUT_A_PROOF =

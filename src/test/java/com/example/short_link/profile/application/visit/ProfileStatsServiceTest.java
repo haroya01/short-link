@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BrowserClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
@@ -87,7 +89,7 @@ class ProfileStatsServiceTest {
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of(hour1, hour2));
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
-    ProfileStats out = service.statsForOwner(1L);
+    VisitStats out = service.statsForOwner(1L);
     assertThat(out.timezone()).isEqualTo("Asia/Seoul");
     assertThat(out.peakHour()).isEqualTo(21);
     assertThat(out.dailyVisits()).hasSize(1);
@@ -107,7 +109,7 @@ class ProfileStatsServiceTest {
     stubVisits(1L);
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
-    ProfileStats out = service.publicStats("alice");
+    VisitStats out = service.publicStats("alice");
     assertThat(out.peakHour()).isNull();
     assertThat(out.timezone()).isEqualTo("Asia/Seoul");
   }
@@ -132,7 +134,7 @@ class ProfileStatsServiceTest {
     stubVisits(1L);
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
-    ProfileStats out = service.statsForOwner(1L);
+    VisitStats out = service.statsForOwner(1L);
     assertThat(out.timezone()).isEqualTo("Asia/Seoul");
   }
 
@@ -153,9 +155,9 @@ class ProfileStatsServiceTest {
             heat(99, 7, 8L));
     when(visits.findHeatmap(anyLong(), any())).thenReturn(rows);
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
-    ProfileStats out = service.statsForOwner(1L);
+    VisitStats out = service.statsForOwner(1L);
     assertThat(out.heatmap())
-        .extracting(ProfileStats.HeatmapCell::dayOfWeek)
+        .extracting(HeatmapCell::dayOfWeek)
         .containsExactly(
             "SUNDAY",
             "MONDAY",
@@ -191,15 +193,15 @@ class ProfileStatsServiceTest {
     when(breakdowns.topUtmSources(anyLong(), anyInt())).thenReturn(List.of());
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
-    ProfileStats out = service.statsForOwner(1L);
+    VisitStats out = service.statsForOwner(1L);
     assertThat(out.countryVisits())
-        .extracting(ProfileStats.CountryVisit::country)
+        .extracting(VisitStats.CountryVisit::country)
         .containsExactly("unknown");
     assertThat(out.deviceVisits())
-        .extracting(ProfileStats.DeviceVisit::device)
+        .extracting(VisitStats.DeviceVisit::device)
         .containsExactly("unknown");
     assertThat(out.browserVisits())
-        .extracting(ProfileStats.BrowserVisit::browser)
+        .extracting(VisitStats.BrowserVisit::browser)
         .containsExactly("unknown");
   }
 

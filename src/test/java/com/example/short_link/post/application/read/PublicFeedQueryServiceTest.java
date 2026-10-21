@@ -125,52 +125,74 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void searchUsesRelevanceQueryByDefault() {
-    when(postRepository.searchPublishedByRelevance(null, "spring", null, 0, 20))
+    when(postRepository.searchPublishedByRelevanceAt(null, "spring", null, 0, 21))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
     PublicFeedView view =
         service.feed(null, PublicFeedQuery.from("spring", null, "relevance", null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
-    verify(postRepository).searchPublishedByRelevance(null, "spring", null, 0, 20);
+    verify(postRepository).searchPublishedByRelevanceAt(null, "spring", null, 0, 21);
   }
 
   @Test
   void searchUsesRecentQueryWhenSortRecent() {
-    when(postRepository.searchPublished(null, "spring", null, 0, 20))
+    when(postRepository.searchPublishedAt(null, "spring", null, 0, 21))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
     service.feed(null, PublicFeedQuery.from("spring", null, "recent", null, 0, 20));
 
-    verify(postRepository).searchPublished(null, "spring", null, 0, 20);
+    verify(postRepository).searchPublishedAt(null, "spring", null, 0, 21);
   }
 
   @Test
   void searchUsesTrendingQueryWhenSorted() {
-    when(postRepository.searchPublishedTrending(null, "spring", null, 0, 20))
+    when(postRepository.searchPublishedTrendingAt(null, "spring", null, 0, 21))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
     service.feed(null, PublicFeedQuery.from("spring", null, "trending", null, 0, 20));
 
-    verify(postRepository).searchPublishedTrending(null, "spring", null, 0, 20);
+    verify(postRepository).searchPublishedTrendingAt(null, "spring", null, 0, 21);
+  }
+
+  @Test
+  void aSearchPageReadsOneMoreRowToKnowAnotherPageFollowsAndDoesNotShowIt() {
+    when(postRepository.searchPublishedAt(null, "spring", null, 2, 3))
+        .thenReturn(List.of(post(1L, "a"), post(1L, "b"), post(1L, "c")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from("spring", null, "recent", null, 1, 2));
+
+    assertThat(view.items()).extracting(PublicFeedItem::slug).containsExactly("a", "b");
+    assertThat(view.hasNext()).isTrue();
+  }
+
+  @Test
+  void aSearchPageThatFillsExactlyIsTheLast() {
+    when(postRepository.searchPublishedAt(null, "spring", null, 2, 3))
+        .thenReturn(List.of(post(1L, "a"), post(1L, "b")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from("spring", null, "recent", null, 1, 2));
+
+    assertThat(view.items()).extracting(PublicFeedItem::slug).containsExactly("a", "b");
+    assertThat(view.hasNext()).isFalse();
   }
 
   @Test
   void combinedSearchAndTagUsesOnlyTheSearchRepositoryQueries() {
-    when(postRepository.searchPublishedTrending(null, "spring", " ko ", 2, 8))
+    when(postRepository.searchPublishedTrendingAt(null, "spring", " ko ", 16, 9))
         .thenReturn(List.of());
 
     service.feed(null, PublicFeedQuery.from(" spring ", "java", "TRENDING", " ko ", 2, 8));
 
-    verify(postRepository).searchPublishedTrending(null, "spring", " ko ", 2, 8);
-    verify(postRepository).countSearchPublished(null, "spring", " ko ");
+    verify(postRepository).searchPublishedTrendingAt(null, "spring", " ko ", 16, 9);
     verifyNoMoreInteractions(postRepository);
   }
 
@@ -212,10 +234,9 @@ class PublicFeedQueryServiceTest {
     verify(postRepository).findPublishedByTag(7L, "java", 0, 20);
     verify(postRepository).findPublishedTrendingByTag(7L, "java", 0, 20);
     verify(postRepository, org.mockito.Mockito.times(2)).countPublishedByTag(7L, "java");
-    verify(postRepository).searchPublishedByRelevance(7L, "kotlin", null, 0, 20);
-    verify(postRepository).searchPublished(7L, "kotlin", null, 0, 20);
-    verify(postRepository).searchPublishedTrending(7L, "kotlin", null, 0, 20);
-    verify(postRepository, org.mockito.Mockito.times(3)).countSearchPublished(7L, "kotlin", null);
+    verify(postRepository).searchPublishedByRelevanceAt(7L, "kotlin", null, 0, 21);
+    verify(postRepository).searchPublishedAt(7L, "kotlin", null, 0, 21);
+    verify(postRepository).searchPublishedTrendingAt(7L, "kotlin", null, 0, 21);
     verifyNoMoreInteractions(postRepository);
   }
 
@@ -440,12 +461,10 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void searchPassesLanguageFilterToRepository() {
-    when(postRepository.searchPublished(null, "rust", "en", 0, 20)).thenReturn(List.of());
-    when(postRepository.countSearchPublished(null, "rust", "en")).thenReturn(0L);
+    when(postRepository.searchPublishedAt(null, "rust", "en", 0, 21)).thenReturn(List.of());
 
     service.feed(null, PublicFeedQuery.from("rust", null, "recent", "en", 0, 20));
 
-    verify(postRepository).searchPublished(null, "rust", "en", 0, 20);
-    verify(postRepository).countSearchPublished(null, "rust", "en");
+    verify(postRepository).searchPublishedAt(null, "rust", "en", 0, 21);
   }
 }

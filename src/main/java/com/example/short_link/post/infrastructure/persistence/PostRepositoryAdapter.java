@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,9 +30,10 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class PostRepositoryAdapter implements PostRepository {
 
-  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
+  static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
+  private final TrendingPostRanking ranking;
 
   @PersistenceContext private EntityManager em;
 
@@ -253,14 +255,33 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit) {
+    return trending(viewerId, null, offset, limit);
+  }
+
+  private List<PostEntity> trending(Long viewerId, String lang, long offset, int limit) {
     Instant now = Instant.now();
-    return jpa.findPublishedTrendingSince(
-        now.minus(TRENDING_WINDOW),
-        null,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        HeardSql.viewer(viewerId),
-        now,
-        new OffsetLimit(offset, limit));
+    List<Long> ranked = ranking.ids(lang);
+    List<PostEntity> shown =
+        ranked.isEmpty()
+            ? List.of()
+            : jpa.findPublishedRankedAmong(
+                ranked,
+                ranked.stream().map(String::valueOf).collect(Collectors.joining(",")),
+                lang,
+                DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+                HeardSql.viewer(viewerId),
+                now,
+                new OffsetLimit(offset, limit));
+    if (shown.size() < limit && ranked.size() >= TrendingPostRanking.SIZE) {
+      return jpa.findPublishedTrendingSince(
+          now.minus(TRENDING_WINDOW),
+          lang,
+          DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+          HeardSql.viewer(viewerId),
+          now,
+          new OffsetLimit(offset, limit));
+    }
+    return shown;
   }
 
   @Override
@@ -320,14 +341,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size) {
-    Instant now = Instant.now();
-    return jpa.findPublishedTrendingSince(
-        now.minus(TRENDING_WINDOW),
-        normLang(lang),
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        HeardSql.viewer(viewerId),
-        now,
-        PageRequest.of(page, size));
+    return trending(viewerId, normLang(lang), (long) page * size, size);
   }
 
   @Override
@@ -381,8 +395,8 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> searchPublishedByRelevance(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedByRelevanceAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedByRelevance(
         booleanMatch(query),
         matchWordBoundaries(query),
@@ -392,12 +406,12 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         Instant.now(),
-        PageRequest.of(page, size));
+        new OffsetLimit(offset, limit));
   }
 
   @Override
-  public List<PostEntity> searchPublished(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedRecent(
         booleanMatch(query),
         matchWordBoundaries(query),
@@ -407,12 +421,12 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         Instant.now(),
-        PageRequest.of(page, size));
+        new OffsetLimit(offset, limit));
   }
 
   @Override
-  public List<PostEntity> searchPublishedTrending(
-      Long viewerId, String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublishedTrendingAt(
+      Long viewerId, String query, String lang, long offset, int limit) {
     Instant now = Instant.now();
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
@@ -424,20 +438,7 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         HeardSql.viewer(viewerId),
         now,
-        PageRequest.of(page, size));
-  }
-
-  @Override
-  public long countSearchPublished(Long viewerId, String query, String lang) {
-    return jpa.countSearchPublished(
-        booleanMatch(query),
-        matchWordBoundaries(query),
-        likePattern(query),
-        titleLikeFallback(query),
-        titleWordFallback(query),
-        normLang(lang),
-        HeardSql.viewer(viewerId),
-        Instant.now());
+        new OffsetLimit(offset, limit));
   }
 
   private static String normLang(String lang) {

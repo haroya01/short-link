@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesDetailView;
 import com.example.short_link.post.application.read.SeriesQueryService;
@@ -60,7 +60,7 @@ class SeriesControllerTest {
 
   @Test
   void seriesStatsReturnsReaderBreakdown() throws Exception {
-    when(readStats.forSeries(any(), any())).thenReturn(PostReadStats.empty("Asia/Seoul"));
+    when(readStats.forSeries(any(), any())).thenReturn(VisitStats.empty("Asia/Seoul"));
 
     mvc.perform(
             get("/api/v1/series/5/stats").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))

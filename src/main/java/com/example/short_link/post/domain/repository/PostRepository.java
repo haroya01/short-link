@@ -107,15 +107,14 @@ public interface PostRepository {
 
   List<PostEntity> findPublishedQuotingNote(Long noteId, Long viewerId, int offset, int limit);
 
-  List<PostEntity> searchPublishedByRelevance(
-      Long viewerId, String query, String lang, int page, int size);
+  List<PostEntity> searchPublishedByRelevanceAt(
+      Long viewerId, String query, String lang, long offset, int limit);
 
-  List<PostEntity> searchPublished(Long viewerId, String query, String lang, int page, int size);
+  List<PostEntity> searchPublishedAt(
+      Long viewerId, String query, String lang, long offset, int limit);
 
-  List<PostEntity> searchPublishedTrending(
-      Long viewerId, String query, String lang, int page, int size);
-
-  long countSearchPublished(Long viewerId, String query, String lang);
+  List<PostEntity> searchPublishedTrendingAt(
+      Long viewerId, String query, String lang, long offset, int limit);
 
   List<PostEntity> findPublishedByAuthorsSeriesOrTags(
       Long viewerId,

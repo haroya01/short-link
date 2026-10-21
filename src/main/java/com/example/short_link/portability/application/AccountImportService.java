@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 // has (nothing is removed). The file is stored as lines and applied a batch at a time in the
 // background, so a big follow list does not hold the request; the member watches the counts.
 @Service
+@RequiredArgsConstructor
 public class AccountImportService {
 
   static final int MAX_LINES = 5000;
@@ -30,20 +31,6 @@ public class AccountImportService {
   private final ImportQueue queue;
   private final ImportRowApplier applier;
   private final Clock clock;
-
-  @Autowired
-  AccountImportService(
-      AccountImportRepository imports, ImportQueue queue, ImportRowApplier applier) {
-    this(imports, queue, applier, Clock.systemUTC());
-  }
-
-  AccountImportService(
-      AccountImportRepository imports, ImportQueue queue, ImportRowApplier applier, Clock clock) {
-    this.imports = imports;
-    this.queue = queue;
-    this.applier = applier;
-    this.clock = clock;
-  }
 
   public record ImportView(
       Long id,
@@ -105,7 +92,6 @@ public class AccountImportService {
     return imports.recent(userId, RECENT).stream().map(ImportView::of).toList();
   }
 
-  // Applies up to `limit` waiting lines and returns how many were taken.
   public int processBatch(int limit) {
     Instant now = clock.instant();
     List<AccountImportRepository.Claimed> claimed = queue.claim(limit, now);

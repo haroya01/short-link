@@ -31,7 +31,7 @@ class LinkClickNotificationListenerTest {
   private final LinkNotificationDispatcher dispatcher = mock(LinkNotificationDispatcher.class);
   private final RedisDistributedLock cooldown = mock(RedisDistributedLock.class);
   private final LinkNotificationProperties props =
-      new LinkNotificationProperties(true, null, true, null, 7, 10, 3.0);
+      new LinkNotificationProperties(true, true, 7, 10, 3.0);
 
   private final LinkClickNotificationListener listener =
       new LinkClickNotificationListener(links, totals, ranges, dispatcher, props, cooldown);

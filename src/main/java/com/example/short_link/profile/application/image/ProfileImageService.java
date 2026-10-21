@@ -4,6 +4,7 @@ import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
@@ -33,7 +34,7 @@ public class ProfileImageService {
   private final ObjectStorage objectStorage;
   private final ObjectStoragePublicUrls publicUrls;
 
-  public PresignResult presignUpload(Long userId, String contentType) {
+  public PresignedUpload presignUpload(Long userId, String contentType) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(objectStorage.isConfigured());
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
@@ -46,7 +47,7 @@ public class ProfileImageService {
     String uploadUrl =
         objectStorage.presignPut(
             key, normalized, Duration.ofSeconds(uploadPolicy.presignTtlSeconds()));
-    return new PresignResult(
+    return new PresignedUpload(
         uploadUrl,
         publicUrls.forKey(key),
         key,
@@ -83,14 +84,6 @@ public class ProfileImageService {
   private static void require(boolean condition) {
     if (!condition) throw new UserException(UserErrorCode.AVATAR_UNAVAILABLE);
   }
-
-  public record PresignResult(
-      String uploadUrl,
-      String publicUrl,
-      String key,
-      String contentType,
-      long maxBytes,
-      long expiresIn) {}
 
   public record CommitResult(String imageUrl, String key) {}
 }

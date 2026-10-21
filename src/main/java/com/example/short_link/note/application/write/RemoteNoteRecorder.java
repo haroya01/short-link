@@ -26,7 +26,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 // A reply to a member's note tells that member; everyone else it names hears of it as a mention.
 // Images stay on their server: the row keeps the remote address and no storage key.
 @Component
+@RequiredArgsConstructor
 class RemoteNoteRecorder implements RemoteNotes {
 
   private static final int MAX_WARNING = NoteEntity.MAX_WARNING_LENGTH;
@@ -45,28 +46,6 @@ class RemoteNoteRecorder implements RemoteNotes {
   private final NotePeopleReader people;
   private final ApplicationEventPublisher events;
   private final Clock clock;
-
-  @Autowired
-  RemoteNoteRecorder(
-      NoteRepository notes,
-      NoteMediaRepository media,
-      NotePeopleReader people,
-      ApplicationEventPublisher events) {
-    this(notes, media, people, events, Clock.systemUTC());
-  }
-
-  RemoteNoteRecorder(
-      NoteRepository notes,
-      NoteMediaRepository media,
-      NotePeopleReader people,
-      ApplicationEventPublisher events,
-      Clock clock) {
-    this.notes = notes;
-    this.media = media;
-    this.people = people;
-    this.events = events;
-    this.clock = clock;
-  }
 
   @Override
   @Transactional(readOnly = true)
