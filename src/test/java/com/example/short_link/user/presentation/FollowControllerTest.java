@@ -12,6 +12,7 @@ import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import com.example.short_link.user.application.read.FollowQueryService;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.application.write.FollowUseCase;
+import com.example.short_link.user.domain.repository.FollowListReader.Counts;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,8 @@ class FollowControllerTest {
 
   @Test
   void statusReturnsFollowState() throws Exception {
-    when(followQueryService.status(USER_ID, "bob")).thenReturn(FollowStatus.visible(true, 5L, 3L));
+    when(followQueryService.status(USER_ID, "bob"))
+        .thenReturn(FollowStatus.visible(true, new Counts(5, 3, 4, 2)));
 
     mvc.perform(
             get("/api/v1/users/bob/follow")
@@ -41,12 +43,15 @@ class FollowControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.following").value(true))
         .andExpect(jsonPath("$.followerCount").value(5))
-        .andExpect(jsonPath("$.followingCount").value(3));
+        .andExpect(jsonPath("$.followingCount").value(3))
+        .andExpect(jsonPath("$.remoteFollowerCount").value(4))
+        .andExpect(jsonPath("$.remoteFollowingCount").value(2));
   }
 
   @Test
   void followReturnsUpdatedStatus() throws Exception {
-    when(followUseCase.follow(USER_ID, "bob", null)).thenReturn(FollowStatus.visible(true, 1L, 0L));
+    when(followUseCase.follow(USER_ID, "bob", null))
+        .thenReturn(FollowStatus.visible(true, new Counts(1, 0, 0, 0)));
 
     mvc.perform(
             put("/api/v1/users/bob/follow")
@@ -57,7 +62,8 @@ class FollowControllerTest {
 
   @Test
   void followAttributesSourcePost() throws Exception {
-    when(followUseCase.follow(USER_ID, "bob", 42L)).thenReturn(FollowStatus.visible(true, 1L, 0L));
+    when(followUseCase.follow(USER_ID, "bob", 42L))
+        .thenReturn(FollowStatus.visible(true, new Counts(1, 0, 0, 0)));
 
     mvc.perform(
             put("/api/v1/users/bob/follow")
@@ -71,7 +77,8 @@ class FollowControllerTest {
 
   @Test
   void unfollowReturnsUpdatedStatus() throws Exception {
-    when(followUseCase.unfollow(USER_ID, "bob")).thenReturn(FollowStatus.visible(false, 0L, 0L));
+    when(followUseCase.unfollow(USER_ID, "bob"))
+        .thenReturn(FollowStatus.visible(false, new Counts(0, 0, 0, 0)));
 
     mvc.perform(
             delete("/api/v1/users/bob/follow")
@@ -90,7 +97,9 @@ class FollowControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.hideFollowerCount").value(true))
         .andExpect(jsonPath("$.followerCount").doesNotExist())
-        .andExpect(jsonPath("$.followingCount").doesNotExist());
+        .andExpect(jsonPath("$.followingCount").doesNotExist())
+        .andExpect(jsonPath("$.remoteFollowerCount").doesNotExist())
+        .andExpect(jsonPath("$.remoteFollowingCount").doesNotExist());
   }
 
   @Test
