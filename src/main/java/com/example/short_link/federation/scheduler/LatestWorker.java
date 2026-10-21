@@ -7,8 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
-// One low-priority thread of its own pulls the chosen servers' newest posts at start and then every
-// interval, whether or not anyone reads. It does not run where scheduling or pulling is off.
+// One low-priority thread of its own pulls the chosen servers' newest posts every interval, whether
+// or not anyone reads. The first pull waits one interval, so the day's count has been read at start
+// before it. It does not run where scheduling or pulling is off.
 @Slf4j
 @Component
 public class LatestWorker implements SmartLifecycle {
@@ -59,6 +60,12 @@ public class LatestWorker implements SmartLifecycle {
   private void work() {
     while (running) {
       try {
+        Thread.sleep(props.every());
+      } catch (InterruptedException stopping) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+      try {
         long started = System.nanoTime();
         int stored = latest.pull();
         log.info(
@@ -67,12 +74,6 @@ public class LatestWorker implements SmartLifecycle {
             (System.nanoTime() - started) / 1_000_000);
       } catch (RuntimeException failed) {
         log.warn("federation latest pull failed reason={}", failed.toString());
-      }
-      try {
-        Thread.sleep(props.every());
-      } catch (InterruptedException stopping) {
-        Thread.currentThread().interrupt();
-        return;
       }
     }
   }

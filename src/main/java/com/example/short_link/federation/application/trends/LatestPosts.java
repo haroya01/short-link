@@ -222,7 +222,7 @@ public class LatestPosts {
           byUri.values().stream()
               .sorted(
                   Comparator.comparing((Kept kept) -> kept.read().note().createdAt()).reversed())
-              .limit(store.room())
+              .limit(store.leftToday())
               .toList();
       int stored = 0;
       for (Kept kept : newest.reversed()) {

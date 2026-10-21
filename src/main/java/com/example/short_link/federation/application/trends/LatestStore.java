@@ -10,14 +10,16 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // A pulled post is kept as a relayed one is, under its author, and marked with the server it was
-// pulled from. The day's cap is its own, so pulls never use up what the relays may keep; the day's
-// count so far is read once, by the first pull.
+// pulled from. The day's cap is its own, so pulls never use up what the relays may keep.
 @Component
+@RequiredArgsConstructor
 class LatestStore {
 
   static final String PULLED = "pulled";
@@ -30,48 +32,19 @@ class LatestStore {
   private final LatestProperties props;
   private final TransactionTemplate transaction;
   private final Clock clock;
-  private volatile boolean counted;
 
-  @Autowired
-  LatestStore(
-      RemoteActorResolver resolver,
-      RemoteNoteIntake intake,
-      RemoteNoteParser parser,
-      FederationRelayedNoteRepository relayed,
-      RelayTally tally,
-      LatestProperties props,
-      TransactionTemplate transaction) {
-    this(resolver, intake, parser, relayed, tally, props, transaction, Clock.systemUTC());
-  }
-
-  LatestStore(
-      RemoteActorResolver resolver,
-      RemoteNoteIntake intake,
-      RemoteNoteParser parser,
-      FederationRelayedNoteRepository relayed,
-      RelayTally tally,
-      LatestProperties props,
-      TransactionTemplate transaction,
-      Clock clock) {
-    this.resolver = resolver;
-    this.intake = intake;
-    this.parser = parser;
-    this.relayed = relayed;
-    this.tally = tally;
-    this.props = props;
-    this.transaction = transaction;
-    this.clock = clock;
+  @EventListener(ApplicationReadyEvent.class)
+  public void load() {
+    if (props.pulling()) {
+      tally.seed(PULLED, relayed.pulledSince(tally.dayStart()));
+    }
   }
 
   Optional<Instant> newest(String host) {
     return relayed.newestPulled(host);
   }
 
-  long room() {
-    if (!counted) {
-      tally.seed(PULLED, relayed.pulledSince(tally.dayStart()));
-      counted = true;
-    }
+  long leftToday() {
     return Math.max(0, props.perDay() - tally.today(PULLED));
   }
 
@@ -82,7 +55,7 @@ class LatestStore {
   }
 
   private String kept(String host, TrendingStatusReader.Read read) {
-    if (room() == 0) {
+    if (leftToday() == 0) {
       return "pull-cap";
     }
     RemoteNoteParser.Parsed note = parser.parse(read.object(), read.object());

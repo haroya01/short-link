@@ -299,7 +299,7 @@ class LatestPostsTest {
   void theFirstPullFillsBackPageByPageUntilItMeetsTheNewestPostKeptFromThatServer() {
     when(store.newest("a.example")).thenReturn(Optional.of(Instant.parse("2026-10-19T23:47:00Z")));
     when(store.newest("b.example")).thenReturn(Optional.empty());
-    when(store.room()).thenReturn(100L);
+    when(store.leftToday()).thenReturn(100L);
     when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
     answers(
         timeline("a.example", 2, ""),
@@ -343,7 +343,7 @@ class LatestPostsTest {
   @Test
   void laterPullsAskOnlyForWhatCameAfterTheNewestPostSeenWhetherOrNotAnyoneReads() {
     when(store.newest("a.example")).thenReturn(Optional.empty());
-    when(store.room()).thenReturn(100L);
+    when(store.leftToday()).thenReturn(100L);
     when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
     answers(timeline("a.example", 2, ""), post("a.example", 9, "2026-10-19T23:50:00Z"));
     answers(
@@ -372,7 +372,7 @@ class LatestPostsTest {
   @Test
   void pastTheDaysCapTheNewestAreKeptOldestFirst() {
     when(store.newest("a.example")).thenReturn(Optional.empty());
-    when(store.room()).thenReturn(2L);
+    when(store.leftToday()).thenReturn(2L);
     when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
     answers(
         timeline("a.example", 3, ""),
@@ -391,7 +391,7 @@ class LatestPostsTest {
   void aPullKeepsNothingFromABlockedServerOrAnAccountThatAsksNotToBeFoundOrNamesAMember() {
     when(serverBlocks.severityFor("b.example")).thenReturn(Optional.of(ServerBlockSeverity.LIMIT));
     when(store.newest("a.example")).thenReturn(Optional.empty());
-    when(store.room()).thenReturn(100L);
+    when(store.leftToday()).thenReturn(100L);
     when(store.keep(anyString(), any())).thenReturn(LatestStore.PULLED);
     ObjectNode hidden = post("a.example", 8, "2026-10-19T23:49:00Z");
     ((ObjectNode) hidden.path("account")).put("discoverable", false);

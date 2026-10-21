@@ -91,7 +91,6 @@ class LatestStoreTest {
 
   @Test
   void aPulledPostIsKeptUnderItsAuthorAndMarkedWithItsServerInTheSameTransaction() {
-    when(relayed.pulledSince(any())).thenReturn(0L);
     when(resolver.byActorUri(ALICE)).thenReturn(Optional.of(actor(HOST)));
     when(intake.relayed(any(), any())).thenReturn(Optional.of(42L));
 
@@ -109,7 +108,6 @@ class LatestStoreTest {
 
   @Test
   void anAuthorThatCannotBeFetchedOrLivesElsewhereKeepsNothing() {
-    when(relayed.pulledSince(any())).thenReturn(0L);
     when(resolver.byActorUri(ALICE))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(actor("other.example")));
@@ -121,15 +119,16 @@ class LatestStoreTest {
   }
 
   @Test
-  void aDaysWorthCountedOnceFromWhatIsKeptEndsThePullsUntilTomorrow() {
+  void aDaysWorthCountedAtStartFromWhatIsKeptEndsThePullsUntilTomorrow() {
     when(relayed.pulledSince(tally.dayStart())).thenReturn(1L);
     when(resolver.byActorUri(ALICE)).thenReturn(Optional.of(actor(HOST)));
     when(intake.relayed(any(), any())).thenReturn(Optional.of(42L));
     LatestStore store = store(2);
 
-    assertThat(store.room()).isEqualTo(1);
+    store.load();
+    assertThat(store.leftToday()).isEqualTo(1);
     assertThat(store.keep(HOST, read(HOST))).isEqualTo("pulled");
-    assertThat(store.room()).isZero();
+    assertThat(store.leftToday()).isZero();
     assertThat(store.keep(HOST, read(HOST))).isEqualTo("pull-cap");
 
     verify(relayed, times(1)).pulledSince(any());
