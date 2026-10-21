@@ -549,9 +549,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   // (the blog's tag follows) join in as originals, again never from someone on either side of a
   // block. A followed author's direct note shows only to its recipients, and direct notes naming
   // the viewer join from anyone, as Mastodon's home timeline carries them. The notes of a series
-  // the
-  // viewer subscribes to join as originals where the series page shows them, unless the viewer
-  // does not hear their writer.
+  // the viewer subscribes to join as originals where the series page shows them, unless the
+  // viewer does not hear their writer.
   @Override
   public List<NoteFeedRow> following(
       Collection<Long> authorIds, Long viewerId, int offset, int limit) {
