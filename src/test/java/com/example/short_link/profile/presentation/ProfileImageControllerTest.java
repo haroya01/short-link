@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.profile.application.image.ProfileImageService;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -48,7 +49,7 @@ class ProfileImageControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(imageService.presignUpload(eq(user.getId()), eq("image/jpeg")))
         .thenReturn(
-            new ProfileImageService.PresignResult(
+            new PresignedUpload(
                 "https://signed", "https://cdn/profile-images/k", "k", "image/jpeg", 1000, 300));
 
     mvc.perform(

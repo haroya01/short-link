@@ -1,6 +1,6 @@
 package com.example.short_link.profile.presentation.visit;
 
-import com.example.short_link.profile.application.visit.ProfileStats;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.profile.application.visit.ProfileStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +18,7 @@ public class PublicProfileStatsController {
   private final ProfileStatsService stats;
 
   @GetMapping("/{username}/stats")
-  public ProfileStats stats(@PathVariable String username) {
+  public VisitStats stats(@PathVariable String username) {
     return stats.publicStats(username);
   }
 }

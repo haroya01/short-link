@@ -71,9 +71,7 @@ class NoteQueryServiceTest {
   }
 
   private static NoteView view(Long id, Long inReplyTo, Long likeCount) {
-    return new NoteView(
-        id, "n" + id, null, null, likeCount, null, ME, List.of(), null, inReplyTo, 0, null, null,
-        null, null);
+    return NoteViewFixtures.note(id, "n" + id, ME, inReplyTo, likeCount);
   }
 
   @Test

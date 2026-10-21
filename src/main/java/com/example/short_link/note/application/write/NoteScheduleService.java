@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 // minutes ahead, at most 300 waiting and 25 on one UTC day. A note that can no longer be posted
 // stays with the reason instead of vanishing.
 @Service
+@RequiredArgsConstructor
 public class NoteScheduleService {
 
   static final Duration LEAD = Duration.ofMinutes(5);
@@ -45,28 +46,6 @@ public class NoteScheduleService {
       Long quotedNoteId,
       Long quotedPostId,
       String failure) {}
-
-  @Autowired
-  public NoteScheduleService(
-      NoteScheduleRepository schedules,
-      NoteCommandService command,
-      JsonMapper json,
-      TransactionTemplate transaction) {
-    this(schedules, command, json, transaction, Clock.systemUTC());
-  }
-
-  NoteScheduleService(
-      NoteScheduleRepository schedules,
-      NoteCommandService command,
-      JsonMapper json,
-      TransactionTemplate transaction,
-      Clock clock) {
-    this.schedules = schedules;
-    this.command = command;
-    this.json = json;
-    this.transaction = transaction;
-    this.clock = clock;
-  }
 
   @Transactional
   public View schedule(Long userId, NoteDraft draft, Instant at) {

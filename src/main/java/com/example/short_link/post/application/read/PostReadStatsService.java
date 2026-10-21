@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.post.application.write.SeriesOwnership;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostReadStatsReader;
@@ -34,7 +36,7 @@ public class PostReadStatsService {
   private final UserRepository userRepository;
 
   @Transactional(readOnly = true)
-  public PostReadStats forPost(Long userId, Long postId) {
+  public VisitStats forPost(Long userId, Long postId) {
     PostEntity post =
         postRepository
             .findById(postId)
@@ -46,7 +48,7 @@ public class PostReadStatsService {
   }
 
   @Transactional(readOnly = true)
-  public PostReadStats forSeries(Long userId, Long seriesId) {
+  public VisitStats forSeries(Long userId, Long seriesId) {
     seriesOwnership.requireOwned(userId, seriesId);
     List<Long> postIds =
         postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId).stream()
@@ -55,11 +57,11 @@ public class PostReadStatsService {
     return compute(postIds, userId);
   }
 
-  private PostReadStats compute(Collection<Long> postIds, Long ownerUserId) {
+  private VisitStats compute(Collection<Long> postIds, Long ownerUserId) {
     ZoneId zone = safeZone(ownerTimezone(ownerUserId));
     if (postIds.isEmpty()) {
       // An empty series must short-circuit before SQL IN ().
-      return PostReadStats.empty(zone.getId());
+      return VisitStats.empty(zone.getId());
     }
     String tz = currentOffset(zone);
 
@@ -71,65 +73,62 @@ public class PostReadStatsService {
     Instant lastAt = reader.lastViewedAt(postIds);
 
     Instant now = Instant.now();
-    List<PostReadStats.DailyVisit> daily =
+    List<VisitStats.DailyVisit> daily =
         reader.daily(postIds, now.minus(DAILY_WINDOW), tz).stream()
-            .map(r -> new PostReadStats.DailyVisit(r.getDay(), r.getCount()))
+            .map(r -> new VisitStats.DailyVisit(r.getDay(), r.getCount()))
             .toList();
 
-    List<PostReadStats.HourVisit> hourly =
+    List<VisitStats.HourVisit> hourly =
         reader.hourly(postIds, tz).stream()
-            .map(r -> new PostReadStats.HourVisit(r.getHour(), r.getCount()))
+            .map(r -> new VisitStats.HourVisit(r.getHour(), r.getCount()))
             .toList();
     Integer peakHour =
         hourly.stream()
             .max((a, b) -> Long.compare(a.count(), b.count()))
-            .map(PostReadStats.HourVisit::hour)
+            .map(VisitStats.HourVisit::hour)
             .orElse(null);
 
-    List<PostReadStats.HeatmapCell> heatmap =
+    List<HeatmapCell> heatmap =
         reader.heatmap(postIds, tz).stream()
-            .map(
-                r ->
-                    new PostReadStats.HeatmapCell(
-                        dayOfWeekName(r.getDow()), r.getHour(), r.getCount()))
+            .map(r -> new HeatmapCell(dayOfWeekName(r.getDow()), r.getHour(), r.getCount()))
             .toList();
 
-    List<PostReadStats.CountryVisit> countries =
+    List<VisitStats.CountryVisit> countries =
         reader.topCountries(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
+            .map(r -> new VisitStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
             .toList();
 
-    List<PostReadStats.DeviceVisit> devices =
+    List<VisitStats.DeviceVisit> devices =
         reader.topDevices(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount()))
+            .map(r -> new VisitStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount()))
             .toList();
 
-    List<PostReadStats.BrowserVisit> browsers =
+    List<VisitStats.BrowserVisit> browsers =
         reader.topBrowsers(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
+            .map(r -> new VisitStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
-    List<PostReadStats.ReferrerHostVisit> referrerHosts =
+    List<VisitStats.ReferrerHostVisit> referrerHosts =
         reader.topReferrerHosts(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.ReferrerHostVisit(r.getHost(), r.getCount()))
+            .map(r -> new VisitStats.ReferrerHostVisit(r.getHost(), r.getCount()))
             .toList();
 
-    List<PostReadStats.SourceChannelVisit> channels =
+    List<VisitStats.SourceChannelVisit> channels =
         reader.topSourceChannels(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.SourceChannelVisit(r.getSource(), r.getCount()))
+            .map(r -> new VisitStats.SourceChannelVisit(r.getSource(), r.getCount()))
             .toList();
 
-    List<PostReadStats.UtmCampaignVisit> utmCampaigns =
+    List<VisitStats.UtmCampaignVisit> utmCampaigns =
         reader.topUtmCampaigns(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
+            .map(r -> new VisitStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
             .toList();
 
-    List<PostReadStats.UtmSourceVisit> utmSources =
+    List<VisitStats.UtmSourceVisit> utmSources =
         reader.topUtmSources(postIds, TOP_SIZE).stream()
-            .map(r -> new PostReadStats.UtmSourceVisit(r.getSource(), r.getCount()))
+            .map(r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount()))
             .toList();
 
-    return new PostReadStats(
+    return new VisitStats(
         zone.getId(),
         total,
         human,

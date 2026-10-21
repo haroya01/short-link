@@ -9,6 +9,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
 import com.example.short_link.post.application.write.SeriesOwnership;
 import com.example.short_link.post.domain.PostEntity;
@@ -59,7 +61,7 @@ class PostReadStatsServiceTest {
     when(reader.countBot(any())).thenReturn(20L);
     when(reader.countUnique(any())).thenReturn(80L);
 
-    PostReadStats stats = service.forPost(USER, 1L);
+    VisitStats stats = service.forPost(USER, 1L);
 
     assertThat(stats.totalVisits()).isEqualTo(120L);
     assertThat(stats.humanVisits()).isEqualTo(100L);
@@ -106,11 +108,11 @@ class PostReadStatsServiceTest {
     when(c.getCount()).thenReturn(7L);
     when(reader.topCountries(any(), anyInt())).thenReturn(List.of(c));
 
-    PostReadStats stats = service.forPost(USER, 1L);
+    VisitStats stats = service.forPost(USER, 1L);
 
     assertThat(stats.peakHour()).isEqualTo(21);
     assertThat(stats.heatmap())
-        .extracting(PostReadStats.HeatmapCell::dayOfWeek)
+        .extracting(HeatmapCell::dayOfWeek)
         .containsExactly(
             "UNKNOWN",
             "SUNDAY",
@@ -128,7 +130,7 @@ class PostReadStatsServiceTest {
     when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
     when(userRepository.findById(USER)).thenReturn(Optional.empty());
 
-    PostReadStats stats = service.forPost(USER, 1L);
+    VisitStats stats = service.forPost(USER, 1L);
 
     assertThat(stats.timezone()).isEqualTo("Asia/Seoul");
   }
@@ -158,7 +160,7 @@ class PostReadStatsServiceTest {
     when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(5L)).thenReturn(List.of(m1, m2));
     when(reader.countViews(any())).thenReturn(300L);
 
-    PostReadStats stats = service.forSeries(USER, 5L);
+    VisitStats stats = service.forSeries(USER, 5L);
 
     verify(seriesOwnership).requireOwned(USER, 5L);
     assertThat(stats.totalVisits()).isEqualTo(300L);
@@ -168,7 +170,7 @@ class PostReadStatsServiceTest {
   void forSeriesEmptyWhenNoMembers() {
     when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(5L)).thenReturn(List.of());
 
-    PostReadStats stats = service.forSeries(USER, 5L);
+    VisitStats stats = service.forSeries(USER, 5L);
 
     verify(seriesOwnership).requireOwned(USER, 5L);
     assertThat(stats.totalVisits()).isZero();

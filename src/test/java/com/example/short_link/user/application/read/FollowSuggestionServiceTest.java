@@ -3,7 +3,6 @@ package com.example.short_link.user.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.domain.UserEntity;
@@ -57,11 +56,5 @@ class FollowSuggestionServiceTest {
     service.dismiss(7L, "sori");
     verify(reader).dismiss(7L, 2L);
     assertThatThrownBy(() -> service.dismiss(7L, "ghost")).isInstanceOf(UserException.class);
-  }
-
-  @Test
-  void theProductionConstructorUsesTheSystemClock() {
-    assertThat(new FollowSuggestionService(reader, users)).isNotNull();
-    verifyNoInteractions(reader);
   }
 }

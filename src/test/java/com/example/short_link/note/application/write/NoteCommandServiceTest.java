@@ -30,6 +30,7 @@ import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -1017,10 +1018,7 @@ class NoteCommandServiceTest {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
-    NoteView edited =
-        new NoteView(
-            1L, "new", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null, null,
-            null);
+    NoteView edited = NoteViewFixtures.note(1L, "new", WRITER, null, 0L);
     when(views.of(List.of(mine), 7L)).thenReturn(List.of(edited));
 
     assertThat(service().edit(7L, 1L, " new ", null, null)).isEqualTo(edited);
@@ -1055,11 +1053,7 @@ class NoteCommandServiceTest {
     when(notes.findById(2L)).thenReturn(Optional.of(reply));
     when(media.findByNoteIds(List.of(2L))).thenReturn(List.of());
     when(views.of(List.of(reply), 7L))
-        .thenReturn(
-            List.of(
-                new NoteView(
-                    2L, "고친 답", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null,
-                    null, null)));
+        .thenReturn(List.of(NoteViewFixtures.note(2L, "고친 답", WRITER, null, 0L)));
 
     service().edit(7L, 2L, "고친 답", null, null);
     service().delete(7L, 2L);

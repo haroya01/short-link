@@ -1,10 +1,10 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
 import com.example.short_link.post.application.read.PostPerformanceResult;
-import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesAnalyticsDetail;
 import com.example.short_link.post.application.read.SeriesAnalyticsRow;
@@ -63,7 +63,7 @@ public class PostAnalyticsController {
   }
 
   @GetMapping("/{id}/stats")
-  public PostReadStats postStats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+  public VisitStats postStats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return readStats.forPost(userId, id);
   }
 }

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.write.avatar.AvatarService;
 import com.example.short_link.user.domain.UserEntity;
@@ -54,7 +55,7 @@ class AvatarControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(service.presignUpload(eq(user.getId()), eq("image/jpeg")))
         .thenReturn(
-            new AvatarService.PresignResult(
+            new PresignedUpload(
                 "https://signed",
                 "https://cdn/avatars/1/x.jpg",
                 "avatars/1/x.jpg",

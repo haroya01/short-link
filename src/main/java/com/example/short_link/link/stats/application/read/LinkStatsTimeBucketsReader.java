@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.application.read;
 
+import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
@@ -72,7 +73,7 @@ class LinkStatsTimeBucketsReader {
             .sorted(Map.Entry.comparingByKey())
             .map(e -> new LinkStats.DayOfWeekClick(mapDayOfWeek(e.getKey()), e.getValue()))
             .toList();
-    List<LinkStats.HeatmapCell> heatmap =
+    List<HeatmapCell> heatmap =
         sum(
                 lifetime,
                 p -> clickTime.findHeatmap(id, p.from(), p.until(), p.offset()),
@@ -83,7 +84,7 @@ class LinkStatsTimeBucketsReader {
             .sorted(Map.Entry.comparingByKey(DowHour.ORDER))
             .map(
                 e ->
-                    new LinkStats.HeatmapCell(
+                    new HeatmapCell(
                         mapDayOfWeek(e.getKey().dow()), e.getKey().hour(), e.getValue()))
             .toList();
     return new TimeBuckets(daily, hourly, peakHour, dayOfWeek, heatmap);
@@ -126,5 +127,5 @@ class LinkStatsTimeBucketsReader {
       List<LinkStats.HourClick> hourly,
       Integer peakHour,
       List<LinkStats.DayOfWeekClick> dayOfWeek,
-      List<LinkStats.HeatmapCell> heatmap) {}
+      List<HeatmapCell> heatmap) {}
 }

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.write.avatar.BannerService;
 import com.example.short_link.user.domain.UserEntity;
@@ -50,7 +51,7 @@ class BannerControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(service.presignUpload(eq(user.getId()), eq("image/jpeg")))
         .thenReturn(
-            new BannerService.PresignResult(
+            new PresignedUpload(
                 "https://signed",
                 "https://cdn/banners/1/x.jpg",
                 "banners/1/x.jpg",

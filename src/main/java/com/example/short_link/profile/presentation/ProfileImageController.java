@@ -1,5 +1,6 @@
 package com.example.short_link.profile.presentation;
 
+import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.profile.application.image.ProfileImageService;
 import com.example.short_link.profile.presentation.request.ProfileImageCommitRequest;
 import com.example.short_link.profile.presentation.request.ProfileImagePresignRequest;
@@ -20,7 +21,7 @@ public class ProfileImageController {
   private final ProfileImageService service;
 
   @PostMapping("/presigned-url")
-  public ProfileImageService.PresignResult presign(
+  public PresignedUpload presign(
       @AuthenticationPrincipal Long userId,
       @Valid @RequestBody ProfileImagePresignRequest request) {
     return service.presignUpload(userId, request.contentType());
