@@ -139,6 +139,11 @@ short-link:
     retention-days: ${BEHAVIOR_EVENT_RETENTION_DAYS:90}
     cleanup-cron: ${BEHAVIOR_EVENT_CLEANUP_CRON:0 50 4 * * *}
     cleanup-enabled: ${BEHAVIOR_EVENT_CLEANUP_ENABLED:true}
+  click-retention:
+    raw-days: ${CLICK_RAW_RETENTION_DAYS:90}
+    cron: ${CLICK_ROLLUP_CRON:0 20 4 * * *}
+    rollup-enabled: ${CLICK_ROLLUP_ENABLED:true}
+    delete-batch: ${CLICK_ROLLUP_DELETE_BATCH:1000}
   user-deletion:
     grace-days: ${USER_DELETION_GRACE_DAYS:30}
     cleanup-cron: ${USER_DELETION_CLEANUP_CRON:0 30 5 * * *}

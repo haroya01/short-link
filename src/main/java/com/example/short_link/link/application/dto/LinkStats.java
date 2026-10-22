@@ -16,6 +16,8 @@ public record LinkStats(
     long humanClicks,
     long botClicks,
     long uniqueClicks,
+    int rawRetentionDays,
+    Instant rawSince,
     long previewClicks,
     long profileClicks,
     Instant firstClickAt,

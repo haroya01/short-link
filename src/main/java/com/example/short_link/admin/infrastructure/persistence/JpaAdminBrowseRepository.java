@@ -13,6 +13,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long> {
 
+  String LINK_CLICKS =
+      "((SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id AND c.clickedAt >= "
+          + "(SELECT s.rolledUntil FROM ClickRollupStateEntity s)) + "
+          + "(SELECT COALESCE(SUM(h.humans + h.bots), 0) FROM ClickHourlyEntity h "
+          + "WHERE h.linkId = l.id))";
+
   @Query(
       value =
           "SELECT u.id AS id, u.email AS email, u.username AS username, "
@@ -43,7 +49,8 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
       value =
           "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
               + "l.userId AS ownerId, u.email AS ownerEmail, "
-              + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS clickCount, "
+              + LINK_CLICKS
+              + " AS clickCount, "
               + "l.createdAt AS createdAt, l.expiresAt AS expiresAt, "
               + "l.maxViews AS maxViews, l.viewCount AS viewCount, "
               + "CASE WHEN l.passwordHash IS NOT NULL THEN 1 ELSE 0 END AS passwordProtected, "
@@ -70,7 +77,8 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
       value =
           "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
               + "l.userId AS ownerId, u.email AS ownerEmail, "
-              + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS clickCount, "
+              + LINK_CLICKS
+              + " AS clickCount, "
               + "l.createdAt AS createdAt, l.expiresAt AS expiresAt, "
               + "l.maxViews AS maxViews, l.viewCount AS viewCount, "
               + "CASE WHEN l.passwordHash IS NOT NULL THEN 1 ELSE 0 END AS passwordProtected, "
@@ -80,7 +88,9 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
               + "WHERE (:ownerId IS NULL OR l.userId = :ownerId) "
               + "AND (:urlPattern IS NULL OR LOWER(l.originalUrl) LIKE :urlPattern "
               + "OR (:exactCode IS NOT NULL AND l.shortCode = :exactCode)) "
-              + "ORDER BY (SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) DESC, "
+              + "ORDER BY "
+              + LINK_CLICKS
+              + " DESC, "
               + "l.createdAt DESC",
       countQuery =
           "SELECT COUNT(l) FROM LinkEntity l "
@@ -96,7 +106,8 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
   @Query(
       "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
           + "l.userId AS ownerId, u.email AS ownerEmail, "
-          + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS clickCount, "
+          + LINK_CLICKS
+          + " AS clickCount, "
           + "l.createdAt AS createdAt, l.expiresAt AS expiresAt, "
           + "l.maxViews AS maxViews, l.viewCount AS viewCount, "
           + "CASE WHEN l.passwordHash IS NOT NULL THEN 1 ELSE 0 END AS passwordProtected, "

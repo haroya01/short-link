@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.ClickRollup;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.AsnClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BotClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BrowserClickRow;
@@ -30,147 +31,261 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaClickDimensionReadRepository extends Repository<ClickEventEntity, Long> {
 
+  String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
+
   @Query(
-      "SELECT c.referrer AS referrer, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.referrer IS NOT NULL "
-          + "GROUP BY c.referrer ORDER BY count DESC")
+      value =
+          "SELECT x AS referrer, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT referrer AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND referrer IS NOT NULL"
+              + RAW
+              + " GROUP BY referrer UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REFERRER
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<ReferrerClickRow> findReferrerClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.referrerHost AS host, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.referrerHost IS NOT NULL "
-          + "GROUP BY c.referrerHost ORDER BY count DESC")
+      value =
+          "SELECT x AS host, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT referrer_host AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL"
+              + RAW
+              + " GROUP BY referrer_host UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REFERRER_HOST
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<ReferrerHostClickRow> findReferrerHostClicks(
       @Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.deviceClass AS device, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY c.deviceClass ORDER BY count DESC")
+      value =
+          "SELECT x AS device, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT device_class AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
+              + RAW
+              + " GROUP BY device_class UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.DEVICE
+              + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<DeviceClickRow> findDeviceClicks(@Param("linkId") Long linkId);
 
   @Query(
-      "SELECT c.osName AS os, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY c.osName ORDER BY count DESC")
+      value =
+          "SELECT x AS os, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT os_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
+              + RAW
+              + " GROUP BY os_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.OS
+              + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<OsClickRow> findOsClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.browserName AS browser, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY c.browserName ORDER BY count DESC")
+      value =
+          "SELECT x AS browser, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT browser_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
+              + RAW
+              + " GROUP BY browser_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.BROWSER
+              + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<BrowserClickRow> findBrowserClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.botName AS bot, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = true "
-          + "GROUP BY c.botName ORDER BY count DESC")
+      value =
+          "SELECT x AS bot, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT bot_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 1"
+              + RAW
+              + " GROUP BY bot_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.BOT_NAME
+              + " AND is_bot = 1 GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<BotClickRow> findBotClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.utmCampaign AS campaign, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.utmCampaign IS NOT NULL "
-          + "GROUP BY c.utmCampaign ORDER BY count DESC")
+      value =
+          "SELECT x AS campaign, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT utm_campaign AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_campaign IS NOT NULL"
+              + RAW
+              + " GROUP BY utm_campaign UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_CAMPAIGN
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<UtmCampaignClickRow> findUtmCampaignClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.utmSource AS source, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.utmSource IS NOT NULL "
-          + "GROUP BY c.utmSource ORDER BY count DESC")
+      value =
+          "SELECT x AS source, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT utm_source AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_source IS NOT NULL"
+              + RAW
+              + " GROUP BY utm_source UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_SOURCE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<UtmSourceClickRow> findUtmSourceClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.utmMedium AS medium, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.utmMedium IS NOT NULL "
-          + "GROUP BY c.utmMedium ORDER BY count DESC")
+      value =
+          "SELECT x AS medium, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT utm_medium AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_medium IS NOT NULL"
+              + RAW
+              + " GROUP BY utm_medium UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_MEDIUM
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<UtmMediumClickRow> findUtmMediumClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.utmContent AS content, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.utmContent IS NOT NULL "
-          + "GROUP BY c.utmContent ORDER BY count DESC")
+      value =
+          "SELECT x AS content, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT utm_content AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_content IS NOT NULL"
+              + RAW
+              + " GROUP BY utm_content UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_CONTENT
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.utmTerm AS term, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.utmTerm IS NOT NULL "
-          + "GROUP BY c.utmTerm ORDER BY count DESC")
+      value =
+          "SELECT x AS term, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT utm_term AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_term IS NOT NULL"
+              + RAW
+              + " GROUP BY utm_term UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_TERM
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<UtmTermClickRow> findUtmTermClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   // 인앱 브라우저는 사람이다 — bot = false 로 사람 클릭만 세고, client_app IS NULL(일반 브라우저)은 뺀다.
   @Query(
-      "SELECT c.clientApp AS app, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.clientApp IS NOT NULL "
-          + "GROUP BY c.clientApp ORDER BY count DESC")
+      value =
+          "SELECT x AS app, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT client_app AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND client_app IS NOT NULL"
+              + RAW
+              + " GROUP BY client_app UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.CLIENT_APP
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<ClientAppClickRow> findClientAppClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.fetchSite AS fetchSite, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.fetchSite IS NOT NULL "
-          + "GROUP BY c.fetchSite ORDER BY count DESC")
+      value =
+          "SELECT x AS fetchSite, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT fetch_site AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND fetch_site IS NOT NULL"
+              + RAW
+              + " GROUP BY fetch_site UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.FETCH_SITE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<FetchSiteClickRow> findFetchSiteClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.postId AS postId, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.postId IS NOT NULL "
-          + "GROUP BY c.postId ORDER BY count DESC")
+      value =
+          "SELECT x AS postId, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT post_id AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND post_id IS NOT NULL"
+              + RAW
+              + " GROUP BY post_id UNION ALL SELECT num, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.POST
+              + " AND is_bot = 0 AND num IS NOT NULL GROUP BY num) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<PostClickRow> findPostClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.sourceChannel AS source, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.sourceChannel IS NOT NULL "
-          + "GROUP BY c.sourceChannel ORDER BY count DESC")
+      value =
+          "SELECT x AS source, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT source_channel AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND source_channel IS NOT NULL"
+              + RAW
+              + " GROUP BY source_channel UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.SOURCE_CHANNEL
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<SourceChannelClickRow> findSourceChannelClicks(
       @Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.destinationId AS destinationId, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY c.destinationId ORDER BY count DESC")
+      value =
+          "SELECT x AS destinationId, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT destination_id AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
+              + RAW
+              + " GROUP BY destination_id UNION ALL SELECT num, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.DESTINATION
+              + " AND is_bot = 0 GROUP BY num) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<DestinationClickRow> findDestinationClicks(@Param("linkId") Long linkId);
 
   @Query(
-      "SELECT c.countryCode AS country, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY c.countryCode ORDER BY count DESC")
+      value =
+          "SELECT x AS country, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT country_code AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
+              + RAW
+              + " GROUP BY country_code UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.COUNTRY
+              + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<CountryClickRow> findCountryClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.regionName AS region, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.regionName IS NOT NULL "
-          + "GROUP BY c.regionName ORDER BY count DESC")
+      value =
+          "SELECT x AS region, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT region_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND region_name IS NOT NULL"
+              + RAW
+              + " GROUP BY region_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REGION
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<RegionClickRow> findRegionClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.cityName AS city, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.cityName IS NOT NULL "
-          + "GROUP BY c.cityName ORDER BY count DESC")
+      value =
+          "SELECT x AS city, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT city_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND city_name IS NOT NULL"
+              + RAW
+              + " GROUP BY city_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.CITY
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<CityClickRow> findCityClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.language AS language, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.language IS NOT NULL "
-          + "GROUP BY c.language ORDER BY count DESC")
+      value =
+          "SELECT x AS language, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT language AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND language IS NOT NULL"
+              + RAW
+              + " GROUP BY language UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.LANGUAGE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
+      nativeQuery = true)
   List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
-      "SELECT c.asn AS asn, c.asnOrg AS organization, COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId "
-          + "AND c.asnOrg IS NOT NULL "
-          + "GROUP BY c.asn, c.asnOrg ORDER BY count DESC")
+      value =
+          "SELECT asn, organization, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT asn, asn_org AS organization, COUNT(*) AS n FROM click_event "
+              + "WHERE link_id = :linkId AND asn_org IS NOT NULL"
+              + RAW
+              + " GROUP BY asn, asn_org UNION ALL SELECT num, value, SUM(clicks) "
+              + "FROM click_daily_dim WHERE link_id = :linkId AND dim = "
+              + ClickRollup.ASN
+              + " GROUP BY num, value) u GROUP BY asn, organization ORDER BY count DESC",
+      nativeQuery = true)
   List<AsnClickRow> findAsnClicks(@Param("linkId") Long linkId, Pageable pageable);
 }

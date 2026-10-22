@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.application.read;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.stats.application.ClickRetentionProperties;
 import com.example.short_link.link.stats.application.LinkInsights;
 import java.time.Clock;
 import java.time.Instant;
@@ -21,6 +22,7 @@ class LinkStatsReportAssembler {
   private final LinkStatsLifecycleReader lifecycleReader;
   private final LinkInsights insightsCalculator;
   private final Clock clock;
+  private final ClickRetentionProperties retention;
 
   LinkStats assemble(LinkEntity link, ZoneId reportZone) {
     LinkId linkId = link.linkId();
@@ -68,6 +70,8 @@ class LinkStatsReportAssembler {
         .humanClicks(totals.human())
         .botClicks(totals.bot())
         .uniqueClicks(totals.unique())
+        .rawRetentionDays(retention.rawDays())
+        .rawSince(totals.rawSince())
         .previewClicks(totals.previewClicks())
         .profileClicks(totals.profileClicks())
         .firstClickAt(totals.firstClickAt())

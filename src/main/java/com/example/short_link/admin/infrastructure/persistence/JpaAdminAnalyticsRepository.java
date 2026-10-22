@@ -7,6 +7,7 @@ import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.C
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.CohortSizeRow;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.LifecycleDayRow;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.ClickRollup;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,12 +27,16 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
   @Query(
       value =
           "SELECT YEARWEEK(u.created_at, 3) AS cohortKey, "
-              + "YEARWEEK(c.clicked_at, 3) AS activityKey, "
+              + "YEARWEEK(c.at, 3) AS activityKey, "
               + "COUNT(DISTINCT u.id) AS activeUsers "
               + "FROM users u JOIN link l ON l.user_id = u.id "
-              + "JOIN click_event c ON c.link_id = l.id "
-              + "WHERE u.created_at >= :since AND c.is_bot = 0 "
-              + "AND c.clicked_at >= u.created_at "
+              + "JOIN (SELECT link_id, clicked_at AS at, clicked_at AS last_at FROM click_event "
+              + "WHERE is_bot = 0 AND clicked_at >= "
+              + ClickRollup.ROLLED_UNTIL
+              + " UNION ALL SELECT link_id, hour_start, last_human_at FROM click_hourly "
+              + "WHERE humans > 0) c ON c.link_id = l.id "
+              + "WHERE u.created_at >= :since "
+              + "AND c.last_at >= u.created_at "
               + "GROUP BY cohortKey, activityKey "
               + "ORDER BY cohortKey, activityKey",
       nativeQuery = true)
@@ -39,11 +44,16 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
 
   @Query(
       value =
-          "SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, "
-              + "COUNT(*) AS clicks, COUNT(DISTINCT l.id) AS links "
-              + "FROM click_event c JOIN link l ON l.id = c.link_id "
-              + "WHERE c.is_bot = 0 "
-              + "AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+          "SELECT day, CAST(SUM(n) AS SIGNED) AS clicks, COUNT(DISTINCT link_id) AS links "
+              + "FROM (SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, "
+              + "l.id AS link_id, COUNT(*) AS n FROM click_event c JOIN link l ON l.id = c.link_id "
+              + "WHERE c.is_bot = 0 AND c.clicked_at >= "
+              + ClickRollup.ROLLED_UNTIL
+              + " AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+              + "GROUP BY day, l.id UNION ALL "
+              + "SELECT h.age_day, h.link_id, SUM(h.humans) FROM click_hourly h "
+              + "JOIN link l ON l.id = h.link_id WHERE h.humans > 0 "
+              + "AND h.age_day BETWEEN 0 AND :maxDay GROUP BY h.age_day, h.link_id) u "
               + "GROUP BY day ORDER BY day",
       nativeQuery = true)
   List<LifecycleDayRow> lifecycleDays(@Param("maxDay") int maxDay);
@@ -71,10 +81,14 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
 
   @Query(
       value =
-          "SELECT DATE_FORMAT(c.clicked_at, '%Y-%m') AS bucket, "
+          "SELECT DATE_FORMAT(c.at, '%Y-%m') AS bucket, "
               + "COUNT(DISTINCT l.user_id) AS active "
-              + "FROM click_event c JOIN link l ON l.id = c.link_id "
-              + "WHERE c.is_bot = 0 AND l.user_id IS NOT NULL AND c.clicked_at >= :since "
+              + "FROM (SELECT link_id, clicked_at AS at FROM click_event WHERE is_bot = 0 "
+              + "AND clicked_at >= :since AND clicked_at >= "
+              + ClickRollup.ROLLED_UNTIL
+              + " UNION ALL SELECT link_id, hour_start FROM click_hourly WHERE humans > 0 "
+              + "AND last_human_at >= :since) c JOIN link l ON l.id = c.link_id "
+              + "WHERE l.user_id IS NOT NULL "
               + "GROUP BY bucket ORDER BY bucket",
       nativeQuery = true)
   List<ActivePerBucketStringRow> monthlyActiveUsers(@Param("since") Instant since);

@@ -22,7 +22,7 @@ class LinkStatsTotalsReader {
     long total = clickRepository.countByLinkId(linkId.value());
     long human = clickTotals.countHumanByLinkId(linkId.value());
     long bot = clickTotals.countBotByLinkId(linkId.value());
-    long unique = clickTotals.countUniqueVisitorsByLinkId(linkId.value());
+    var unique = clickTotals.uniqueVisitorsByLinkId(linkId.value());
     Instant firstClickAt = clickTotals.findFirstClickAt(linkId.value());
     Instant lastClickAt = clickTotals.findLastClickAt(linkId.value());
     long previewClicks = clickTotals.countPreviewByLinkId(linkId.value());
@@ -35,7 +35,8 @@ class LinkStatsTotalsReader {
         total,
         human,
         bot,
-        unique,
+        unique.count(),
+        unique.rawSince(),
         previewClicks,
         profileClicks,
         firstClickAt,
@@ -58,6 +59,7 @@ class LinkStatsTotalsReader {
       long human,
       long bot,
       long unique,
+      Instant rawSince,
       long previewClicks,
       long profileClicks,
       Instant firstClickAt,
