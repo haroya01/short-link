@@ -58,6 +58,7 @@ public class RemoteTrendingFeed {
 
   private enum Phase {
     UNSEEN('u'),
+    UNSEEN_PAST_SEEN('v'),
     SEEN_AHEAD('d'),
     SEEN('s');
 
@@ -65,6 +66,10 @@ public class RemoteTrendingFeed {
 
     Phase(char mark) {
       this.mark = mark;
+    }
+
+    boolean unseen() {
+      return this == UNSEEN || this == UNSEEN_PAST_SEEN;
     }
   }
 
@@ -156,7 +161,10 @@ public class RemoteTrendingFeed {
           full = true;
           break;
         }
-        if ((phase == Phase.UNSEEN) != seenBefore.contains(candidate.uri())) {
+        boolean wasSeen = seenBefore.contains(candidate.uri());
+        if (phase.unseen() && wasSeen) {
+          phase = Phase.UNSEEN_PAST_SEEN;
+        } else if (phase.unseen() || wasSeen) {
           if (phase == Phase.SEEN_AHEAD) {
             seenFrom = items.size();
             phase = Phase.SEEN;
@@ -168,7 +176,7 @@ public class RemoteTrendingFeed {
       if (full || below.more()) {
         continue;
       }
-      if (phase != Phase.UNSEEN) {
+      if (phase != Phase.UNSEEN_PAST_SEEN) {
         return new Page(items, null, null, seenFrom);
       }
       phase = Phase.SEEN_AHEAD;

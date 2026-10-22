@@ -267,7 +267,7 @@ class RemoteTrendingFeedTest {
     RemoteTrendingFeed.Page page = feed.latest(null, DEVICE, null, null, 2);
 
     assertThat(page.items()).isEmpty();
-    assertThat(page.next()).isEqualTo("u" + AS_OF.toEpochMilli() + ".t10");
+    assertThat(page.next()).isEqualTo("v" + AS_OF.toEpochMilli() + ".t10");
     verify(latest, times(RemoteTrendingFeed.MAX_READS)).page(eq(null), anyInt(), eq(2));
 
     RemoteTrendingFeed.Page after = feed.latest(null, DEVICE, page.next(), null, 2);
@@ -303,5 +303,22 @@ class RemoteTrendingFeedTest {
     assertThat(first.seenFrom()).isEqualTo(2);
     assertThat(first.next()).isEqualTo("s" + AS_OF.toEpochMilli() + ".r29");
     verifyNoInteractions(latest);
+  }
+
+  @Test
+  void aReaderWhoSawNoneOfItReachesTheEndWithoutReadingTheFeedAgain() {
+    below(0, 2, true, "a", "b");
+    below(2, 2, false, "c");
+    seenBefore();
+
+    RemoteTrendingFeed.Page first = feed.latest(null, DEVICE, null, null, 2);
+    RemoteTrendingFeed.Page last = feed.latest(null, DEVICE, first.next(), null, 2);
+
+    assertThat(uris(first)).containsExactly("a", "b");
+    assertThat(first.next()).isEqualTo("u" + AS_OF.toEpochMilli() + ".t2");
+    assertThat(uris(last)).containsExactly("c");
+    assertThat(last.next()).isNull();
+    assertThat(last.seenFrom()).isNull();
+    verify(latest, times(1)).page(null, 0, 2);
   }
 }

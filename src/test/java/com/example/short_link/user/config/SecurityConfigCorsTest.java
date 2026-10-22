@@ -9,8 +9,11 @@ import com.example.short_link.user.presentation.security.JsonAuthenticationEntry
 import com.example.short_link.user.presentation.security.JwtAuthenticationFilter;
 import com.example.short_link.user.presentation.security.OAuth2LoginFailureHandler;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
+import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 class SecurityConfigCorsTest {
 
@@ -25,6 +28,18 @@ class SecurityConfigCorsTest {
   @Test
   void allowsLocalhostInLocalProfile() {
     assertThat(config.corsConfigurationSource("http://localhost:3001", "local")).isNotNull();
+  }
+
+  @Test
+  void aSignedOutReadersDeviceHeaderPassesThePreflight() {
+    CorsConfiguration cors =
+        ((UrlBasedCorsConfigurationSource)
+                config.corsConfigurationSource("https://app.kurl.me", "prod"))
+            .getCorsConfigurations()
+            .get("/**");
+
+    assertThat(cors.checkHeaders(List.of("x-kurl-device", "content-type")))
+        .containsExactly("x-kurl-device", "content-type");
   }
 
   @Test
