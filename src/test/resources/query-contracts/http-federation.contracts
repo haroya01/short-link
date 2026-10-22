@@ -496,16 +496,18 @@
 # bookmarks, answers, followed accounts' notes and long dwells, with each note's author, language and
 # tags, in one statement) and their language; then the kept notes of the last three days with the
 # viewer's blocks, mutes, server blocks, language filter and follows applied, their tags, their
-# counts, which of them the reader saw (with a reader key), and the page built as any note page. A
-# later page is cut from the ranking held in memory, so it only builds its notes. A pool ten times
-# wider costs the same. A dwell's flush finds its note by uri and writes it beside the sightings. A
+# counts, which of them the reader saw (with a reader key), and the page built as any note page
+# (its notes by id, thread chain, remote authors, media, stats, a member's marks, and link cards
+# when a note has an address). A later page is cut from the ranking held in memory, so it only
+# builds its notes. A pool ten times wider costs what the first page did less its link cards. A
+# dwell's flush finds its note by uri and writes it beside the sightings. A
 # round of asking counts again reads the due notes, the server's block and the instance key, then
 # writes every answer in one statement.
-@junit | federation-for-you-anonymous | 8 | 0 | 0 | 0 | 8
-@junit | federation-for-you-first | 12 | 0 | 0 | 0 | 12
+@junit | federation-for-you-anonymous | 9 | 0 | 0 | 0 | 9
+@junit | federation-for-you-first | 14 | 0 | 0 | 0 | 14
 @junit | federation-for-you-next | 6 | 0 | 0 | 0 | 6
 @junit | federation-seen-dwell | 0 | 0 | 0 | 0 | 0
 @junit | federation-seen-flush-dwell | 1 | 2 | 0 | 0 | 3
-@junit | federation-for-you-device | 10 | 0 | 0 | 0 | 10
+@junit | federation-for-you-device | 11 | 0 | 0 | 0 | 11
 @junit | federation-for-you-wide | 12 | 0 | 0 | 0 | 12
 @junit | federation-reach-round | 3 | 1 | 0 | 0 | 4
