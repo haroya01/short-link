@@ -6,6 +6,7 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerHostClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.SourceChannelClickRow;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -20,30 +21,35 @@ class ClickAlertReadRepositoryAdapter implements ClickAlertReadRepository {
   @Override
   public Optional<SourceChannelClickRow> findTopChannelByLinkIdAndRange(
       Long linkId, Instant from, Instant to) {
-    return jpa.findTopChannelByLinkIdAndRange(linkId, from, to);
+    return jpa.findTopChannelByLinkIdAndRange(linkId, epoch(from), epoch(to));
   }
 
   @Override
   public Optional<CountryClickRow> findTopCountryByLinkIdAndRange(
       Long linkId, Instant from, Instant to) {
-    return jpa.findTopCountryByLinkIdAndRange(linkId, from, to);
+    return jpa.findTopCountryByLinkIdAndRange(linkId, epoch(from), epoch(to));
   }
 
   @Override
   public Optional<DeviceClickRow> findTopDeviceByLinkIdAndRange(
       Long linkId, Instant from, Instant to) {
-    return jpa.findTopDeviceByLinkIdAndRange(linkId, from, to);
+    return jpa.findTopDeviceByLinkIdAndRange(linkId, epoch(from), epoch(to));
   }
 
   @Override
   public Optional<HourClickRow> findPeakHourByLinkIdAndRange(
       Long linkId, Instant from, Instant to, String tz) {
-    return jpa.findPeakHourByLinkIdAndRange(linkId, from, to, tz);
+    return jpa.findPeakHourByLinkIdAndRange(linkId, epoch(from), epoch(to), tz);
   }
 
   @Override
   public Optional<ReferrerHostClickRow> findTopReferrerHostByLinkIdSince(
       Long linkId, Instant since) {
-    return jpa.findTopReferrerHostByLinkIdSince(linkId, since);
+    return jpa.findTopReferrerHostByLinkIdSince(linkId, epoch(since));
+  }
+
+  private static BigDecimal epoch(Instant instant) {
+    return BigDecimal.valueOf(instant.getEpochSecond())
+        .add(BigDecimal.valueOf(instant.getNano(), 9));
   }
 }
