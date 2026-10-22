@@ -1,6 +1,7 @@
 package com.example.short_link.user.application.read;
 
 import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.user.domain.repository.FollowListReader.Counts;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 // Hidden follower/following totals are null and omitted from JSON. hideFollowerCount is always
@@ -11,6 +12,8 @@ public record FollowStatus(
     boolean following,
     Long followerCount,
     Long followingCount,
+    Long remoteFollowerCount,
+    Long remoteFollowingCount,
     boolean hideFollowerCount,
     boolean notifyNotes,
     boolean requested,
@@ -18,13 +21,24 @@ public record FollowStatus(
     boolean blockedByViewer,
     boolean blocksViewer) {
 
-  public static FollowStatus visible(boolean following, long followerCount, long followingCount) {
+  public static FollowStatus visible(boolean following, Counts counts) {
     return new FollowStatus(
-        following, followerCount, followingCount, false, false, false, false, false, false);
+        following,
+        counts.followers(),
+        counts.following(),
+        counts.remoteFollowers(),
+        counts.remoteFollowing(),
+        false,
+        false,
+        false,
+        false,
+        false,
+        false);
   }
 
   public static FollowStatus hidden(boolean following) {
-    return new FollowStatus(following, null, null, true, false, false, false, false, false);
+    return new FollowStatus(
+        following, null, null, null, null, true, false, false, false, false, false);
   }
 
   public FollowStatus notifyingOfNotes(boolean on) {
@@ -32,6 +46,8 @@ public record FollowStatus(
         following,
         followerCount,
         followingCount,
+        remoteFollowerCount,
+        remoteFollowingCount,
         hideFollowerCount,
         on,
         requested,
@@ -45,6 +61,8 @@ public record FollowStatus(
         following,
         followerCount,
         followingCount,
+        remoteFollowerCount,
+        remoteFollowingCount,
         hideFollowerCount,
         notifyNotes,
         requested,
@@ -58,6 +76,8 @@ public record FollowStatus(
         following,
         followerCount,
         followingCount,
+        remoteFollowerCount,
+        remoteFollowingCount,
         hideFollowerCount,
         notifyNotes,
         requested,

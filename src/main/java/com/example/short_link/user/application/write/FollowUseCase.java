@@ -9,6 +9,7 @@ import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowListReader;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -28,6 +29,7 @@ public class FollowUseCase {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final FollowRequestRepository followRequests;
+  private final FollowListReader followLists;
   private final UserBlockChecker userBlocks;
   private final ApplicationEventPublisher events;
 
@@ -97,10 +99,7 @@ public class FollowUseCase {
     FollowStatus status =
         target.isHideFollowerCount()
             ? FollowStatus.hidden(following)
-            : FollowStatus.visible(
-                following,
-                followRepository.countByFollowingId(target.getId()),
-                followRepository.countByFollowerId(target.getId()));
+            : FollowStatus.visible(following, followLists.counts(target.getId()));
     return status.requesting(false, target.isLocked()).blocking(blocks);
   }
 

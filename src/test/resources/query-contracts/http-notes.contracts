@@ -235,8 +235,8 @@
 # the row it inserted; the follow status reads it from that row, and the blocks between the two both
 # ways in one statement.
 @junit | note-bell-before-follow | 2 | 0 | 0 | 0 | 2
-@junit | note-bell-follow | 11 | 2 | 0 | 0 | 13
-@junit | note-bell-follow-status | 5 | 0 | 0 | 0 | 5
+@junit | note-bell-follow | 10 | 2 | 0 | 0 | 12
+@junit | note-bell-follow-status | 4 | 0 | 0 | 0 | 4
 # A new note finds the bell-ringers in one query (blocks and notice mutes excluded), then records
 # their notices like other fan-outs: preferences in one read, the insert, names for the push.
 @junit | note-create-bell | 8 | 2 | 0 | 0 | 10

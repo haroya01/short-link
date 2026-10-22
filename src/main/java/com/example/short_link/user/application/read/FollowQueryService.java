@@ -3,6 +3,7 @@ package com.example.short_link.user.application.read;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowListReader;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -21,6 +22,7 @@ public class FollowQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final FollowRequestRepository followRequests;
+  private final FollowListReader followLists;
   private final UserBlockChecker userBlocks;
 
   public FollowStatus status(Long viewerId, String targetUsername) {
@@ -43,10 +45,7 @@ public class FollowQueryService {
     FollowStatus status =
         target.isHideFollowerCount()
             ? FollowStatus.hidden(following)
-            : FollowStatus.visible(
-                following,
-                followRepository.countByFollowingId(target.getId()),
-                followRepository.countByFollowerId(target.getId()));
+            : FollowStatus.visible(following, followLists.counts(target.getId()));
     return status
         .notifyingOfNotes(notifyNotes)
         .requesting(requested, target.isLocked())

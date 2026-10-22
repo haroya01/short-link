@@ -10,6 +10,8 @@ import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowListReader;
+import com.example.short_link.user.domain.repository.FollowListReader.Counts;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -29,12 +31,16 @@ class FollowQueryServiceTest {
   @Mock private FollowRepository followRepository;
   @Mock private FollowRequestRepository followRequests;
   @Mock private UserBlockChecker userBlocks;
+  @Mock private FollowListReader followLists;
 
   private FollowQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new FollowQueryService(userRepository, followRepository, followRequests, userBlocks);
+    service =
+        new FollowQueryService(
+            userRepository, followRepository, followRequests, followLists, userBlocks);
+    lenient().when(followLists.counts(any())).thenReturn(new Counts(0, 0, 0, 0));
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
@@ -51,22 +57,22 @@ class FollowQueryServiceTest {
     FollowEntity follow = new FollowEntity(9L, 2L);
     follow.notifyOfNotes(true);
     when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(follow));
-    when(followRepository.countByFollowingId(2L)).thenReturn(5L);
-    when(followRepository.countByFollowerId(2L)).thenReturn(3L);
+    when(followLists.counts(2L)).thenReturn(new Counts(5, 3, 4, 2));
 
     FollowStatus status = service.status(9L, "bob");
 
     assertThat(status.following()).isTrue();
     assertThat(status.followerCount()).isEqualTo(5);
     assertThat(status.followingCount()).isEqualTo(3);
+    assertThat(status.remoteFollowerCount()).isEqualTo(4);
+    assertThat(status.remoteFollowingCount()).isEqualTo(2);
     assertThat(status.notifyNotes()).isTrue();
   }
 
   @Test
   void anonymousViewerIsNeverFollowingButStillSeesCount() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.countByFollowingId(2L)).thenReturn(5L);
-    when(followRepository.countByFollowerId(2L)).thenReturn(0L);
+    when(followLists.counts(2L)).thenReturn(new Counts(5, 0, 0, 0));
 
     FollowStatus status = service.status(null, "bob");
 
