@@ -8,10 +8,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -20,6 +22,7 @@ import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -44,11 +47,13 @@ class RemoteNoteRecorderTest {
 
   @Mock private NoteRepository notes;
   @Mock private NoteMediaRepository media;
+  @Mock private NoteLinkPreviewRepository previews;
   @Mock private NotePeopleReader people;
   @Mock private ApplicationEventPublisher events;
 
   private RemoteNoteRecorder recorder() {
-    return new RemoteNoteRecorder(notes, media, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
+    return new RemoteNoteRecorder(
+        notes, media, previews, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static RemoteNotes.Received received(
@@ -623,5 +628,40 @@ class RemoteNoteRecorderTest {
 
     assertThat(recorder().target(6L)).contains(new RemoteNotes.Target(URI, 43L, false));
     assertThat(recorder().target(5L)).isEmpty();
+  }
+
+  @Test
+  void aCardItsServerMadeIsKeptAsTheNotesLinkCardWithoutFetchingAnything() {
+    recorder()
+        .preview(
+            7L,
+            "watch https://youtu.be/abc",
+            false,
+            new RemoteNotes.LinkCard(
+                "https://www.youtube.com/watch?v=abc",
+                "A video",
+                "About it",
+                "https://i.yt/a.jpg"));
+
+    verify(previews)
+        .put(
+            7L,
+            new LinkPreviewReader.Preview(
+                "https://www.youtube.com/watch?v=abc", "A video", "About it", "https://i.yt/a.jpg"),
+            NOW);
+    verifyNoInteractions(events);
+  }
+
+  @Test
+  void withoutACardTheFirstAddressIsReadAfterCommitUnlessThereIsMediaOrNoAddress() {
+    RemoteNoteRecorder recorder = recorder();
+
+    recorder.preview(7L, "watch https://youtu.be/abc.", false, null);
+    recorder.preview(8L, "watch https://youtu.be/abc", true, null);
+    recorder.preview(9L, "no address here", false, new RemoteNotes.LinkCard(null, "t", null, null));
+
+    verify(events).publishEvent(new NoteLinkPreviewRequested(7L, "https://youtu.be/abc"));
+    verifyNoMoreInteractions(events);
+    verifyNoInteractions(previews);
   }
 }

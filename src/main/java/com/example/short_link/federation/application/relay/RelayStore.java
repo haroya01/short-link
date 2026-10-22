@@ -2,6 +2,7 @@ package com.example.short_link.federation.application.relay;
 
 import static com.example.short_link.federation.application.ActivityStreams.idsOf;
 
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.RemoteActorResolver;
 import com.example.short_link.federation.application.RemoteNoteIntake;
@@ -36,6 +37,7 @@ public class RelayStore {
   private final RelayTally tally;
   private final RelayProperties props;
   private final RemoteNoteReachRepository reach;
+  private final RemoteNotes remoteNotes;
   private final TransactionTemplate transaction;
   private final Clock clock;
 
@@ -48,6 +50,7 @@ public class RelayStore {
       RelayTally tally,
       RelayProperties props,
       RemoteNoteReachRepository reach,
+      RemoteNotes remoteNotes,
       TransactionTemplate transaction) {
     this(
         resolver,
@@ -57,6 +60,7 @@ public class RelayStore {
         tally,
         props,
         reach,
+        remoteNotes,
         transaction,
         Clock.systemUTC());
   }
@@ -69,6 +73,7 @@ public class RelayStore {
       RelayTally tally,
       RelayProperties props,
       RemoteNoteReachRepository reach,
+      RemoteNotes remoteNotes,
       TransactionTemplate transaction,
       Clock clock) {
     this.resolver = resolver;
@@ -78,6 +83,7 @@ public class RelayStore {
     this.tally = tally;
     this.props = props;
     this.reach = reach;
+    this.remoteNotes = remoteNotes;
     this.transaction = transaction;
     this.clock = clock;
   }
@@ -124,6 +130,11 @@ public class RelayStore {
                                           RemoteNoteReachRepository.Counts.NONE,
                                           now,
                                           ReachSchedule.first(now)));
+                          remoteNotes.preview(
+                              noteId,
+                              note.body(),
+                              !note.media().isEmpty() || note.shape().poll() != null,
+                              null);
                           return noteId;
                         }));
     return kept != null && kept.isPresent() ? STORED : "not-kept";

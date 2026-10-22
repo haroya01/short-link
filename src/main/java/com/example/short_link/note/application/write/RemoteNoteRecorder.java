@@ -2,6 +2,7 @@ package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
@@ -10,9 +11,11 @@ import com.example.short_link.common.note.RemoteNotes.Poll;
 import com.example.short_link.common.note.RemoteNotes.Shape;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -43,6 +46,7 @@ class RemoteNoteRecorder implements RemoteNotes {
 
   private final NoteRepository notes;
   private final NoteMediaRepository media;
+  private final NoteLinkPreviewRepository previews;
   private final NotePeopleReader people;
   private final ApplicationEventPublisher events;
   private final Clock clock;
@@ -69,6 +73,22 @@ class RemoteNoteRecorder implements RemoteNotes {
             note ->
                 new Target(
                     note.getUri(), note.getRemoteActorId(), note.getVisibility().shareable()));
+  }
+
+  @Override
+  @Transactional
+  public void preview(Long noteId, String body, boolean hasMedia, LinkCard card) {
+    if (card != null && card.url() != null) {
+      previews.put(
+          noteId,
+          new LinkPreviewReader.Preview(card.url(), card.title(), card.description(), card.image()),
+          clock.instant().truncatedTo(ChronoUnit.MICROS));
+      return;
+    }
+    String url = NoteLinks.previewUrl(body, hasMedia, false);
+    if (url != null) {
+      events.publishEvent(new NoteLinkPreviewRequested(noteId, url));
+    }
   }
 
   @Override

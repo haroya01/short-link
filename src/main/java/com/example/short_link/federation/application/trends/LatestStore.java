@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application.trends;
 
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.RemoteActorResolver;
 import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
@@ -38,6 +39,7 @@ class LatestStore {
   private final LatestProperties props;
   private final ReachProperties reachProps;
   private final RemoteNoteReachRepository reach;
+  private final RemoteNotes remoteNotes;
   private final TransactionTemplate transaction;
   private final Clock clock;
 
@@ -102,11 +104,25 @@ class LatestStore {
                                   read.note().replyCount()),
                               now,
                               ReachSchedule.first(now));
+                          remoteNotes.preview(
+                              noteId, note.body(), hasMedia(note), card(read.note()));
                           return noteId;
                         }));
     if (kept == null || kept.isEmpty()) {
       return prefix + "-not-kept";
     }
     return trended ? TRENDED : PULLED;
+  }
+
+  private static boolean hasMedia(RemoteNoteParser.Parsed note) {
+    return !note.media().isEmpty() || note.shape().poll() != null;
+  }
+
+  private static RemoteNotes.LinkCard card(TrendingNote note) {
+    TrendingNote.LinkPreview preview = note.linkPreview();
+    return preview == null
+        ? null
+        : new RemoteNotes.LinkCard(
+            preview.url(), preview.title(), preview.description(), preview.image());
   }
 }

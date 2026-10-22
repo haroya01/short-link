@@ -107,6 +107,11 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
             ok(
                 "["
                     + status(103, "yui", "ko", 3, Duration.ofMinutes(10))
+                        .replace(
+                            "\"card\":null",
+                            "\"card\":{\"url\":\"https://www.youtube.com/watch?v=abc\","
+                                + "\"title\":\"A video\",\"description\":\"About it\","
+                                + "\"image\":\"https://i.example/a.jpg\"}")
                     + ","
                     + status(102, "rin", "ja", 50, Duration.ofMinutes(20))
                     + ","
@@ -120,14 +125,18 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
 
     JsonNode anonymous =
         body(
-            call(
+            callWithHeaders(
                 "federation-for-you-anonymous",
                 "GET",
                 "/api/v1/federation/for-you?limit=2",
                 null,
-                null,
+                Map.of("Accept-Language", "ja-JP,ja;q=0.9"),
                 200));
     assertThat(uris(anonymous)).containsExactly(uri("rin", 102), uri("yui", 103));
+    assertThat(anonymous.path("items").get(1).path("linkPreview").path("url").asString())
+        .isEqualTo("https://www.youtube.com/watch?v=abc");
+    assertThat(anonymous.path("items").get(1).path("linkPreview").path("title").asString())
+        .isEqualTo("A video");
     assertThat(anonymous.path("next").asString()).startsWith("f").endsWith(".2");
 
     JsonNode first =
@@ -180,7 +189,7 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
                 device(),
                 200));
     assertThat(uris(deviceFirst))
-        .containsExactly(uri("rin", 102), uri("yui", 101), uri("yui", 103));
+        .containsExactly(uri("yui", 101), uri("rin", 102), uri("yui", 103));
     assertThat(deviceFirst.path("seenFrom").asInt()).isEqualTo(2);
 
     StringJoiner more = new StringJoiner(",", "[", "]");

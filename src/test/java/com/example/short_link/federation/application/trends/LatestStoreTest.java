@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteActorResolver;
@@ -35,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @ExtendWith(MockitoExtension.class)
 class LatestStoreTest {
@@ -50,6 +52,7 @@ class LatestStoreTest {
   @Mock private RemoteNoteIntake intake;
   @Mock private FederationRelayedNoteRepository relayed;
   @Mock private RemoteNoteReachRepository reach;
+  @Mock private RemoteNotes remoteNotes;
   @Mock private PlatformTransactionManager transactions;
 
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -70,6 +73,7 @@ class LatestStoreTest {
         new LatestProperties(true, List.of(HOST), 40, 0, null, null, true, null, 0, perDay),
         new ReachProperties(true, 0, trendedPerDay, null, 0, null, null),
         reach,
+        remoteNotes,
         new TransactionTemplate(transactions),
         clock);
   }
@@ -108,7 +112,7 @@ class LatestStoreTest {
     ArgumentCaptor<RemoteNoteParser.Parsed> note =
         ArgumentCaptor.forClass(RemoteNoteParser.Parsed.class);
     Instant kept = Instant.parse("2026-10-21T03:00:00.123456Z");
-    InOrder order = inOrder(intake, relayed, reach, transactions);
+    InOrder order = inOrder(intake, relayed, reach, remoteNotes, transactions);
     order.verify(intake).relayed(any(), note.capture());
     order.verify(relayed).markPulled(42L, HOST, kept);
     order
@@ -119,6 +123,7 @@ class LatestStoreTest {
             new RemoteNoteReachRepository.Counts(3, 2, 1),
             kept,
             kept.plusSeconds(3_600));
+    order.verify(remoteNotes).preview(42L, "hello", false, null);
     order.verify(transactions).commit(any());
     assertThat(note.getValue().uri()).isEqualTo(ALICE + "/statuses/1");
     assertThat(tally.today("pulled")).isEqualTo(1);
@@ -183,5 +188,33 @@ class LatestStoreTest {
     assertThat(store.keepTrended(HOST, read(HOST))).isEqualTo("trend-no-author");
     assertThat(store.keepTrended(HOST, read(HOST))).isEqualTo("trend-not-kept");
     verifyNoInteractions(reach);
+  }
+
+  @Test
+  void theCardThePostsServerMadeGoesAlongAsItsLinkCard() {
+    ObjectNode status = TrendingStatusReaderTest.status(ALICE + "/statuses/1", "alice");
+    status.put("content", "<p>see https://youtu.be/abc</p>");
+    status.set(
+        "card",
+        JSON.readTree(
+            "{\"url\":\"https://www.youtube.com/watch?v=abc\",\"title\":\"A video\","
+                + "\"description\":\"About it\",\"image\":\"https://i.yt/a.jpg\"}"));
+    TrendingStatusReader.Read read =
+        new TrendingStatusReader(new RemoteNoteParser(URLS), JSON).read(status, HOST).orElseThrow();
+    when(resolver.byActorUri(ALICE)).thenReturn(Optional.of(actor(HOST)));
+    when(intake.relayed(any(), any())).thenReturn(Optional.of(42L));
+
+    assertThat(store(2_000, 10).keepTrended(HOST, read)).isEqualTo("trended");
+
+    verify(remoteNotes)
+        .preview(
+            42L,
+            "see https://youtu.be/abc",
+            false,
+            new RemoteNotes.LinkCard(
+                "https://www.youtube.com/watch?v=abc",
+                "A video",
+                "About it",
+                "https://i.yt/a.jpg"));
   }
 }
