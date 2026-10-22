@@ -21,7 +21,7 @@ public interface JpaPostLikeRepository extends JpaRepository<PostLikeEntity, Lon
   @Query(
       value =
           "INSERT IGNORE INTO post_like (post_id, user_id, created_at) "
-              + "VALUES (:postId, :userId, NOW())",
+              + "VALUES (:postId, :userId, UTC_TIMESTAMP(6))",
       nativeQuery = true)
   int insertIgnore(@Param("postId") Long postId, @Param("userId") Long userId);
 

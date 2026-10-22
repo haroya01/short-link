@@ -85,13 +85,29 @@ class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRep
   }
 
   @Override
+  public void markTrended(Long noteId, String host, Instant receivedAt) {
+    em.createNativeQuery(
+            "INSERT INTO federation_relayed_note (note_id, pulled_from, received_at, trended)"
+                + " VALUES (:note, :host, :at, TRUE)")
+        .setParameter("note", noteId)
+        .setParameter("host", host)
+        .setParameter("at", receivedAt)
+        .executeUpdate();
+  }
+
+  @Override
   public long relayedSince(Instant since) {
     return receivedSince(since, "IS NULL");
   }
 
   @Override
   public long pulledSince(Instant since) {
-    return receivedSince(since, "IS NOT NULL");
+    return receivedSince(since, "IS NOT NULL AND NOT trended");
+  }
+
+  @Override
+  public long trendedSince(Instant since) {
+    return receivedSince(since, "IS NOT NULL AND trended");
   }
 
   private long receivedSince(Instant since, String pulled) {
@@ -111,7 +127,7 @@ class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRep
     List<Instant> at =
         em.createNativeQuery(
                 "SELECT n.created_at FROM note n WHERE n.id = (SELECT MAX(r.note_id)"
-                    + " FROM federation_relayed_note r WHERE r.pulled_from = :host)")
+                    + " FROM federation_relayed_note r WHERE r.pulled_from = :host AND NOT r.trended)")
             .setParameter("host", host)
             .unwrap(NativeQuery.class)
             .addScalar("created_at", Instant.class)

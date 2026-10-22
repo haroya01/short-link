@@ -42,35 +42,35 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
   @Override
   public List<HourClickRow> findHourlyClicks(
       Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findHourlyClicks(linkId, from, until, timezone);
+    return jpa.findHourlyClicks(linkId, epoch(from), epoch(until), timezone);
   }
 
   @Override
   public List<DayOfWeekClickRow> findDayOfWeekClicks(
       Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findDayOfWeekClicks(linkId, from, until, timezone);
+    return jpa.findDayOfWeekClicks(linkId, epoch(from), epoch(until), timezone);
   }
 
   @Override
   public List<HeatmapRow> findHeatmap(Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findHeatmap(linkId, from, until, timezone);
+    return jpa.findHeatmap(linkId, epoch(from), epoch(until), timezone);
   }
 
   @Override
   public List<HourClickRow> findHourlyClicksByLinkIdsSince(
       List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findHourlyClicksByLinkIdsSince(linkIds, since, timezone);
+    return jpa.findHourlyClicksByLinkIdsSince(linkIds, epoch(since), timezone);
   }
 
   @Override
   public List<DailyClickRow> findDailyClicksByLinkIdsSince(
       List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findDailyClicksByLinkIdsSince(linkIds, since, timezone);
+    return jpa.findDailyClicksByLinkIdsSince(linkIds, epoch(since), timezone);
   }
 
   @Override
   public List<HeatmapRow> findHeatmapByLinkIdsSince(
       List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findHeatmapByLinkIdsSince(linkIds, since, timezone);
+    return jpa.findHeatmapByLinkIdsSince(linkIds, epoch(since), timezone);
   }
 }

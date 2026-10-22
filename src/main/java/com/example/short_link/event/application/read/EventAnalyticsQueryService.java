@@ -9,7 +9,6 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.ZoneId;
 import java.util.Comparator;
@@ -43,14 +42,20 @@ public class EventAnalyticsQueryService {
     }
 
     Map<Long, String> channelByLinkId = eventQueryService.channelLabels(eventId);
-    List<ClickEventEntity> humanClicks =
-        channelByLinkId.isEmpty()
-            ? List.of()
-            : clickEventRepository
-                .findAllByLinkIdInOrderByClickedAtAsc(channelByLinkId.keySet())
-                .stream()
-                .filter(click -> !click.isBot())
-                .toList();
+    Map<String, Long> clicksByChannel = new LinkedHashMap<>();
+    long humanClicks = 0;
+    Map<String, Long> clicksByApp = new LinkedHashMap<>();
+    if (!channelByLinkId.isEmpty()) {
+      for (Map.Entry<Long, Map<String, Long>> link :
+          clickEventRepository.humanClientAppCountsByLinkIds(channelByLinkId.keySet()).entrySet()) {
+        String channel = channelByLinkId.getOrDefault(link.getKey(), "?");
+        for (Map.Entry<String, Long> app : link.getValue().entrySet()) {
+          humanClicks += app.getValue();
+          clicksByChannel.merge(channel, app.getValue(), Long::sum);
+          clicksByApp.merge(orDirect(app.getKey()), app.getValue(), Long::sum);
+        }
+      }
+    }
     List<EventRegistrationEntity> confirmed =
         registrationRepository.findAllByEventIdOrderByCreatedAtAsc(eventId).stream()
             .filter(r -> r.getStatus() == RegistrationStatus.CONFIRMED)
@@ -58,10 +63,10 @@ public class EventAnalyticsQueryService {
 
     ZoneId zone = zoneOf(event.getTimezone());
     return new EventAnalyticsView(
-        humanClicks.size(),
+        humanClicks,
         confirmed.size(),
-        buckets(humanClicks, click -> channelByLinkId.getOrDefault(click.getLinkId(), "?")),
-        buckets(humanClicks, click -> orDirect(click.getClientApp())),
+        sorted(clicksByChannel),
+        sorted(clicksByApp),
         buckets(confirmed, r -> registrationChannel(r, channelByLinkId)),
         confirmed.stream()
             .collect(
@@ -74,6 +79,13 @@ public class EventAnalyticsQueryService {
             .map(entry -> new DailyBucket(entry.getKey(), entry.getValue()))
             .sorted(Comparator.comparing(DailyBucket::date))
             .toList());
+  }
+
+  private static List<Bucket> sorted(Map<String, Long> counts) {
+    return counts.entrySet().stream()
+        .map(entry -> new Bucket(entry.getKey(), entry.getValue()))
+        .sorted(Comparator.comparingLong(Bucket::count).reversed())
+        .toList();
   }
 
   private static <T> List<Bucket> buckets(List<T> items, Function<T, String> keyOf) {

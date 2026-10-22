@@ -92,7 +92,7 @@ class NoteListRepositoryAdapter implements NoteListRepository {
   public boolean addMember(Long listId, Long memberId) {
     return em.createNativeQuery(
                 "INSERT IGNORE INTO note_list_member (list_id, member_id, created_at)"
-                    + " VALUES (:list, :member, NOW(6))")
+                    + " VALUES (:list, :member, UTC_TIMESTAMP(6))")
             .setParameter("list", listId)
             .setParameter("member", memberId)
             .executeUpdate()

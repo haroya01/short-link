@@ -164,7 +164,10 @@ public class SecurityConfig {
                         "/ap/**")
                     .permitAll()
                     .requestMatchers(
-                        GET, "/api/v1/federation/trending", "/api/v1/federation/latest")
+                        GET,
+                        "/api/v1/federation/trending",
+                        "/api/v1/federation/latest",
+                        "/api/v1/federation/for-you")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/federation/accounts/search")
                     .permitAll()

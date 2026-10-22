@@ -36,7 +36,12 @@ public class RemoteNoteIntake {
 
   public Optional<Long> keep(
       RemoteActorEntity actor, RemoteNoteParser.Parsed note, NoteSnapshot parent) {
-    return keep(actor, note, parent, true);
+    Optional<Long> kept = keep(actor, note, parent, true);
+    kept.ifPresent(
+        noteId ->
+            remoteNotes.preview(
+                noteId, note.body(), !note.media().isEmpty() || note.shape().poll() != null, null));
+    return kept;
   }
 
   // A note from the account's own outbox: written by it, public or unlisted, not a reply, and told

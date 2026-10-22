@@ -21,7 +21,7 @@ public interface JpaNotificationPreferenceRepository
   @Query(
       value =
           "INSERT INTO notification_preference (user_id, type, enabled, created_at) "
-              + "VALUES (:userId, :type, :enabled, CURRENT_TIMESTAMP(6)) "
+              + "VALUES (:userId, :type, :enabled, UTC_TIMESTAMP(6)) "
               + "ON DUPLICATE KEY UPDATE enabled = :enabled",
       nativeQuery = true)
   void setEnabled(

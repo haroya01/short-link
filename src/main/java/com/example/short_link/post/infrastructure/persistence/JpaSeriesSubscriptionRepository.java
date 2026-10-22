@@ -34,7 +34,7 @@ public interface JpaSeriesSubscriptionRepository
   @Query(
       value =
           "INSERT IGNORE INTO series_subscription (user_id, series_id, created_at) "
-              + "VALUES (:userId, :seriesId, NOW())",
+              + "VALUES (:userId, :seriesId, UTC_TIMESTAMP(6))",
       nativeQuery = true)
   int insertIgnore(@Param("userId") Long userId, @Param("seriesId") Long seriesId);
 

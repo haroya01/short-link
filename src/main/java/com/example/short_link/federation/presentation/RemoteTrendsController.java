@@ -1,5 +1,6 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
 import com.example.short_link.federation.domain.SeenViewer;
@@ -7,6 +8,7 @@ import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import com.example.short_link.federation.presentation.request.SeenRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +29,7 @@ public class RemoteTrendsController {
 
   private final RemoteTrendingFeed trending;
   private final RemoteSeen seen;
+  private final RemoteForYou forYou;
 
   @GetMapping("/trending")
   public RemoteTrendingFeed.Page trending(
@@ -46,6 +49,16 @@ public class RemoteTrendsController {
     return trending.latest(viewerId, SeenViewer.of(viewerId, device), cursor, since, limit);
   }
 
+  @GetMapping("/for-you")
+  public RemoteTrendingFeed.Page forYou(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestHeader(name = DEVICE_HEADER, required = false) String device,
+      @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false) String languages,
+      @RequestParam(defaultValue = "20") int limit,
+      @RequestParam(required = false) String cursor) {
+    return forYou.page(viewerId, SeenViewer.of(viewerId, device), languages, cursor, limit);
+  }
+
   @PostMapping("/seen")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public void seen(
@@ -57,7 +70,16 @@ public class RemoteTrendsController {
       throw new FederationException(FederationErrorCode.SEEN_WITHOUT_VIEWER);
     }
     if (request != null) {
-      seen.record(viewer, request.uris());
+      seen.record(
+          viewer,
+          request.uris(),
+          request.dwell() == null
+              ? null
+              : request.dwell().stream()
+                  .filter(dwell -> dwell != null && dwell.ms() != null)
+                  .map(dwell -> new RemoteSeen.Dwell(dwell.uri(), dwell.ms()))
+                  .toList(),
+          request.feed());
     }
   }
 }

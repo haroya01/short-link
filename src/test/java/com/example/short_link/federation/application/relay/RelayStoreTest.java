@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteActorResolver;
@@ -15,7 +16,9 @@ import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.foryou.ReachTarget;
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
+import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
@@ -50,6 +53,8 @@ class RelayStoreTest {
   @Mock private RemoteNoteIntake intake;
   @Mock private FederationRelayedNoteRepository relayed;
   @Mock private RelaySubscriptions subscriptions;
+  @Mock private RemoteNoteReachRepository reach;
+  @Mock private RemoteNotes remoteNotes;
   @Mock private PlatformTransactionManager transactions;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
@@ -65,6 +70,8 @@ class RelayStoreTest {
         tally,
         new RelayProperties(
             enabled, 30, perDay, 10, Duration.ofSeconds(5), Duration.ofSeconds(4), null, List.of()),
+        reach,
+        remoteNotes,
         new TransactionTemplate(transactions),
         clock);
   }
@@ -114,10 +121,37 @@ class RelayStoreTest {
 
     assertThat(kept(store(true, 2_000), post)).isEqualTo("stored");
 
-    InOrder order = inOrder(intake, relayed, transactions);
+    Instant kept = Instant.parse("2026-10-17T03:00:00.123456Z");
+    InOrder order = inOrder(intake, relayed, reach, remoteNotes, transactions);
     order.verify(intake).relayed(any(), any());
-    order.verify(relayed).mark(42L, 7L, Instant.parse("2026-10-17T03:00:00.123456Z"));
+    order.verify(relayed).mark(42L, 7L, kept);
+    order
+        .verify(reach)
+        .track(
+            42L,
+            new ReachTarget(HOST, "1"),
+            RemoteNoteReachRepository.Counts.NONE,
+            kept,
+            kept.plusSeconds(3_600));
+    order.verify(remoteNotes).preview(42L, "안녕", false, null);
     order.verify(transactions).commit(any());
+  }
+
+  @Test
+  void aKeptPostWhoseIdIsNotAMastodonStatusHasNoCountsToAskFor() {
+    JsonNode post =
+        JSON.readTree(
+            """
+            {"id":"https://mastodon.example/notes/9","type":"Note","attributedTo":"%s",
+             "to":["https://www.w3.org/ns/activitystreams#Public"],"content":"<p>hi</p>"}"""
+                .formatted(ALICE));
+    when(resolver.byActorUri(ALICE)).thenReturn(Optional.of(actor(ALICE, HOST)));
+    when(intake.relayed(any(), any())).thenReturn(Optional.of(43L));
+
+    assertThat(kept(store(true, 2_000), post)).isEqualTo("stored");
+
+    verify(relayed).mark(any(), any(), any());
+    verifyNoInteractions(reach);
   }
 
   @Test

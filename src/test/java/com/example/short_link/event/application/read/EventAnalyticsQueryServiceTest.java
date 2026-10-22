@@ -2,7 +2,6 @@ package com.example.short_link.event.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.event.application.read.EventAnalyticsView.Bucket;
@@ -14,7 +13,6 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -74,16 +72,6 @@ class EventAnalyticsQueryServiceTest {
     return registration;
   }
 
-  private ClickEventEntity click(Long linkId, boolean bot, String clientApp) {
-    ClickEventEntity click = mock(ClickEventEntity.class);
-    when(click.isBot()).thenReturn(bot);
-    if (!bot) {
-      when(click.getLinkId()).thenReturn(linkId);
-      when(click.getClientApp()).thenReturn(clientApp);
-    }
-    return click;
-  }
-
   @Test
   void missingEvent_isNotFound() {
     when(eventRepository.findById(10L)).thenReturn(Optional.empty());
@@ -128,9 +116,12 @@ class EventAnalyticsQueryServiceTest {
     Map<Long, String> channels = new LinkedHashMap<>();
     channels.put(7L, "단톡용");
     when(eventQueryService.channelLabels(10L)).thenReturn(channels);
-    List<ClickEventEntity> clicks =
-        List.of(click(7L, false, "kakaotalk"), click(7L, true, null), click(99L, false, null));
-    when(clickEventRepository.findAllByLinkIdInOrderByClickedAtAsc(Set.of(7L))).thenReturn(clicks);
+    Map<String, Long> fromUnknownLink = new LinkedHashMap<>();
+    fromUnknownLink.put(null, 1L);
+    Map<Long, Map<String, Long>> clicks = new LinkedHashMap<>();
+    clicks.put(7L, Map.of("kakaotalk", 1L));
+    clicks.put(99L, fromUnknownLink);
+    when(clickEventRepository.humanClientAppCountsByLinkIds(Set.of(7L))).thenReturn(clicks);
 
     EventRegistrationEntity byLink = registration(1L, Instant.parse("2026-09-01T01:00:00Z"));
     byLink.attribute(7L, "messenger", "kakaotalk", null, null, null);

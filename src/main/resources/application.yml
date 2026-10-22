@@ -139,6 +139,11 @@ short-link:
     retention-days: ${BEHAVIOR_EVENT_RETENTION_DAYS:90}
     cleanup-cron: ${BEHAVIOR_EVENT_CLEANUP_CRON:0 50 4 * * *}
     cleanup-enabled: ${BEHAVIOR_EVENT_CLEANUP_ENABLED:true}
+  click-retention:
+    raw-days: ${CLICK_RAW_RETENTION_DAYS:90}
+    cron: ${CLICK_ROLLUP_CRON:0 20 4 * * *}
+    rollup-enabled: ${CLICK_ROLLUP_ENABLED:true}
+    delete-batch: ${CLICK_ROLLUP_DELETE_BATCH:1000}
   user-deletion:
     grace-days: ${USER_DELETION_GRACE_DAYS:30}
     cleanup-cron: ${USER_DELETION_CLEANUP_CRON:0 30 5 * * *}
@@ -229,6 +234,14 @@ short-link:
       every: ${FEDERATION_LATEST_EVERY:5m}
       backfill-pages: ${FEDERATION_LATEST_BACKFILL_PAGES:5}
       per-day: ${FEDERATION_LATEST_PER_DAY:2000}
+    reach:
+      enabled: ${FEDERATION_REACH_ENABLED:true}
+      per-day: ${FEDERATION_REACH_PER_DAY:1500}
+      trended-per-day: ${FEDERATION_REACH_TRENDED_PER_DAY:300}
+      every: 5m
+      per-round: 200
+      pause: 1s
+      patience: 5s
     seen:
       flush-every: PT5S
       max-buffered: 50000

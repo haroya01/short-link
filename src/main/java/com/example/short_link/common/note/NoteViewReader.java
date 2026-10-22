@@ -1,5 +1,6 @@
 package com.example.short_link.common.note;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,18 @@ public interface NoteViewReader {
   List<Listed> received(Long viewerId, Long beforeId, int limit);
 
   List<Listed> latest(Long viewerId, Long beforeId, int limit);
+
+  record Pooled(
+      Long id,
+      Long remoteActorId,
+      String domain,
+      String language,
+      Instant createdAt,
+      String uri,
+      List<String> tags) {}
+
+  List<Pooled> remotePool(Long viewerId, Instant since, Instant until, int limit);
+
+  // In the order given, leaving out a note that is gone.
+  List<Listed> listed(Long viewerId, List<Long> noteIds);
 }

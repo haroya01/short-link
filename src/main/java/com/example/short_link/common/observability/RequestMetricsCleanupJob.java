@@ -8,13 +8,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
 public class RequestMetricsCleanupJob {
 
   private static final String LOCK_KEY = "kurl:cleanup:request-metrics";
+  private static final int DELETE_BATCH = 1000;
 
   private final RequestMetricJpaRepository repository;
   private final RedisDistributedLock lock;
@@ -26,7 +26,7 @@ public class RequestMetricsCleanupJob {
       RequestMetricJpaRepository repository,
       RedisDistributedLock lock,
       MeterRegistry meterRegistry,
-      @Value("${short-link.request-metrics.retention-days:90}") int retentionDays,
+      @Value("${short-link.request-metrics.retention-days:30}") int retentionDays,
       @Value("${short-link.request-metrics.cleanup-enabled:true}") boolean enabled) {
     this.repository = repository;
     this.lock = lock;
@@ -36,7 +36,6 @@ public class RequestMetricsCleanupJob {
   }
 
   @Scheduled(cron = "${short-link.request-metrics.cleanup-cron:0 50 4 * * *}", zone = "Asia/Seoul")
-  @Transactional
   public void runDaily() {
     if (!enabled) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(5))) {
@@ -44,8 +43,13 @@ public class RequestMetricsCleanupJob {
       return;
     }
     try {
-      int removed =
-          repository.deleteByOccurredAtBefore(Instant.now().minus(Duration.ofDays(retentionDays)));
+      Instant cutoff = Instant.now().minus(Duration.ofDays(retentionDays));
+      int removed = 0;
+      int batch;
+      do {
+        batch = repository.deleteBatchBefore(cutoff, DELETE_BATCH);
+        removed += batch;
+      } while (batch == DELETE_BATCH);
       meterRegistry.counter("cleanup.request_metrics").increment(removed);
       log.info(
           "request-metrics cleanup removed {} rows older than {} days", removed, retentionDays);
