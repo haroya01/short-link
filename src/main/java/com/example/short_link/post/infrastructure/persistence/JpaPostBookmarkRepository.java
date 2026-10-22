@@ -30,7 +30,7 @@ public interface JpaPostBookmarkRepository extends JpaRepository<PostBookmarkEnt
   @Query(
       value =
           "INSERT IGNORE INTO post_bookmark (post_id, user_id, created_at) "
-              + "VALUES (:postId, :userId, NOW())",
+              + "VALUES (:postId, :userId, UTC_TIMESTAMP(6))",
       nativeQuery = true)
   int insertIgnore(@Param("postId") Long postId, @Param("userId") Long userId);
 

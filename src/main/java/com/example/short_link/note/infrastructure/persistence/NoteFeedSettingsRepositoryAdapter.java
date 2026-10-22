@@ -32,7 +32,7 @@ class NoteFeedSettingsRepositoryAdapter implements NoteFeedSettingsRepository {
   public void setLanguages(Long userId, List<String> languages) {
     em.createNativeQuery(
             "INSERT INTO note_feed_preference (user_id, show_reposts, languages, updated_at)"
-                + " VALUES (:user, TRUE, :languages, NOW(6)) AS fresh"
+                + " VALUES (:user, TRUE, :languages, UTC_TIMESTAMP(6)) AS fresh"
                 + " ON DUPLICATE KEY UPDATE languages = fresh.languages,"
                 + " updated_at = fresh.updated_at")
         .setParameter("user", userId)
@@ -44,7 +44,7 @@ class NoteFeedSettingsRepositoryAdapter implements NoteFeedSettingsRepository {
   public void setShowsReposts(Long userId, boolean show) {
     em.createNativeQuery(
             "INSERT INTO note_feed_preference (user_id, show_reposts, updated_at)"
-                + " VALUES (:user, :show, NOW(6)) AS fresh"
+                + " VALUES (:user, :show, UTC_TIMESTAMP(6)) AS fresh"
                 + " ON DUPLICATE KEY UPDATE show_reposts = fresh.show_reposts,"
                 + " updated_at = fresh.updated_at")
         .setParameter("user", userId)
@@ -66,7 +66,7 @@ class NoteFeedSettingsRepositoryAdapter implements NoteFeedSettingsRepository {
   public void hideRepostsOf(Long userId, Long otherUserId) {
     em.createNativeQuery(
             "INSERT IGNORE INTO note_repost_mute (user_id, muted_user_id, created_at)"
-                + " VALUES (:user, :other, NOW(6))")
+                + " VALUES (:user, :other, UTC_TIMESTAMP(6))")
         .setParameter("user", userId)
         .setParameter("other", otherUserId)
         .executeUpdate();

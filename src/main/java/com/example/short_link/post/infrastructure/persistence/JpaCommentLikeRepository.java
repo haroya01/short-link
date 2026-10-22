@@ -17,7 +17,7 @@ public interface JpaCommentLikeRepository extends JpaRepository<CommentLikeEntit
   @Query(
       value =
           "INSERT IGNORE INTO comment_like (comment_id, user_id, created_at) "
-              + "VALUES (:commentId, :userId, NOW())",
+              + "VALUES (:commentId, :userId, UTC_TIMESTAMP(6))",
       nativeQuery = true)
   int insertIgnore(@Param("commentId") Long commentId, @Param("userId") Long userId);
 

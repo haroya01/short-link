@@ -24,7 +24,7 @@ class NoteRemoteReactionRepositoryAdapter implements NoteRemoteReactionRepositor
         em.createNativeQuery(
                 "INSERT IGNORE INTO note_remote_reaction"
                     + " (note_id, remote_actor_id, kind, activity_id, created_at)"
-                    + " VALUES (:noteId, :actorId, :kind, :activityId, NOW(6))")
+                    + " VALUES (:noteId, :actorId, :kind, :activityId, UTC_TIMESTAMP(6))")
             .setParameter("noteId", noteId)
             .setParameter("actorId", remoteActorId)
             .setParameter("kind", kind.name())
