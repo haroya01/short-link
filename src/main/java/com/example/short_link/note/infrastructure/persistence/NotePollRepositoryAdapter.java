@@ -57,7 +57,7 @@ class NotePollRepositoryAdapter implements NotePollRepository {
   public boolean vote(Long noteId, Long userId, int choices) {
     return em.createNativeQuery(
                 "INSERT IGNORE INTO note_poll_vote (note_id, user_id, choices, created_at)"
-                    + " VALUES (:note, :user, :choices, NOW(6))")
+                    + " VALUES (:note, :user, :choices, UTC_TIMESTAMP(6))")
             .setParameter("note", noteId)
             .setParameter("user", userId)
             .setParameter("choices", choices)
@@ -72,11 +72,11 @@ class NotePollRepositoryAdapter implements NotePollRepository {
     String sql =
         multiple
             ? "INSERT INTO note_poll_remote_vote (note_id, remote_actor_id, choices, created_at)"
-                + " VALUES (:note, :actor, :choices, NOW(6)) AS fresh"
+                + " VALUES (:note, :actor, :choices, UTC_TIMESTAMP(6)) AS fresh"
                 + " ON DUPLICATE KEY UPDATE choices = note_poll_remote_vote.choices | fresh.choices"
             : "INSERT IGNORE INTO note_poll_remote_vote"
                 + " (note_id, remote_actor_id, choices, created_at)"
-                + " VALUES (:note, :actor, :choices, NOW(6))";
+                + " VALUES (:note, :actor, :choices, UTC_TIMESTAMP(6))";
     return em.createNativeQuery(sql)
             .setParameter("note", noteId)
             .setParameter("actor", remoteActorId)

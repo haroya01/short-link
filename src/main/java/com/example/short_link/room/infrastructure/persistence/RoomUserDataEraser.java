@@ -24,7 +24,7 @@ class RoomUserDataEraser implements UserDataEraser {
         .setParameter("user", userId)
         .executeUpdate();
     em.createNativeQuery(
-            "UPDATE room_invite SET disabled_at = NOW(6)"
+            "UPDATE room_invite SET disabled_at = UTC_TIMESTAMP(6)"
                 + " WHERE creator_id = :user AND disabled_at IS NULL")
         .setParameter("user", userId)
         .executeUpdate();

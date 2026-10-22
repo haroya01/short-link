@@ -17,7 +17,7 @@ public interface JpaHighlightReplyLikeRepository
   @Query(
       value =
           "INSERT IGNORE INTO highlight_reply_like (highlight_reply_id, user_id, created_at) "
-              + "VALUES (:replyId, :userId, NOW())",
+              + "VALUES (:replyId, :userId, UTC_TIMESTAMP(6))",
       nativeQuery = true)
   int insertIgnore(@Param("replyId") Long replyId, @Param("userId") Long userId);
 
