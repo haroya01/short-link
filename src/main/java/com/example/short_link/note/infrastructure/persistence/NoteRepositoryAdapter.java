@@ -15,6 +15,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RemotePoolRow;
 import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
@@ -34,6 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.NativeQuery;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -229,6 +231,72 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setParameter("now", Instant.now())
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<RemotePoolRow> remotePool(Long viewerId, Instant since, Instant until, int limit) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT n.id, n.remote_actor_id, a.domain, n.language, n.created_at, n.uri"
+                    + " FROM federation_relayed_note r STRAIGHT_JOIN note n ON n.id = r.note_id"
+                    + " JOIN federation_remote_actor a ON a.id = n.remote_actor_id"
+                    + " WHERE r.received_at >= :since AND r.received_at <= :until"
+                    + " AND n.created_at >= :since AND "
+                    + notReply("n")
+                    + " AND "
+                    + NoteAccessSql.listed("n")
+                    + heardNote("n")
+                    + unlimited("n")
+                    + inLanguages("n")
+                    + " AND n.content_warning IS NULL AND NOT n.marked_sensitive"
+                    + " AND NOT EXISTS (SELECT 1 FROM federation_following ff"
+                    + " WHERE ff.user_id = :viewer AND ff.remote_actor_id = n.remote_actor_id"
+                    + " AND ff.accepted_at IS NOT NULL)"
+                    + " ORDER BY r.note_id DESC")
+            .setParameter("since", since)
+            .setParameter("until", until)
+            .setParameter("viewer", viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .setMaxResults(limit)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("remote_actor_id", Long.class)
+            .addScalar("domain", String.class)
+            .addScalar("language", String.class)
+            .addScalar("created_at", Instant.class)
+            .addScalar("uri", String.class)
+            .getResultList();
+    return rows.stream()
+        .map(
+            row ->
+                new RemotePoolRow(
+                    (Long) row[0],
+                    (Long) row[1],
+                    (String) row[2],
+                    (String) row[3],
+                    (Instant) row[4],
+                    (String) row[5]))
+        .toList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Map<Long, List<String>> tagsOf(Collection<Long> noteIds) {
+    if (noteIds.isEmpty()) {
+      return Map.of();
+    }
+    List<Object[]> rows =
+        em.createNativeQuery("SELECT note_id, tag FROM note_tag WHERE note_id IN (:ids)")
+            .setParameter("ids", noteIds)
+            .unwrap(NativeQuery.class)
+            .addScalar("note_id", Long.class)
+            .addScalar("tag", String.class)
+            .getResultList();
+    Map<Long, List<String>> tags = new HashMap<>();
+    rows.forEach(
+        row -> tags.computeIfAbsent((Long) row[0], id -> new ArrayList<>()).add((String) row[1]));
+    return tags;
   }
 
   static String onProfile(String alias) {

@@ -48,6 +48,8 @@ class TrendingPostsTest {
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final Instant NOW = Instant.parse("2026-10-17T00:00:00Z");
   private static final Duration PATIENCE = Duration.ofSeconds(4);
+  private static final FederationUrls URLS =
+      new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me"));
   private static final TrendsProperties PROPS =
       new TrendsProperties(
           true, List.of(" A.example ", "b.example", "c.example", ""), 3, 1, null, PATIENCE);
@@ -56,6 +58,7 @@ class TrendingPostsTest {
   @Mock private SigningKeys signingKeys;
   @Mock private FederationDomainBlockRepository serverBlocks;
   @Mock private RemoteAccountStandingReader standings;
+  @Mock private RemoteReach reach;
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
   private TrendingPosts trending;
@@ -78,6 +81,8 @@ class TrendingPostsTest {
                     new FederationUrls(
                         new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
                 JSON),
+            URLS,
+            reach,
             JSON,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
@@ -184,6 +189,8 @@ class TrendingPostsTest {
                 new FederationUrls(
                     new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
             JSON),
+        URLS,
+        reach,
         JSON,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }

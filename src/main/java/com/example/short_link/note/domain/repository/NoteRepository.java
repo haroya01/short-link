@@ -8,6 +8,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.RemotePoolRow;
 import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
@@ -77,6 +78,12 @@ public interface NoteRepository {
 
   // The notes a relay brought or a pull kept, newest first, as the federated feed filters them.
   List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
+
+  // The same notes kept between since and until, newest first, without a warning or a sensitive
+  // mark and not by an account the viewer follows.
+  List<RemotePoolRow> remotePool(Long viewerId, Instant since, Instant until, int limit);
+
+  Map<Long, List<String>> tagsOf(Collection<Long> noteIds);
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 

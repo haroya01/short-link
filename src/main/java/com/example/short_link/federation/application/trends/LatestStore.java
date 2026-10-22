@@ -5,7 +5,10 @@ import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.application.relay.RelayTally;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.foryou.ReachSchedule;
+import com.example.short_link.federation.domain.foryou.ReachTarget;
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
+import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -17,12 +20,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // A pulled post is kept as a relayed one is, under its author, and marked with the server it was
-// pulled from. The day's cap is its own, so pulls never use up what the relays may keep.
+// pulled from. The day's cap is its own, so pulls never use up what the relays may keep; a post
+// kept because a server listed it as trending has a cap of its own again. Each kept post's counts
+// are tracked so they can be asked again.
 @Component
 @RequiredArgsConstructor
 class LatestStore {
 
   static final String PULLED = "pulled";
+  static final String TRENDED = "trended";
 
   private final RemoteActorResolver resolver;
   private final RemoteNoteIntake intake;
@@ -30,6 +36,8 @@ class LatestStore {
   private final FederationRelayedNoteRepository relayed;
   private final RelayTally tally;
   private final LatestProperties props;
+  private final ReachProperties reachProps;
+  private final RemoteNoteReachRepository reach;
   private final TransactionTemplate transaction;
   private final Clock clock;
 
@@ -37,6 +45,7 @@ class LatestStore {
   public void load() {
     if (props.pulling()) {
       tally.seed(PULLED, relayed.pulledSince(tally.dayStart()));
+      tally.seed(TRENDED, relayed.trendedSince(tally.dayStart()));
     }
   }
 
@@ -49,23 +58,29 @@ class LatestStore {
   }
 
   String keep(String host, TrendingStatusReader.Read read) {
-    String outcome = kept(host, read);
+    String outcome = leftToday() == 0 ? "pull-cap" : kept(host, read, false);
     tally.count(outcome);
     return outcome;
   }
 
-  private String kept(String host, TrendingStatusReader.Read read) {
-    if (leftToday() == 0) {
-      return "pull-cap";
-    }
+  String keepTrended(String host, TrendingStatusReader.Read read) {
+    String outcome =
+        tally.today(TRENDED) >= reachProps.trendedPerDay() ? "trend-cap" : kept(host, read, true);
+    tally.count(outcome);
+    return outcome;
+  }
+
+  private String kept(String host, TrendingStatusReader.Read read, boolean trended) {
+    String prefix = trended ? "trend" : "pull";
     RemoteNoteParser.Parsed note = parser.parse(read.object(), read.object());
     Optional<RemoteActorEntity> author =
         resolver
             .byActorUri(read.actorUri())
             .filter(actor -> !actor.onSuspendedServer() && read.domain().equals(actor.getDomain()));
     if (author.isEmpty()) {
-      return "pull-no-author";
+      return prefix + "-no-author";
     }
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     Optional<Long> kept =
         transaction.execute(
             status ->
@@ -73,10 +88,25 @@ class LatestStore {
                     .relayed(author.get(), note)
                     .map(
                         noteId -> {
-                          relayed.markPulled(
-                              noteId, host, clock.instant().truncatedTo(ChronoUnit.MICROS));
+                          if (trended) {
+                            relayed.markTrended(noteId, host, now);
+                          } else {
+                            relayed.markPulled(noteId, host, now);
+                          }
+                          reach.track(
+                              noteId,
+                              ReachTarget.of(read.note().uri()).orElse(null),
+                              new RemoteNoteReachRepository.Counts(
+                                  read.note().likeCount(),
+                                  read.note().repostCount(),
+                                  read.note().replyCount()),
+                              now,
+                              ReachSchedule.first(now));
                           return noteId;
                         }));
-    return kept != null && kept.isPresent() ? PULLED : "pull-not-kept";
+    if (kept == null || kept.isEmpty()) {
+      return prefix + "-not-kept";
+    }
+    return trended ? TRENDED : PULLED;
   }
 }

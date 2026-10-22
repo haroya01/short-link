@@ -134,32 +134,12 @@ public class LatestPosts {
     if (!props.enabled()) {
       return new Page(List.of(), false, List.of());
     }
-    if (askedAt == null) {
-      refresh();
-    } else if (askedAt.plus(props.freshFor()).isBefore(clock.instant())) {
-      CompletableFuture.runAsync(this::refresh, askers);
-    }
+    fresh();
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
     if (offset + size > latest.size()) {
       deepen();
     }
-    List<Kept> all = latest;
-    RemoteAccountStandingReader.Hidden hidden =
-        viewerId == null || all.isEmpty()
-            ? RemoteAccountStandingReader.Hidden.NONE
-            : standings.hidden(
-                viewerId,
-                all.stream().map(kept -> kept.read().actorUri()).distinct().toList(),
-                all.stream().map(kept -> kept.read().domain()).distinct().toList(),
-                clock.instant());
-    List<TrendingStatusReader.Read> shown =
-        all.stream()
-            .map(Kept::read)
-            .filter(
-                read ->
-                    !hidden.actorUris().contains(read.actorUri())
-                        && !hidden.domains().contains(read.domain()))
-            .toList();
+    List<TrendingStatusReader.Read> shown = shown(viewerId);
     int from = Math.clamp(offset, 0, shown.size());
     List<TrendingStatusReader.Read> page = shown.subList(from, Math.min(from + size, shown.size()));
     boolean more = from + page.size() < shown.size() || canDeepen();
@@ -171,6 +151,41 @@ public class LatestPosts {
             .map(TrendingStatusReader.Read::actorUri)
             .distinct()
             .toList());
+  }
+
+  List<TrendingStatusReader.Read> pool(Long viewerId) {
+    if (!props.enabled()) {
+      return List.of();
+    }
+    fresh();
+    return shown(viewerId);
+  }
+
+  private void fresh() {
+    if (askedAt == null) {
+      refresh();
+    } else if (askedAt.plus(props.freshFor()).isBefore(clock.instant())) {
+      CompletableFuture.runAsync(this::refresh, askers);
+    }
+  }
+
+  private List<TrendingStatusReader.Read> shown(Long viewerId) {
+    List<Kept> all = latest;
+    RemoteAccountStandingReader.Hidden hidden =
+        viewerId == null || all.isEmpty()
+            ? RemoteAccountStandingReader.Hidden.NONE
+            : standings.hidden(
+                viewerId,
+                all.stream().map(kept -> kept.read().actorUri()).distinct().toList(),
+                all.stream().map(kept -> kept.read().domain()).distinct().toList(),
+                clock.instant());
+    return all.stream()
+        .map(Kept::read)
+        .filter(
+            read ->
+                !hidden.actorUris().contains(read.actorUri())
+                    && !hidden.domains().contains(read.domain()))
+        .toList();
   }
 
   public Optional<JsonNode> object(String address) {
@@ -353,7 +368,7 @@ public class LatestPosts {
       first = first == null ? id : first;
       last = id;
       lastAt = instant(status.path("created_at").asString(null));
-      if (safe(status) && !(props.pulling() && namesUs(status))) {
+      if (safe(status) && !(props.pulling() && namesUs(status, urls))) {
         reader.read(status, host).ifPresent(reads::add);
       }
     }
@@ -383,7 +398,11 @@ public class LatestPosts {
     return rest != null && rest.until().isAfter(clock.instant());
   }
 
-  private boolean namesUs(JsonNode status) {
+  static boolean keepable(JsonNode status, FederationUrls urls) {
+    return safe(status) && !namesUs(status, urls);
+  }
+
+  private static boolean namesUs(JsonNode status, FederationUrls urls) {
     for (JsonNode mention : status.path("mentions")) {
       String acct = mention.path("acct").asString("");
       int at = acct.lastIndexOf('@');

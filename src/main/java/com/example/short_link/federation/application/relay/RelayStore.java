@@ -7,8 +7,12 @@ import com.example.short_link.federation.application.RemoteActorResolver;
 import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.foryou.ReachSchedule;
+import com.example.short_link.federation.domain.foryou.ReachTarget;
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
+import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +35,7 @@ public class RelayStore {
   private final RelaySubscriptions subscriptions;
   private final RelayTally tally;
   private final RelayProperties props;
+  private final RemoteNoteReachRepository reach;
   private final TransactionTemplate transaction;
   private final Clock clock;
 
@@ -42,8 +47,18 @@ public class RelayStore {
       RelaySubscriptions subscriptions,
       RelayTally tally,
       RelayProperties props,
+      RemoteNoteReachRepository reach,
       TransactionTemplate transaction) {
-    this(resolver, intake, relayed, subscriptions, tally, props, transaction, Clock.systemUTC());
+    this(
+        resolver,
+        intake,
+        relayed,
+        subscriptions,
+        tally,
+        props,
+        reach,
+        transaction,
+        Clock.systemUTC());
   }
 
   RelayStore(
@@ -53,6 +68,7 @@ public class RelayStore {
       RelaySubscriptions subscriptions,
       RelayTally tally,
       RelayProperties props,
+      RemoteNoteReachRepository reach,
       TransactionTemplate transaction,
       Clock clock) {
     this.resolver = resolver;
@@ -61,6 +77,7 @@ public class RelayStore {
     this.subscriptions = subscriptions;
     this.tally = tally;
     this.props = props;
+    this.reach = reach;
     this.transaction = transaction;
     this.clock = clock;
   }
@@ -96,8 +113,17 @@ public class RelayStore {
                     .relayed(author.get(), note)
                     .map(
                         noteId -> {
-                          relayed.mark(
-                              noteId, relayId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+                          Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+                          relayed.mark(noteId, relayId, now);
+                          ReachTarget.of(note.uri())
+                              .ifPresent(
+                                  target ->
+                                      reach.track(
+                                          noteId,
+                                          target,
+                                          RemoteNoteReachRepository.Counts.NONE,
+                                          now,
+                                          ReachSchedule.first(now)));
                           return noteId;
                         }));
     return kept != null && kept.isPresent() ? STORED : "not-kept";

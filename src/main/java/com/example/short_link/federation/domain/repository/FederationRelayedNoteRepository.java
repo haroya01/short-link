@@ -11,9 +11,13 @@ public interface FederationRelayedNoteRepository {
 
   void markPulled(Long noteId, String host, Instant receivedAt);
 
+  void markTrended(Long noteId, String host, Instant receivedAt);
+
   long relayedSince(Instant since);
 
   long pulledSince(Instant since);
+
+  long trendedSince(Instant since);
 
   // When the newest note pulled from the server was published, if any is kept.
   Optional<Instant> newestPulled(String host);
