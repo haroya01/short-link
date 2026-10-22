@@ -1,7 +1,8 @@
 # Rooms, measured against Docker MySQL 2026-10-20 (CI run 39339848908). Never automatically update
 # on test failure.
 # A signed-in POST, PUT, PATCH or DELETE to a link, event, room, CTA, campaign or custom-domain
-# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate).
+# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate); removals
+# and the member's own settings (@OpenToSuspended) do not.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 #
 # Making a room: the room, its owner as the first member (watermark from the room's newest note),
@@ -59,21 +60,21 @@
 # Every room of the member, its newest note, unread count and members in one statement, then up
 # to three faces per room besides the member in one more.
 @junit | room-list | 2 | 0 | 0 | 0 | 2
-@junit | room-read | 3 | 0 | 1 | 0 | 4
+@junit | room-read | 2 | 0 | 1 | 0 | 3
 @junit | room-detail | 4 | 0 | 0 | 0 | 4
 # Pinning: membership, whether it is pinned already, the member's pin count against five, the
 # update. Unpinning skips the count.
-@junit | room-pin | 4 | 0 | 1 | 0 | 5
-@junit | room-unpin | 3 | 0 | 1 | 0 | 4
-@junit | room-feed-hide | 2 | 0 | 1 | 0 | 3
-@junit | room-feed-show | 2 | 0 | 1 | 0 | 3
+@junit | room-pin | 3 | 0 | 1 | 0 | 4
+@junit | room-unpin | 2 | 0 | 1 | 0 | 3
+@junit | room-feed-hide | 1 | 0 | 1 | 0 | 2
+@junit | room-feed-show | 1 | 0 | 1 | 0 | 2
 # The owner's changes run under the room's row lock, then the room is read back as on detail.
 @junit | room-update | 6 | 0 | 1 | 0 | 7
 @junit | room-requests | 3 | 0 | 0 | 0 | 3
 @junit | room-request-approve | 4 | 1 | 0 | 1 | 6
 @junit | room-request-reject | 3 | 0 | 0 | 1 | 4
 @junit | room-invites | 4 | 0 | 0 | 0 | 4
-@junit | room-invite-disable | 5 | 0 | 1 | 0 | 6
+@junit | room-invite-disable | 4 | 0 | 1 | 0 | 5
 # Removing a member: lock, both memberships, the membership deleted, their invites stopped, the
 # invitations they sent that nobody answered deleted, and the removal kept so no invite lets them
 # back in.
@@ -81,7 +82,7 @@
 @junit | room-my-notes | 6 | 0 | 0 | 0 | 6
 # Leaving and keeping the notes: lock, membership, the membership deleted, the member's invites
 # stopped and the invitations they sent that nobody answered deleted.
-@junit | room-leave | 3 | 0 | 1 | 2 | 6
+@junit | room-leave | 2 | 0 | 1 | 2 | 5
 # Deleting one's notes in a room only records the request; RoomNoteErasureJob deletes them later
 # in chunks, so the request stays one statement however many notes there are.
 @junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
@@ -89,7 +90,7 @@
 # RoomPostErasureJob deletes them later in chunks.
 @junit | room-my-posts-delete | 0 | 1 | 0 | 0 | 1
 @junit | room-suggestions | 1 | 0 | 0 | 0 | 1
-@junit | room-suggestions-dismiss | 1 | 1 | 0 | 0 | 2
+@junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1
 # Inviting by name: the room locked, membership, the waiting count against the cap, one insert for
 # everyone asked (whoever cannot be asked is left out inside it), then who waits now.
 @junit | room-invitation-send | 5 | 1 | 0 | 0 | 6
@@ -100,5 +101,5 @@
 # same membership, removal, request and seat checks as an invite link before the invitation is
 # taken and the member added.
 @junit | room-invitation-accept | 8 | 1 | 0 | 1 | 10
-@junit | room-invitation-decline | 1 | 0 | 1 | 0 | 2
-@junit | room-invitation-cancel | 4 | 0 | 0 | 1 | 5
+@junit | room-invitation-decline | 0 | 0 | 1 | 0 | 1
+@junit | room-invitation-cancel | 3 | 0 | 0 | 1 | 4

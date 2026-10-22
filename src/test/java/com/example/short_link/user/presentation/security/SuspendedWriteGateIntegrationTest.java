@@ -1,11 +1,15 @@
 package com.example.short_link.user.presentation.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -45,6 +49,7 @@ class SuspendedWriteGateIntegrationTest {
 
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository users;
+  @Autowired private LinkRepository links;
   @Autowired private JwtTokenService jwt;
 
   @Autowired
@@ -79,7 +84,7 @@ class SuspendedWriteGateIntegrationTest {
   }
 
   @Test
-  void readsAndAnAccountInGoodStandingAreLetThrough() throws Exception {
+  void readsOwnRemovalsAndAnAccountInGoodStandingAreLetThrough() throws Exception {
     UserEntity suspended = newUser();
     suspended.suspend(Instant.now().plus(Duration.ofDays(1)));
     users.save(suspended);
@@ -87,6 +92,10 @@ class SuspendedWriteGateIntegrationTest {
 
     mvc.perform(get("/api/v1/rooms").header("Authorization", bearer(suspended)))
         .andExpect(status().isOk());
+    links.save(new LinkEntity("https://example.com/own", "gate001", suspended.getId(), null));
+    mvc.perform(delete("/api/v1/links/gate001").header("Authorization", bearer(suspended)))
+        .andExpect(status().is2xxSuccessful());
+    assertThat(links.findByShortCode(ShortCode.of("gate001"))).isEmpty();
     mvc.perform(
             post("/api/v1/links")
                 .header("Authorization", bearer(fine))
@@ -121,12 +130,32 @@ class SuspendedWriteGateIntegrationTest {
     }
 
     assertThat(open)
-        .containsExactly(
+        .containsExactlyInAnyOrder(
             "CampaignStatsCompareController.compare",
             "MyClickStreamController.issueStreamToken",
             "PasswordUnlockController.unlock",
-            "SseClickStreamController.issueStreamToken");
-    assertThat(gated).isGreaterThan(60);
+            "SseClickStreamController.issueStreamToken",
+            "LinkManagementController.delete",
+            "LinkManagementController.bulkDelete",
+            "LinkWebhookController.delete",
+            "CtaController.delete",
+            "CampaignController.archive",
+            "CampaignBatchController.delete",
+            "CustomDomainController.delete",
+            "RoomController.leave",
+            "RoomController.decline",
+            "RoomController.cancelInvitation",
+            "RoomController.disable",
+            "MyLinksWorkspaceController.add",
+            "MyLinksWorkspaceController.remove",
+            "MyLinksWorkspaceController.reorder",
+            "RoomController.pin",
+            "RoomController.unpin",
+            "RoomController.hide",
+            "RoomController.show",
+            "RoomController.read",
+            "RoomController.dismiss");
+    assertThat(gated).isGreaterThan(40);
   }
 
   private UserEntity newUser() {

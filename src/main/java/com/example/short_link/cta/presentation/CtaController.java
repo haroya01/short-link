@@ -1,5 +1,6 @@
 package com.example.short_link.cta.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.cta.application.read.CtaQueryService;
 import com.example.short_link.cta.application.read.CtaView;
 import com.example.short_link.cta.application.write.CreateCtaCommand;
@@ -78,6 +79,7 @@ public class CtaController {
                 parsePurpose(request.purpose()))));
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {

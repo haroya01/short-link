@@ -9,6 +9,7 @@ import com.example.short_link.campaign.presentation.request.CampaignBatchBulkReq
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.presentation.request.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.presentation.response.CampaignBatchResponse;
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -92,6 +93,7 @@ public class CampaignBatchController {
     return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{batchId}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Long userId,

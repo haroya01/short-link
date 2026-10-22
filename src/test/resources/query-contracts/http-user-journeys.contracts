@@ -3,7 +3,8 @@
 # Background-delivery IDs measure the real explicit worker separately from HTTP.
 # Native query-audit 0.6 format. Never automatically update on test failure.
 # A signed-in POST, PUT, PATCH or DELETE to a link, event, room, CTA, campaign or custom-domain
-# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate).
+# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate); removals
+# and the member's own settings (@OpenToSuspended) do not.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 @junit | account-api-key-authenticate | 4 | 0 | 1 | 0 | 5
 @junit | account-api-key-cross-user-revoke | 1 | 0 | 0 | 0 | 1
@@ -145,10 +146,10 @@
 # place and the dropped one deleted.
 @junit | author-unpublished-body-edit | 2 | 0 | 2 | 2 | 6
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
-@junit | campaign-archive | 3 | 0 | 1 | 0 | 4
+@junit | campaign-archive | 2 | 0 | 1 | 0 | 3
 @junit | campaign-batch-bulk | 12 | 14 | 4 | 0 | 30
 @junit | campaign-batch-create | 8 | 7 | 2 | 0 | 17
-@junit | campaign-batch-delete | 4 | 0 | 0 | 2 | 6
+@junit | campaign-batch-delete | 3 | 0 | 0 | 2 | 5
 # The deleted batch's link left the redirect cache, so its code misses the cached-row read.
 @junit | campaign-batch-deleted-visit | 1 | 0 | 0 | 0 | 1
 @junit | campaign-batch-detail | 3 | 0 | 0 | 0 | 3
@@ -192,7 +193,7 @@
 @junit | creator-blog-hook-update | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-active-list-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-create | 7 | 7 | 2 | 0 | 16
-@junit | creator-cta-delete | 3 | 0 | 1 | 0 | 4
+@junit | creator-cta-delete | 2 | 0 | 1 | 0 | 3
 @junit | creator-cta-deleted-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-denies-other | 2 | 0 | 0 | 0 | 2
 @junit | creator-cta-detail | 1 | 0 | 0 | 0 | 1
@@ -227,8 +228,8 @@
 @junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | curation-unlist-path | 2 | 0 | 1 | 0 | 3
-@junit | custom-domain-delete | 2 | 0 | 0 | 1 | 3
-@junit | custom-domain-delete-foreign-denied | 2 | 0 | 0 | 0 | 2
+@junit | custom-domain-delete | 1 | 0 | 0 | 1 | 2
+@junit | custom-domain-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-list | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-register | 3 | 1 | 0 | 0 | 4
 # DNS result persistence reloads the domain in its own transaction, including failed checks.
@@ -323,7 +324,7 @@
 @junit | interaction-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | link-account-stream | 0 | 0 | 0 | 0 | 0
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
-@junit | link-bulk-delete | 2 | 2 | 0 | 2 | 6
+@junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
 @junit | link-bulk-import | 10 | 12 | 4 | 0 | 26
 @junit | link-claim-anonymous | 2 | 0 | 1 | 0 | 3
 @junit | link-claim-replay | 2 | 0 | 0 | 0 | 2
@@ -335,8 +336,8 @@
 @junit | link-create-owned | 6 | 6 | 2 | 0 | 14
 @junit | link-create-protected | 6 | 6 | 2 | 0 | 14
 @junit | link-create-webhook | 6 | 6 | 2 | 0 | 14
-@junit | link-delete-foreign-denied | 2 | 0 | 0 | 0 | 2
-@junit | link-delete-owned | 2 | 1 | 0 | 1 | 4
+@junit | link-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
+@junit | link-delete-owned | 1 | 1 | 0 | 1 | 3
 @junit | link-destination-add | 3 | 1 | 0 | 0 | 4
 @junit | link-destination-delete | 3 | 0 | 0 | 1 | 4
 @junit | link-destination-list | 2 | 0 | 0 | 0 | 2
@@ -376,7 +377,7 @@
 # Read total/human counts, owner timezone, tags, and local-day buckets for the PATCH response.
 @junit | link-update-owned | 8 | 1 | 2 | 0 | 11
 @junit | link-webhook-configure | 3 | 0 | 1 | 0 | 4
-@junit | link-webhook-delete | 3 | 0 | 0 | 1 | 4
+@junit | link-webhook-delete | 2 | 0 | 0 | 1 | 3
 @junit | link-webhook-disable | 3 | 0 | 1 | 0 | 4
 @junit | link-webhook-list | 2 | 0 | 0 | 0 | 2
 @junit | link-webhook-register | 3 | 1 | 0 | 0 | 4
@@ -727,11 +728,11 @@
 # Owner workspace: all counts are batched; adding a link does not add per-link SELECTs.
 @junit | workspace-create-first | 6 | 6 | 2 | 0 | 14
 @junit | workspace-create-second | 5 | 6 | 2 | 0 | 13
-@junit | workspace-favorite-add-first | 4 | 0 | 1 | 0 | 5
-@junit | workspace-favorite-add-second | 4 | 0 | 1 | 0 | 5
+@junit | workspace-favorite-add-first | 3 | 0 | 1 | 0 | 4
+@junit | workspace-favorite-add-second | 3 | 0 | 1 | 0 | 4
 @junit | workspace-favorite-list | 6 | 0 | 0 | 0 | 6
-@junit | workspace-favorite-order | 3 | 0 | 2 | 0 | 5
-@junit | workspace-favorite-remove | 3 | 0 | 1 | 0 | 4
+@junit | workspace-favorite-order | 2 | 0 | 2 | 0 | 4
+@junit | workspace-favorite-remove | 2 | 0 | 1 | 0 | 3
 @junit | workspace-selected-links | 6 | 0 | 0 | 0 | 6
 @junit | workspace-overview | 9 | 0 | 0 | 0 | 9
 # A note report: the note exists, no open report of it from this reader, insert. The open backlog

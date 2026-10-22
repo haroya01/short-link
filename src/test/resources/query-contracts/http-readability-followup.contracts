@@ -2,7 +2,8 @@
 # Fixtures and direct DB assertions excluded; triggered async work included.
 # Counts were reviewed against actual SQL. Never automatically update on failure.
 # A signed-in POST, PUT, PATCH or DELETE to a link, event, room, CTA, campaign or custom-domain
-# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate).
+# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate); removals
+# and the member's own settings (@OpenToSuspended) do not.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 
 # The public form is loaded before domain address validation rejects the submission.
