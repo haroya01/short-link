@@ -559,6 +559,16 @@ class RoomRepositoryAdapter implements RoomRepository {
   }
 
   @Override
+  public int dropInvitationsBy(Long roomId, Long inviterId) {
+    return em.createNativeQuery(
+            "DELETE FROM room_invitation"
+                + " WHERE room_id = :room AND inviter_id = :inviter AND declined_at IS NULL")
+        .setParameter("room", roomId)
+        .setParameter("inviter", inviterId)
+        .executeUpdate();
+  }
+
+  @Override
   public boolean declineInvitation(Long roomId, Long userId, Instant at) {
     return em.createNativeQuery(
                 "UPDATE room_invitation SET declined_at = :at"

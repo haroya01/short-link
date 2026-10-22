@@ -1,6 +1,7 @@
 package com.example.short_link.link.redirect.presentation.helper;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.WebAddress;
 import com.example.short_link.link.redirect.application.LinkPreviewData;
 import com.example.short_link.link.redirect.application.read.LinkPreviewQueryService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class LinkPreviewRenderer {
             : previews.find(link, shortUrl, clickCount);
     boolean revealDestination = scope == Scope.DESTINATION;
     String original = preview.originalUrl();
+    boolean linksDestination = revealDestination && WebAddress.is(original);
     // 제목이 없을 때 목적지 주소로 대신 채우는데, 목적지를 숨길 때는 그게 곧 누출이다.
     String title =
         !revealDestination && preview.title().equals(original) ? shortUrl : preview.title();
@@ -68,14 +70,14 @@ public class LinkPreviewRenderer {
       sb.append("<meta name=\"twitter:image\" content=\"").append(escape(image)).append("\">\n");
     }
 
-    if (revealDestination) {
+    if (linksDestination) {
       sb.append("<link rel=\"canonical\" href=\"").append(escape(original)).append("\">\n");
       sb.append("<meta http-equiv=\"refresh\" content=\"0;url=")
           .append(escape(original))
           .append("\">\n");
     }
     sb.append("</head>\n<body>\n");
-    if (revealDestination) {
+    if (linksDestination) {
       sb.append("<p>Redirecting to <a href=\"")
           .append(escape(original))
           .append("\">")

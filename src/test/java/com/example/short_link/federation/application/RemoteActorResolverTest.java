@@ -67,7 +67,8 @@ class RemoteActorResolverTest {
   }
 
   private static FederationHttp.Result ok(String body) {
-    return new FederationHttp.Result.Ok(200, body.getBytes(StandardCharsets.UTF_8));
+    return new FederationHttp.Result.Ok(
+        200, body.getBytes(StandardCharsets.UTF_8), "application/activity+json; charset=utf-8");
   }
 
   private static RemoteActorEntity cached(Instant fetchedAt) {
@@ -131,6 +132,63 @@ class RemoteActorResolverTest {
 
     assertThat(actor.getActorUri()).isEqualTo("https://gts.example/users/bob");
     assertThat(actor.deliveryInbox()).isEqualTo("https://gts.example/users/bob/inbox");
+  }
+
+  @Test
+  void aDocumentElsewhereOnTheSameServerCannotReplaceAnActorsKey() {
+    String planted = "https://mastodon.example/system/media/planted.json";
+    String plantedKey = planted + "#main-key";
+    String forged =
+        RemoteActorFixtures.MASTODON.replace(
+            "\"id\": \"https://mastodon.example/users/alice#main-key\"",
+            "\"id\": \"" + plantedKey + "\"");
+    when(actors.findByKeyId(plantedKey)).thenReturn(Optional.empty());
+    when(http.get(URI.create(planted), instance)).thenReturn(ok(forged));
+    when(http.get(MASTODON_ACTOR, instance)).thenReturn(ok(RemoteActorFixtures.MASTODON));
+
+    assertThat(resolver().byKeyId(plantedKey, true)).isEmpty();
+    verify(actors, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void aDocumentServedAsAnythingButActivityJsonIsNotAnActor() {
+    byte[] alice = RemoteActorFixtures.MASTODON.getBytes(StandardCharsets.UTF_8);
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.empty());
+    when(http.get(MASTODON_ACTOR, instance))
+        .thenReturn(
+            new FederationHttp.Result.Ok(200, alice, "application/octet-stream"),
+            new FederationHttp.Result.Ok(200, alice, "text/plain"),
+            new FederationHttp.Result.Ok(200, alice, "image/jpeg"),
+            new FederationHttp.Result.Ok(200, alice),
+            new FederationHttp.Result.Ok(
+                200,
+                alice,
+                "Application/LD+JSON;Profile=\"https://www.w3.org/ns/activitystreams\""));
+
+    for (int i = 0; i < 4; i++) {
+      assertThat(resolver().byActorUri(MASTODON_ACTOR.toString())).isEmpty();
+    }
+    assertThat(resolver().byActorUri(MASTODON_ACTOR.toString())).isPresent();
+  }
+
+  @Test
+  void aSearchedAddressServingAnActorWithAnotherIdIsBelievedOnlyAsThatIdServesIt() {
+    URI profile = URI.create("https://mastodon.example/@alice");
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.empty());
+    when(http.get(MASTODON_ACTOR, instance))
+        .thenReturn(
+            ok(RemoteActorFixtures.MASTODON),
+            ok(
+                RemoteActorFixtures.MASTODON.replace(
+                    "\"id\": \"https://mastodon.example/users/alice\"",
+                    "\"id\": \"https://mastodon.example/users/eve\"")));
+    var json = JsonMapper.builder().build();
+
+    RemoteActorEntity actor =
+        resolver().stored(json.readTree(RemoteActorFixtures.MASTODON), profile).orElseThrow();
+    assertThat(actor.getActorUri()).isEqualTo(MASTODON_ACTOR.toString());
+    assertThat(resolver().stored(json.readTree(RemoteActorFixtures.MASTODON), profile)).isEmpty();
+    verify(http, never()).get(profile, instance);
   }
 
   @Test
@@ -286,10 +344,11 @@ class RemoteActorResolverTest {
   }
 
   @Test
-  void aDocumentFetchedFromAProfileAddressIsStoredUnderItsOwnIdOnTheSameHost() {
+  void aDocumentFetchedFromAProfileAddressIsStoredAsItsOwnIdServesItOnTheSameHost() {
     JsonMapper json = JsonMapper.builder().build();
     URI profile = URI.create("https://mastodon.example/@alice");
     when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.empty());
+    when(http.get(MASTODON_ACTOR, instance)).thenReturn(ok(RemoteActorFixtures.MASTODON));
 
     Optional<RemoteActorEntity> stored =
         resolver().stored(json.readTree(RemoteActorFixtures.MASTODON), profile);
@@ -303,6 +362,6 @@ class RemoteActorResolverTest {
                     json.readTree(RemoteActorFixtures.MASTODON),
                     URI.create("https://elsewhere.example/@alice")))
         .isEmpty();
-    verify(http, never()).get(any(), any());
+    verify(http, times(1)).get(any(), any());
   }
 }

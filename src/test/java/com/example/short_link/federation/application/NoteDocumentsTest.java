@@ -84,6 +84,34 @@ class NoteDocumentsTest {
   }
 
   @Test
+  void aDirectNoteAddressedToNoOneElsewhereIsNeverAddressedToFollowers() {
+    NoteSnapshot direct =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "just us",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            NoteVisibility.DIRECT);
+
+    for (Map<String, Object> document :
+        List.of(
+            documents.create(direct, "pid"),
+            documents.update(direct, "pid"),
+            documents.note(direct, "pid"))) {
+      assertThat(document.get("to")).isEqualTo(List.of());
+      assertThat(document.get("cc")).isEqualTo(List.of());
+    }
+  }
+
+  @Test
   void aNoteInAKnownLanguageCarriesItAsTheContentMapKey() {
     NoteSnapshot korean =
         new NoteSnapshot(

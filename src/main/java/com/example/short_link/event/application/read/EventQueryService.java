@@ -1,5 +1,6 @@
 package com.example.short_link.event.application.read;
 
+import com.example.short_link.common.csv.CsvCells;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.application.read.EventView.EventLinkView;
 import com.example.short_link.event.domain.EventEntity;
@@ -69,22 +70,24 @@ public class EventQueryService {
             .toList();
     StringBuilder csv = new StringBuilder("name,contact,status,channel,registered_at");
     for (EventQuestionView question : questions) {
-      csv.append(',').append(escapeCsv(question.label()));
+      csv.append(',').append(CsvCells.escape(question.label()));
     }
     csv.append('\n');
     for (AttendeeView attendee : attendees) {
-      csv.append(escapeCsv(attendee.name()))
+      csv.append(CsvCells.escape(attendee.name()))
           .append(',')
-          .append(escapeCsv(attendee.contact()))
+          .append(CsvCells.escape(attendee.contact()))
           .append(',')
           .append(attendee.status())
           .append(',')
-          .append(escapeCsv(attendee.channel() == null ? "" : attendee.channel()))
+          .append(CsvCells.escape(attendee.channel() == null ? "" : attendee.channel()))
           .append(',')
           .append(attendee.createdAt());
       for (EventQuestionView question : questions) {
         csv.append(',')
-            .append(escapeCsv(attendee.answers().getOrDefault(String.valueOf(question.id()), "")));
+            .append(
+                CsvCells.escape(
+                    attendee.answers().getOrDefault(String.valueOf(question.id()), "")));
       }
       csv.append('\n');
     }
@@ -124,13 +127,5 @@ public class EventQueryService {
       throw new EventException(EventErrorCode.EVENT_PERMISSION_DENIED);
     }
     return event;
-  }
-
-  private static String escapeCsv(String value) {
-    if (value == null) return "";
-    if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-      return '"' + value.replace("\"", "\"\"") + '"';
-    }
-    return value;
   }
 }

@@ -11,6 +11,7 @@ import com.example.short_link.campaign.presentation.request.CampaignCreateReques
 import com.example.short_link.campaign.presentation.request.CampaignUpdateRequest;
 import com.example.short_link.campaign.presentation.response.CampaignDetailResponse;
 import com.example.short_link.campaign.presentation.response.CampaignSummaryResponse;
+import com.example.short_link.common.user.OpenToSuspended;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -69,6 +70,7 @@ public class CampaignController {
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}")
   public CampaignDetailResponse archive(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {

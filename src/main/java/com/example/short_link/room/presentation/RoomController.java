@@ -1,5 +1,6 @@
 package com.example.short_link.room.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.room.application.read.RoomInviteView;
 import com.example.short_link.room.application.read.RoomListItem;
 import com.example.short_link.room.application.read.RoomQueryService;
@@ -64,6 +65,7 @@ public class RoomController {
     return query.suggestions(userId);
   }
 
+  @OpenToSuspended
   @PostMapping("/suggestions/dismiss")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void dismiss(
@@ -81,6 +83,7 @@ public class RoomController {
     return JoinRoomResponse.of(invitations.accept(userId, roomId));
   }
 
+  @OpenToSuspended
   @PostMapping("/invitations/{roomId}/decline")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void decline(@AuthenticationPrincipal Long userId, @PathVariable Long roomId) {
@@ -100,6 +103,7 @@ public class RoomController {
     return command.update(userId, id, request.name(), request.approvalRequired());
   }
 
+  @OpenToSuspended
   @PostMapping("/{id}/read")
   public UnreadResponse read(
       @AuthenticationPrincipal Long userId,
@@ -108,28 +112,33 @@ public class RoomController {
     return new UnreadResponse(command.read(userId, id, request.noteId()));
   }
 
+  @OpenToSuspended
   @PutMapping("/{id}/feed-hidden")
   public FeedHiddenResponse hide(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return new FeedHiddenResponse(command.hideFromFeed(userId, id, true));
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}/feed-hidden")
   public FeedHiddenResponse show(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return new FeedHiddenResponse(command.hideFromFeed(userId, id, false));
   }
 
+  @OpenToSuspended
   @PutMapping("/{id}/pin")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void pin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     command.pin(userId, id, true);
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}/pin")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void unpin(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     command.pin(userId, id, false);
   }
 
+  @OpenToSuspended
   @PostMapping("/{id}/leave")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void leave(
@@ -163,6 +172,7 @@ public class RoomController {
         userId, id, options.maxUses(), options.expiresInSeconds(), options.approval());
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}/invites/{inviteId}")
   public RoomInviteView disable(
       @AuthenticationPrincipal Long userId, @PathVariable Long id, @PathVariable Long inviteId) {
@@ -182,6 +192,7 @@ public class RoomController {
     return invitations.invite(userId, id, request.userIds());
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}/invitations/{inviteeId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void cancelInvitation(

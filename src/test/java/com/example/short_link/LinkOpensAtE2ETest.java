@@ -102,6 +102,57 @@ class LinkOpensAtE2ETest {
   }
 
   @Test
+  void beforeItOpensAProtectedOrLimitedLinkGivesBotsOnlyTheKurlCard() throws Exception {
+    UserEntity owner = newUser();
+    LinkEntity locked = new LinkEntity("https://x.example.com/", "opn0006", owner.getId(), null);
+    locked.applyOgMetadata(
+        "Scraped launch title",
+        "Scraped launch summary",
+        "https://cdn.example.com/launch.png",
+        Instant.now());
+    linkRepository.save(locked);
+    LinkEntity limited = new LinkEntity("https://y.example.com/", "opn0007", owner.getId(), null);
+    limited.applyOgMetadata(
+        "Scraped launch title",
+        "Scraped launch summary",
+        "https://cdn.example.com/launch.png",
+        Instant.now());
+    limited.setMaxViews(10);
+    linkRepository.save(limited);
+    LinkEntity plain = new LinkEntity("https://z.example.com/", "opn0008", owner.getId(), null);
+    plain.applyOgMetadata(
+        "Scraped launch title",
+        "Scraped launch summary",
+        "https://cdn.example.com/launch.png",
+        Instant.now());
+    linkRepository.save(plain);
+    mvc.perform(
+            patch("/api/v1/links/opn0006/protection")
+                .header("Authorization", bearer(owner))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"open-sesame\"}"))
+        .andExpect(status().isOk());
+    String later = "{\"opensAt\":\"" + Instant.now().plus(1, ChronoUnit.DAYS) + "\"}";
+    for (String code : new String[] {"opn0006", "opn0007", "opn0008"}) {
+      setOptions(owner, code, later).andExpect(status().isOk());
+    }
+
+    for (String code : new String[] {"opn0006", "opn0007"}) {
+      mvc.perform(get("/" + code).header("User-Agent", "facebookexternalhit/1.1"))
+          .andExpect(status().isOk())
+          .andExpect(content().string(containsString("og:url")))
+          .andExpect(content().string(not(containsString("Scraped launch title"))))
+          .andExpect(content().string(not(containsString("Scraped launch summary"))))
+          .andExpect(content().string(not(containsString("cdn.example.com"))));
+    }
+    mvc.perform(get("/opn0008").header("User-Agent", "facebookexternalhit/1.1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Scraped launch title")))
+        .andExpect(content().string(containsString("cdn.example.com/launch.png")))
+        .andExpect(content().string(not(containsString("z.example.com"))));
+  }
+
+  @Test
   void aPastOpeningTimeOrAClearedOneRedirectsNormally() throws Exception {
     UserEntity owner = newUser();
     linkRepository.save(

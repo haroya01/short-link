@@ -40,7 +40,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         keyOpt.ifPresent(
             key -> {
               UserEntity user = userQueryService.findActive(key.getUserId()).orElse(null);
-              if (user == null) return;
+              if (user == null || user.isBanned()) return;
               var authorities =
                   List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
               var auth = new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);

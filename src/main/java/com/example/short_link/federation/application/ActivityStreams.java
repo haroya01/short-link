@@ -1,7 +1,9 @@
 package com.example.short_link.federation.application;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import tools.jackson.databind.JsonNode;
 
 public final class ActivityStreams {
@@ -10,6 +12,36 @@ public final class ActivityStreams {
   public static final String PUBLIC = CONTEXT + "#Public";
 
   private ActivityStreams() {}
+
+  // Mastodon's rule since CVE-2024-23832: activity+json, or ld+json naming this profile.
+  public static boolean isDocumentType(String contentType) {
+    if (contentType == null) {
+      return false;
+    }
+    String[] parts = contentType.split(";");
+    String type = parts[0].strip().toLowerCase(Locale.ROOT);
+    if (type.equals("application/activity+json")) {
+      return true;
+    }
+    if (!type.equals("application/ld+json")) {
+      return false;
+    }
+    for (int i = 1; i < parts.length; i++) {
+      String parameter = parts[i].strip();
+      int equals = parameter.indexOf('=');
+      if (equals < 0 || !parameter.substring(0, equals).strip().equalsIgnoreCase("profile")) {
+        continue;
+      }
+      String value = parameter.substring(equals + 1).strip();
+      if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+        value = value.substring(1, value.length() - 1);
+      }
+      if (Arrays.asList(value.strip().split("\\s+")).contains(CONTEXT)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   public static String text(JsonNode node) {
     if (node == null || !node.isString()) {

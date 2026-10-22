@@ -202,7 +202,7 @@ public class OutboxBackfill implements RemoteHistory {
       return Optional.empty();
     }
     FederationHttp.Result result = http.get(URI.create(address), signer);
-    if (!(result instanceof FederationHttp.Result.Ok ok)) {
+    if (!(result instanceof FederationHttp.Result.Ok ok) || !ok.activityStreams()) {
       log.info("federation outbox fetch outcome={} uri={}", result, address);
       return Optional.empty();
     }

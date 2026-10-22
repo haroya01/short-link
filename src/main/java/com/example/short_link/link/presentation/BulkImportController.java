@@ -1,5 +1,6 @@
 package com.example.short_link.link.presentation;
 
+import com.example.short_link.common.csv.CsvCells;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
@@ -47,27 +48,19 @@ public class BulkImportController {
     StringBuilder sb = new StringBuilder(result.rows().size() * 96);
     sb.append("url,custom_code,expires_at,short_code,short_url,error\n");
     for (BulkImportRow row : result.rows()) {
-      sb.append(escape(row.url()))
+      sb.append(CsvCells.escape(row.url()))
           .append(',')
-          .append(escape(row.customCode()))
+          .append(CsvCells.escape(row.customCode()))
           .append(',')
-          .append(escape(row.expiresAt()))
+          .append(CsvCells.escape(row.expiresAt()))
           .append(',')
-          .append(escape(row.shortCode() == null ? null : row.shortCode().value()))
+          .append(CsvCells.escape(row.shortCode() == null ? null : row.shortCode().value()))
           .append(',')
-          .append(row.shortCode() == null ? "" : escape(urlBuilder.build(row.shortCode())))
+          .append(row.shortCode() == null ? "" : CsvCells.escape(urlBuilder.build(row.shortCode())))
           .append(',')
-          .append(escape(row.error()))
+          .append(CsvCells.escape(row.error()))
           .append('\n');
     }
     return sb.toString();
-  }
-
-  private static String escape(String s) {
-    if (s == null) return "";
-    if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
-      return "\"" + s.replace("\"", "\"\"") + "\"";
-    }
-    return s;
   }
 }

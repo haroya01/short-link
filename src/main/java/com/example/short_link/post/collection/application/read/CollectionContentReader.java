@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.collection.application.CollectionTargets;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -34,12 +35,12 @@ public class CollectionContentReader {
   private final UserRepository userRepository;
 
   public Map<Long, List<String>> previewByCollection(
-      List<CollectionEntity> collections, boolean publishedOnly) {
+      List<CollectionEntity> collections, Long viewerId) {
     if (collections.isEmpty()) return Map.of();
 
     var selected = previewConnections(collections);
     var connections = selected.values().stream().flatMap(List::stream).toList();
-    var content = loadPreviewContent(connections, publishedOnly);
+    var content = loadPreviewContent(connections, viewerId);
     return content.previewLabels(selected);
   }
 
@@ -72,30 +73,24 @@ public class CollectionContentReader {
   }
 
   private CollectionContentSnapshot loadPreviewContent(
-      List<CollectionConnectionEntity> connections, boolean publishedOnly) {
-    var candidates =
-        postRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.POST)).stream()
-            .filter(post -> !post.isInRoom())
-            .toList();
-    if (publishedOnly) candidates = candidates.stream().filter(PostAccessPolicy::isOpen).toList();
-    var posts = indexedBy(candidates, PostEntity::getId);
-    var highlights = indexedBy(openHighlights(connections), PostHighlightEntity::getId);
-    if (publishedOnly && !highlights.isEmpty()) keepHighlightsOfPublishedPosts(highlights);
+      List<CollectionConnectionEntity> connections, Long viewerId) {
+    var openHighlights = openHighlights(connections);
+    Set<Long> postIds = new HashSet<>(refIds(connections, ConnectionBlockType.POST));
+    openHighlights.forEach(highlight -> postIds.add(highlight.getPostId()));
+    var posts =
+        indexedBy(
+            postRepository.findAllByIdIn(postIds).stream()
+                .filter(post -> CollectionTargets.shows(post, viewerId))
+                .toList(),
+            PostEntity::getId);
+    var highlights =
+        indexedBy(
+            openHighlights.stream()
+                .filter(highlight -> posts.containsKey(highlight.getPostId()))
+                .toList(),
+            PostHighlightEntity::getId);
     var notes = noteBodies.blocksByIds(refIds(connections, ConnectionBlockType.NOTE));
     return new CollectionContentSnapshot(posts, highlights, notes, Map.of());
-  }
-
-  private void keepHighlightsOfPublishedPosts(Map<Long, PostHighlightEntity> highlights) {
-    Set<Long> parentIds =
-        highlights.values().stream()
-            .map(PostHighlightEntity::getPostId)
-            .collect(Collectors.toSet());
-    Set<Long> publishedParents =
-        postRepository.findAllByIdIn(parentIds).stream()
-            .filter(PostAccessPolicy::isOpen)
-            .map(PostEntity::getId)
-            .collect(Collectors.toSet());
-    highlights.values().removeIf(highlight -> !publishedParents.contains(highlight.getPostId()));
   }
 
   private CollectionContentSnapshot loadPublishedContent(

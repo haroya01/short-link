@@ -3,8 +3,8 @@ package com.example.short_link.campaign.application;
 import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.QrOptions;
 import com.example.short_link.campaign.application.helper.QrPngEncoder;
+import com.example.short_link.common.csv.CsvCells;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.export.application.helper.CsvWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -24,7 +24,7 @@ public class CampaignBatchExportService {
   public String exportCsv(Long campaignId, Long ownerId) {
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
     StringBuilder sb = new StringBuilder();
-    CsvWriter.appendRow(
+    CsvCells.appendRow(
         sb,
         "batch_id",
         "batch_name",
@@ -35,7 +35,7 @@ public class CampaignBatchExportService {
         "destination_url",
         "memo");
     for (BatchWithLink bwl : batches) {
-      CsvWriter.appendRow(
+      CsvCells.appendRow(
           sb,
           bwl.batch().getId(),
           bwl.batch().getName(),

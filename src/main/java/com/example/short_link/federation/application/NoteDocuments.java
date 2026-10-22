@@ -188,7 +188,7 @@ public class NoteDocuments {
   }
 
   private List<String> to(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
-    if (!addressed.isEmpty() && note.visibility().direct()) {
+    if (note.visibility().direct()) {
       return addressed.stream().map(Addressee::actorUri).toList();
     }
     return note.visibility().listed()

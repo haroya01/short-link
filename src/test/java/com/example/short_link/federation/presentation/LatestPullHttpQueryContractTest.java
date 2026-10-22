@@ -47,7 +47,8 @@ class LatestPullHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   private static FederationHttp.Result ok(String body) {
-    return new FederationHttp.Result.Ok(200, body.getBytes(StandardCharsets.UTF_8));
+    return new FederationHttp.Result.Ok(
+        200, body.getBytes(StandardCharsets.UTF_8), "application/activity+json; charset=utf-8");
   }
 
   private static String status(String id, String user, String at, String extra) {

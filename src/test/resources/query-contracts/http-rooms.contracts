@@ -1,22 +1,25 @@
 # Rooms, measured against Docker MySQL 2026-10-20 (CI run 39339848908). Never automatically update
 # on test failure.
+# A signed-in POST, PUT, PATCH or DELETE to a link, event, room, CTA, campaign or custom-domain
+# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate); removals
+# and the member's own settings (@OpenToSuspended) do not.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 #
 # Making a room: the room, its owner as the first member (watermark from the room's newest note),
 # then the room as the owner sees it: membership, members, their feed setting.
-@junit | room-create | 3 | 2 | 0 | 0 | 5
+@junit | room-create | 4 | 2 | 0 | 0 | 6
 # An invite: membership, the invite row, then the kurl short link to the invite page through the
 # usual link creation (blocked domains, quota, link and its policy rows, audit, OG metadata of the
 # page), the invite updated with its short code, and the creator for the answer.
-@junit | room-invite-create | 7 | 7 | 3 | 0 | 17
+@junit | room-invite-create | 8 | 7 | 3 | 0 | 18
 # The public invite page: invite, room, member count, inviter and up to eight faces. No note is read.
 @junit | room-invite-landing | 5 | 0 | 0 | 0 | 5
 # Joining locks the invite and then the room; membership, removal and an open request are checked,
 # the seats counted, the use recorded and the member added.
-@junit | room-join | 6 | 1 | 1 | 0 | 8
+@junit | room-join | 7 | 1 | 1 | 0 | 9
 # Through an approval invite or room the same checks end in a request instead of a membership.
-@junit | room-join-request | 6 | 1 | 1 | 0 | 8
-@junit | room-join-request-again | 6 | 1 | 1 | 0 | 8
+@junit | room-join-request | 7 | 1 | 1 | 0 | 9
+@junit | room-join-request-again | 7 | 1 | 1 | 0 | 9
 # A room note: moderation (user), authors, membership, insert, the room's name for the answer, and
 # after commit the federation actor lookup, which stops there since a room note never leaves.
 @junit | room-note-create | 5 | 1 | 0 | 0 | 6
@@ -66,19 +69,20 @@
 @junit | room-feed-hide | 1 | 0 | 1 | 0 | 2
 @junit | room-feed-show | 1 | 0 | 1 | 0 | 2
 # The owner's changes run under the room's row lock, then the room is read back as on detail.
-@junit | room-update | 5 | 0 | 1 | 0 | 6
+@junit | room-update | 6 | 0 | 1 | 0 | 7
 @junit | room-requests | 3 | 0 | 0 | 0 | 3
-@junit | room-request-approve | 3 | 1 | 0 | 1 | 5
-@junit | room-request-reject | 2 | 0 | 0 | 1 | 3
+@junit | room-request-approve | 4 | 1 | 0 | 1 | 6
+@junit | room-request-reject | 3 | 0 | 0 | 1 | 4
 @junit | room-invites | 4 | 0 | 0 | 0 | 4
 @junit | room-invite-disable | 4 | 0 | 1 | 0 | 5
-# Removing a member: lock, both memberships, the membership deleted, their invites stopped and the
-# removal kept so no invite lets them back in.
-@junit | room-member-remove | 3 | 1 | 1 | 1 | 6
+# Removing a member: lock, both memberships, the membership deleted, their invites stopped, the
+# invitations they sent that nobody answered deleted, and the removal kept so no invite lets them
+# back in.
+@junit | room-member-remove | 4 | 1 | 1 | 2 | 8
 @junit | room-my-notes | 6 | 0 | 0 | 0 | 6
 # Leaving and keeping the notes: lock, membership, the membership deleted, the member's invites
-# stopped.
-@junit | room-leave | 2 | 0 | 1 | 1 | 4
+# stopped and the invitations they sent that nobody answered deleted.
+@junit | room-leave | 2 | 0 | 1 | 2 | 5
 # Deleting one's notes in a room only records the request; RoomNoteErasureJob deletes them later
 # in chunks, so the request stays one statement however many notes there are.
 @junit | room-my-notes-delete | 0 | 1 | 0 | 0 | 1
@@ -89,12 +93,13 @@
 @junit | room-suggestions-dismiss | 0 | 1 | 0 | 0 | 1
 # Inviting by name: the room locked, membership, the waiting count against the cap, one insert for
 # everyone asked (whoever cannot be asked is left out inside it), then who waits now.
-@junit | room-invitation-send | 4 | 1 | 0 | 0 | 5
+@junit | room-invitation-send | 5 | 1 | 0 | 0 | 6
 @junit | room-invitees | 3 | 0 | 0 | 0 | 3
 # The invitee's own invitations, with room, inviter and member count, in one statement.
 @junit | room-invitations-mine | 1 | 0 | 0 | 0 | 1
-# Accepting is joining: lock, the invitation taken, then the same membership, removal, request
-# and seat checks as an invite link before the member is added.
-@junit | room-invitation-accept | 6 | 1 | 0 | 1 | 8
+# Accepting is joining: lock, the invitation and whether its sender is still a member, then the
+# same membership, removal, request and seat checks as an invite link before the invitation is
+# taken and the member added.
+@junit | room-invitation-accept | 8 | 1 | 0 | 1 | 10
 @junit | room-invitation-decline | 0 | 0 | 1 | 0 | 1
 @junit | room-invitation-cancel | 3 | 0 | 0 | 1 | 4

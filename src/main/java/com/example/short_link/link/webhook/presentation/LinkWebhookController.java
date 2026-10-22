@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
 import com.example.short_link.link.webhook.application.dto.WebhookSummary;
@@ -92,6 +93,7 @@ public class LinkWebhookController {
             request.spikeWindowMinutes()));
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{shortCode}/webhooks/{id}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Long userId,

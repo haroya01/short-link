@@ -383,9 +383,10 @@
 # Resolving a handle already known and fresh reads as the lookup does: the account by handle (its
 # server's block rides along), the member's follow of it, whether they blocked its server.
 @junit | federation-resolve-handle | 3 | 0 | 0 | 0 | 3
-# A profile address: is its server suspended, the instance key that signs the fetch, then the
-# document is kept under its own id (lookup, insert) and read as the lookup does.
-@junit | federation-resolve-profile | 5 | 1 | 0 | 0 | 6
+# A profile address: is its server suspended, the instance key that signs the fetch; the document
+# names another id, so that id is fetched the same way and only its answer is kept (lookup, insert)
+# and read as the lookup does.
+@junit | federation-resolve-profile | 7 | 1 | 0 | 0 | 8
 # A note address: server suspended, instance key, is the note kept, its author (cached, fresh), then
 # the inbox's INSERT IGNORE and its id; the answer is the account notes page's item for that note
 # (note, its thread chain, remote author, media, stats, the member's marks). Asked again, the kept

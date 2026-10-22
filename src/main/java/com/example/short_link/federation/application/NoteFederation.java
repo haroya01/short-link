@@ -215,7 +215,9 @@ public class NoteFederation {
   }
 
   private static Long quotedElsewhere(NoteSnapshot note) {
-    return note.quotedNote() != null && note.quotedNote().remote() ? note.quotedNote().id() : null;
+    return note.quotedNote() != null && note.quotedNote().remote() && !note.visibility().direct()
+        ? note.quotedNote().id()
+        : null;
   }
 
   @Transactional

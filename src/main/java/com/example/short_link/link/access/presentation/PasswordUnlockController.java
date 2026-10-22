@@ -1,6 +1,7 @@
 package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.access.application.PasswordUnlockResult;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
@@ -31,6 +32,7 @@ public class PasswordUnlockController {
   private final LinkHtmlRenderer html;
   private final VisitHandoff handoff;
 
+  @OpenToSuspended
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
       consumes = "application/x-www-form-urlencoded")

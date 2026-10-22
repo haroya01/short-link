@@ -7,8 +7,9 @@ import java.util.Optional;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 
-// Accepts only an actor whose id, inbox and key all live on the host it was fetched from, so one
-// server cannot publish a key or inbox for another server's account.
+// Accepts only an actor whose id is the address it was fetched from and whose inbox and key live on
+// that host, so neither another server nor another document on the same server can publish a key
+// or inbox for an account.
 public final class RemoteActorParser {
 
   private static final Set<String> ACTOR_TYPES =
@@ -37,7 +38,9 @@ public final class RemoteActorParser {
       return Optional.empty();
     }
     String host = host(fetchedFrom);
-    if (host == null || !host.equals(host(id)) || !host.equals(host(inbox))) {
+    if (host == null
+        || !withoutFragment(id).equals(withoutFragment(fetchedFrom.toString()))
+        || !host.equals(host(inbox))) {
       return Optional.empty();
     }
     JsonNode key = publicKey(document, keyId);
@@ -118,6 +121,15 @@ public final class RemoteActorParser {
     }
     String value = node.asString().strip();
     return value.isEmpty() ? null : value;
+  }
+
+  public static Optional<String> id(JsonNode document) {
+    return Optional.ofNullable(text(document.get("id")));
+  }
+
+  private static String withoutFragment(String uri) {
+    int hash = uri.indexOf('#');
+    return hash < 0 ? uri : uri.substring(0, hash);
   }
 
   public static String host(String url) {
