@@ -15,6 +15,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -91,7 +92,10 @@ class LocalTimeBucketQueriesIntegrationTest {
 
     assertThat(
             alerts.findPeakHourByLinkIdAndRange(
-                link.getId(), SINCE, SINCE.plusSeconds(864_000), SEOUL))
+                link.getId(),
+                BigDecimal.valueOf(SINCE.getEpochSecond()),
+                BigDecimal.valueOf(SINCE.plusSeconds(864_000).getEpochSecond()),
+                SEOUL))
         .hasValueSatisfying(row -> assertThat(row.getHour()).isEqualTo(EVENING));
   }
 
