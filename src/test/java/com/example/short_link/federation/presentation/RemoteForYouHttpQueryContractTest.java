@@ -107,6 +107,7 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
             ok(
                 "["
                     + status(103, "yui", "ko", 3, Duration.ofMinutes(10))
+                        .replace("<p>yui 103</p>", "<p>yui 103 https://youtu.be/abc</p>")
                         .replace(
                             "\"card\":null",
                             "\"card\":{\"url\":\"https://www.youtube.com/watch?v=abc\","
