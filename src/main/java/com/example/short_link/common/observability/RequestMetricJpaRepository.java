@@ -18,8 +18,12 @@ public interface RequestMetricJpaRepository extends JpaRepository<RequestMetricE
 
   @Modifying
   @Transactional
-  @Query("DELETE FROM RequestMetricEntity m WHERE m.occurredAt < :cutoff")
-  int deleteByOccurredAtBefore(@Param("cutoff") Instant cutoff);
+  @Query(
+      value =
+          "DELETE FROM request_metrics WHERE occurred_at < :cutoff "
+              + "ORDER BY occurred_at LIMIT :limit",
+      nativeQuery = true)
+  int deleteBatchBefore(@Param("cutoff") Instant cutoff, @Param("limit") int limit);
 
   @Query(
       "SELECT m FROM RequestMetricEntity m "
