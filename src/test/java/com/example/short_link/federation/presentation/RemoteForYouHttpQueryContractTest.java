@@ -192,6 +192,19 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(uris(deviceFirst))
         .containsExactly(uri("yui", 101), uri("rin", 102), uri("yui", 103));
     assertThat(deviceFirst.path("seenFrom").asInt()).isEqualTo(2);
+    Thread.sleep(5);
+    JsonNode deviceHome =
+        body(
+            callWithHeaders(
+                "federation-for-you-device-hide",
+                "GET",
+                "/api/v1/federation/for-you?limit=20&seen=hide",
+                null,
+                device(),
+                200));
+    assertThat(uris(deviceHome)).containsExactly(uri("yui", 101), uri("rin", 102));
+    assertThat(deviceHome.has("seenFrom")).isFalse();
+    assertThat(deviceHome.path("next").isNull()).isTrue();
 
     StringJoiner more = new StringJoiner(",", "[", "]");
     for (int id = 200; id < 230; id++) {

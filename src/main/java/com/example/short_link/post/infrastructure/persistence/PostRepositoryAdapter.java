@@ -1,6 +1,7 @@
 package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.common.post.PostAccessSql;
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.DiscoveryQuality;
@@ -11,6 +12,7 @@ import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -176,15 +178,24 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit) {
-    return em.createNativeQuery(
-            "SELECT p.* FROM posts p WHERE ("
-                + JpaPostRepository.BROWSE_CONDITION
-                + ") OR ("
-                + PostAccessSql.inFeedRooms("p")
-                + HeardSql.POST_AUTHOR
-                + ") ORDER BY p.published_at DESC",
-            PostEntity.class)
+  public List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit, Unseen unseen) {
+    String shown =
+        "("
+            + JpaPostRepository.BROWSE_CONDITION
+            + ") OR ("
+            + PostAccessSql.inFeedRooms("p")
+            + HeardSql.POST_AUTHOR
+            + ")";
+    Query query =
+        em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + (unseen == null ? shown : "(" + shown + ")" + Unseen.sql("p", Unseen.POST))
+                + " ORDER BY p.published_at DESC",
+            PostEntity.class);
+    if (unseen != null) {
+      unseen.bind(query, Unseen.POST);
+    }
+    return query
         .setParameter("lang", null)
         .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
         .setParameter("viewer", HeardSql.viewer(viewerId))

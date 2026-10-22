@@ -1,20 +1,30 @@
 package com.example.short_link.home.application.read;
 
+import com.example.short_link.common.seen.Unseen;
+import com.example.short_link.federation.application.trends.LocalSeen;
+import com.example.short_link.federation.domain.SeenItem;
+import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 // One feed of notes and blog posts. Following and latest run newest first across both by a note's
 // writing time and a post's publishing time (a repost stands at its note's time); trending takes
 // the two trending orders in turn. The cursor is the next position in each source,
-// "<notes>.<posts>".
+// "<notes>.<posts>". Latest can leave out what the reader already had on screen: its cursor is then
+// "h<asOf>.<notes>.<posts>", positions in the list without what was seen before asOf.
 @Service
 @RequiredArgsConstructor
 public class HomeFeedQueryService {
@@ -24,6 +34,8 @@ public class HomeFeedQueryService {
 
   private final NoteQueryService notes;
   private final PublicFeedQueryService posts;
+  private final LocalSeen seen;
+  private final Clock clock;
 
   public enum Tab {
     FOLLOWING,
@@ -47,29 +59,40 @@ public class HomeFeedQueryService {
 
   record Merged(List<Item> items, int notesTaken, int postsTaken) {}
 
-  public Page page(Long viewerId, String tab, String cursor, String since, int limit) {
+  record At(Instant asOf, int notes, int posts) {}
+
+  public Page page(
+      Long viewerId,
+      SeenViewer viewer,
+      String tab,
+      String cursor,
+      String since,
+      int limit,
+      boolean hideSeen) {
     Tab chosen = tab(tab);
     if (chosen == Tab.FOLLOWING && viewerId == null) {
       return new Page(List.of(), null);
     }
     int size = Math.clamp(limit, 1, MAX_LIMIT);
+    boolean hiding = chosen == Tab.LATEST && viewer != null;
     if (since != null && cursor == null) {
-      return newer(viewerId, chosen, since, size);
+      return newer(viewerId, hiding && hideSeen ? viewer : null, chosen, since, size);
     }
-    int[] at = positions(cursor);
-    NoteSlice noteSlice = notes(chosen, viewerId, at[0], size + 1);
-    PostSlice postSlice = posts(chosen, viewerId, at[1], size + 1);
+    At at = at(cursor, hiding && hideSeen, now());
+    Unseen unseen = hiding && at.asOf() != null ? seen.unseen(viewer, at.asOf()) : null;
+    NoteSlice noteSlice = notes(chosen, viewerId, at.notes(), size + 1, unseen);
+    PostSlice postSlice = posts(chosen, viewerId, at.posts(), size + 1, unseen);
     Merged merged = merge(chosen, noteSlice.items(), postSlice.items(), size);
     int nextNote =
         next(
-            at[0],
+            at.notes(),
             noteSlice.items().stream().map(NoteSlice.At::position).toList(),
             merged.notesTaken(),
             size,
             noteSlice.exhausted());
     int nextPost =
         next(
-            at[1],
+            at.posts(),
             postSlice.items().stream().map(PostSlice.At::position).toList(),
             merged.postsTaken(),
             size,
@@ -79,43 +102,70 @@ public class HomeFeedQueryService {
             || merged.postsTaken() < postSlice.items().size()
             || !noteSlice.exhausted()
             || !postSlice.exhausted();
+    String prefix = at.asOf() == null ? "" : "h" + at.asOf().toEpochMilli() + ".";
     return new Page(
         merged.items(),
-        more ? nextNote + "." + nextPost : null,
+        more ? prefix + nextNote + "." + nextPost : null,
         cursor == null ? top(noteSlice, postSlice, "0.0") : null,
         null);
+  }
+
+  private Instant now() {
+    return clock.instant().truncatedTo(ChronoUnit.MILLIS);
   }
 
   // What came in above the newest note and post the reader already has, at most SINCE_LIMIT. A
   // marker no longer within reach (deleted, or more arrived than fit) is a gap: the reader gets a
   // fresh first page to replace the list with. Trending has no "above", so it always starts over.
-  private Page newer(Long viewerId, Tab chosen, String since, int size) {
+  // With a viewer to hide for, the marker is looked for in the list as it is, since the reader saw
+  // it, and only what came above it leaves out the seen.
+  private Page newer(Long viewerId, SeenViewer hideFor, Tab chosen, String since, int size) {
     long[] marker = markers(since);
     if (chosen == Tab.TRENDING || marker == null) {
-      return fresh(viewerId, chosen, size);
+      return fresh(viewerId, hideFor, chosen, size);
     }
-    NoteSlice noteSlice = notes(chosen, viewerId, 0, SINCE_LIMIT + 1);
-    PostSlice postSlice = posts(chosen, viewerId, 0, SINCE_LIMIT + 1);
+    NoteSlice noteSlice = notes(chosen, viewerId, 0, SINCE_LIMIT + 1, null);
+    PostSlice postSlice = posts(chosen, viewerId, 0, SINCE_LIMIT + 1, null);
     int newNotes = above(noteSlice.items().stream().map(at -> at.note().id()).toList(), marker[0]);
     int newPosts =
         above(postSlice.items().stream().map(at -> at.post().item().id()).toList(), marker[1]);
     if ((newNotes < 0 && !(marker[0] == 0 && noteSlice.exhausted()))
         || (newPosts < 0 && !(marker[1] == 0 && postSlice.exhausted()))) {
-      return fresh(viewerId, chosen, size);
+      return fresh(viewerId, hideFor, chosen, size);
     }
     List<NoteSlice.At> notesAbove =
         noteSlice.items().subList(0, newNotes < 0 ? noteSlice.items().size() : newNotes);
     List<PostSlice.At> postsAbove =
         postSlice.items().subList(0, newPosts < 0 ? postSlice.items().size() : newPosts);
     if (notesAbove.size() + postsAbove.size() > SINCE_LIMIT) {
-      return fresh(viewerId, chosen, size);
+      return fresh(viewerId, hideFor, chosen, size);
+    }
+    if (hideFor != null && notesAbove.size() + postsAbove.size() > 0) {
+      List<SeenItem> asked = new ArrayList<>();
+      notesAbove.forEach(at -> asked.add(new SeenItem(SeenItem.NOTE, at.note().id())));
+      postsAbove.forEach(at -> asked.add(new SeenItem(SeenItem.POST, at.post().item().id())));
+      Set<SeenItem> hidden = seen.seenBefore(hideFor, asked, now());
+      notesAbove =
+          notesAbove.stream()
+              .filter(
+                  at ->
+                      Objects.equals(at.note().author().id(), viewerId)
+                          || !hidden.contains(new SeenItem(SeenItem.NOTE, at.note().id())))
+              .toList();
+      postsAbove =
+          postsAbove.stream()
+              .filter(
+                  at ->
+                      Objects.equals(at.post().item().author().id(), viewerId)
+                          || !hidden.contains(new SeenItem(SeenItem.POST, at.post().item().id())))
+              .toList();
     }
     Merged merged = merge(chosen, notesAbove, postsAbove, SINCE_LIMIT);
     return new Page(merged.items(), null, top(noteSlice, postSlice, since), false);
   }
 
-  private Page fresh(Long viewerId, Tab chosen, int size) {
-    Page first = page(viewerId, chosen.name(), null, null, size);
+  private Page fresh(Long viewerId, SeenViewer hideFor, Tab chosen, int size) {
+    Page first = page(viewerId, hideFor, chosen.name(), null, null, size, hideFor != null);
     return new Page(first.items(), first.next(), first.newest(), true);
   }
 
@@ -151,18 +201,18 @@ public class HomeFeedQueryService {
     }
   }
 
-  private NoteSlice notes(Tab chosen, Long viewerId, int offset, int limit) {
+  private NoteSlice notes(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> notes.followingAt(viewerId, offset, limit);
-      case LATEST -> notes.everyoneAt(viewerId, offset, limit);
+      case LATEST -> notes.everyoneAt(viewerId, offset, limit, unseen);
       case TRENDING -> notes.trendingAt(viewerId, offset, limit);
     };
   }
 
-  private PostSlice posts(Tab chosen, Long viewerId, int offset, int limit) {
+  private PostSlice posts(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> posts.followingAt(viewerId, offset, limit);
-      case LATEST -> posts.recentAt(viewerId, offset, limit);
+      case LATEST -> posts.recentAt(viewerId, offset, limit, unseen);
       case TRENDING -> posts.trendingAt(viewerId, offset, limit);
     };
   }
@@ -215,6 +265,31 @@ public class HomeFeedQueryService {
     } catch (IllegalArgumentException unknown) {
       return Tab.LATEST;
     }
+  }
+
+  // A cursor from a scroll that left out the seen keeps doing so; one from before it never does.
+  static At at(String cursor, boolean hideSeen, Instant now) {
+    if (cursor == null) {
+      return new At(hideSeen ? now : null, 0, 0);
+    }
+    if (!cursor.startsWith("h")) {
+      int[] at = positions(cursor);
+      return new At(null, at[0], at[1]);
+    }
+    String[] parts = cursor.substring(1).split("\\.");
+    try {
+      if (parts.length == 3) {
+        long asOf = Long.parseLong(parts[0]);
+        int notes = Integer.parseInt(parts[1]);
+        int posts = Integer.parseInt(parts[2]);
+        if (asOf >= 0 && notes >= 0 && posts >= 0) {
+          return new At(Instant.ofEpochMilli(asOf), notes, posts);
+        }
+      }
+    } catch (NumberFormatException malformed) {
+      return new At(now, 0, 0);
+    }
+    return new At(now, 0, 0);
   }
 
   static int[] positions(String cursor) {

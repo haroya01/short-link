@@ -85,7 +85,9 @@ class NoteFeedRoomsIntegrationTest {
   @Test
   void walkingTheLatestFeedByAnyPageSizeNeitherRepeatsNorSkips() {
     for (int size = 1; size <= annLatest.size(); size++) {
-      assertThat(walk(size, notes::topLevel).subList(0, annLatest.size()))
+      assertThat(
+              walk(size, (viewer, offset, limit) -> notes.topLevel(viewer, offset, limit, null))
+                  .subList(0, annLatest.size()))
           .as("page size %d", size)
           .containsExactlyElementsOf(annLatest);
     }
@@ -101,7 +103,7 @@ class NoteFeedRoomsIntegrationTest {
         ann);
 
     assertThat(newest(ann, annLatest.size())).containsExactlyElementsOf(annLatest);
-    assertThat(notes.topLevel(ann, 0, 50).stream().map(NoteEntity::getId))
+    assertThat(notes.topLevel(ann, 0, 50, null).stream().map(NoteEntity::getId))
         .doesNotContain(japanesePublic, japaneseRoom);
   }
 
@@ -120,7 +122,7 @@ class NoteFeedRoomsIntegrationTest {
   }
 
   private List<Long> newest(Long viewerId, int count) {
-    return notes.topLevel(viewerId, 0, count).stream().map(NoteEntity::getId).toList();
+    return notes.topLevel(viewerId, 0, count, null).stream().map(NoteEntity::getId).toList();
   }
 
   private List<Long> walk(int size, Page page) {

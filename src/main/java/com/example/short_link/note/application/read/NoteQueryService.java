@@ -2,6 +2,7 @@ package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.reply.ReplyPreview;
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -50,7 +51,8 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView everyone(int page, int size, Long viewerId) {
-    return page(page, size, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit));
+    return page(
+        page, size, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit, null));
   }
 
   @Transactional(readOnly = true)
@@ -245,8 +247,8 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteSlice everyoneAt(Long viewerId, int offset, int limit) {
-    return slice(notes.topLevel(viewerId, offset, limit), offset, limit, viewerId);
+  public NoteSlice everyoneAt(Long viewerId, int offset, int limit, Unseen unseen) {
+    return slice(notes.topLevel(viewerId, offset, limit, unseen), offset, limit, viewerId);
   }
 
   @Transactional(readOnly = true)

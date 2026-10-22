@@ -302,3 +302,16 @@
 @junit | home-following-next | 9 | 0 | 0 | 0 | 9
 @junit | home-following-series | 14 | 0 | 0 | 0 | 14
 @junit | home-latest-since | 11 | 0 | 0 | 0 | 11
+# Latest with seen=hide leaves out what the reader had on screen inside the same note and post
+# statements, so a hidden page, its next page and a page past 300 sightings each cost what the
+# member's plain latest does. Handing over kurl rows only fills memory; a flush writes them in one
+# INSERT. Since looks for its marker in the plain list and asks once which of what came above it
+# was seen.
+@junit | home-latest-member | 13 | 0 | 0 | 0 | 13
+@junit | home-seen-kurl | 0 | 0 | 0 | 0 | 0
+@junit | home-seen-kurl-flush | 0 | 1 | 0 | 0 | 1
+@junit | home-latest-hidden | 13 | 0 | 0 | 0 | 13
+@junit | home-latest-hidden-next | 13 | 0 | 0 | 0 | 13
+@junit | home-seen-kurl-arrived | 0 | 0 | 0 | 0 | 0
+@junit | home-latest-hidden-since | 14 | 0 | 0 | 0 | 14
+@junit | home-latest-hidden-heavy | 13 | 0 | 0 | 0 | 13

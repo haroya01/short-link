@@ -73,7 +73,12 @@ public class RemoteForYou {
   }
 
   public RemoteTrendingFeed.Page page(
-      Long viewerId, SeenViewer viewer, String languages, String cursor, int limit) {
+      Long viewerId,
+      SeenViewer viewer,
+      String languages,
+      String cursor,
+      int limit,
+      boolean hideSeen) {
     if (!latestProps.enabled()) {
       return new RemoteTrendingFeed.Page(List.of(), null);
     }
@@ -93,8 +98,9 @@ public class RemoteForYou {
       ranking = rank(viewerId, viewer, accepted, at.asOf(), stored);
       rankings.put(key, ranking);
     }
-    int from = Math.min(at.offset(), ranking.refs().size());
-    int to = Math.min(from + size, ranking.refs().size());
+    int end = hideSeen && ranking.seenFrom() >= 0 ? ranking.seenFrom() : ranking.refs().size();
+    int from = Math.min(at.offset(), end);
+    int to = Math.min(from + size, end);
     List<Object> slice = ranking.refs().subList(from, to);
     List<Object> items = new ArrayList<>(slice.size());
     Integer seenFrom = null;
@@ -124,7 +130,7 @@ public class RemoteForYou {
         authors.warm(unknown);
       }
     }
-    String next = to < ranking.refs().size() ? "f" + at.asOf().toEpochMilli() + "." + to : null;
+    String next = to < end ? "f" + at.asOf().toEpochMilli() + "." + to : null;
     return new RemoteTrendingFeed.Page(items, next, null, seenFrom);
   }
 

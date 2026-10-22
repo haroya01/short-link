@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.note.application.write.NotePollService;
 import com.example.short_link.note.application.write.NoteScheduleService;
@@ -30,6 +31,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   @MockitoBean private ObjectStorage objectStorage;
   @Autowired private NotePollService polls;
   @Autowired private NoteScheduleService schedules;
+  @Autowired private LocalSeen localSeen;
 
   @Test
   void repostsByPeopleYouFollowFlowIntoTheFollowingFeedOnceButNeverFromSomeoneYouBlocked()
@@ -1131,6 +1133,107 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             200);
     assertThat(homeKeys(subscribed))
         .containsExactly("note:" + arrived, "note:" + newest, "post:" + post, "note:" + episode);
+  }
+
+  @Test
+  void theHomeLatestLeavesOutWhatTheReaderAlreadyHadOnScreenButNotTheirOwn() throws Exception {
+    Actor reader = actor("hide-reader", false);
+    Actor writer = actor("hide-writer", false);
+    Instant ahead = Instant.now().plusSeconds(24 * 3_600);
+    long older = noteWrittenAt(writer, "본 노트", ahead.minusSeconds(240));
+    long seenPost = postAt(writer, "본 글", ahead.minusSeconds(200));
+    long kept = noteWrittenAt(writer, "안 본 노트", ahead.minusSeconds(180));
+    long own = noteWrittenAt(reader, "내 노트", ahead.minusSeconds(120));
+    long top = noteWrittenAt(writer, "본 맨 위 노트", ahead.minusSeconds(60));
+
+    var whole =
+        step(
+            "home-latest-member",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=2",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(whole)).containsExactly("note:" + top, "note:" + own);
+    step(
+        "home-seen-kurl",
+        "POST",
+        "/api/v1/federation/seen",
+        reader,
+        Map.of(
+            "uris",
+            List.of(
+                "kurl:note:" + older,
+                "kurl:post:" + seenPost,
+                "kurl:note:" + own,
+                "kurl:note:" + top,
+                "kurl:note:0")),
+        202);
+    deliverBackgroundWork("home-seen-kurl-flush", () -> assertThat(localSeen.flush()).isEqualTo(4));
+    assertThat(count("local_seen", "item_kind = 1 AND item_id IN (?, ?, ?)", older, own, top))
+        .isEqualTo(3);
+    Thread.sleep(5);
+
+    var hidden =
+        step(
+            "home-latest-hidden",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=2&seen=hide",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(hidden)).containsExactly("note:" + own, "note:" + kept);
+    String next = hidden.path("next").asText();
+    assertThat(next).startsWith("h");
+    var onward =
+        step(
+            "home-latest-hidden-next",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=2&seen=hide&cursor=" + next,
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(onward))
+        .doesNotContain("note:" + older, "post:" + seenPost, "note:" + own, "note:" + kept);
+
+    String marker = hidden.path("newest").asText();
+    long arrivedSeen = noteWrittenAt(writer, "새로 왔지만 본 노트", ahead.minusSeconds(30));
+    long arrived = noteWrittenAt(writer, "새로 온 노트", ahead);
+    step(
+        "home-seen-kurl-arrived",
+        "POST",
+        "/api/v1/federation/seen",
+        reader,
+        Map.of("uris", List.of("kurl:note:" + arrivedSeen)),
+        202);
+    Thread.sleep(5);
+    var refreshed =
+        step(
+            "home-latest-hidden-since",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=2&seen=hide&since=" + marker,
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(refreshed)).containsExactly("note:" + arrived);
+    assertThat(refreshed.path("gap").asBoolean()).isFalse();
+
+    jdbc.update(
+        "INSERT INTO local_seen (viewer_kind, viewer_key, item_kind, item_id, seen_at)"
+            + " SELECT 1, UNHEX(LPAD(HEX(?), 32, '0')), 1, n.id, UTC_TIMESTAMP(6) - INTERVAL 1 HOUR"
+            + " FROM note n WHERE n.user_id <> ? ORDER BY n.id DESC LIMIT 300"
+            + " ON DUPLICATE KEY UPDATE seen_at = seen_at",
+        reader.id(),
+        reader.id());
+    var heavy =
+        step(
+            "home-latest-hidden-heavy",
+            "GET",
+            "/api/v1/public/home?tab=latest&limit=2&seen=hide",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(heavy)).contains("note:" + own).doesNotContain("note:" + arrived);
   }
 
   @Test
