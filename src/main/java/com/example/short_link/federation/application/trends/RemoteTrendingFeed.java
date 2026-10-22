@@ -1,9 +1,15 @@
 package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.federation.domain.SeenViewer;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,12 +30,46 @@ public class RemoteTrendingFeed {
   private final LatestProperties latestProps;
   private final TrendingAuthors authors;
   private final NoteViewReader notes;
+  private final RemoteSeen seen;
+  private final Clock clock;
+
+  static final int MAX_READS = 5;
 
   public record Page(
-      List<Object> items, String next, @JsonInclude(JsonInclude.Include.NON_NULL) Boolean gap) {
+      List<Object> items,
+      String next,
+      @JsonInclude(JsonInclude.Include.NON_NULL) Boolean gap,
+      @JsonInclude(JsonInclude.Include.NON_NULL) Integer seenFrom) {
+
+    public Page(List<Object> items, String next, Boolean gap) {
+      this(items, next, gap, null);
+    }
 
     public Page(List<Object> items, String next) {
-      this(items, next, null);
+      this(items, next, null, null);
+    }
+  }
+
+  public record KeptNote(@JsonUnwrapped Object note, String uri) {}
+
+  private record Candidate(Object item, String uri, String after) {}
+
+  private record Below(List<Candidate> items, boolean more) {}
+
+  private enum Phase {
+    UNSEEN('u'),
+    UNSEEN_PAST_SEEN('v'),
+    SEEN_AHEAD('d'),
+    SEEN('s');
+
+    final char mark;
+
+    Phase(char mark) {
+      this.mark = mark;
+    }
+
+    boolean unseen() {
+      return this == UNSEEN || this == UNSEEN_PAST_SEEN;
     }
   }
 
@@ -47,8 +87,11 @@ public class RemoteTrendingFeed {
     return new Page(List.copyOf(pool.items()), next);
   }
 
-  public Page latest(Long viewerId, String cursor, String since, int limit) {
+  public Page latest(Long viewerId, SeenViewer viewer, String cursor, String since, int limit) {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
+    if (viewer != null && (cursor == null ? since == null : seenCursor(cursor))) {
+      return unseenFirst(viewerId, viewer, cursor, size);
+    }
     if (latestProps.pulling()) {
       return stored(viewerId, cursor, since, size);
     }
@@ -81,13 +124,112 @@ public class RemoteTrendingFeed {
       List<NoteViewReader.Listed> top = notes.latest(viewerId, null, TrendingPosts.MAX_LIMIT);
       for (int at = 0; at < top.size(); at++) {
         if (String.valueOf(top.get(at).id()).equals(since)) {
-          return new Page(views(top.subList(0, at)), null, false);
+          List<Object> items = new ArrayList<>(at);
+          top.subList(0, at).forEach(row -> items.add(new KeptNote(row.view(), row.uri())));
+          return new Page(items, null, false);
         }
       }
     }
     Long beforeId = cursor != null && cursor.startsWith("r") ? id(cursor) : null;
-    Page page = paged(notes.latest(viewerId, beforeId, size + 1), size);
-    return fresh ? new Page(page.items(), page.next(), true) : page;
+    List<NoteViewReader.Listed> rows = notes.latest(viewerId, beforeId, size + 1);
+    boolean more = rows.size() > size;
+    List<NoteViewReader.Listed> shown = more ? rows.subList(0, size) : rows;
+    List<Object> items = new ArrayList<>(shown.size());
+    shown.forEach(row -> items.add(new KeptNote(row.view(), row.uri())));
+    return new Page(items, more ? "r" + shown.getLast().id() : null, fresh ? Boolean.TRUE : null);
+  }
+
+  private Page unseenFirst(Long viewerId, SeenViewer viewer, String cursor, int size) {
+    Phase phase = Phase.UNSEEN;
+    Instant asOf = clock.instant().truncatedTo(ChronoUnit.MILLIS);
+    String at = "";
+    if (cursor != null) {
+      int dot = cursor.indexOf('.');
+      phase = phaseOf(cursor.charAt(0));
+      asOf = Instant.ofEpochMilli(Long.parseLong(cursor.substring(1, dot)));
+      at = cursor.substring(dot + 1);
+    }
+    List<Object> items = new ArrayList<>(size);
+    Integer seenFrom = null;
+    for (int reads = 0; reads < MAX_READS && items.size() < size; reads++) {
+      Below below = below(viewerId, at, size);
+      Set<String> seenBefore =
+          seen.seenBefore(viewer, below.items().stream().map(Candidate::uri).toList(), asOf);
+      boolean full = false;
+      for (Candidate candidate : below.items()) {
+        if (items.size() == size) {
+          full = true;
+          break;
+        }
+        boolean wasSeen = seenBefore.contains(candidate.uri());
+        if (phase.unseen() && wasSeen) {
+          phase = Phase.UNSEEN_PAST_SEEN;
+        } else if (phase.unseen() || wasSeen) {
+          if (phase == Phase.SEEN_AHEAD) {
+            seenFrom = items.size();
+            phase = Phase.SEEN;
+          }
+          items.add(candidate.item());
+        }
+        at = candidate.after();
+      }
+      if (full || below.more()) {
+        continue;
+      }
+      if (phase != Phase.UNSEEN_PAST_SEEN) {
+        return new Page(items, null, null, seenFrom);
+      }
+      phase = Phase.SEEN_AHEAD;
+      at = "";
+    }
+    return new Page(
+        items, phase.mark + String.valueOf(asOf.toEpochMilli()) + "." + at, null, seenFrom);
+  }
+
+  private Below below(Long viewerId, String at, int size) {
+    if (latestProps.pulling()) {
+      Long beforeId = at.startsWith("r") ? id(at) : null;
+      List<NoteViewReader.Listed> rows = notes.latest(viewerId, beforeId, size + 1);
+      boolean more = rows.size() > size;
+      List<Candidate> items = new ArrayList<>(size);
+      for (NoteViewReader.Listed row : more ? rows.subList(0, size) : rows) {
+        items.add(new Candidate(new KeptNote(row.view(), row.uri()), row.uri(), "r" + row.id()));
+      }
+      return new Below(items, more);
+    }
+    int from = offset(at);
+    LatestPosts.Page page = latest.page(viewerId, from, size);
+    warm(viewerId, page.unknownAuthors());
+    List<Candidate> items = new ArrayList<>(page.items().size());
+    for (int i = 0; i < page.items().size(); i++) {
+      TrendingNote note = page.items().get(i);
+      items.add(new Candidate(note, note.uri(), "t" + (from + i + 1)));
+    }
+    return new Below(items, page.more());
+  }
+
+  private static boolean seenCursor(String cursor) {
+    if (cursor.length() < 3 || phaseOf(cursor.charAt(0)) == null) {
+      return false;
+    }
+    int dot = cursor.indexOf('.');
+    if (dot < 2) {
+      return false;
+    }
+    try {
+      return Long.parseLong(cursor.substring(1, dot)) >= 0;
+    } catch (NumberFormatException malformed) {
+      return false;
+    }
+  }
+
+  private static Phase phaseOf(char mark) {
+    for (Phase phase : Phase.values()) {
+      if (phase.mark == mark) {
+        return phase;
+      }
+    }
+    return null;
   }
 
   private Page kept(Long viewerId, Long beforeId, int size) {

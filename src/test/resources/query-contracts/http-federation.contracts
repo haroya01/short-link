@@ -475,3 +475,19 @@
 @junit | federation-latest-stored-since | 6 | 0 | 0 | 0 | 6
 @junit | federation-latest-stored-muted | 1 | 0 | 0 | 0 | 1
 @junit | federation-trending-kept-pulled | 6 | 0 | 0 | 0 | 6
+# Posts from elsewhere a reader had on screen. Handing them over only fills memory, for a member
+# or a signed-out device alike, and nobody's are turned away before anything is read. A flush
+# writes everything held as one multi-row INSERT ... ON DUPLICATE KEY UPDATE. The latest without a
+# reader key is the first read of memory as before (instance key, the chosen server's block, the
+# post's server's block). With a device, each page read below asks once which of its posts the
+# device saw before the scroll began: the unseen run (two reads, the second reaching the bottom)
+# then the seen run from the top (one read); the next page reads once. The daily cleanup is one
+# DELETE ... LIMIT while fewer than a batch are old enough.
+@junit | federation-seen-latest-plain | 3 | 0 | 0 | 0 | 3
+@junit | federation-seen | 0 | 0 | 0 | 0 | 0
+@junit | federation-seen-member | 0 | 0 | 0 | 0 | 0
+@junit | federation-seen-nobody | 0 | 0 | 0 | 0 | 0
+@junit | federation-seen-flush | 0 | 1 | 0 | 0 | 1
+@junit | federation-seen-latest-first | 3 | 0 | 0 | 0 | 3
+@junit | federation-seen-latest-next | 1 | 0 | 0 | 0 | 1
+@junit | federation-seen-cleanup | 0 | 0 | 0 | 1 | 1

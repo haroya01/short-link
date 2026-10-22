@@ -229,6 +229,11 @@ short-link:
       every: ${FEDERATION_LATEST_EVERY:5m}
       backfill-pages: ${FEDERATION_LATEST_BACKFILL_PAGES:5}
       per-day: ${FEDERATION_LATEST_PER_DAY:2000}
+    seen:
+      flush-every: PT5S
+      max-buffered: 50000
+      keep-for: 14d
+      cleanup-cron: "0 35 4 * * *"
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

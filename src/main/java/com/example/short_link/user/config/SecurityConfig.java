@@ -90,7 +90,8 @@ public class SecurityConfig {
             "X-Pow-Challenge",
             "X-Pow-Nonce",
             "X-Post-Key",
-            "X-Post-Grant"));
+            "X-Post-Grant",
+            "X-Kurl-Device"));
     cors.setExposedHeaders(List.of("X-Request-Id", "Content-Disposition", "X-Content-Version"));
     cors.setAllowCredentials(true);
     cors.setMaxAge(3600L);
@@ -168,6 +169,10 @@ public class SecurityConfig {
                     .requestMatchers(GET, "/api/v1/federation/accounts/search")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/federation/domains")
+                    .permitAll()
+                    // A signed-out reader is told apart by the X-Kurl-Device header the
+                    // controller requires.
+                    .requestMatchers(POST, "/api/v1/federation/seen")
                     .permitAll()
                     // Remote servers deliver anonymously; the inbox verifies their HTTP signature.
                     .requestMatchers(POST, "/ap/inbox", "/ap/actors/*/inbox")
