@@ -217,7 +217,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   public List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM federation_relayed_note r STRAIGHT_JOIN note n ON n.id = r.note_id"
-                + " WHERE r.note_id < :before AND "
+                + " WHERE r.note_id < :before AND NOT r.trended AND "
                 + notReply("n")
                 + " AND "
                 + NoteAccessSql.listed("n")

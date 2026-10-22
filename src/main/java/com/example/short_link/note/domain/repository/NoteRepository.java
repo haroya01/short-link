@@ -76,7 +76,8 @@ public interface NoteRepository {
 
   List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
 
-  // The notes a relay brought or a pull kept, newest first, as the federated feed filters them.
+  // The notes a relay brought or a pull kept, newest first, as the federated feed filters them; a
+  // note kept because it trended elsewhere is not among them.
   List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
 
   // The same notes kept between since and until, newest first, without a warning or a sensitive

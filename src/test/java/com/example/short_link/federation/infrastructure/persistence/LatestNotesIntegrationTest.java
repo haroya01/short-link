@@ -170,4 +170,13 @@ class LatestNotesIntegrationTest {
     assertThat(latest(null, null)).containsExactly(elsewhere, shown, muted, blocked);
     assertThat(latest(null, null)).doesNotContain(suspended, limited);
   }
+
+  @Test
+  void aNoteKeptBecauseItTrendedElsewhereIsNotAmongTheLatest() {
+    Long pulledOne = pulled(alice);
+    Long trended = remoteNote(bob, "PUBLIC", false);
+    relayed.markTrended(trended, "pulled-" + tag + ".example", Instant.now());
+
+    assertThat(latest(viewer, null)).containsExactly(pulledOne);
+  }
 }
