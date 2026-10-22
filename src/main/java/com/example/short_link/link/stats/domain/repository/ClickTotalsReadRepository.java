@@ -14,7 +14,7 @@ public interface ClickTotalsReadRepository {
 
   long countProfileChannelByLinkId(Long linkId);
 
-  long countUniqueVisitorsByLinkId(Long linkId);
+  UniqueVisitors uniqueVisitorsByLinkId(Long linkId);
 
   Instant findFirstClickAt(Long linkId);
 
@@ -35,4 +35,6 @@ public interface ClickTotalsReadRepository {
   List<LinkClickCount> countsByLinkIdsBefore(List<Long> ids, Instant before);
 
   Instant findLastClickBeforeByLinkIds(List<Long> ids, Instant before);
+
+  record UniqueVisitors(long count, Instant rawSince) {}
 }

@@ -50,7 +50,9 @@ public class AdminFunnelService {
                 em.createQuery(
                         "SELECT COUNT(DISTINCT l.userId) FROM LinkEntity l "
                             + "WHERE l.userId IN (SELECT u.id FROM UserEntity u WHERE u.createdAt >= :since) "
-                            + "AND EXISTS (SELECT 1 FROM ClickEventEntity c WHERE c.linkId = l.id AND c.bot = false)")
+                            + "AND (EXISTS (SELECT 1 FROM ClickEventEntity c WHERE c.linkId = l.id AND c.bot = false) "
+                            + "OR EXISTS (SELECT 1 FROM ClickHourlyEntity h WHERE h.linkId = l.id "
+                            + "AND h.humans > 0))")
                     .setParameter("since", since)
                     .getSingleResult())
             .longValue();
