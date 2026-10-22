@@ -109,6 +109,8 @@ public interface RemoteNotes {
 
   record Target(String uri, Long remoteActorId, boolean shareable) {}
 
+  record LinkCard(String url, String title, String description, String image) {}
+
   boolean exists(String uri);
 
   Optional<Long> kept(String uri);
@@ -118,6 +120,10 @@ public interface RemoteNotes {
   Optional<Long> receive(Received note);
 
   boolean revise(Long remoteActorId, Long noteId, Revision revision);
+
+  // The card the note's own server made for it, kept as its link card; without one, the first
+  // address in its text is read once the transaction commits, as a member's note's is.
+  void preview(Long noteId, String body, boolean hasMedia, LinkCard card);
 
   boolean retract(Long remoteActorId, String uri);
 

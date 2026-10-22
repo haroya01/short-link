@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -291,5 +292,26 @@ class RemoteNoteIntakeTest {
         ArgumentCaptor.forClass(RemoteNotes.Received.class);
     verify(remoteNotes).receive(received.capture());
     assertThat(received.getValue().inReplyToLocalId()).isEqualTo(3L);
+  }
+
+  @Test
+  void aDeliveredNoteHasItsFirstAddressReadForALinkCardAndADuplicateDoesNot() {
+    JsonNode object =
+        JSON.readTree(
+            """
+            {"id":"%s","type":"Note","attributedTo":"%s","to":["%s"],
+             "content":"<p>new video https://youtu.be/abc</p>",
+             "published":"2026-10-06T00:00:00Z"}"""
+                .formatted(NOTE, ALICE, ActivityStreams.PUBLIC));
+    when(actorRows.findByPublicIds(Set.of())).thenReturn(List.of());
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(9L), Optional.empty());
+    RemoteNoteIntake intake = intake();
+    RemoteNoteParser.Parsed note = new RemoteNoteParser(URLS).parse(object, object);
+
+    assertThat(intake.keep(alice("mastodon.example"), note, null)).contains(9L);
+    assertThat(intake.keep(alice("mastodon.example"), note, null)).isEmpty();
+
+    verify(remoteNotes).preview(9L, "new video https://youtu.be/abc", false, null);
+    verify(remoteNotes, times(1)).preview(any(), any(), anyBoolean(), any());
   }
 }

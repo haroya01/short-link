@@ -12,7 +12,6 @@ com.example.short_link.federation.application.relay.RelayStore calls Clock.syste
 com.example.short_link.federation.application.relay.RelaySubscriptions calls Clock.systemUTC()
 com.example.short_link.federation.application.relay.RelayTally calls Clock.systemUTC()
 com.example.short_link.federation.application.trends.LatestPosts calls Clock.systemUTC()
-com.example.short_link.federation.application.trends.TrendingPosts calls Clock.systemUTC()
 com.example.short_link.federation.infrastructure.http.SignedFederationHttp calls Clock.systemUTC()
 com.example.short_link.federation.scheduler.DeliveryWorker calls Clock.systemUTC()
 com.example.short_link.federation.scheduler.DirectoryWorker calls Clock.systemUTC()

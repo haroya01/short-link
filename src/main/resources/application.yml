@@ -229,6 +229,14 @@ short-link:
       every: ${FEDERATION_LATEST_EVERY:5m}
       backfill-pages: ${FEDERATION_LATEST_BACKFILL_PAGES:5}
       per-day: ${FEDERATION_LATEST_PER_DAY:2000}
+    reach:
+      enabled: ${FEDERATION_REACH_ENABLED:true}
+      per-day: ${FEDERATION_REACH_PER_DAY:1500}
+      trended-per-day: ${FEDERATION_REACH_TRENDED_PER_DAY:300}
+      every: 5m
+      per-round: 200
+      pause: 1s
+      patience: 5s
     seen:
       flush-every: PT5S
       max-buffered: 50000

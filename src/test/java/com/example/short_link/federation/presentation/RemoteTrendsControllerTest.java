@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
 import com.example.short_link.federation.domain.SeenViewer;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,6 +33,7 @@ class RemoteTrendsControllerTest {
   @Autowired private MockMvc mvc;
   @MockitoBean private RemoteTrendingFeed feed;
   @MockitoBean private RemoteSeen seen;
+  @MockitoBean private RemoteForYou forYou;
 
   @Test
   void aSignedOutDeviceAndAMemberBothHandOverWhatTheySaw() throws Exception {
@@ -50,9 +53,66 @@ class RemoteTrendsControllerTest {
         .andExpect(status().isAccepted());
 
     verify(seen)
-        .record(SeenViewer.of(null, DEVICE), List.of("https://mastodon.social/users/a/statuses/1"));
+        .record(
+            SeenViewer.of(null, DEVICE),
+            List.of("https://mastodon.social/users/a/statuses/1"),
+            null,
+            null);
     verify(seen)
-        .record(SeenViewer.member(7L), List.of("https://mastodon.social/users/a/statuses/1"));
+        .record(
+            SeenViewer.member(7L),
+            List.of("https://mastodon.social/users/a/statuses/1"),
+            null,
+            null);
+  }
+
+  @Test
+  void howLongEachPostStayedAndWhichFeedShowedItGoAlong() throws Exception {
+    mvc.perform(
+            post("/api/v1/federation/seen")
+                .header(RemoteTrendsController.DEVICE_HEADER, DEVICE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"uris":["https://a.example/users/a/statuses/1"],"feed":"for-you",
+                     "dwell":[{"uri":"https://a.example/users/a/statuses/1","ms":12000},
+                              {"uri":"https://a.example/users/a/statuses/2"},null]}"""))
+        .andExpect(status().isAccepted());
+
+    verify(seen)
+        .record(
+            SeenViewer.of(null, DEVICE),
+            List.of("https://a.example/users/a/statuses/1"),
+            List.of(new RemoteSeen.Dwell("https://a.example/users/a/statuses/1", 12_000)),
+            "for-you");
+  }
+
+  @Test
+  void forYouTellsTheRankingWhoIsReadingInWhichLanguagesFromWhere() throws Exception {
+    when(feed.latest(null, null, null, null, 20))
+        .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
+    when(forYou.page(7L, SeenViewer.member(7L), "ko-KR,ko;q=0.9", "f1.20", 10))
+        .thenReturn(new RemoteTrendingFeed.Page(List.of(Map.of("uri", "b")), "f1.30", null, 3));
+    when(forYou.page(null, SeenViewer.of(null, DEVICE), null, null, 20))
+        .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
+
+    mvc.perform(
+            get("/api/v1/federation/for-you?limit=10&cursor=f1.20")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "ko-KR,ko;q=0.9"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].uri").value("b"))
+        .andExpect(jsonPath("$.next").value("f1.30"))
+        .andExpect(jsonPath("$.seenFrom").value(3))
+        .andExpect(jsonPath("$.gap").doesNotExist());
+    mvc.perform(
+            get("/api/v1/federation/for-you").header(RemoteTrendsController.DEVICE_HEADER, DEVICE))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.next").isEmpty())
+        .andExpect(jsonPath("$.seenFrom").doesNotExist());
+    mvc.perform(get("/api/v1/federation/latest")).andExpect(status().isOk());
+
+    verify(feed).latest(null, null, null, null, 20);
   }
 
   @Test

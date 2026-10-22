@@ -348,7 +348,7 @@
 # six configured servers is blocked here, the instance key once, whether each server the posts come
 # from is blocked, once per server (five here), then which of the posts' accounts are known here.
 @junit | federation-trending-empty | 0 | 0 | 0 | 0 | 0
-@junit | federation-trending-refresh | 13 | 0 | 0 | 0 | 13
+@junit | federation-trending-refresh | 14 | 0 | 0 | 0 | 14
 @junit | federation-trending | 0 | 0 | 0 | 0 | 0
 # A member's read also learns, behind the answer, the accounts on the page this server has not met:
 # per account its row, whether its server is suspended and the instance key before asking (two
@@ -359,7 +359,7 @@
 # and kept behind it, then the notes kept here by id, newest first, built as any note page. The post
 # itself comes from memory: its id, its account (met already), the note insert, the view. A repost
 # of it is the usual repost to a server elsewhere, including the member's first actor.
-@junit | federation-trending-pool-refresh | 5 | 0 | 0 | 0 | 5
+@junit | federation-trending-pool-refresh | 6 | 0 | 0 | 0 | 6
 @junit | federation-trending-pool-member | 5 | 1 | 0 | 0 | 6
 @junit | federation-trending-kept | 6 | 0 | 0 | 0 | 6
 @junit | federation-trending-resolve | 9 | 1 | 0 | 0 | 10
@@ -440,7 +440,7 @@
 # author (cached and fresh here; an author seen first is fetched and inserted, three reads and one
 # insert more); the note (insert, then its id), its picture's address, its tag, and the relay mark.
 @junit | federation-inbox-relay-announce-store | 1 | 0 | 0 | 0 | 1
-@junit | federation-relay-worker-store | 5 | 4 | 0 | 0 | 9
+@junit | federation-relay-worker-store | 5 | 5 | 0 | 0 | 10
 @junit | notes-federated-relayed | 6 | 0 | 0 | 0 | 6
 # Instance directories an admin adds so their people can be found by name. Adding one: is its server
 # blocked, is it there already, then its row (looked up again by its own key before the insert).
@@ -464,8 +464,8 @@
 # per new post its author (lookup, suspended-server check and instance key before the fetch, lookup
 # and insert), the note's INSERT IGNORE and id, and its mark. A later pull asks only since the
 # newest post seen, and its author is fresh.
-@junit | federation-latest-pull-first | 8 | 3 | 0 | 0 | 11
-@junit | federation-latest-pull-since | 4 | 2 | 0 | 0 | 6
+@junit | federation-latest-pull-first | 8 | 4 | 0 | 0 | 12
+@junit | federation-latest-pull-since | 4 | 3 | 0 | 0 | 7
 # The latest from the store, for anyone: one statement walks the pulled and relayed notes down from
 # the cursor with the viewer's blocks, mutes and server blocks applied, then the page as any note
 # page (thread chain, remote authors, media, stats, and a member's marks). A refresh since a note
@@ -491,4 +491,21 @@
 @junit | federation-seen-flush | 0 | 1 | 0 | 0 | 1
 @junit | federation-seen-latest-first | 3 | 0 | 0 | 0 | 3
 @junit | federation-seen-latest-next | 1 | 0 | 0 | 0 | 1
-@junit | federation-seen-cleanup | 0 | 0 | 0 | 1 | 1
+@junit | federation-seen-cleanup | 0 | 0 | 0 | 2 | 2
+# Posts from elsewhere ranked for the reader. A first page reads, for a member, their signals (likes,
+# bookmarks, answers, followed accounts' notes and long dwells, with each note's author, language and
+# tags, in one statement) and their language; then the kept notes of the last three days with the
+# viewer's blocks, mutes, server blocks, language filter and follows applied, their tags, their
+# counts, which of them the reader saw (with a reader key), and the page built as any note page. A
+# later page is cut from the ranking held in memory, so it only builds its notes. A pool ten times
+# wider costs the same. A dwell's flush finds its note by uri and writes it beside the sightings. A
+# round of asking counts again reads the due notes, the server's block and the instance key, then
+# writes every answer in one statement.
+@junit | federation-for-you-anonymous | 8 | 0 | 0 | 0 | 8
+@junit | federation-for-you-first | 12 | 0 | 0 | 0 | 12
+@junit | federation-for-you-next | 6 | 0 | 0 | 0 | 6
+@junit | federation-seen-dwell | 0 | 0 | 0 | 0 | 0
+@junit | federation-seen-flush-dwell | 1 | 2 | 0 | 0 | 3
+@junit | federation-for-you-device | 10 | 0 | 0 | 0 | 10
+@junit | federation-for-you-wide | 12 | 0 | 0 | 0 | 12
+@junit | federation-reach-round | 3 | 1 | 0 | 0 | 4
