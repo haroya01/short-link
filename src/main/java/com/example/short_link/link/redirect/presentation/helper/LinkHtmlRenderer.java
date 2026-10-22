@@ -2,6 +2,7 @@ package com.example.short_link.link.redirect.presentation.helper;
 
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.domain.WebAddress;
 import com.example.short_link.link.exception.LinkErrorCode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -245,9 +246,10 @@ public class LinkHtmlRenderer {
   }
 
   String unlockedPage(Locale locale, String destinationUrl) {
-    String safe = escape(destinationUrl);
+    String safe = escape(navigable(destinationUrl));
     // URL은 HTML data 속성에서 읽어 JS 문자열 삽입을 피한다. JS가 없으면 meta-refresh로 이동한다.
-    String head = "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
+    String head =
+        safe.isEmpty() ? "" : "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
     String inner =
         "<div class=\"unlock\">"
             + markSvg("bigmark")
@@ -272,8 +274,9 @@ public class LinkHtmlRenderer {
 
   String splashPage(Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
     int seconds = Math.max(1, splash.seconds());
+    String next = escape(navigable(nextUrl));
     String cta =
-        splash.ctaLabel() == null || splash.ctaUrl() == null
+        splash.ctaLabel() == null || navigable(splash.ctaUrl()) == null
             ? ""
             : "<a class=\"btn\" href=\""
                 + escape(splash.ctaUrl())
@@ -281,7 +284,7 @@ public class LinkHtmlRenderer {
                 + escape(splash.ctaLabel())
                 + "</a>";
     String stay =
-        stayUrl == null
+        navigable(stayUrl) == null
             ? ""
             : "<a class=\"stay\" href=\""
                 + escape(stayUrl)
@@ -293,11 +296,13 @@ public class LinkHtmlRenderer {
             + escape(splash.message())
             + "</p>"
             + cta
-            + "<a class=\"go\" href=\""
-            + escape(nextUrl)
-            + "\">"
-            + escape(text(locale, "visitor.splash.continue"))
-            + " →</a>"
+            + (next.isEmpty()
+                ? ""
+                : "<a class=\"go\" href=\""
+                    + next
+                    + "\">"
+                    + escape(text(locale, "visitor.splash.continue"))
+                    + " →</a>")
             + "<div class=\"bar\"><span style=\"animation-duration:"
             + seconds
             + "s\"></span></div>"
@@ -310,7 +315,7 @@ public class LinkHtmlRenderer {
             + poweredBy(locale)
             + "</p>"
             + "<span id=\"d\" data-u=\""
-            + escape(nextUrl)
+            + next
             + "\" data-s=\""
             + seconds
             + "\" data-p=\""
@@ -319,7 +324,7 @@ public class LinkHtmlRenderer {
             + "<script>(function(){var d=document.getElementById('d'),s=+d.dataset.s,"
             + "n=document.getElementById('n'),c=document.getElementById('c'),"
             + "b=document.querySelector('.bar span');"
-            + "var t=setInterval(function(){s--;if(s<=0){clearInterval(t);location.replace(d.dataset.u);return}"
+            + "var t=setInterval(function(){s--;if(s<=0){clearInterval(t);if(d.dataset.u){location.replace(d.dataset.u)}return}"
             + "n.textContent=s},1000);"
             + "function stop(){clearInterval(t);c.textContent=d.dataset.p;if(b){b.style.animationPlayState='paused'}}"
             + "document.addEventListener('pointerdown',stop,{once:true});"
@@ -358,12 +363,16 @@ public class LinkHtmlRenderer {
             + escape(title)
             + "</h1><p>"
             + escape(text(locale, "visitor.handoff.body"))
-            + "</p><a class=\"stay\" href=\""
-            + escape(destinationUrl)
-            + "\">"
-            + escape(text(locale, "visitor.handoff.stay"))
-            + "</a><span id=\"d\" data-u=\""
-            + escape(handoffUrl)
+            + "</p>"
+            + (navigable(destinationUrl) == null
+                ? ""
+                : "<a class=\"stay\" href=\""
+                    + escape(destinationUrl)
+                    + "\">"
+                    + escape(text(locale, "visitor.handoff.stay"))
+                    + "</a>")
+            + "<span id=\"d\" data-u=\""
+            + escape(navigable(handoffUrl))
             + "\" hidden></span>"
             + "<script>var u=document.getElementById('d').dataset.u;if(u){location.replace(u)}</script>";
     return page(locale, title, inner);
@@ -379,7 +388,14 @@ public class LinkHtmlRenderer {
     return escape(line).replace(marker, html);
   }
 
+  private static String navigable(String url) {
+    return WebAddress.is(url) || (url != null && url.startsWith(VisitHandoff.KAKAOTALK_EXTERNAL))
+        ? url
+        : null;
+  }
+
   private static String escape(String s) {
+    if (s == null) return "";
     StringBuilder out = new StringBuilder(s.length() + 16);
     for (int i = 0; i < s.length(); i++) {
       char c = s.charAt(i);

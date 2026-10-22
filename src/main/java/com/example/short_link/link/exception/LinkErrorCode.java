@@ -17,6 +17,7 @@ public enum LinkErrorCode {
       "Failed to generate unique short code after multiple attempts"),
   MALICIOUS_URL(HttpStatus.BAD_REQUEST, "malicious url rejected (sha256_prefix=%s)"),
   SELF_REFERENCING_URL(HttpStatus.BAD_REQUEST, "url points back at the short link service: %s"),
+  UNSUPPORTED_URL_SCHEME(HttpStatus.BAD_REQUEST, "url must be an http or https address"),
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
   INVALID_FAVORITE_ORDER(

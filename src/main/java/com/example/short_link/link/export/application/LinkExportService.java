@@ -1,5 +1,6 @@
 package com.example.short_link.link.export.application;
 
+import com.example.short_link.common.csv.CsvCells;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.classifier.application.ReferrerChannelClassifier;
@@ -8,7 +9,6 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.export.application.helper.CsvWriter;
 import com.example.short_link.link.export.application.properties.LinkExportProperties;
 import com.example.short_link.link.stats.application.LinkClickEventReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
@@ -38,7 +38,7 @@ public class LinkExportService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     StringBuilder sb = new StringBuilder(64 * 1024);
-    CsvWriter.appendRow(
+    CsvCells.appendRow(
         sb,
         "clicked_at",
         "country",
@@ -67,7 +67,7 @@ public class LinkExportService {
         if (written >= exportProperties.eventCap()) break;
         String channel =
             c.getReferrer() == null ? "direct" : channelClassifier.classify(c.getReferrer());
-        CsvWriter.appendRow(
+        CsvCells.appendRow(
             sb,
             c.getClickedAt(),
             c.getCountryCode(),
@@ -97,40 +97,40 @@ public class LinkExportService {
     String dim = dimension == null ? "daily" : dimension.toLowerCase(Locale.ROOT);
     switch (dim) {
       case "daily" -> {
-        CsvWriter.appendRow(sb, "date", "count");
-        stats.dailyClicks().forEach(d -> CsvWriter.appendRow(sb, d.date(), d.count()));
+        CsvCells.appendRow(sb, "date", "count");
+        stats.dailyClicks().forEach(d -> CsvCells.appendRow(sb, d.date(), d.count()));
       }
       case "hourly" -> {
-        CsvWriter.appendRow(sb, "hour", "count");
-        stats.hourClicks().forEach(d -> CsvWriter.appendRow(sb, d.hour(), d.count()));
+        CsvCells.appendRow(sb, "hour", "count");
+        stats.hourClicks().forEach(d -> CsvCells.appendRow(sb, d.hour(), d.count()));
       }
       case "country" -> {
-        CsvWriter.appendRow(sb, "country", "count");
-        stats.countryClicks().forEach(d -> CsvWriter.appendRow(sb, d.country(), d.count()));
+        CsvCells.appendRow(sb, "country", "count");
+        stats.countryClicks().forEach(d -> CsvCells.appendRow(sb, d.country(), d.count()));
       }
       case "city" -> {
-        CsvWriter.appendRow(sb, "city", "count");
-        stats.cityClicks().forEach(d -> CsvWriter.appendRow(sb, d.city(), d.count()));
+        CsvCells.appendRow(sb, "city", "count");
+        stats.cityClicks().forEach(d -> CsvCells.appendRow(sb, d.city(), d.count()));
       }
       case "device" -> {
-        CsvWriter.appendRow(sb, "device", "count");
-        stats.deviceClicks().forEach(d -> CsvWriter.appendRow(sb, d.device(), d.count()));
+        CsvCells.appendRow(sb, "device", "count");
+        stats.deviceClicks().forEach(d -> CsvCells.appendRow(sb, d.device(), d.count()));
       }
       case "os" -> {
-        CsvWriter.appendRow(sb, "os", "count");
-        stats.osClicks().forEach(d -> CsvWriter.appendRow(sb, d.os(), d.count()));
+        CsvCells.appendRow(sb, "os", "count");
+        stats.osClicks().forEach(d -> CsvCells.appendRow(sb, d.os(), d.count()));
       }
       case "browser" -> {
-        CsvWriter.appendRow(sb, "browser", "count");
-        stats.browserClicks().forEach(d -> CsvWriter.appendRow(sb, d.browser(), d.count()));
+        CsvCells.appendRow(sb, "browser", "count");
+        stats.browserClicks().forEach(d -> CsvCells.appendRow(sb, d.browser(), d.count()));
       }
       case "referrer" -> {
-        CsvWriter.appendRow(sb, "referrer", "count");
-        stats.referrerClicks().forEach(d -> CsvWriter.appendRow(sb, d.referrer(), d.count()));
+        CsvCells.appendRow(sb, "referrer", "count");
+        stats.referrerClicks().forEach(d -> CsvCells.appendRow(sb, d.referrer(), d.count()));
       }
       case "channel" -> {
-        CsvWriter.appendRow(sb, "channel", "count");
-        stats.channelClicks().forEach(d -> CsvWriter.appendRow(sb, d.channel(), d.count()));
+        CsvCells.appendRow(sb, "channel", "count");
+        stats.channelClicks().forEach(d -> CsvCells.appendRow(sb, d.channel(), d.count()));
       }
       default -> throw new LinkException(LinkErrorCode.INVALID_EXPORT_DIMENSION, dim);
     }

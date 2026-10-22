@@ -111,6 +111,27 @@ class RemoteActorParserTest {
   }
 
   @Test
+  void refusesADocumentOnTheSameHostThatIsNotTheActorItNames() {
+    String keyId = "https://mastodon.example/users/alice#main-key";
+    JsonNode alice = read(RemoteActorFixtures.MASTODON);
+
+    assertThat(
+            RemoteActorParser.parse(
+                alice, URI.create("https://mastodon.example/system/media/a.json"), keyId))
+        .isEmpty();
+    assertThat(RemoteActorParser.parse(alice, URI.create("https://mastodon.example/@alice"), keyId))
+        .isEmpty();
+    assertThat(
+            RemoteActorParser.parse(
+                alice, URI.create("https://mastodon.example/users/alice/"), keyId))
+        .isEmpty();
+    assertThat(
+            RemoteActorParser.parse(
+                alice, URI.create("https://mastodon.example/users/alice#main-key"), keyId))
+        .isPresent();
+  }
+
+  @Test
   void refusesNonActorsAndBrokenDocuments() {
     URI from = URI.create("https://mastodon.example/users/alice");
     ObjectNode note = (ObjectNode) read(RemoteActorFixtures.MASTODON);

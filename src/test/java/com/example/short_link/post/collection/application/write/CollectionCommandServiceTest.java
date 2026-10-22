@@ -196,6 +196,7 @@ class CollectionCommandServiceTest {
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
     PostEntity post = new PostEntity(2L, "slug", "Title", "ko");
     ReflectionTestUtils.setField(post, "id", 5L);
+    post.publish();
     when(postRepository.findById(5L)).thenReturn(Optional.of(post));
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
@@ -235,6 +236,7 @@ class CollectionCommandServiceTest {
     PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 0, 3, "q", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findById(9L)).thenReturn(Optional.of(hl));
+    when(postRepository.findById(6L)).thenReturn(Optional.of(post(6L, 2L)));
     CollectionConnectionEntity existing =
         new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, 9L, "old", 2);
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
@@ -257,6 +259,7 @@ class CollectionCommandServiceTest {
     PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 0, 3, "q", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findById(9L)).thenReturn(Optional.of(hl));
+    when(postRepository.findById(6L)).thenReturn(Optional.of(post(6L, 2L)));
     CollectionConnectionEntity existing =
         new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, 9L, "old", 2);
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
@@ -273,6 +276,7 @@ class CollectionCommandServiceTest {
   private PostEntity post(long id, long authorId) {
     PostEntity p = new PostEntity(authorId, "s" + id, "T" + id, "ko");
     ReflectionTestUtils.setField(p, "id", id);
+    p.publish();
     return p;
   }
 
@@ -341,6 +345,7 @@ class CollectionCommandServiceTest {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
     when(highlightRepository.findById(5L)).thenReturn(Optional.of(highlight(5L, 8L, 77L)));
+    when(postRepository.findById(77L)).thenReturn(Optional.of(post(77L, 8L)));
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
     when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -409,6 +414,47 @@ class CollectionCommandServiceTest {
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.CONNECTION_TARGET_NOT_FOUND);
     verify(connectionRepository, never()).save(any());
+  }
+
+  @Test
+  void connectRejectsSomeoneElsesDraftAndAHighlightOnItAsIfMissing() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+    PostEntity draft = new PostEntity(2L, "draft", "Draft", "ko");
+    ReflectionTestUtils.setField(draft, "id", 5L);
+    when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
+    when(highlightRepository.findById(9L)).thenReturn(Optional.of(highlight(9L, 2L, 5L)));
+
+    for (ConnectBlockCommand cmd :
+        List.of(
+            new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null),
+            new ConnectBlockCommand(1L, 10L, ConnectionBlockType.HIGHLIGHT, 9L, null))) {
+      assertThatThrownBy(() -> service.connect(cmd))
+          .isInstanceOf(PostException.class)
+          .extracting(e -> ((PostException) e).errorCode())
+          .isEqualTo(PostErrorCode.CONNECTION_TARGET_NOT_FOUND);
+    }
+    verify(connectionRepository, never()).save(any());
+  }
+
+  @Test
+  void connectAcceptsTheCuratorsOwnDraftAndTheirHighlightOnIt() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+    PostEntity draft = new PostEntity(1L, "draft", "Draft", "ko");
+    ReflectionTestUtils.setField(draft, "id", 5L);
+    when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
+    when(highlightRepository.findById(9L)).thenReturn(Optional.of(highlight(9L, 1L, 5L)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    assertThat(
+            service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null)))
+        .isNotNull();
+    assertThat(
+            service.connect(
+                new ConnectBlockCommand(1L, 10L, ConnectionBlockType.HIGHLIGHT, 9L, null)))
+        .isNotNull();
   }
 
   @Test

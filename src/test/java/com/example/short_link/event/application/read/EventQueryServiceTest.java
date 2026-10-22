@@ -190,4 +190,25 @@ class EventQueryServiceTest {
     // 이름 안의 개행은 셀 안에 인용된 채 남는다 — 행 분리와 헷갈리면 안 된다.
     assertThat(lines[2]).startsWith("\"나\n다\",b@x.com,CONFIRMED,,");
   }
+
+  @Test
+  void exportAttendeesCsv_keepsFormulaLookingAnswersAsText() {
+    when(eventRepository.findById(10L)).thenReturn(Optional.of(ownedEvent()));
+    when(eventLinkRepository.findAllByEventId(10L)).thenReturn(List.of());
+    EventQuestionEntity question =
+        new EventQuestionEntity(10L, 0, QuestionType.SHORT_TEXT, "@team", null, false);
+    ReflectionTestUtils.setField(question, "id", 5L);
+    when(questionRepository.findAllByEventIdOrderByPosition(10L)).thenReturn(List.of(question));
+    EventRegistrationEntity formula =
+        new EventRegistrationEntity(10L, "=1+1", "+82-10", "{\"5\":\"-2+3\"}", "hash");
+    ReflectionTestUtils.setField(formula, "id", 1L);
+    ReflectionTestUtils.setField(formula, "createdAt", CREATED);
+    when(registrationRepository.findAllByEventIdOrderByCreatedAtAsc(10L))
+        .thenReturn(List.of(formula));
+
+    String[] lines = service.exportAttendeesCsv(1L, 10L).split("\n");
+
+    assertThat(lines[0]).endsWith(",'@team");
+    assertThat(lines[1]).startsWith("'=1+1,'+82-10,CONFIRMED,,").endsWith(",'-2+3");
+  }
 }

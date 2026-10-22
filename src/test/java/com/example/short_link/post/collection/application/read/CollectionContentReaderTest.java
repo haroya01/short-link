@@ -51,16 +51,40 @@ class CollectionContentReaderTest {
                 connection(1L, ConnectionBlockType.POST, 11L, 3),
                 connection(2L, ConnectionBlockType.HIGHLIGHT, 20L, 2),
                 connection(3L, ConnectionBlockType.POST, 13L, 1)));
-    when(posts.findAllByIdIn(List.of(11L))).thenReturn(List.of(post(11L, false)));
     when(highlights.findAllByIdIn(List.of(20L))).thenReturn(List.of(highlight(20L, 12L)));
-    when(posts.findAllByIdIn(Set.of(12L))).thenReturn(List.of(post(12L, false)));
+    when(posts.findAllByIdIn(Set.of(11L, 12L)))
+        .thenReturn(List.of(post(11L, false), post(12L, false)));
 
-    assertThat(reader.previewByCollection(List.of(collection(1L, false)), true))
+    assertThat(reader.previewByCollection(List.of(collection(1L, false)), null))
         .containsEntry(1L, List.of());
-    verify(posts).findAllByIdIn(List.of(11L));
-    verify(posts).findAllByIdIn(Set.of(12L));
+    verify(posts).findAllByIdIn(Set.of(11L, 12L));
     verifyNoMoreInteractions(posts);
     verifyNoInteractions(users);
+  }
+
+  @Test
+  void theCuratorsOwnPreviewShowsTheirDraftsButNotSomeoneElsesHiddenPost() {
+    when(connections.findAllByCollectionIdInOrderByPositionDesc(List.of(1L, 2L)))
+        .thenReturn(
+            List.of(
+                postIn(1L, 11L, 1),
+                postIn(1L, 12L, 0),
+                highlightIn(2L, 20L, 1),
+                highlightIn(2L, 21L, 0)));
+    when(highlights.findAllByIdIn(List.of(20L, 21L)))
+        .thenReturn(List.of(highlight(20L, 11L), highlight(21L, 12L)));
+    var othersDraft = post(12L, false);
+    ReflectionTestUtils.setField(othersDraft, "userId", 8L);
+    when(posts.findAllByIdIn(Set.of(11L, 12L))).thenReturn(List.of(post(11L, false), othersDraft));
+    var mine = List.of(collection(1L, false), collection(2L, false));
+
+    var asCurator = reader.previewByCollection(mine, 7L);
+    var asOtherAuthor = reader.previewByCollection(mine, 8L);
+
+    assertThat(asCurator.get(1L)).containsExactly("Post 11");
+    assertThat(asCurator.get(2L)).containsExactly("Quoted post 11");
+    assertThat(asOtherAuthor.get(1L)).containsExactly("Post 12");
+    assertThat(asOtherAuthor.get(2L)).containsExactly("Quoted post 12");
   }
 
   @Test
@@ -78,7 +102,7 @@ class CollectionContentReaderTest {
         .thenReturn(List.of(post(11L, true), post(12L, true), post(22L, true), post(23L, true)));
 
     var previews =
-        reader.previewByCollection(List.of(collection(1L, true), collection(2L, false)), true);
+        reader.previewByCollection(List.of(collection(1L, true), collection(2L, false)), null);
 
     assertThat(previews.get(1L)).containsExactly("Post 11", "Post 12");
     assertThat(previews.get(2L)).containsExactly("Post 23", "Post 22");
@@ -134,6 +158,15 @@ class CollectionContentReaderTest {
     var connection =
         new CollectionConnectionEntity(
             collectionId, ConnectionBlockType.POST, refId, "Worth reading", position);
+    ReflectionTestUtils.setField(connection, "id", collectionId * 100 + position);
+    return connection;
+  }
+
+  private static CollectionConnectionEntity highlightIn(
+      long collectionId, long refId, int position) {
+    var connection =
+        new CollectionConnectionEntity(
+            collectionId, ConnectionBlockType.HIGHLIGHT, refId, "Worth reading", position);
     ReflectionTestUtils.setField(connection, "id", collectionId * 100 + position);
     return connection;
   }

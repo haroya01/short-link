@@ -1,6 +1,8 @@
 package com.example.short_link.user.application.moderation;
 
 import com.example.short_link.common.user.UserModerationPort;
+import com.example.short_link.user.application.write.ApiKeyService;
+import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 class UserModerationAdapter implements UserModerationPort {
 
   private final UserRepository userRepository;
+  private final ApiKeyService apiKeys;
+  private final RefreshTokenStore refreshTokens;
 
   @Override
   @Transactional
@@ -37,6 +41,8 @@ class UserModerationAdapter implements UserModerationPort {
     UserEntity user = require(userId);
     user.ban();
     userRepository.save(user);
+    apiKeys.revokeAllFor(userId);
+    refreshTokens.deleteAllForUser(userId);
   }
 
   private UserEntity require(Long userId) {

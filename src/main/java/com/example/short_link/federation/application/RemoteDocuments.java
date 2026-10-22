@@ -28,7 +28,12 @@ public class RemoteDocuments {
     if (serverBlocks.suspends(uri.getHost())) {
       throw notFound(asked);
     }
-    return answer(http.get(uri, signingKeys.forInstance()), uri, asked);
+    FederationHttp.Result result = http.get(uri, signingKeys.forInstance());
+    if (result instanceof FederationHttp.Result.Ok ok && !ok.activityStreams()) {
+      log.info("federation resolve not activity json type={} uri={}", ok.contentType(), uri);
+      throw notFound(asked);
+    }
+    return answer(result, uri, asked);
   }
 
   public JsonNode webFinger(URI uri, String asked) {

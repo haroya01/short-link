@@ -144,7 +144,9 @@ public class RedirectController {
             src,
             crawler,
             req,
-            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
+            link.passwordRequired() || link.limitsVisitors()
+                ? LinkPreviewRenderer.Scope.KURL_CARD_ONLY
+                : LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
       }
       return html.notYetOpenPageResponse(locale, link.visitOptions().opensAt());
     }

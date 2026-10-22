@@ -91,6 +91,8 @@ public interface RoomRepository {
 
   boolean dropInvitation(Long roomId, Long userId);
 
+  int dropInvitationsBy(Long roomId, Long inviterId);
+
   boolean declineInvitation(Long roomId, Long userId, Instant at);
 
   List<RoomInvitation> invitationsFor(Long userId, int limit);

@@ -50,7 +50,8 @@ class RemoteDocumentsTest {
   }
 
   private static FederationHttp.Result ok(String body) {
-    return new FederationHttp.Result.Ok(200, body.getBytes(StandardCharsets.UTF_8));
+    return new FederationHttp.Result.Ok(
+        200, body.getBytes(StandardCharsets.UTF_8), "application/activity+json; charset=utf-8");
   }
 
   private static FederationErrorCode codeOf(Runnable fetch) {
@@ -68,6 +69,30 @@ class RemoteDocumentsTest {
 
     assertThat(documents().fetch(ALICE, "@alice@mastodon.example").path("type").asString())
         .isEqualTo("Person");
+  }
+
+  @Test
+  void aDocumentServedAsAnythingButActivityJsonIsNotFound() {
+    byte[] body = "{\"type\":\"Person\"}".getBytes(StandardCharsets.UTF_8);
+    when(http.get(ALICE, instance))
+        .thenReturn(
+            new FederationHttp.Result.Ok(200, body, "application/octet-stream"),
+            new FederationHttp.Result.Ok(200, body, "text/plain; charset=utf-8"),
+            new FederationHttp.Result.Ok(200, body, "image/png"),
+            new FederationHttp.Result.Ok(200, body, "application/json"),
+            new FederationHttp.Result.Ok(200, body, "application/ld+json"),
+            new FederationHttp.Result.Ok(200, body),
+            new FederationHttp.Result.Ok(
+                200,
+                body,
+                "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""));
+
+    RemoteDocuments documents = documents();
+    for (int i = 0; i < 6; i++) {
+      assertThat(codeOf(() -> documents.fetch(ALICE, "x")))
+          .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+    }
+    assertThat(documents.fetch(ALICE, "x").path("type").asString()).isEqualTo("Person");
   }
 
   @Test

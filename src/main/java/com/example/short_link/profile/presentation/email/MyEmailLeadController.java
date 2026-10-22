@@ -1,5 +1,6 @@
 package com.example.short_link.profile.presentation.email;
 
+import com.example.short_link.common.csv.CsvCells;
 import com.example.short_link.profile.application.email.EmailLeadService;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import jakarta.validation.Valid;
@@ -45,7 +46,7 @@ public class MyEmailLeadController {
     List<EmailLeadEntity> rows =
         includeOptedOut ? service.list(userId, 0, 500) : service.listActive(userId, 0, 500);
     for (EmailLeadEntity l : rows) {
-      csv.append(escape(l.getEmail()))
+      csv.append(CsvCells.escape(l.getEmail()))
           .append(',')
           .append(l.getBlockId())
           .append(',')
@@ -71,13 +72,5 @@ public class MyEmailLeadController {
   @DeleteMapping("/{id}")
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     service.delete(userId, id);
-  }
-
-  private static String escape(String value) {
-    if (value == null) return "";
-    if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-      return "\"" + value.replace("\"", "\"\"") + "\"";
-    }
-    return value;
   }
 }

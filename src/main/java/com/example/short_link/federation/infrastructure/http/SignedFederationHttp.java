@@ -155,7 +155,7 @@ public class SignedFederationHttp implements FederationHttp {
     }
     int status = response.status();
     if (status >= 200 && status < 300) {
-      return new Sent(new Result.Ok(status, response.body()));
+      return new Sent(new Result.Ok(status, response.body(), response.header("Content-Type")));
     }
     return new Sent(
         new Result.Failed(status, "HTTP " + status),

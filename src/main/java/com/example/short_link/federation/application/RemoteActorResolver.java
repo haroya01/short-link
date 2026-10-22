@@ -109,8 +109,20 @@ public class RemoteActorResolver {
     return fresh(cached) ? Optional.of(cached) : byActorUri(cached.getActorUri());
   }
 
+  // A searched address on the actor's server may serve it under another address (a profile page).
+  // That document is believed only as its own id serves it.
   public Optional<RemoteActorEntity> stored(JsonNode document, URI fetchedFrom) {
-    return RemoteActorParser.parse(document, fetchedFrom, null).map(this::store);
+    Optional<RemoteActorDocument> parsed = RemoteActorParser.parse(document, fetchedFrom, null);
+    if (parsed.isEmpty()) {
+      URI id =
+          RemoteActorParser.id(document).map(RemoteActorResolver::withoutFragment).orElse(null);
+      if (id != null
+          && sameHost(id, fetchedFrom)
+          && !id.equals(withoutFragment(fetchedFrom.toString()))) {
+        parsed = fetch(id).flatMap(doc -> RemoteActorParser.parse(doc, id, null));
+      }
+    }
+    return parsed.map(this::store);
   }
 
   // A suspended server is never asked for anything.
@@ -119,6 +131,10 @@ public class RemoteActorResolver {
       return Optional.empty();
     }
     return switch (http.get(uri, signingKeys.forInstance())) {
+      case FederationHttp.Result.Ok ok when !ok.activityStreams() -> {
+        log.info("federation fetch not activity json type={} uri={}", ok.contentType(), uri);
+        yield Optional.empty();
+      }
       case FederationHttp.Result.Ok ok -> {
         try {
           yield Optional.of(json.readTree(ok.body()));

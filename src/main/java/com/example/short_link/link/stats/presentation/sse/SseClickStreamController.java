@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.presentation.sse;
 
 import com.example.short_link.common.security.ClickStreamTokenService;
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -94,6 +95,7 @@ public class SseClickStreamController {
     return emitter;
   }
 
+  @OpenToSuspended
   @PostMapping("/{shortCode}/stream-token")
   public StreamTokenResponse issueStreamToken(
       @PathVariable ShortCode shortCode, @AuthenticationPrincipal Long userId) {

@@ -2,10 +2,13 @@
 # Fixtures and independent DB assertions excluded; HTTP-triggered async SQL included.
 # Background-delivery IDs measure the real explicit worker separately from HTTP.
 # Native query-audit 0.6 format. Never automatically update on test failure.
+# A signed-in POST, PUT, PATCH or DELETE to a link, event, room, CTA, campaign or custom-domain
+# handler first reads the account to refuse a banned or suspended one (SuspendedWriteGate).
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 @junit | account-api-key-authenticate | 4 | 0 | 1 | 0 | 5
 @junit | account-api-key-cross-user-revoke | 1 | 0 | 0 | 0 | 1
-@junit | account-api-key-issue | 0 | 1 | 0 | 0 | 1
+# Issuing a key first asks whether the account may write (not banned or suspended).
+@junit | account-api-key-issue | 1 | 1 | 0 | 0 | 2
 @junit | account-api-key-list | 1 | 0 | 0 | 0 | 1
 @junit | account-api-key-revoke | 1 | 0 | 1 | 0 | 2
 @junit | account-api-key-revoked-rejected | 1 | 0 | 0 | 0 | 1
@@ -142,39 +145,39 @@
 # place and the dropped one deleted.
 @junit | author-unpublished-body-edit | 2 | 0 | 2 | 2 | 6
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
-@junit | campaign-archive | 2 | 0 | 1 | 0 | 3
-@junit | campaign-batch-bulk | 11 | 14 | 4 | 0 | 29
-@junit | campaign-batch-create | 7 | 7 | 2 | 0 | 16
-@junit | campaign-batch-delete | 3 | 0 | 0 | 2 | 5
+@junit | campaign-archive | 3 | 0 | 1 | 0 | 4
+@junit | campaign-batch-bulk | 12 | 14 | 4 | 0 | 30
+@junit | campaign-batch-create | 8 | 7 | 2 | 0 | 17
+@junit | campaign-batch-delete | 4 | 0 | 0 | 2 | 6
 # The deleted batch's link left the redirect cache, so its code misses the cached-row read.
 @junit | campaign-batch-deleted-visit | 1 | 0 | 0 | 0 | 1
 @junit | campaign-batch-detail | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batch-list | 5 | 0 | 0 | 0 | 5
 @junit | campaign-batch-qr | 3 | 0 | 0 | 0 | 3
-@junit | campaign-batch-update | 3 | 0 | 1 | 0 | 4
+@junit | campaign-batch-update | 4 | 0 | 1 | 0 | 5
 @junit | campaign-batch-visit | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batches-csv | 5 | 0 | 0 | 0 | 5
 @junit | campaign-batches-qr-zip | 5 | 0 | 0 | 0 | 5
 @junit | campaign-click-worker-persist | 6 | 2 | 0 | 0 | 8
-@junit | campaign-create | 0 | 1 | 0 | 0 | 1
-@junit | campaign-create-comparison | 0 | 1 | 0 | 0 | 1
+@junit | campaign-create | 1 | 1 | 0 | 0 | 2
+@junit | campaign-create-comparison | 1 | 1 | 0 | 0 | 2
 @junit | campaign-detail | 2 | 0 | 0 | 0 | 2
 @junit | campaign-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
-@junit | campaign-end | 9 | 0 | 7 | 0 | 16
-@junit | campaign-ended-policy-update | 2 | 0 | 1 | 0 | 3
+@junit | campaign-end | 10 | 0 | 7 | 0 | 17
+@junit | campaign-ended-policy-update | 3 | 0 | 1 | 0 | 4
 # An ended link: the cached row and destinations, the link row for its follow-up page, and the
 # custom-domain owner check before forwarding there.
 @junit | campaign-ended-visit | 4 | 0 | 0 | 0 | 4
 @junit | campaign-ended-visit-trailing-slash | 4 | 0 | 0 | 0 | 4
 @junit | campaign-list | 3 | 0 | 0 | 0 | 3
-@junit | campaign-policy-reapply | 9 | 0 | 6 | 0 | 15
-@junit | campaign-policy-update | 2 | 0 | 1 | 0 | 3
+@junit | campaign-policy-reapply | 10 | 0 | 6 | 0 | 16
+@junit | campaign-policy-update | 3 | 0 | 1 | 0 | 4
 @junit | campaign-reapplied-visit | 4 | 0 | 0 | 0 | 4
 @junit | campaign-recommendations | 10 | 0 | 0 | 0 | 10
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
-@junit | campaign-scheduled-batch-create | 7 | 7 | 2 | 0 | 16
+@junit | campaign-scheduled-batch-create | 8 | 7 | 2 | 0 | 17
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
-@junit | campaign-scheduled-create | 0 | 1 | 0 | 0 | 1
+@junit | campaign-scheduled-create | 1 | 1 | 0 | 0 | 2
 @junit | campaign-scheduled-end-tick | 5 | 0 | 3 | 0 | 8
 @junit | campaign-scheduled-expired-visitor | 3 | 0 | 0 | 0 | 3
 @junit | campaign-scheduled-read-active | 2 | 0 | 0 | 0 | 2
@@ -188,16 +191,17 @@
 @junit | creator-blog-hook-list | 1 | 0 | 0 | 0 | 1
 @junit | creator-blog-hook-update | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-active-list-after-delete | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-create | 6 | 7 | 2 | 0 | 15
-@junit | creator-cta-delete | 2 | 0 | 1 | 0 | 3
+@junit | creator-cta-create | 7 | 7 | 2 | 0 | 16
+@junit | creator-cta-delete | 3 | 0 | 1 | 0 | 4
 @junit | creator-cta-deleted-detail | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-denies-other | 1 | 0 | 0 | 0 | 1
+@junit | creator-cta-denies-other | 2 | 0 | 0 | 0 | 2
 @junit | creator-cta-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-list | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-update | 2 | 0 | 1 | 0 | 3
+@junit | creator-cta-update | 3 | 0 | 1 | 0 | 4
 @junit | creator-reader-behavior | 0 | 1 | 0 | 0 | 1
 @junit | curation-collection-delete | 1 | 0 | 0 | 1 | 2
-@junit | curation-connect-highlight | 9 | 2 | 0 | 0 | 11
+# A highlight is connected only when the post it is on is open or the curator's own.
+@junit | curation-connect-highlight | 10 | 2 | 0 | 0 | 12
 @junit | curation-connect-note | 9 | 2 | 0 | 0 | 11
 @junit | curation-connect-post | 7 | 2 | 0 | 0 | 9
 @junit | curation-delete-highlight-purges-connection | 1 | 0 | 0 | 3 | 4
@@ -223,13 +227,13 @@
 @junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | curation-unlist-path | 2 | 0 | 1 | 0 | 3
-@junit | custom-domain-delete | 1 | 0 | 0 | 1 | 2
-@junit | custom-domain-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
+@junit | custom-domain-delete | 2 | 0 | 0 | 1 | 3
+@junit | custom-domain-delete-foreign-denied | 2 | 0 | 0 | 0 | 2
 @junit | custom-domain-list | 1 | 0 | 0 | 0 | 1
-@junit | custom-domain-register | 2 | 1 | 0 | 0 | 3
+@junit | custom-domain-register | 3 | 1 | 0 | 0 | 4
 # DNS result persistence reloads the domain in its own transaction, including failed checks.
-@junit | custom-domain-verification-missing | 2 | 0 | 1 | 0 | 3
-@junit | custom-domain-verify | 2 | 0 | 1 | 0 | 3
+@junit | custom-domain-verification-missing | 3 | 0 | 1 | 0 | 4
+@junit | custom-domain-verify | 3 | 0 | 1 | 0 | 4
 @junit | discovery-english-body | 3 | 1 | 1 | 0 | 5
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-english-metadata | 2 | 1 | 1 | 0 | 4
@@ -258,18 +262,18 @@
 @junit | discovery-tag-trending-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-feed | 5 | 0 | 0 | 0 | 5
 @junit | discovery-trending-tag-sections | 7 | 0 | 0 | 0 | 7
-@junit | event-alias-link | 6 | 7 | 2 | 0 | 15
+@junit | event-alias-link | 7 | 7 | 2 | 0 | 16
 @junit | event-analytics | 4 | 0 | 0 | 0 | 4
 @junit | event-attendees | 3 | 0 | 0 | 0 | 3
 @junit | event-attendees-csv | 4 | 0 | 0 | 0 | 4
-@junit | event-cancel | 6 | 0 | 1 | 0 | 7
-@junit | event-close | 6 | 0 | 1 | 0 | 7
-@junit | event-cover-commit | 1 | 0 | 1 | 0 | 2
-@junit | event-cover-foreign-denied | 1 | 0 | 0 | 0 | 1
-@junit | event-cover-presign | 1 | 0 | 0 | 0 | 1
+@junit | event-cancel | 7 | 0 | 1 | 0 | 8
+@junit | event-close | 7 | 0 | 1 | 0 | 8
+@junit | event-cover-commit | 2 | 0 | 1 | 0 | 3
+@junit | event-cover-foreign-denied | 2 | 0 | 0 | 0 | 2
+@junit | event-cover-presign | 2 | 0 | 0 | 0 | 2
 @junit | event-cover-read | 4 | 0 | 0 | 0 | 4
-@junit | event-create | 10 | 9 | 3 | 0 | 22
-@junit | event-create-cover | 10 | 9 | 3 | 0 | 22
+@junit | event-create | 11 | 9 | 3 | 0 | 23
+@junit | event-create-cover | 11 | 9 | 3 | 0 | 23
 @junit | event-detail | 4 | 0 | 0 | 0 | 4
 @junit | event-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | event-list | 1 | 0 | 0 | 0 | 1
@@ -281,8 +285,8 @@
 @junit | event-register-duplicate | 3 | 0 | 0 | 0 | 3
 @junit | event-registration-cancel | 1 | 0 | 2 | 0 | 3
 @junit | event-registration-cancel-repeat | 1 | 0 | 0 | 0 | 1
-@junit | event-reopen | 6 | 0 | 1 | 0 | 7
-@junit | event-update | 7 | 1 | 1 | 1 | 10
+@junit | event-reopen | 7 | 0 | 1 | 0 | 8
+@junit | event-update | 8 | 1 | 1 | 1 | 11
 # Following a locked member leaves a request (Mastodon-style approval). Locking is the plain profile
 # update. A request adds one lookup to the follow (is one already waiting), then its insert; status
 # counts follow; after commit the notification asks block/mute, preference, inserts, then the
@@ -319,34 +323,34 @@
 @junit | interaction-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | link-account-stream | 0 | 0 | 0 | 0 | 0
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
-@junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
-@junit | link-bulk-import | 9 | 12 | 4 | 0 | 25
-@junit | link-claim-anonymous | 1 | 0 | 1 | 0 | 2
-@junit | link-claim-replay | 1 | 0 | 0 | 0 | 1
+@junit | link-bulk-delete | 2 | 2 | 0 | 2 | 6
+@junit | link-bulk-import | 10 | 12 | 4 | 0 | 26
+@junit | link-claim-anonymous | 2 | 0 | 1 | 0 | 3
+@junit | link-claim-replay | 2 | 0 | 0 | 0 | 2
 @junit | link-click-worker-persist | 6 | 2 | 0 | 0 | 8
-@junit | link-countries-block | 2 | 0 | 2 | 0 | 4
+@junit | link-countries-block | 3 | 0 | 2 | 0 | 5
 @junit | link-countries-read | 1 | 0 | 0 | 0 | 1
 @junit | link-create-anonymous | 4 | 6 | 2 | 0 | 12
-@junit | link-create-bulk-companion | 4 | 6 | 2 | 0 | 12
-@junit | link-create-owned | 5 | 6 | 2 | 0 | 13
-@junit | link-create-protected | 5 | 6 | 2 | 0 | 13
-@junit | link-create-webhook | 5 | 6 | 2 | 0 | 13
-@junit | link-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
-@junit | link-delete-owned | 1 | 1 | 0 | 1 | 3
-@junit | link-destination-add | 2 | 1 | 0 | 0 | 3
-@junit | link-destination-delete | 2 | 0 | 0 | 1 | 3
+@junit | link-create-bulk-companion | 5 | 6 | 2 | 0 | 13
+@junit | link-create-owned | 6 | 6 | 2 | 0 | 14
+@junit | link-create-protected | 6 | 6 | 2 | 0 | 14
+@junit | link-create-webhook | 6 | 6 | 2 | 0 | 14
+@junit | link-delete-foreign-denied | 2 | 0 | 0 | 0 | 2
+@junit | link-delete-owned | 2 | 1 | 0 | 1 | 4
+@junit | link-destination-add | 3 | 1 | 0 | 0 | 4
+@junit | link-destination-delete | 3 | 0 | 0 | 1 | 4
 @junit | link-destination-list | 2 | 0 | 0 | 0 | 2
-@junit | link-destination-update | 2 | 0 | 1 | 0 | 3
+@junit | link-destination-update | 3 | 0 | 1 | 0 | 4
 @junit | link-detail-owned | 6 | 0 | 0 | 0 | 6
 @junit | link-events | 2 | 0 | 0 | 0 | 2
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
 @junit | link-list-owned | 6 | 0 | 0 | 0 | 6
 @junit | link-og-card | 1 | 0 | 0 | 0 | 1
-@junit | link-og-override | 3 | 0 | 2 | 0 | 5
+@junit | link-og-override | 4 | 0 | 2 | 0 | 6
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
 @junit | link-pow-challenge | 0 | 0 | 0 | 0 | 0
-@junit | link-protect | 2 | 0 | 2 | 0 | 4
+@junit | link-protect | 3 | 0 | 2 | 0 | 5
 @junit | link-public-preview | 0 | 0 | 0 | 0 | 0
 @junit | link-public-service-stats | 2 | 0 | 0 | 0 | 2
 @junit | link-redirect | 3 | 0 | 0 | 0 | 3
@@ -357,7 +361,7 @@
 @junit | link-stats-private | 43 | 0 | 0 | 0 | 43
 @junit | link-stats-public | 43 | 0 | 0 | 0 | 43
 @junit | link-stats-public-denied | 1 | 0 | 0 | 0 | 1
-@junit | link-stats-publish | 1 | 0 | 1 | 0 | 2
+@junit | link-stats-publish | 2 | 0 | 1 | 0 | 3
 @junit | link-stream-anonymous | 1 | 0 | 0 | 0 | 1
 @junit | link-stream-authenticated | 1 | 0 | 0 | 0 | 1
 @junit | link-stream-claim-revoked | 1 | 0 | 0 | 0 | 1
@@ -366,16 +370,16 @@
 @junit | link-tags-replace | 3 | 1 | 0 | 1 | 5
 @junit | link-unlock-correct | 1 | 0 | 1 | 0 | 2
 @junit | link-unlock-view-limit | 3 | 0 | 1 | 0 | 4
-@junit | link-visit-options-update | 3 | 1 | 0 | 0 | 4
+@junit | link-visit-options-update | 4 | 1 | 0 | 0 | 5
 @junit | link-unlock-wrong | 1 | 0 | 0 | 0 | 1
-@junit | link-update-foreign-denied | 1 | 0 | 0 | 0 | 1
+@junit | link-update-foreign-denied | 2 | 0 | 0 | 0 | 2
 # Read total/human counts, owner timezone, tags, and local-day buckets for the PATCH response.
-@junit | link-update-owned | 7 | 1 | 2 | 0 | 10
-@junit | link-webhook-configure | 2 | 0 | 1 | 0 | 3
-@junit | link-webhook-delete | 2 | 0 | 0 | 1 | 3
-@junit | link-webhook-disable | 2 | 0 | 1 | 0 | 3
+@junit | link-update-owned | 8 | 1 | 2 | 0 | 11
+@junit | link-webhook-configure | 3 | 0 | 1 | 0 | 4
+@junit | link-webhook-delete | 3 | 0 | 0 | 1 | 4
+@junit | link-webhook-disable | 3 | 0 | 1 | 0 | 4
 @junit | link-webhook-list | 2 | 0 | 0 | 0 | 2
-@junit | link-webhook-register | 2 | 1 | 0 | 0 | 3
+@junit | link-webhook-register | 3 | 1 | 0 | 0 | 4
 @junit | link-weekly-insights | 8 | 0 | 0 | 0 | 8
 @junit | notification-blog-cross-user-read | 0 | 0 | 1 | 0 | 1
 @junit | notification-blog-list | 2 | 0 | 0 | 0 | 2
@@ -437,9 +441,9 @@
 @junit | ops-denies-author-moderation | 0 | 0 | 0 | 0 | 0
 @junit | ops-denies-member | 0 | 0 | 0 | 0 | 0
 @junit | ops-denies-member-link-enable | 0 | 0 | 0 | 0 | 0
-@junit | ops-disable-link | 2 | 1 | 0 | 0 | 3
+@junit | ops-disable-link | 3 | 1 | 0 | 0 | 4
 @junit | ops-edit-post | 3 | 2 | 1 | 0 | 6
-@junit | ops-enable-link | 2 | 0 | 0 | 1 | 3
+@junit | ops-enable-link | 3 | 0 | 0 | 1 | 4
 @junit | ops-funnel | 4 | 0 | 0 | 0 | 4
 @junit | ops-health-metrics | 0 | 0 | 0 | 0 | 0
 @junit | ops-lifecycle | 1 | 0 | 0 | 0 | 1
@@ -506,10 +510,10 @@
 @junit | profile-link-cross-user-highlight-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-link-hide | 3 | 0 | 2 | 0 | 5
 @junit | profile-link-highlight | 5 | 0 | 2 | 0 | 7
-@junit | profile-link-limit-once | 4 | 1 | 1 | 0 | 6
-@junit | profile-link-limit-twice | 4 | 1 | 1 | 0 | 6
+@junit | profile-link-limit-once | 5 | 1 | 1 | 0 | 7
+@junit | profile-link-limit-twice | 5 | 1 | 1 | 0 | 7
 # Protecting a link shown on the profile also reads the owner's username to drop the cached profile.
-@junit | profile-link-protect | 4 | 1 | 1 | 0 | 6
+@junit | profile-link-protect | 5 | 1 | 1 | 0 | 7
 @junit | profile-link-show | 6 | 1 | 1 | 0 | 8
 @junit | profile-oembed-cached | 0 | 0 | 0 | 0 | 0
 @junit | profile-oembed-fetch | 0 | 0 | 0 | 0 | 0
@@ -635,8 +639,9 @@
 @junit | reader-public-comment-thread-without-tombstones | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-comment-thread-after-last-reply | 2 | 0 | 0 | 0 | 2
 @junit | reader-public-connection-feed | 6 | 0 | 0 | 0 | 6
-# After the reorder the path starts with the note, so its first two steps read the note and its author.
-@junit | reader-public-curator-collections | 9 | 0 | 0 | 0 | 9
+# After the reorder the path starts with the note, so its first two steps read the note and its author;
+# the highlight and the post it is on come in one read, as the path's own page reads them.
+@junit | reader-public-curator-collections | 8 | 0 | 0 | 0 | 8
 @junit | reader-public-highlight-replies | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-highlight-replies-liked | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-highlight-replies-signed-in | 5 | 0 | 0 | 0 | 5
@@ -678,25 +683,25 @@
 # Links with a view limit or country block: a crawler's card reads the link row and human clicks
 # but no event preview, spends no view, and is refused like a person once the limit is spent or its
 # country is blocked. A prefetch of a counted link stops at the custom-domain check.
-@junit | restricted-create-once | 5 | 6 | 2 | 0 | 13
-@junit | restricted-limit-views | 2 | 0 | 2 | 0 | 4
+@junit | restricted-create-once | 6 | 6 | 2 | 0 | 14
+@junit | restricted-limit-views | 3 | 0 | 2 | 0 | 5
 @junit | restricted-crawler-preview | 5 | 0 | 0 | 0 | 5
 @junit | restricted-crawler-again | 3 | 0 | 0 | 0 | 3
 @junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
 @junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
 @junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
-@junit | restricted-create-blocked | 5 | 6 | 2 | 0 | 13
-@junit | restricted-block-japan | 2 | 0 | 2 | 0 | 4
-@junit | restricted-limit-blocked | 2 | 0 | 2 | 0 | 4
+@junit | restricted-create-blocked | 6 | 6 | 2 | 0 | 14
+@junit | restricted-block-japan | 3 | 0 | 2 | 0 | 5
+@junit | restricted-limit-blocked | 3 | 0 | 2 | 0 | 5
 @junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
 @junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
-@junit | restricted-create-open | 5 | 6 | 2 | 0 | 13
+@junit | restricted-create-open | 6 | 6 | 2 | 0 | 14
 @junit | open-crawler-preview | 6 | 0 | 0 | 0 | 6
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-comment-like | 11 | 2 | 0 | 0 | 13
 @junit | removal-live-highlight | 6 | 1 | 0 | 0 | 7
-@junit | removal-live-highlight-connection | 9 | 2 | 0 | 0 | 11
+@junit | removal-live-highlight-connection | 10 | 2 | 0 | 0 | 12
 @junit | removal-live-highlight-reply | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-like | 8 | 1 | 1 | 0 | 10
 @junit | removal-live-post-connection | 7 | 2 | 0 | 0 | 9
@@ -720,13 +725,13 @@
 @junit | tag-rename | 3 | 0 | 1 | 0 | 4
 
 # Owner workspace: all counts are batched; adding a link does not add per-link SELECTs.
-@junit | workspace-create-first | 5 | 6 | 2 | 0 | 13
-@junit | workspace-create-second | 4 | 6 | 2 | 0 | 12
-@junit | workspace-favorite-add-first | 3 | 0 | 1 | 0 | 4
-@junit | workspace-favorite-add-second | 3 | 0 | 1 | 0 | 4
+@junit | workspace-create-first | 6 | 6 | 2 | 0 | 14
+@junit | workspace-create-second | 5 | 6 | 2 | 0 | 13
+@junit | workspace-favorite-add-first | 4 | 0 | 1 | 0 | 5
+@junit | workspace-favorite-add-second | 4 | 0 | 1 | 0 | 5
 @junit | workspace-favorite-list | 6 | 0 | 0 | 0 | 6
-@junit | workspace-favorite-order | 2 | 0 | 2 | 0 | 4
-@junit | workspace-favorite-remove | 2 | 0 | 1 | 0 | 3
+@junit | workspace-favorite-order | 3 | 0 | 2 | 0 | 5
+@junit | workspace-favorite-remove | 3 | 0 | 1 | 0 | 4
 @junit | workspace-selected-links | 6 | 0 | 0 | 0 | 6
 @junit | workspace-overview | 9 | 0 | 0 | 0 | 9
 # A note report: the note exists, no open report of it from this reader, insert. The open backlog

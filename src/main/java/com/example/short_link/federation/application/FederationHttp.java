@@ -24,7 +24,16 @@ public interface FederationHttp {
   Result post(URI inbox, byte[] body, Signer signer);
 
   sealed interface Result {
-    record Ok(int status, byte[] body) implements Result {}
+    record Ok(int status, byte[] body, String contentType) implements Result {
+
+      public Ok(int status, byte[] body) {
+        this(status, body, null);
+      }
+
+      public boolean activityStreams() {
+        return ActivityStreams.isDocumentType(contentType);
+      }
+    }
 
     record Failed(int status, String reason) implements Result {
 

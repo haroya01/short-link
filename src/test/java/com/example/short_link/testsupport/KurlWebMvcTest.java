@@ -3,6 +3,7 @@ package com.example.short_link.testsupport;
 import com.example.short_link.common.observability.RequestMetricsFilter;
 import com.example.short_link.user.presentation.security.ApiKeyAuthenticationFilter;
 import com.example.short_link.user.presentation.security.JwtAuthenticationFilter;
+import com.example.short_link.user.presentation.security.SuspendedWriteGate;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -29,7 +30,8 @@ import org.springframework.core.annotation.AliasFor;
             classes = {
               ApiKeyAuthenticationFilter.class,
               JwtAuthenticationFilter.class,
-              RequestMetricsFilter.class
+              RequestMetricsFilter.class,
+              SuspendedWriteGate.class
             }))
 @AutoConfigureMockMvc
 @Import(WebMvcSecurityTestConfig.class)

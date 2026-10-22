@@ -177,6 +177,9 @@ public class RelayWorker implements SmartLifecycle {
         instanceof FederationHttp.Result.Ok ok)) {
       return "unanswered";
     }
+    if (!ok.activityStreams()) {
+      return "not-a-post";
+    }
     JsonNode post;
     try {
       post = json.readTree(ok.body());
