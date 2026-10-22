@@ -24,11 +24,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.EntityManagerHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -457,6 +459,76 @@ class RoomE2ETest {
                 send(welcomed, post("/api/v1/rooms/invitations/" + room + "/accept"), null)
                     .at("$.status"))
         .isEqualTo("joined");
+  }
+
+  @Test
+  void aMemberWhoLeavesOrIsRemovedTakesTheirUnansweredInvitationsWithThem() throws Exception {
+    long room = room(owner);
+    send(friend, post("/api/v1/room-invites/" + code(owner, room, "{}") + "/join"), null);
+    send(stranger, post("/api/v1/room-invites/" + code(owner, room, "{}") + "/join"), null);
+    Person byFriend = person("bf");
+    Person byStranger = person("bs");
+    Person byOwner = person("bo");
+    send(
+        friend,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + byFriend.id() + "]}");
+    send(
+        stranger,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + byStranger.id() + "]}");
+    send(
+        owner,
+        post("/api/v1/rooms/" + room + "/invitations"),
+        "{\"userIds\":[" + byOwner.id() + "]}");
+
+    assertThat(
+            send(owner, delete("/api/v1/rooms/" + room + "/members/" + friend.id()), null).status())
+        .isEqualTo(204);
+    assertThat(send(stranger, post("/api/v1/rooms/" + room + "/leave"), null).status())
+        .isEqualTo(204);
+
+    for (Person invited : List.of(byFriend, byStranger)) {
+      List<?> waiting = send(invited, get("/api/v1/rooms/invitations"), null).at("$");
+      assertThat(waiting).isEmpty();
+      assertThat(
+              send(invited, post("/api/v1/rooms/invitations/" + room + "/accept"), null).status())
+          .isEqualTo(404);
+      assertThat(send(invited, get("/api/v1/rooms/" + room + "/notes"), null).status())
+          .isEqualTo(404);
+    }
+    List<String> stillWaiting =
+        send(owner, get("/api/v1/rooms/" + room + "/invitations"), null).at("$[*].person.username");
+    assertThat(stillWaiting).containsExactly(byOwner.username());
+  }
+
+  @Test
+  void anInvitationLeftBehindByAFormerMemberCannotBeAcceptedAndIsCleared() throws Exception {
+    long room = room(owner);
+    Person invited = person("i");
+    jdbc.update(
+        "INSERT INTO room_invitation (room_id, user_id, inviter_id, created_at)"
+            + " VALUES (?, ?, ?, NOW(6))",
+        room,
+        invited.id(),
+        stranger.id());
+
+    assertThat(send(invited, post("/api/v1/rooms/invitations/" + room + "/accept"), null).status())
+        .isEqualTo(404);
+
+    EntityManagerHolder holder =
+        (EntityManagerHolder)
+            TransactionSynchronizationManager.getResource(em.getEntityManagerFactory());
+    assertThat(holder.getEntityManager().getTransaction().getRollbackOnly()).isFalse();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM room_invitation WHERE room_id = ? AND user_id = ?",
+                Long.class,
+                room,
+                invited.id()))
+        .isZero();
+    assertThat(send(invited, get("/api/v1/rooms/" + room + "/notes"), null).status())
+        .isEqualTo(404);
   }
 
   @Test

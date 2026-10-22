@@ -1,12 +1,19 @@
-package com.example.short_link.link.export.application.helper;
+package com.example.short_link.common.csv;
 
-public final class CsvWriter {
+// A text cell starting with one of FORMULA_STARTS is a formula to spreadsheet apps; a leading quote
+// keeps it text. Numbers and dates are written as they are.
+public final class CsvCells {
 
-  private CsvWriter() {}
+  private static final String FORMULA_STARTS = "=+-@\t\r";
+
+  private CsvCells() {}
 
   public static String escape(Object value) {
     if (value == null) return "";
     String s = value.toString();
+    if (value instanceof CharSequence && !s.isEmpty() && FORMULA_STARTS.indexOf(s.charAt(0)) >= 0) {
+      s = "'" + s;
+    }
     boolean needsQuotes =
         s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r");
     if (!needsQuotes) return s;

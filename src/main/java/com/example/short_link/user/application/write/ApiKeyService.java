@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.write;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.user.domain.ApiKeyEntity;
 import com.example.short_link.user.domain.repository.ApiKeyRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -26,10 +27,12 @@ public class ApiKeyService {
 
   private final ApiKeyRepository repository;
   private final MeterRegistry meterRegistry;
+  private final UserModerationGuard moderation;
   private final SecureRandom random = new SecureRandom();
 
   @Transactional
   public IssuedApiKey issue(Long userId, String name) {
+    moderation.requireCanWrite(userId);
     String raw = KEY_PREFIX + randomString();
     String hash = sha256(raw);
     String shownPrefix = raw.substring(0, Math.min(raw.length(), 12));
@@ -64,6 +67,13 @@ public class ApiKeyService {
               return true;
             })
         .orElse(false);
+  }
+
+  @Transactional
+  public void revokeAllFor(Long userId) {
+    repository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        .filter(ApiKeyEntity::isActive)
+        .forEach(ApiKeyEntity::revoke);
   }
 
   @Transactional(readOnly = true)

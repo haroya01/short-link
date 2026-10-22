@@ -17,6 +17,8 @@ import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowListReader;
+import com.example.short_link.user.domain.repository.FollowListReader.Counts;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -37,6 +39,7 @@ class FollowUseCaseTest {
   @Mock private FollowRepository followRepository;
   @Mock private FollowRequestRepository followRequests;
   @Mock private UserBlockChecker userBlocks;
+  @Mock private FollowListReader followLists;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private FollowUseCase useCase;
@@ -44,7 +47,9 @@ class FollowUseCaseTest {
   @BeforeEach
   void setUp() {
     useCase =
-        new FollowUseCase(userRepository, followRepository, followRequests, userBlocks, events);
+        new FollowUseCase(
+            userRepository, followRepository, followRequests, followLists, userBlocks, events);
+    lenient().when(followLists.counts(any())).thenReturn(new Counts(0, 0, 0, 0));
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
@@ -59,8 +64,7 @@ class FollowUseCaseTest {
   void followCreatesEdgeWhenNew() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRepository.countByFollowingId(2L)).thenReturn(1L);
-    when(followRepository.countByFollowerId(2L)).thenReturn(0L);
+    when(followLists.counts(2L)).thenReturn(new Counts(1, 0, 0, 0));
 
     FollowStatus status = useCase.follow(9L, "bob", 42L);
 
@@ -87,8 +91,7 @@ class FollowUseCaseTest {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
         .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
-    when(followRepository.countByFollowingId(2L)).thenReturn(1L);
-    when(followRepository.countByFollowerId(2L)).thenReturn(0L);
+    when(followLists.counts(2L)).thenReturn(new Counts(1, 0, 0, 0));
 
     FollowStatus status = useCase.follow(9L, "bob", null);
 
@@ -174,8 +177,6 @@ class FollowUseCaseTest {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
         .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
-    when(followRepository.countByFollowingId(2L)).thenReturn(0L);
-    when(followRepository.countByFollowerId(2L)).thenReturn(0L);
 
     FollowStatus status = useCase.unfollow(9L, "bob");
 

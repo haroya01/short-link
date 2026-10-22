@@ -350,7 +350,7 @@ class CollectionQueryServiceTest {
     PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 0, 3, longQuote, null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
-    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(6L, 2L)));
     when(noteBodies.blocksByIds(anyCollection())).thenReturn(Map.of());
 
     List<CollectionSummaryView> views = service.listMine(1L, null, null);

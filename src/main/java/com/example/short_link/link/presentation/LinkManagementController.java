@@ -1,5 +1,6 @@
 package com.example.short_link.link.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.write.BulkDeleteLinksCommand;
@@ -53,12 +54,14 @@ public class LinkManagementController {
     return MyLinkResponse.from(updated, urlBuilder);
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{shortCode}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     deleteLink.execute(new DeleteLinkCommand(userId, shortCode));
   }
 
+  @OpenToSuspended
   @DeleteMapping
   public BulkDeleteResponse bulkDelete(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BulkDeleteRequest request) {

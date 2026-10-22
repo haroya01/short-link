@@ -26,7 +26,8 @@ public enum UserErrorCode {
   ACCOUNT_SUSPENDED(HttpStatus.FORBIDDEN, "account is suspended"),
   BLOCKED_BY_AUTHOR(HttpStatus.FORBIDDEN, "you can't interact with this author"),
   BLOCKED_TARGET(HttpStatus.FORBIDDEN, "this author has blocked you"),
-  FOLLOW_LIST_HIDDEN(HttpStatus.FORBIDDEN, "this author's follow lists are hidden");
+  FOLLOW_LIST_HIDDEN(HttpStatus.FORBIDDEN, "this author's follow lists are hidden"),
+  WEB_PUSH_ENDPOINT_INVALID(HttpStatus.BAD_REQUEST, "not a browser push service endpoint");
 
   private final HttpStatus status;
   private final String template;

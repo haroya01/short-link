@@ -57,8 +57,9 @@ public class RoomInvitationService {
   }
 
   // Accepting is joining: the same seat and removal checks as an invite link. A room that asks for
-  // approval still asks unless its owner sent the invitation.
-  @Transactional
+  // approval still asks unless its owner sent the invitation. An invitation whose sender is no
+  // longer a member is gone, and stays gone though the answer is an error; a full room keeps it.
+  @Transactional(noRollbackFor = RoomException.class)
   public JoinResult accept(Long userId, Long roomId) {
     RoomEntity room =
         rooms
@@ -68,19 +69,25 @@ public class RoomInvitationService {
         rooms
             .inviterOf(roomId, userId)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId));
-    rooms.dropInvitation(roomId, userId);
+    if (!rooms.isMember(roomId, inviter)) {
+      rooms.dropInvitation(roomId, userId);
+      throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
+    }
     if (rooms.isMember(roomId, userId)) {
+      rooms.dropInvitation(roomId, userId);
       return new JoinResult(Joined.ALREADY_MEMBER, roomId);
     }
     if (rooms.isRemoved(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REMOVED);
     }
     if (rooms.hasRequested(roomId, userId)) {
+      rooms.dropInvitation(roomId, userId);
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     if (rooms.countMembers(roomId) >= RoomEntity.MAX_MEMBERS) {
       throw new RoomException(RoomErrorCode.ROOM_FULL, RoomEntity.MAX_MEMBERS);
     }
+    rooms.dropInvitation(roomId, userId);
     Instant now = now();
     if (room.isApprovalRequired() && !room.isOwnedBy(inviter)) {
       rooms.request(roomId, userId, null, now);

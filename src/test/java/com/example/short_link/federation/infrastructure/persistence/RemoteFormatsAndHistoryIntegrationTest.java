@@ -152,7 +152,11 @@ class RemoteFormatsAndHistoryIntegrationTest {
 
   private void serves(String uri, String body) {
     when(http.get(eq(URI.create(uri)), any()))
-        .thenReturn(new FederationHttp.Result.Ok(200, body.getBytes(StandardCharsets.UTF_8)));
+        .thenReturn(
+            new FederationHttp.Result.Ok(
+                200,
+                body.getBytes(StandardCharsets.UTF_8),
+                "application/activity+json; charset=utf-8"));
   }
 
   private long notifications(Long member) {

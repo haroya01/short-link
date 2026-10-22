@@ -3,7 +3,9 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.common.note.NoteViewReader;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -37,7 +39,9 @@ class NoteViewProvider implements NoteViewReader {
   }
 
   private List<Listed> listed(List<NoteEntity> page, Long viewerId) {
+    Map<Long, String> uris = new HashMap<>();
+    page.forEach(note -> uris.put(note.getId(), note.getUri()));
     List<NoteView> shown = views.ofFeed(page, viewerId);
-    return shown.stream().map(view -> new Listed(view.id(), view)).toList();
+    return shown.stream().map(view -> new Listed(view.id(), view, uris.get(view.id()))).toList();
   }
 }

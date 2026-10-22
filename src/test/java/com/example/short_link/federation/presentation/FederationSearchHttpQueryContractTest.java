@@ -89,7 +89,8 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   private static FederationHttp.Result ok(String body) {
-    return new FederationHttp.Result.Ok(200, body.getBytes(StandardCharsets.UTF_8));
+    return new FederationHttp.Result.Ok(
+        200, body.getBytes(StandardCharsets.UTF_8), "application/activity+json; charset=utf-8");
   }
 
   private static List<String> accts(JsonNode found) {
@@ -514,15 +515,15 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
 
     String carol = "https://" + host("profile") + "/users/carol";
     URI profile = URI.create("https://" + host("profile") + "/@carol");
-    when(http.get(eq(profile), any()))
-        .thenReturn(
-            ok(
-                """
-                {"@context":["https://www.w3.org/ns/activitystreams"],
-                 "id":"%1$s","type":"Person","preferredUsername":"carol","name":"Carol",
-                 "inbox":"%1$s/inbox","url":"%2$s",
-                 "publicKey":{"id":"%1$s#main-key","owner":"%1$s","publicKeyPem":%3$s}}"""
-                    .formatted(carol, profile, json.writeValueAsString(KEYS.publicKey()))));
+    String carolDocument =
+        """
+        {"@context":["https://www.w3.org/ns/activitystreams"],
+         "id":"%1$s","type":"Person","preferredUsername":"carol","name":"Carol",
+         "inbox":"%1$s/inbox","url":"%2$s",
+         "publicKey":{"id":"%1$s#main-key","owner":"%1$s","publicKeyPem":%3$s}}"""
+            .formatted(carol, profile, json.writeValueAsString(KEYS.publicKey()));
+    when(http.get(eq(profile), any())).thenReturn(ok(carolDocument));
+    when(http.get(eq(URI.create(carol)), any())).thenReturn(ok(carolDocument));
     var account =
         body(
             call(

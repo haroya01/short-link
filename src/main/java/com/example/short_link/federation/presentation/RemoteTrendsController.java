@@ -1,11 +1,21 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
+import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.federation.exception.FederationErrorCode;
+import com.example.short_link.federation.exception.FederationException;
+import com.example.short_link.federation.presentation.request.SeenRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -13,7 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RemoteTrendsController {
 
+  public static final String DEVICE_HEADER = "X-Kurl-Device";
+
   private final RemoteTrendingFeed trending;
+  private final RemoteSeen seen;
 
   @GetMapping("/trending")
   public RemoteTrendingFeed.Page trending(
@@ -26,9 +39,25 @@ public class RemoteTrendsController {
   @GetMapping("/latest")
   public RemoteTrendingFeed.Page latest(
       @AuthenticationPrincipal Long viewerId,
+      @RequestHeader(name = DEVICE_HEADER, required = false) String device,
       @RequestParam(defaultValue = "20") int limit,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) String since) {
-    return trending.latest(viewerId, cursor, since, limit);
+    return trending.latest(viewerId, SeenViewer.of(viewerId, device), cursor, since, limit);
+  }
+
+  @PostMapping("/seen")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void seen(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestHeader(name = DEVICE_HEADER, required = false) String device,
+      @RequestBody(required = false) SeenRequest request) {
+    SeenViewer viewer = SeenViewer.of(viewerId, device);
+    if (viewer == null) {
+      throw new FederationException(FederationErrorCode.SEEN_WITHOUT_VIEWER);
+    }
+    if (request != null) {
+      seen.record(viewer, request.uris());
+    }
   }
 }

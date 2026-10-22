@@ -147,6 +147,34 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void aVisitorPageNeverWritesAnAddressThatIsNotTheWeb() {
+    String script = "javascript:alert(document.cookie)";
+    String unlocked = new String(renderer.unlockedPageResponse(KO, script).getBody());
+    String splash =
+        new String(
+            renderer
+                .splashPageResponse(
+                    KO, new CachedLink.Splash("hi", 2, "go", "data:text/html,x"), script, script)
+                .getBody());
+    String handoff =
+        new String(renderer.inAppHandoffPageResponse(KO, "vbscript:x", script).getBody());
+
+    for (String body : List.of(unlocked, splash, handoff)) {
+      assertThat(body)
+          .doesNotContain("javascript:")
+          .doesNotContain("data:text")
+          .doesNotContain("vbscript:")
+          .contains("data-u=\"\"");
+    }
+    assertThat(unlocked).doesNotContain("http-equiv=\"refresh\"");
+    assertThat(splash)
+        .doesNotContain("class=\"btn\"")
+        .doesNotContain("class=\"go\"")
+        .doesNotContain("class=\"stay\"");
+    assertThat(handoff).doesNotContain("class=\"stay\"");
+  }
+
+  @Test
   void visitorErrorPage_mapsVisitorCodes_elseNull() {
     assertThat(
             renderer.visitorErrorPage(KO, LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED).getStatusCode())

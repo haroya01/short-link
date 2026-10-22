@@ -3,6 +3,7 @@ package com.example.short_link.post.collection.application.write;
 import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.collection.application.CollectionTargets;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -73,7 +74,7 @@ public class CollectionCommandService {
   @Transactional
   public CollectionConnectionEntity connect(ConnectBlockCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
-    requireTargetExists(cmd.blockType(), cmd.refId());
+    requireTargetExists(cmd.userId(), cmd.blockType(), cmd.refId());
 
     // 삽입 전 연결 목록을 순서 계산과 기존 기여자 알림에 함께 사용한다.
     List<CollectionConnectionEntity> existing =
@@ -204,12 +205,21 @@ public class CollectionCommandService {
     return collection;
   }
 
-  private void requireTargetExists(ConnectionBlockType blockType, Long refId) {
+  private void requireTargetExists(Long userId, ConnectionBlockType blockType, Long refId) {
     boolean exists =
         switch (blockType) {
-          case POST -> postRepository.findById(refId).filter(post -> !post.isInRoom()).isPresent();
+          case POST ->
+              postRepository
+                  .findById(refId)
+                  .filter(post -> CollectionTargets.shows(post, userId))
+                  .isPresent();
           case HIGHLIGHT ->
-              highlightRepository.findById(refId).filter(PostAccessPolicy::saidOpenly).isPresent();
+              highlightRepository
+                  .findById(refId)
+                  .filter(PostAccessPolicy::saidOpenly)
+                  .flatMap(highlight -> postRepository.findById(highlight.getPostId()))
+                  .filter(post -> CollectionTargets.shows(post, userId))
+                  .isPresent();
           case NOTE -> noteBodies.exists(refId);
         };
     if (!exists) {

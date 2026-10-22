@@ -2,6 +2,7 @@ package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.read.FollowListQueryService;
 import com.example.short_link.user.application.read.FollowListView;
+import com.example.short_link.user.application.read.MixedFollowListView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +36,26 @@ public class FollowListController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return followListQueryService.following(viewerId, username, safePage(page), safeSize(size));
+  }
+
+  @GetMapping(value = "/followers", params = "include=remote")
+  public MixedFollowListView followersWithRemote(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return followListQueryService.followersWithRemote(
+        viewerId, username, safePage(page), safeSize(size));
+  }
+
+  @GetMapping(value = "/following", params = "include=remote")
+  public MixedFollowListView followingWithRemote(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return followListQueryService.followingWithRemote(
+        viewerId, username, safePage(page), safeSize(size));
   }
 
   private int safePage(int page) {

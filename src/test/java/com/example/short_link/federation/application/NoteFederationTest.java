@@ -346,6 +346,76 @@ class NoteFederationTest {
   }
 
   @Test
+  void aDirectNoteQuotingANoteElsewhereNeverLeavesForThatServer() {
+    NoteSnapshot directQuote =
+        new NoteSnapshot(
+            44L,
+            7L,
+            "yuki",
+            "look",
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            null,
+            null,
+            List.of(),
+            new NoteSnapshotReader.QuotedNote(
+                41L, null, ALICE_NOTE.uri(), "https://m.example/@alice/9"),
+            null,
+            false,
+            NoteVisibility.DIRECT);
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(directQuote));
+    federating();
+
+    service().createdElsewhere(44L, 7L);
+    service().edited(44L, 7L, true);
+
+    verify(deliveries, never()).enqueue(any(), any(), any(), any());
+    verify(remoteParents, never()).of(41L);
+  }
+
+  @Test
+  void aDirectReplyElsewhereThatAlsoQuotesAnotherServerReachesOnlyThePersonItAnswers() {
+    NoteSnapshot directReplyQuoting =
+        new NoteSnapshot(
+            43L,
+            7L,
+            "yuki",
+            "an answer",
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            41L,
+            null,
+            List.of(),
+            new NoteSnapshotReader.QuotedNote(
+                50L, null, "https://q.example/notes/50", "https://q.example/@carol/50"),
+            null,
+            false,
+            NoteVisibility.DIRECT);
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(43L)).thenReturn(Optional.of(directReplyQuoting));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+
+    service().createdElsewhere(43L, 7L);
+    service().edited(43L, 7L, true);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries, org.mockito.Mockito.times(2))
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://m.example/inbox")));
+    for (String sent : body.getAllValues()) {
+      assertThat(JSON.readTree(sent).path("to").toString())
+          .isEqualTo("[\"https://m.example/users/alice\"]");
+      assertThat(sent).doesNotContain("https://q.example/users");
+    }
+    verify(remoteParents, never()).of(50L);
+    verify(followers, never()).deliveryInboxes(any());
+  }
+
+  @Test
   void aQuoteOfAMembersNoteTakesTheUsualPathAndNamesNoServer() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     NoteSnapshot quotingMio =

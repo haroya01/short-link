@@ -49,14 +49,16 @@ public class RoomCommandService {
     return query.detail(roomId, userId);
   }
 
-  // Leaving keeps the member's notes and room posts unless they ask otherwise; their invites stop
-  // working, and an owner hands the room to whoever has been in it longest.
+  // Leaving keeps the member's notes and room posts unless they ask otherwise; their invites and
+  // unanswered invitations stop working, and an owner hands the room to whoever has been in it
+  // longest.
   @Transactional
   public void leave(Long userId, Long roomId, boolean deleteMyNotes) {
     RoomEntity room = locked(roomId);
     requireMember(roomId, userId);
     rooms.removeMember(roomId, userId);
     rooms.disableInvitesBy(roomId, userId, now());
+    rooms.dropInvitationsBy(roomId, userId);
     if (room.isOwnedBy(userId)) {
       rooms.longestStayingMemberBesides(roomId, userId).ifPresent(room::handTo);
     }
@@ -66,7 +68,7 @@ public class RoomCommandService {
     }
   }
 
-  // The removed member's notes stay; no invite lets them back in.
+  // The removed member's notes stay; no invite lets them back in, and no one gets in by theirs.
   @Transactional
   public void remove(Long ownerId, Long roomId, Long memberId) {
     owned(roomId, ownerId);
@@ -77,6 +79,7 @@ public class RoomCommandService {
     Instant now = now();
     rooms.removeMember(roomId, memberId);
     rooms.disableInvitesBy(roomId, memberId, now);
+    rooms.dropInvitationsBy(roomId, memberId);
     rooms.markRemoved(roomId, memberId, now);
   }
 

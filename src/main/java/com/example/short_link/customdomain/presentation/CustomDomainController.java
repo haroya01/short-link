@@ -1,5 +1,6 @@
 package com.example.short_link.customdomain.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.customdomain.application.dto.DomainSummary;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.customdomain.application.write.DeleteCustomDomainUseCase;
@@ -48,6 +49,7 @@ public class CustomDomainController {
     return verify.execute(userId, id);
   }
 
+  @OpenToSuspended
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     delete.execute(userId, id);

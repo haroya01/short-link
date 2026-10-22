@@ -3,6 +3,7 @@ package com.example.short_link.campaign.presentation;
 import com.example.short_link.campaign.application.CampaignStatsService;
 import com.example.short_link.campaign.application.dto.CampaignStatsCompareView;
 import com.example.short_link.campaign.presentation.request.CampaignStatsCompareRequest;
+import com.example.short_link.common.user.OpenToSuspended;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,7 @@ public class CampaignStatsCompareController {
 
   private final CampaignStatsService service;
 
+  @OpenToSuspended
   @PostMapping
   public CampaignStatsCompareView compare(
       @AuthenticationPrincipal Long userId,

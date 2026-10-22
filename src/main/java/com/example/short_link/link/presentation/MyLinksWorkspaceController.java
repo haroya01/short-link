@@ -1,5 +1,6 @@
 package com.example.short_link.link.presentation;
 
+import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.read.MyLinksWorkspaceQueryService;
 import com.example.short_link.link.application.write.LinkFavoritesService;
@@ -35,18 +36,21 @@ public class MyLinksWorkspaceController {
     return MyLinksPage.from(query.favorites(userId), urls);
   }
 
+  @OpenToSuspended
   @PutMapping("/favorites/{code}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void add(@AuthenticationPrincipal Long userId, @PathVariable ShortCode code) {
     favorites.add(userId, code);
   }
 
+  @OpenToSuspended
   @DeleteMapping("/favorites/{code}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void remove(@AuthenticationPrincipal Long userId, @PathVariable ShortCode code) {
     favorites.remove(userId, code);
   }
 
+  @OpenToSuspended
   @PutMapping("/favorites/order")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void reorder(

@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.presentation.sse;
 
 import com.example.short_link.common.security.ClickStreamTokenService;
+import com.example.short_link.common.user.OpenToSuspended;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -32,6 +33,7 @@ public class MyClickStreamController {
   private final SseClickStreamRegistry registry;
   private final MeterRegistry meterRegistry;
 
+  @OpenToSuspended
   @PostMapping("/stream-token")
   public StreamTokenResponse issueStreamToken(@AuthenticationPrincipal Long userId) {
     if (userId == null) {

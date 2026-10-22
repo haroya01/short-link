@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 public class VisitHandoff {
 
   private static final String LINE_EXTERNAL_PARAM = "openExternalBrowser=1";
-  private static final String KAKAOTALK_EXTERNAL = "kakaotalk://web/openExternal?url=";
+  static final String KAKAOTALK_EXTERNAL = "kakaotalk://web/openExternal?url=";
 
   private final ClientAppClassifier clientApps;
   private final LinkHtmlRenderer html;

@@ -16,6 +16,7 @@ import com.example.short_link.link.destination.application.write.SetBlockedCount
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.moderation.application.LinkModerationService;
 import com.example.short_link.link.moderation.domain.LinkDisableReason;
@@ -58,6 +59,34 @@ class LinkCreationServiceTest {
     assertThat(saved.getUserId()).isNull();
     assertThat(saved.getExpiresAt())
         .isBetween(Instant.now().plusSeconds(86000), Instant.now().plusSeconds(87000));
+  }
+
+  @Test
+  void onlyAWebAddressBecomesALinkWhoeverCallsIt() {
+    UserEntity user = userRepository.save(new UserEntity("scheme@example.com", "google", "g-s"));
+
+    for (String url :
+        new String[] {
+          "javascript:alert(1)",
+          "JavaScript:alert(1)",
+          "data:text/html,<b>x</b>",
+          "vbscript:msgbox(1)",
+          " javascript:alert(1)",
+          "//example.com/no-scheme",
+          "ftp://example.com/file"
+        }) {
+      assertThatThrownBy(() -> service.execute(CreateLinkCommand.of(url, user.getId(), null, null)))
+          .isInstanceOfSatisfying(
+              LinkException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.UNSUPPORTED_URL_SCHEME));
+    }
+    assertThat(linkRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())).isEmpty();
+    assertThat(
+            service
+                .execute(
+                    CreateLinkCommand.of("HTTPS://example.com/upper", user.getId(), null, null))
+                .shortCode())
+        .isNotNull();
   }
 
   @Test
