@@ -2,7 +2,8 @@ name: Deploy
 
 on:
   # push 는 PR 에서 CI 가 통과한 트리와 같을 때만 내보내고, 나머지는 main CI 가 끝난 workflow_run 이 내보낸다.
-  # 두 경로가 같은 판정(pr_verified)을 반대로 쓰므로 한 커밋은 한 번만 나간다.
+  # workflow_run 은 판정을 다시 하지 않고 그 커밋의 sha 이미지가 GHCR 에 있는지만 본다. 같은 concurrency
+  # 그룹이라 push 실행이 끝난 뒤에 보므로, push 가 판정·API 실패·취소로 못 내보낸 커밋만 한 번 나간다.
   push:
     branches: [main]
   workflow_run:
@@ -22,7 +23,7 @@ env:
 permissions:
   contents: read
   packages: write
-  actions: read
+  checks: read
   pull-requests: read
 
 jobs:
@@ -47,18 +48,41 @@ jobs:
         run: |
           sha="${{ github.event.workflow_run.head_sha || github.sha }}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          if [ "$EVENT" != "workflow_dispatch" ]; then
+          api() {
+            for _ in 1 2 3 4 5; do
+              gh api "$@" && return 0
+              sleep 3
+            done
+            return 1
+          }
+          if [ "$EVENT" = "push" ]; then
             pr_verified=false
-            head=$(gh api "repos/$REPO/commits/$sha/pulls" -q '[.[] | select(.merged_at != null)][0].head.sha // empty')
+            head=""
+            pr=$(git log -1 --format=%s "$sha" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')
+            if [ -n "$pr" ]; then
+              head=$(api "repos/$REPO/pulls/$pr" -q "select(.merge_commit_sha == \"$sha\") | .head.sha") || head=""
+            fi
             if [ -n "$head" ]; then
-              head_tree=$(gh api "repos/$REPO/git/commits/$head" -q .tree.sha)
-              passed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$head&event=pull_request&status=success" -q .total_count)
-              if [ "$head_tree" = "$(git rev-parse "$sha^{tree}")" ] && [ "$passed" -gt 0 ]; then
+              head_tree=$(api "repos/$REPO/git/commits/$head" -q .tree.sha) || head_tree=""
+              passed=$(api "repos/$REPO/commits/$head/check-runs?check_name=build" -q '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length') || passed=0
+              if [ "$head_tree" = "$(git rev-parse "$sha^{tree}")" ] && [ "${passed:-0}" -gt 0 ]; then
                 pr_verified=true
               fi
             fi
-            echo "pr_verified=$pr_verified (pr head ${head:-none})"
-            if { [ "$EVENT" = "push" ] && [ "$pr_verified" = "false" ]; } || { [ "$EVENT" = "workflow_run" ] && [ "$pr_verified" = "true" ]; }; then
+            echo "pr_verified=$pr_verified (pr #${pr:-none} head ${head:-none}, passed ${passed:-none})"
+            if [ "$pr_verified" = "false" ]; then
+              echo "ships=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          if [ "$EVENT" = "workflow_run" ]; then
+            token=$(curl -fsS -u "x:$GH_TOKEN" "https://$REGISTRY/token?scope=repository:$IMAGE_NAME:pull" | jq -r .token) || token=""
+            image=$(curl -sS -o /dev/null -w '%{http_code}' -I \
+              -H "Authorization: Bearer $token" \
+              -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+              "https://$REGISTRY/v2/$IMAGE_NAME/manifests/sha-$sha") || image=000
+            echo "image sha-$sha: HTTP $image"
+            if [ "$image" = "200" ]; then
               echo "ships=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
