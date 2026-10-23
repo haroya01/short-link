@@ -124,7 +124,7 @@ class HomeMixVectorsTest {
   @Test
   void theFileNamesItsSchemaVersionRulesAndBothTables() {
     assertThat(doc.get("schema").asString()).isEqualTo("kurl.home-mix");
-    assertThat(doc.get("version").asInt()).isEqualTo(2);
+    assertThat(doc.get("version").asInt()).isEqualTo(3);
     assertThat(doc.get("rules")).isNotEmpty();
     assertThat(doc.get("tables").get("base").get("platforms").toString())
         .isEqualTo("[\"ios\",\"web\"]");

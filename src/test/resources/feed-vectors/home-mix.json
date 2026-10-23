@@ -1,6 +1,7 @@
 {
   "schema": "kurl.home-mix",
-  "version": 2,
+  "version": 3,
+  "status": "retired from the home: the record of how 1.3.1 lays out 홈 최신 (tab=latest plus the 맞춤 mixed in); from 1.3.2 the server ranks the home in one list (home-rank)",
   "decisions": [
     "2026-10-22 home-mix-remote-for-you",
     "2026-10-23 home-latest-hide-seen"

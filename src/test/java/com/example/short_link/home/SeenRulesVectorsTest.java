@@ -5,18 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.domain.SeenItem;
 import com.example.short_link.federation.domain.SeenUri;
-import com.example.short_link.home.HomeMixVectorsTest.Input;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 class SeenRulesVectorsTest {
 
@@ -41,7 +38,7 @@ class SeenRulesVectorsTest {
   @Test
   void theFileNamesItsSchemaVersionRulesAndEveryTable() {
     assertThat(doc.get("schema").asString()).isEqualTo("kurl.seen-rules");
-    assertThat(doc.get("version").asInt()).isEqualTo(2);
+    assertThat(doc.get("version").asInt()).isEqualTo(3);
     assertThat(doc.get("rules")).isNotEmpty();
     assertThat(doc.get("tables").propertyNames())
         .containsExactlyInAnyOrder(
@@ -129,7 +126,7 @@ class SeenRulesVectorsTest {
       boolean counted =
           c.get("appActive").asBoolean()
               && switch (surface) {
-                case "home-latest" -> ratio > 0;
+                case "home-for-you" -> ratio > 0;
                 case "explore-remote" -> ratio >= 0.5 && ms >= 1_000;
                 default -> false;
               };
@@ -138,17 +135,16 @@ class SeenRulesVectorsTest {
   }
 
   @Test
-  void
-      onlyHomeLatestAndTheForYouMixedIntoItAskToHideAndOnlySurfacesThatRecordTheSeenNeedTheDevice() {
+  void onlyTheRankedHomeAsksToHideAndOnlySurfacesThatRecordTheSeenNeedTheDevice() {
     for (JsonNode c : cases("requests")) {
       String surface = c.get("surface").asString();
       assertThat(c.get("seenHide").asBoolean())
           .as(c.get("id").asString())
-          .isEqualTo(surface.equals("home-latest"));
+          .isEqualTo(surface.equals("home-for-you"));
       assertThat(c.get("deviceHeader").asString())
           .as(c.get("id").asString())
           .isEqualTo(
-              surface.equals("home-latest") || surface.equals("explore-remote")
+              surface.equals("home-for-you") || surface.equals("explore-remote")
                   ? "required"
                   : "notNeeded");
     }
@@ -183,56 +179,30 @@ class SeenRulesVectorsTest {
   }
 
   @Test
-  void theCachedFirstPageLeavesOutWhatWasSeenWithinFourteenDaysExceptMine() {
+  void theCachedFirstPageLeavesOutWhatWasSeenWithinFourteenDaysMineIncluded() {
     for (JsonNode c : cases("cache")) {
       JsonNode ago = c.get("seenSecondsAgo");
-      boolean leftOut =
-          !ago.isNull() && ago.asLong() < KEEP_SECONDS && !c.get("authorIsMe").asBoolean();
+      boolean leftOut = !ago.isNull() && ago.asLong() < KEEP_SECONDS;
       assertThat(c.get("leftOut").asBoolean()).as(c.get("id").asString()).isEqualTo(leftOut);
     }
   }
 
-  private static Set<String> keys(List<String> rows) {
+  private static Set<String> keys(JsonNode rows) {
     Set<String> keys = new HashSet<>();
-    rows.forEach(row -> keys.add(row.substring(row.indexOf(':') + 1)));
+    rows.forEach(row -> keys.add(row.asString()));
     return keys;
   }
 
   private static String notice(JsonNode c) {
-    JsonNode before = c.get("before");
-    JsonNode own = c.get("own");
-    JsonNode remote = c.get("remote");
-    boolean ownOk = own.get("result").asString().equals("ok");
-    boolean remoteOk = remote.get("result").asString().equals("ok");
-    List<String> rows =
-        HomeMixVectorsTest.mix(
-            new State(
-                    ownOk ? own.get("items") : before.get("own"),
-                    remoteOk ? remote.get("items") : before.get("remote"),
-                    ownOk ? own.get("done") : before.get("ownDone"))
-                .input());
-    Set<String> shown =
-        keys(
-            HomeMixVectorsTest.mix(
-                new State(before.get("own"), before.get("remote"), before.get("ownDone")).input()));
-    if (keys(rows).stream().anyMatch(key -> !shown.contains(key))) {
-      return "newRows";
-    }
-    if (!ownOk || !remoteOk) {
+    if (c.get("result").asString().equals("failed")) {
       return "failed";
     }
-    return rows.isEmpty() ? "caughtUp" : "nothingNew";
-  }
-
-  private record State(JsonNode own, JsonNode remote, JsonNode done) {
-
-    Input input() {
-      ObjectNode node = JsonMapper.builder().build().createObjectNode();
-      node.set("own", own);
-      node.set("remote", remote);
-      node.set("ownDone", done);
-      return HomeMixVectorsTest.input(node);
+    Set<String> before = keys(c.get("before"));
+    Set<String> after = keys(c.get("after"));
+    if (!before.containsAll(after)) {
+      return "newRows";
     }
+    return after.isEmpty() ? "caughtUp" : "nothingNew";
   }
 
   @Test
@@ -242,6 +212,10 @@ class SeenRulesVectorsTest {
           .as(c.get("id").asString())
           .isIn("newRows", "nothingNew", "caughtUp", "failed")
           .isEqualTo(notice(c));
+      assertThat(c.get("rowsAfter"))
+          .as(c.get("id").asString())
+          .isEqualTo(
+              c.get("result").asString().equals("failed") ? c.get("before") : c.get("after"));
     }
   }
 }
