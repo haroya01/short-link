@@ -509,6 +509,8 @@
 @junit | federation-seen-dwell | 0 | 0 | 0 | 0 | 0
 @junit | federation-seen-flush-dwell | 1 | 2 | 0 | 0 | 3
 @junit | federation-for-you-device | 11 | 0 | 0 | 0 | 11
-@junit | federation-for-you-device-hide | 11 | 0 | 0 | 0 | 11
+# The home asks the same with seen=hide: the same ranking cut where the seen would start, here
+# without the one note that carried a link card.
+@junit | federation-for-you-device-hide | 10 | 0 | 0 | 0 | 10
 @junit | federation-for-you-wide | 12 | 0 | 0 | 0 | 12
 @junit | federation-reach-round | 3 | 1 | 0 | 0 | 4

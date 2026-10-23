@@ -3,8 +3,6 @@ package com.example.short_link.common.seen;
 import jakarta.persistence.Query;
 import java.nio.ByteBuffer;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,7 +40,7 @@ public record Unseen(
                 .putLong(viewerKey.getMostSignificantBits())
                 .putLong(viewerKey.getLeastSignificantBits())
                 .array())
-        .setParameter("seenAsOf", LocalDateTime.ofInstant(asOf, ZoneOffset.UTC))
+        .setParameter("seenAsOf", asOf)
         .setParameter("seenHeld", kind == NOTE ? heldNotes : heldPosts);
   }
 }
