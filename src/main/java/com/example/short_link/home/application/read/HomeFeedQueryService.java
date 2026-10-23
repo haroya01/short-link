@@ -6,10 +6,12 @@ import com.example.short_link.federation.domain.SeenItem;
 import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
+import com.example.short_link.post.application.read.BlogSlice;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -25,7 +27,9 @@ import org.springframework.stereotype.Service;
 // the two trending orders in turn. The cursor is the next position in each source,
 // "<notes>.<posts>". Latest can leave out what the reader already had on screen: its cursor is then
 // "h<asOf>.<notes>.<posts>", positions in the list without what was seen before asOf. For you is
-// one ranked list of notes, posts and posts from elsewhere, which HomeForYou makes.
+// one ranked list of notes, posts and posts from elsewhere, which HomeForYou makes. Blog is the
+// posts alone, newest published first at any age; its cursor and since marker are the position
+// "b<published micros>.<id>".
 @Service
 @RequiredArgsConstructor
 public class HomeFeedQueryService {
@@ -43,7 +47,8 @@ public class HomeFeedQueryService {
     FOLLOWING,
     LATEST,
     TRENDING,
-    FOR_YOU
+    FOR_YOU,
+    BLOG
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -92,6 +97,9 @@ public class HomeFeedQueryService {
     if (chosen == Tab.FOR_YOU) {
       return forYou.page(viewerId, viewer, languages, cursor, size, hideSeen);
     }
+    if (chosen == Tab.BLOG) {
+      return blog(viewerId, cursor, since, size);
+    }
     boolean hiding = chosen == Tab.LATEST && viewer != null;
     if (since != null && cursor == null) {
       return newer(viewerId, hiding && hideSeen ? viewer : null, chosen, since, size);
@@ -126,6 +134,73 @@ public class HomeFeedQueryService {
         more ? prefix + nextNote + "." + nextPost : null,
         cursor == null ? top(noteSlice, postSlice, "0.0") : null,
         null);
+  }
+
+  record Marker(Instant publishedAt, long id) {
+
+    static Marker of(Instant publishedAt, Long id) {
+      return publishedAt == null ? null : new Marker(publishedAt, id);
+    }
+
+    static Marker parse(String raw) {
+      if (raw == null || !raw.startsWith("b")) {
+        return null;
+      }
+      String[] parts = raw.substring(1).split("\\.");
+      try {
+        if (parts.length == 2) {
+          long micros = Long.parseLong(parts[0]);
+          long id = Long.parseLong(parts[1]);
+          if (micros >= 0 && id > 0) {
+            return new Marker(Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id);
+          }
+        }
+      } catch (NumberFormatException | ArithmeticException | DateTimeException malformed) {
+        return null;
+      }
+      return null;
+    }
+
+    @Override
+    public String toString() {
+      return "b" + ChronoUnit.MICROS.between(Instant.EPOCH, publishedAt) + "." + id;
+    }
+  }
+
+  // Since brings what was published above the marker, at most SINCE_LIMIT; more than that is a gap
+  // and a fresh first page.
+  private Page blog(Long viewerId, String cursor, String since, int size) {
+    if (since != null && cursor == null) {
+      Marker marker = Marker.parse(since);
+      BlogSlice above =
+          marker == null
+              ? null
+              : posts.blogAbove(viewerId, marker.publishedAt(), marker.id(), SINCE_LIMIT);
+      if (above != null && !above.more()) {
+        Marker top = Marker.of(above.firstAt(), above.firstId());
+        return new Page(cards(above), null, top == null ? since : top.toString(), false);
+      }
+      Page first = blog(viewerId, null, null, size);
+      return new Page(first.items(), first.next(), first.newest(), true);
+    }
+    Marker from = Marker.parse(cursor);
+    BlogSlice below =
+        posts.blogBelow(
+            viewerId,
+            from == null ? null : from.publishedAt(),
+            from == null ? null : from.id(),
+            size);
+    Marker last = Marker.of(below.lastAt(), below.lastId());
+    Marker top = Marker.of(below.firstAt(), below.firstId());
+    return new Page(
+        cards(below),
+        below.more() ? last.toString() : null,
+        from == null && top != null ? top.toString() : null,
+        null);
+  }
+
+  private static List<Item> cards(BlogSlice slice) {
+    return slice.posts().stream().map(card -> new Item("post", null, card, null)).toList();
   }
 
   private Instant now() {
@@ -222,7 +297,7 @@ public class HomeFeedQueryService {
   private NoteSlice notes(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> notes.followingAt(viewerId, offset, limit);
-      case LATEST, FOR_YOU -> notes.everyoneAt(viewerId, offset, limit, unseen);
+      case LATEST, FOR_YOU, BLOG -> notes.everyoneAt(viewerId, offset, limit, unseen);
       case TRENDING -> notes.trendingAt(viewerId, offset, limit);
     };
   }
@@ -230,7 +305,7 @@ public class HomeFeedQueryService {
   private PostSlice posts(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> posts.followingAt(viewerId, offset, limit);
-      case LATEST, FOR_YOU -> posts.recentAt(viewerId, offset, limit, unseen);
+      case LATEST, FOR_YOU, BLOG -> posts.recentAt(viewerId, offset, limit, unseen);
       case TRENDING -> posts.trendingAt(viewerId, offset, limit);
     };
   }

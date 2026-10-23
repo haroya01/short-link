@@ -91,6 +91,13 @@ public interface PostRepository {
   // Quotes are the public notes quoting the post.
   List<PoolRow> findHomePool(Long viewerId, Instant since, Instant until, int limit);
 
+  // What the home's latest lists outside rooms, newest published first, the later id first among
+  // posts published at the same time. Below takes those after the position (publishedAt, id),
+  // above those before it, nearest first; a null position starts from the top.
+  List<PostEntity> findBlogBelow(Long viewerId, Instant publishedAt, Long id, int limit);
+
+  List<PostEntity> findBlogAbove(Long viewerId, Instant publishedAt, long id, int limit);
+
   List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit);
 
   List<PostEntity> findInRoomsOfAt(Long viewerId, int offset, int limit);

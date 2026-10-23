@@ -268,6 +268,49 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   @SuppressWarnings("unchecked")
+  public List<PostEntity> findBlogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
+    Query query =
+        em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + JpaPostRepository.BROWSE_CONDITION
+                + (publishedAt == null
+                    ? ""
+                    : " AND (p.published_at < :at OR (p.published_at = :at AND p.id < :id))")
+                + " ORDER BY p.published_at DESC, p.id DESC",
+            PostEntity.class);
+    if (publishedAt != null) {
+      query.setParameter("at", publishedAt).setParameter("id", id);
+    }
+    return blog(query, viewerId, limit);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findBlogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
+    Query query =
+        em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + JpaPostRepository.BROWSE_CONDITION
+                + " AND (p.published_at > :at OR (p.published_at = :at AND p.id > :id))"
+                + " ORDER BY p.published_at, p.id",
+            PostEntity.class);
+    query.setParameter("at", publishedAt).setParameter("id", id);
+    return blog(query, viewerId, limit);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<PostEntity> blog(Query query, Long viewerId, int limit) {
+    return query
+        .setParameter("lang", null)
+        .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
   public List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT p.* FROM posts p WHERE "

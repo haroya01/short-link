@@ -331,3 +331,8 @@
 @junit | home-for-you-seen | 0 | 0 | 0 | 0 | 0
 @junit | home-for-you-seen-flush | 0 | 2 | 0 | 0 | 2
 @junit | home-for-you-device-hide | 21 | 0 | 0 | 0 | 21
+# Blog: one statement walks the listed posts down from the cursor's position (published time, then
+# id), and the page is built as any post card page. Since walks up from the marker in the same way.
+@junit | home-blog-first | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-next | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-since | 4 | 0 | 0 | 0 | 4

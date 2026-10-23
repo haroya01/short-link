@@ -200,6 +200,34 @@ public class PublicFeedQueryService {
         .toList();
   }
 
+  public BlogSlice blogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
+    List<PostEntity> rows = postRepository.findBlogBelow(viewerId, publishedAt, id, limit + 1);
+    boolean more = rows.size() > limit;
+    return blog(more ? rows.subList(0, limit) : rows, more, viewerId);
+  }
+
+  public BlogSlice blogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
+    List<PostEntity> rows =
+        new ArrayList<>(postRepository.findBlogAbove(viewerId, publishedAt, id, limit + 1));
+    boolean more = rows.size() > limit;
+    List<PostEntity> nearest = more ? rows.subList(0, limit) : rows;
+    return blog(nearest.reversed(), more, viewerId);
+  }
+
+  private BlogSlice blog(List<PostEntity> rows, boolean more, Long viewerId) {
+    if (rows.isEmpty()) {
+      return BlogSlice.EMPTY;
+    }
+    List<PostCard> cards =
+        slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
+            .map(PostSlice.At::post)
+            .toList();
+    PostEntity first = rows.getFirst();
+    PostEntity last = rows.getLast();
+    return new BlogSlice(
+        cards, first.getPublishedAt(), first.getId(), last.getPublishedAt(), last.getId(), more);
+  }
+
   public PostSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
     List<PostEntity> rows = postRepository.findInRoomAt(roomId, viewerId, offset, limit);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);

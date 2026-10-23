@@ -18,6 +18,7 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteAuthor;
+import com.example.short_link.post.application.read.BlogSlice;
 import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -94,6 +95,41 @@ class HomeFeedQueryServiceTest {
     home.page(null, null, "latest", null, null, 2, false);
     home.page(null, null, "nonsense", null, null, 2, false);
     verify(forYou, times(1)).page(any(), any(), any(), any(), anyInt(), any(Boolean.class));
+  }
+
+  @Test
+  void blogPagesFromTheLastRowsPositionAndOnlyAFirstPageNamesTheNewest() {
+    Instant top = Instant.parse("2026-10-20T10:00:00.123456Z");
+    Instant last = Instant.parse("2026-10-19T10:00:00.000001Z");
+    PostCard card = post(0, "2026-10-20T10:00:00Z").post();
+    when(posts.blogBelow(7L, null, null, 2))
+        .thenReturn(new BlogSlice(List.of(card), top, 9L, last, 4L, true));
+    when(posts.blogBelow(7L, last, 4L, 2))
+        .thenReturn(new BlogSlice(List.of(card), last, 3L, last, 3L, false));
+
+    HomeFeedQueryService.Page first = home.page(7L, null, null, "blog", null, null, 2, true);
+    HomeFeedQueryService.Page onward =
+        home.page(7L, null, null, "blog", first.next(), null, 2, true);
+
+    assertThat(kinds(first)).containsExactly("post");
+    assertThat(first.next()).isEqualTo("b1792404000000001.4");
+    assertThat(first.newest()).isEqualTo("b1792490400123456.9");
+    assertThat(onward.next()).isNull();
+    assertThat(onward.newest()).isNull();
+    verifyNoInteractions(notes, seen, forYou);
+  }
+
+  @Test
+  void aBlogMarkerIsThePublishedMicrosAndIdAndAnythingElseIsNone() {
+    Instant at = Instant.parse("2026-10-20T10:00:00.123456Z");
+    HomeFeedQueryService.Marker marker = new HomeFeedQueryService.Marker(at, 9L);
+
+    assertThat(HomeFeedQueryService.Marker.parse(marker.toString())).isEqualTo(marker);
+    for (String bad :
+        List.of("b1.0", "b-1.2", "b1", "1.2", "bx.2", "b1.2.3", "b99999999999999999999.1", "")) {
+      assertThat(HomeFeedQueryService.Marker.parse(bad)).as(bad).isNull();
+    }
+    assertThat(HomeFeedQueryService.Marker.parse(null)).isNull();
   }
 
   @Test
