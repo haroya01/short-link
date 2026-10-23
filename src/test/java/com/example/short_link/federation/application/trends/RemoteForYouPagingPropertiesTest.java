@@ -2,6 +2,7 @@ package com.example.short_link.federation.application.trends;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -69,7 +70,7 @@ class RemoteForYouPagingPropertiesTest {
     RemoteSeen seen = lenient(RemoteSeen.class);
     Map<Long, Note> byId = new HashMap<>();
     world.notes().forEach(note -> byId.put(note.id(), note));
-    when(notes.remotePool(any(), any(), any(), anyInt()))
+    when(notes.remotePool(any(), any(), any(), anyInt(), anyBoolean()))
         .thenReturn(
             world.notes().stream()
                 .map(
@@ -81,7 +82,8 @@ class RemoteForYouPagingPropertiesTest {
                             note.language(),
                             NOW.minus(note.age()),
                             note.uri(),
-                            List.of()))
+                            List.of(),
+                            NOW.minus(note.age())))
                 .toList());
     when(reach.of(any()))
         .thenReturn(
