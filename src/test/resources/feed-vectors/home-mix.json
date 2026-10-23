@@ -1,9 +1,9 @@
 {
   "schema": "kurl.home-mix",
-  "version": 1,
+  "version": 2,
   "decisions": [
-    "vault decisions/2026-10-22-home-mix-remote-for-you",
-    "vault decisions/2026-10-23-home-latest-hide-seen"
+    "2026-10-22 home-mix-remote-for-you",
+    "2026-10-23 home-latest-hide-seen"
   ],
   "rules": [
     "own rows keep their order; a repeated own item (same kind and id) shows once and counts once",
@@ -22,7 +22,7 @@
     "cards": "web only: own row indexes (0-based, over own rows after de-duplication) that a connection card follows",
     "expected": "rows in order: own:<key>, mixed:<key>, tail:<key>",
     "steps": "a sequence of states; expectedIsPrefixOfNext tells whether the earlier layout is the start of the next one",
-    "currentlyDiffers": "what a platform's code does today when it disagrees with expected (iOS origin/main 521f1ca, web origin/feat/home-hide-seen 6a3ff0ad); informational, not an answer"
+    "currentlyDiffers": "what a platform's code did when this version was made (iOS 521f1ca, web 6a3ff0ad) where it disagrees with expected; informational, not an answer"
   },
   "tables": {
     "base": {"platforms": ["ios", "web"], "cases": [

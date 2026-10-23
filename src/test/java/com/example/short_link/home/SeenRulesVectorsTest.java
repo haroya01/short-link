@@ -41,7 +41,7 @@ class SeenRulesVectorsTest {
   @Test
   void theFileNamesItsSchemaVersionRulesAndEveryTable() {
     assertThat(doc.get("schema").asString()).isEqualTo("kurl.seen-rules");
-    assertThat(doc.get("version").asInt()).isEqualTo(1);
+    assertThat(doc.get("version").asInt()).isEqualTo(2);
     assertThat(doc.get("rules")).isNotEmpty();
     assertThat(doc.get("tables").propertyNames())
         .containsExactlyInAnyOrder(
@@ -138,12 +138,19 @@ class SeenRulesVectorsTest {
   }
 
   @Test
-  void onlyHomeLatestAndTheForYouMixedIntoItAskToHideAndEveryRequestNamesTheDevice() {
+  void
+      onlyHomeLatestAndTheForYouMixedIntoItAskToHideAndOnlySurfacesThatRecordTheSeenNeedTheDevice() {
     for (JsonNode c : cases("requests")) {
+      String surface = c.get("surface").asString();
       assertThat(c.get("seenHide").asBoolean())
           .as(c.get("id").asString())
-          .isEqualTo(c.get("surface").asString().equals("home-latest"));
-      assertThat(c.get("deviceHeader").asBoolean()).isTrue();
+          .isEqualTo(surface.equals("home-latest"));
+      assertThat(c.get("deviceHeader").asString())
+          .as(c.get("id").asString())
+          .isEqualTo(
+              surface.equals("home-latest") || surface.equals("explore-remote")
+                  ? "required"
+                  : "notNeeded");
     }
   }
 
@@ -192,24 +199,29 @@ class SeenRulesVectorsTest {
   }
 
   private static String notice(JsonNode c) {
+    JsonNode before = c.get("before");
     JsonNode own = c.get("own");
     JsonNode remote = c.get("remote");
-    if (own.get("result").asString().equals("failed")) {
-      return "failed";
-    }
+    boolean ownOk = own.get("result").asString().equals("ok");
     boolean remoteOk = remote.get("result").asString().equals("ok");
-    State after =
-        new State(own.get("items"), remoteOk ? remote.get("items") : null, own.get("done"));
-    List<String> rows = HomeMixVectorsTest.mix(after.input());
-    if (rows.isEmpty()) {
-      return remoteOk ? "caughtUp" : "failed";
-    }
-    JsonNode before = c.get("before");
+    List<String> rows =
+        HomeMixVectorsTest.mix(
+            new State(
+                    ownOk ? own.get("items") : before.get("own"),
+                    remoteOk ? remote.get("items") : before.get("remote"),
+                    ownOk ? own.get("done") : before.get("ownDone"))
+                .input());
     Set<String> shown =
         keys(
             HomeMixVectorsTest.mix(
                 new State(before.get("own"), before.get("remote"), before.get("ownDone")).input()));
-    return keys(rows).stream().anyMatch(key -> !shown.contains(key)) ? "newRows" : "nothingNew";
+    if (keys(rows).stream().anyMatch(key -> !shown.contains(key))) {
+      return "newRows";
+    }
+    if (!ownOk || !remoteOk) {
+      return "failed";
+    }
+    return rows.isEmpty() ? "caughtUp" : "nothingNew";
   }
 
   private record State(JsonNode own, JsonNode remote, JsonNode done) {
@@ -217,7 +229,7 @@ class SeenRulesVectorsTest {
     Input input() {
       ObjectNode node = JsonMapper.builder().build().createObjectNode();
       node.set("own", own);
-      node.set("remote", remote == null ? node.arrayNode() : remote);
+      node.set("remote", remote);
       node.set("ownDone", done);
       return HomeMixVectorsTest.input(node);
     }
