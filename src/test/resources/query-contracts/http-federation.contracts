@@ -514,3 +514,8 @@
 @junit | federation-for-you-device-hide | 10 | 0 | 0 | 0 | 10
 @junit | federation-for-you-wide | 12 | 0 | 0 | 0 | 12
 @junit | federation-reach-round | 3 | 1 | 0 | 0 | 4
+# A quote kept from elsewhere carries its quoted post as a member's quote does.
+@junit | remote-quote-member-note | 0 | 0 | 0 | 0 | 0
+@junit | remote-quote-note | 0 | 0 | 0 | 0 | 0
+@junit | remote-quote-federation-for-you | 0 | 0 | 0 | 0 | 0
+@junit | remote-quote-home-for-you | 0 | 0 | 0 | 0 | 0

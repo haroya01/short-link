@@ -111,17 +111,18 @@ public class RelayStore {
     if (author.isEmpty()) {
       return "no-author";
     }
+    RemoteNoteParser.Parsed quoted = intake.quoted(note);
     Long relayId = subscriptions.relayId(relay);
     Optional<Long> kept =
         transaction.execute(
             status ->
                 intake
-                    .relayed(author.get(), note)
+                    .relayed(author.get(), quoted)
                     .map(
                         noteId -> {
                           Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
                           relayed.mark(noteId, relayId, now);
-                          ReachTarget.of(note.uri())
+                          ReachTarget.of(quoted.uri())
                               .ifPresent(
                                   target ->
                                       reach.track(
@@ -132,8 +133,8 @@ public class RelayStore {
                                           ReachSchedule.first(now)));
                           remoteNotes.preview(
                               noteId,
-                              note.body(),
-                              !note.media().isEmpty() || note.shape().poll() != null,
+                              quoted.body(),
+                              !quoted.media().isEmpty() || quoted.shape().poll() != null,
                               null);
                           return noteId;
                         }));

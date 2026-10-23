@@ -48,6 +48,7 @@ class RemoteNoteIntakeTest {
   @Mock private NoteSnapshotReader notes;
   @Mock private RemoteActorResolver resolver;
   @Mock private EarlyDeletes earlyDeletes;
+  @Mock private RemoteDocuments documents;
 
   private RemoteNoteIntake intake() {
     return new RemoteNoteIntake(
@@ -58,7 +59,8 @@ class RemoteNoteIntakeTest {
         notes,
         resolver,
         earlyDeletes,
-        URLS);
+        URLS,
+        documents);
   }
 
   private static RemoteActorEntity alice(String domain) {

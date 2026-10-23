@@ -6,6 +6,7 @@ import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteNoteParser;
+import com.example.short_link.testsupport.FederationFixtures;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +45,27 @@ class TrendingStatusReaderTest {
 
   private Optional<TrendingStatusReader.Read> read(ObjectNode status) {
     return reader.read(status, SERVER);
+  }
+
+  @Test
+  void aQuoteTheServerAcceptedNamesWhatItQuotesAndShowsItsAddressUntilKept() {
+    ObjectNode status = (ObjectNode) FederationFixtures.json("mastodon-quote-status.json");
+
+    TrendingStatusReader.Read read = reader.read(status, "mastodon.example").orElseThrow();
+
+    assertThat(read.quoteAccepted()).isTrue();
+    assertThat(read.object().path("quote").asString())
+        .isEqualTo("https://news.example/users/desk/statuses/117491245825695182");
+    assertThat(read.note().body())
+        .isEqualTo(
+            "The answer to that headline is no.\n\nhttps://news.example/@desk/117491245825695182");
+
+    ((ObjectNode) status.path("quote")).put("state", "pending");
+    assertThat(reader.read(status, "mastodon.example").orElseThrow().quoteAccepted()).isFalse();
+    status.remove("quote");
+    TrendingStatusReader.Read plain = reader.read(status, "mastodon.example").orElseThrow();
+    assertThat(plain.quoteAccepted()).isFalse();
+    assertThat(plain.object().has("quote")).isFalse();
   }
 
   @Test

@@ -1,0 +1,124 @@
+{
+ "@context": [
+  "https://www.w3.org/ns/activitystreams",
+  {
+   "ostatus": "http://ostatus.org#",
+   "atomUri": "ostatus:atomUri",
+   "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+   "conversation": "ostatus:conversation",
+   "sensitive": "as:sensitive",
+   "toot": "http://joinmastodon.org/ns#",
+   "votersCount": "toot:votersCount",
+   "quote": {
+    "@id": "https://w3id.org/fep/044f#quote",
+    "@type": "@id"
+   },
+   "quoteUri": "http://fedibird.com/ns#quoteUri",
+   "_misskey_quote": "https://misskey-hub.net/ns#_misskey_quote",
+   "quoteAuthorization": {
+    "@id": "https://w3id.org/fep/044f#quoteAuthorization",
+    "@type": "@id"
+   },
+   "gts": "https://gotosocial.org/ns#",
+   "interactionPolicy": {
+    "@id": "gts:interactionPolicy",
+    "@type": "@id"
+   },
+   "canFeature": {
+    "@id": "https://w3id.org/fep/7aa9#canFeature",
+    "@type": "@id"
+   },
+   "canQuote": {
+    "@id": "gts:canQuote",
+    "@type": "@id"
+   },
+   "automaticApproval": {
+    "@id": "gts:automaticApproval",
+    "@type": "@id"
+   },
+   "manualApproval": {
+    "@id": "gts:manualApproval",
+    "@type": "@id"
+   },
+   "Hashtag": "as:Hashtag"
+  }
+ ],
+ "id": "https://news.example/users/desk/statuses/117491245825695182",
+ "type": "Note",
+ "summary": null,
+ "inReplyTo": null,
+ "published": "2026-10-23T16:48:56Z",
+ "url": "https://news.example/@desk/117491245825695182",
+ "attributedTo": "https://news.example/users/desk",
+ "to": [
+  "https://www.w3.org/ns/activitystreams#Public"
+ ],
+ "cc": [
+  "https://news.example/users/desk/followers",
+  "https://news.example/users/space"
+ ],
+ "sensitive": false,
+ "atomUri": "https://news.example/users/desk/statuses/117491245825695182",
+ "inReplyToAtomUri": null,
+ "conversation": "https://news.example/contexts/110068856921867174-117491245825695182",
+ "context": "https://news.example/contexts/110068856921867174-117491245825695182",
+ "content": "<p>Satellites will triple by 2035. Is that a problem in orbit?</p>",
+ "contentMap": {
+  "en": "<p>Satellites will triple by 2035. Is that a problem in orbit?</p>"
+ },
+ "interactionPolicy": {
+  "canQuote": {
+   "automaticApproval": [
+    "https://www.w3.org/ns/activitystreams#Public"
+   ]
+  }
+ },
+ "attachment": [
+  {
+   "type": "Link",
+   "href": "https://news.example/L0r.gY"
+  }
+ ],
+ "tag": [
+  {
+   "type": "Mention",
+   "href": "https://news.example/users/space",
+   "name": "@space@news.example"
+  },
+  {
+   "type": "Hashtag",
+   "href": "https://news.example/tags/science",
+   "name": "#science"
+  },
+  {
+   "type": "Hashtag",
+   "href": "https://news.example/tags/space",
+   "name": "#space"
+  },
+  {
+   "type": "Hashtag",
+   "href": "https://news.example/tags/spaceexploration",
+   "name": "#spaceexploration"
+  }
+ ],
+ "replies": {
+  "id": "https://news.example/users/desk/statuses/117491245825695182/replies",
+  "type": "Collection",
+  "first": {
+   "type": "CollectionPage",
+   "next": "https://news.example/users/desk/statuses/117491245825695182/replies?only_other_accounts=true&page=true",
+   "partOf": "https://news.example/users/desk/statuses/117491245825695182/replies",
+   "items": []
+  }
+ },
+ "likes": {
+  "id": "https://news.example/users/desk/statuses/117491245825695182/likes",
+  "type": "Collection",
+  "totalItems": 3
+ },
+ "shares": {
+  "id": "https://news.example/users/desk/statuses/117491245825695182/shares",
+  "type": "Collection",
+  "totalItems": 6
+ }
+}

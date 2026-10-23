@@ -1011,11 +1011,11 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
                     + " conversation_id, reply, reply_policy, language, remote_kind, remote_title,"
                     + " remote_community, poll_options, poll_expires_at, poll_multiple,"
-                    + " poll_closed_at, poll_votes, poll_voters) VALUES"
+                    + " poll_closed_at, poll_votes, poll_voters, quoted_note_id) VALUES"
                     + " (:actor, :uri, :url, :body, :createdAt, :warning, :sensitive, :visibility,"
                     + " :parent, :conversation, :reply, :replyPolicy, :language, :kind, :title,"
                     + " :community, :pollOptions, :pollExpiresAt, :pollMultiple, :pollClosedAt,"
-                    + " :pollVotes, :pollVoters)")
+                    + " :pollVotes, :pollVoters, :quoted)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -1040,6 +1040,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("pollVotes", poll == null ? null : NoteEntity.votesColumn(poll.votes()))
             .setParameter(
                 "pollVoters", poll == null ? null : Math.clamp(poll.voters(), 0, Integer.MAX_VALUE))
+            .setParameter("quoted", row.quotedNoteId())
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }

@@ -134,7 +134,8 @@ class RemoteNoteRecorder implements RemoteNotes {
                         poll.multiple(),
                         now,
                         poll.votes(),
-                        poll.voters())));
+                        poll.voters()),
+                received.quotedNoteId()));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
@@ -229,27 +230,29 @@ class RemoteNoteRecorder implements RemoteNotes {
             || !Objects.equals(note.pollOptions(), pollOptions(shape.poll()));
     note.describeElsewhere(shape.kind().name(), title, cut(shape.community(), MAX_TITLE));
     tally(note, shape.poll());
-    if (revision.body().equals(note.getBody())
+    String body =
+        revision.quoteLink() != null && note.getQuotedNoteId() == null
+            ? revision.body() + "\n\n" + revision.quoteLink()
+            : revision.body();
+    if (body.equals(note.getBody())
         && Objects.equals(warning, note.getContentWarning())
         && sensitive == note.isSensitive()
         && !mediaChanged
         && !reshaped) {
       return true;
     }
-    boolean retagged = !Hashtags.sameTags(note.getBody(), revision.body());
-    note.edit(
-        revision.body(),
-        editedAt == null ? clock.instant().truncatedTo(ChronoUnit.MICROS) : editedAt);
+    boolean retagged = !Hashtags.sameTags(note.getBody(), body);
+    note.edit(body, editedAt == null ? clock.instant().truncatedTo(ChronoUnit.MICROS) : editedAt);
     note.markContent(warning, sensitive);
     if (retagged) {
-      notes.retag(noteId, Hashtags.of(revision.body()));
+      notes.retag(noteId, Hashtags.of(body));
     }
     if (mediaChanged) {
       media.deleteAllByNoteId(noteId);
       media.saveAll(attached);
     }
     events.publishEvent(
-        new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(revision.body())));
+        new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(body)));
     return true;
   }
 

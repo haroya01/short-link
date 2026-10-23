@@ -1,0 +1,100 @@
+{
+ "@context": [
+  "https://www.w3.org/ns/activitystreams",
+  {
+   "ostatus": "http://ostatus.org#",
+   "atomUri": "ostatus:atomUri",
+   "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+   "conversation": "ostatus:conversation",
+   "sensitive": "as:sensitive",
+   "toot": "http://joinmastodon.org/ns#",
+   "votersCount": "toot:votersCount",
+   "quote": {
+    "@id": "https://w3id.org/fep/044f#quote",
+    "@type": "@id"
+   },
+   "quoteUri": "http://fedibird.com/ns#quoteUri",
+   "_misskey_quote": "https://misskey-hub.net/ns#_misskey_quote",
+   "quoteAuthorization": {
+    "@id": "https://w3id.org/fep/044f#quoteAuthorization",
+    "@type": "@id"
+   },
+   "gts": "https://gotosocial.org/ns#",
+   "interactionPolicy": {
+    "@id": "gts:interactionPolicy",
+    "@type": "@id"
+   },
+   "canFeature": {
+    "@id": "https://w3id.org/fep/7aa9#canFeature",
+    "@type": "@id"
+   },
+   "canQuote": {
+    "@id": "gts:canQuote",
+    "@type": "@id"
+   },
+   "automaticApproval": {
+    "@id": "gts:automaticApproval",
+    "@type": "@id"
+   },
+   "manualApproval": {
+    "@id": "gts:manualApproval",
+    "@type": "@id"
+   }
+  }
+ ],
+ "id": "https://mastodon.example/users/ana/statuses/117491551754057458",
+ "type": "Note",
+ "summary": null,
+ "inReplyTo": null,
+ "published": "2026-10-23T18:06:44Z",
+ "url": "https://mastodon.example/@ana/117491551754057458",
+ "attributedTo": "https://mastodon.example/users/ana",
+ "to": [
+  "https://www.w3.org/ns/activitystreams#Public"
+ ],
+ "cc": [
+  "https://mastodon.example/users/ana/followers"
+ ],
+ "sensitive": false,
+ "atomUri": "https://mastodon.example/users/ana/statuses/117491551754057458",
+ "inReplyToAtomUri": null,
+ "conversation": "https://mastodon.example/contexts/108194428751240116-117491551754057458",
+ "context": "https://mastodon.example/contexts/108194428751240116-117491551754057458",
+ "content": "<p class=\"quote-inline\">RE: <a href=\"https://news.example/@desk/117491245825695182\" target=\"_blank\" rel=\"nofollow noopener\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">news.example/@desk/</span><span class=\"invisible\">117491245825695182</span></a></p><p>The answer to that headline is no.</p>",
+ "contentMap": {
+  "en": "<p class=\"quote-inline\">RE: <a href=\"https://news.example/@desk/117491245825695182\" target=\"_blank\" rel=\"nofollow noopener\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">news.example/@desk/</span><span class=\"invisible\">117491245825695182</span></a></p><p>The answer to that headline is no.</p>"
+ },
+ "quote": "https://news.example/users/desk/statuses/117491245825695182",
+ "_misskey_quote": "https://news.example/users/desk/statuses/117491245825695182",
+ "quoteUri": "https://news.example/users/desk/statuses/117491245825695182",
+ "quoteAuthorization": "https://news.example/users/desk/quote_authorizations/117491551939300305",
+ "interactionPolicy": {
+  "canQuote": {
+   "automaticApproval": [
+    "https://www.w3.org/ns/activitystreams#Public"
+   ]
+  }
+ },
+ "attachment": [],
+ "tag": [],
+ "replies": {
+  "id": "https://mastodon.example/users/ana/statuses/117491551754057458/replies",
+  "type": "Collection",
+  "first": {
+   "type": "CollectionPage",
+   "next": "https://mastodon.example/users/ana/statuses/117491551754057458/replies?only_other_accounts=true&page=true",
+   "partOf": "https://mastodon.example/users/ana/statuses/117491551754057458/replies",
+   "items": []
+  }
+ },
+ "likes": {
+  "id": "https://mastodon.example/users/ana/statuses/117491551754057458/likes",
+  "type": "Collection",
+  "totalItems": 27
+ },
+ "shares": {
+  "id": "https://mastodon.example/users/ana/statuses/117491551754057458/shares",
+  "type": "Collection",
+  "totalItems": 15
+ }
+}
