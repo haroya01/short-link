@@ -8,6 +8,7 @@ import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.common.user.HeardSql;
+import com.example.short_link.note.domain.LocalPoolRow;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
@@ -245,10 +246,12 @@ class NoteRepositoryAdapter implements NoteRepository {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<RemotePoolRow> remotePool(Long viewerId, Instant since, Instant until, int limit) {
+  public List<RemotePoolRow> remotePool(
+      Long viewerId, Instant since, Instant until, int limit, boolean withFollowed) {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT n.id, n.remote_actor_id, a.domain, n.language, n.created_at, n.uri"
+                "SELECT n.id, n.remote_actor_id, a.domain, n.language, n.created_at, n.uri,"
+                    + " r.received_at"
                     + " FROM federation_relayed_note r STRAIGHT_JOIN note n ON n.id = r.note_id"
                     + " JOIN federation_remote_actor a ON a.id = n.remote_actor_id"
                     + " WHERE r.received_at >= :since AND r.received_at <= :until"
@@ -260,9 +263,12 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + unlimited("n")
                     + inLanguages("n")
                     + " AND n.content_warning IS NULL AND NOT n.marked_sensitive"
-                    + " AND NOT EXISTS (SELECT 1 FROM federation_following ff"
-                    + " WHERE ff.user_id = :viewer AND ff.remote_actor_id = n.remote_actor_id"
-                    + " AND ff.accepted_at IS NOT NULL)"
+                    + (withFollowed
+                        ? ""
+                        : " AND NOT EXISTS (SELECT 1 FROM federation_following ff"
+                            + " WHERE ff.user_id = :viewer"
+                            + " AND ff.remote_actor_id = n.remote_actor_id"
+                            + " AND ff.accepted_at IS NOT NULL)")
                     + " ORDER BY r.note_id DESC")
             .setParameter("since", since)
             .setParameter("until", until)
@@ -276,6 +282,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             .addScalar("language", String.class)
             .addScalar("created_at", Instant.class)
             .addScalar("uri", String.class)
+            .addScalar("received_at", Instant.class)
             .getResultList();
     return rows.stream()
         .map(
@@ -286,7 +293,41 @@ class NoteRepositoryAdapter implements NoteRepository {
                     (String) row[2],
                     (String) row[3],
                     (Instant) row[4],
-                    (String) row[5]))
+                    (String) row[5],
+                    (Instant) row[6]))
+        .toList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<LocalPoolRow> localPool(Long viewerId, Instant since, Instant until, int limit) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT n.id, n.user_id, n.language, n.created_at FROM note n"
+                    + " FORCE INDEX (idx_note_local_top_level) WHERE "
+                    + notReply("n")
+                    + " AND "
+                    + NoteAccessSql.listed("n")
+                    + " AND n.remote_actor_id IS NULL"
+                    + " AND n.created_at >= :since AND n.created_at <= :until"
+                    + heard("n")
+                    + inLanguages("n")
+                    + " ORDER BY n.id DESC")
+            .setParameter("since", since)
+            .setParameter("until", until)
+            .setParameter("viewer", viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .setMaxResults(limit)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("user_id", Long.class)
+            .addScalar("language", String.class)
+            .addScalar("created_at", Instant.class)
+            .getResultList();
+    return rows.stream()
+        .map(
+            row ->
+                new LocalPoolRow((Long) row[0], (Long) row[1], (String) row[2], (Instant) row[3]))
         .toList();
   }
 

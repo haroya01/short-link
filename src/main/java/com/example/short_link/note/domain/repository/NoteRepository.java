@@ -2,6 +2,7 @@ package com.example.short_link.note.domain.repository;
 
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.seen.Unseen;
+import com.example.short_link.note.domain.LocalPoolRow;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteReplyPolicy;
@@ -82,8 +83,13 @@ public interface NoteRepository {
   List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
 
   // The same notes kept between since and until, newest first, without a warning or a sensitive
-  // mark and not by an account the viewer follows.
-  List<RemotePoolRow> remotePool(Long viewerId, Instant since, Instant until, int limit);
+  // mark, and not by an account the viewer follows unless followed ones are asked for.
+  List<RemotePoolRow> remotePool(
+      Long viewerId, Instant since, Instant until, int limit, boolean withFollowed);
+
+  // Members' public top-level notes written between since and until, newest first, heard and in
+  // the viewer's languages as the home's latest has them, without room notes.
+  List<LocalPoolRow> localPool(Long viewerId, Instant since, Instant until, int limit);
 
   Map<Long, List<String>> tagsOf(Collection<Long> noteIds);
 

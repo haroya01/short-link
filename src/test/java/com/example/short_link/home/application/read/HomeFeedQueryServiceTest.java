@@ -2,6 +2,7 @@ package com.example.short_link.home.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -17,6 +18,7 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteAuthor;
+import com.example.short_link.post.application.read.BlogSlice;
 import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -37,8 +39,9 @@ class HomeFeedQueryServiceTest {
   private final NoteQueryService notes = mock(NoteQueryService.class);
   private final PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
   private final LocalSeen seen = mock(LocalSeen.class);
+  private final HomeForYou forYou = mock(HomeForYou.class);
   private final HomeFeedQueryService home =
-      new HomeFeedQueryService(notes, posts, seen, Clock.fixed(NOW, ZoneOffset.UTC));
+      new HomeFeedQueryService(notes, posts, seen, forYou, Clock.fixed(NOW, ZoneOffset.UTC));
 
   private static NoteSlice.At note(int position, String at) {
     return note(position, at, position + 100L);
@@ -77,6 +80,56 @@ class HomeFeedQueryServiceTest {
 
   private static List<String> kinds(HomeFeedQueryService.Page page) {
     return page.items().stream().map(HomeFeedQueryService.Item::kind).toList();
+  }
+
+  @Test
+  void forYouIsTheOneRankedListWithoutSinceAndTheOldTabsStayAsTheyWere() {
+    SeenViewer reader = SeenViewer.member(7L);
+    HomeFeedQueryService.Page ranked = new HomeFeedQueryService.Page(List.of(), "r1.40");
+    when(forYou.page(7L, reader, "ja", "r1.20", 40, true)).thenReturn(ranked);
+
+    assertThat(home.page(7L, reader, "ja", "for-you", "r1.20", "3.4", 500, true)).isSameAs(ranked);
+    verifyNoInteractions(notes, posts, seen);
+    when(notes.everyoneAt(null, 0, 3, null)).thenReturn(new NoteSlice(List.of(), true));
+    when(posts.recentAt(null, 0, 3, null)).thenReturn(new PostSlice(List.of(), true));
+    home.page(null, null, "latest", null, null, 2, false);
+    home.page(null, null, "nonsense", null, null, 2, false);
+    verify(forYou, times(1)).page(any(), any(), any(), any(), anyInt(), any(Boolean.class));
+  }
+
+  @Test
+  void blogPagesFromTheLastRowsPositionAndOnlyAFirstPageNamesTheNewest() {
+    Instant top = Instant.parse("2026-10-20T10:00:00.123456Z");
+    Instant last = Instant.parse("2026-10-19T10:00:00.000001Z");
+    PostCard card = post(0, "2026-10-20T10:00:00Z").post();
+    when(posts.blogBelow(7L, null, null, 2))
+        .thenReturn(new BlogSlice(List.of(card), top, 9L, last, 4L, true));
+    when(posts.blogBelow(7L, last, 4L, 2))
+        .thenReturn(new BlogSlice(List.of(card), last, 3L, last, 3L, false));
+
+    HomeFeedQueryService.Page first = home.page(7L, null, null, "blog", null, null, 2, true);
+    HomeFeedQueryService.Page onward =
+        home.page(7L, null, null, "blog", first.next(), null, 2, true);
+
+    assertThat(kinds(first)).containsExactly("post");
+    assertThat(first.next()).isEqualTo("b1792404000000001.4");
+    assertThat(first.newest()).isEqualTo("b1792490400123456.9");
+    assertThat(onward.next()).isNull();
+    assertThat(onward.newest()).isNull();
+    verifyNoInteractions(notes, seen, forYou);
+  }
+
+  @Test
+  void aBlogMarkerIsThePublishedMicrosAndIdAndAnythingElseIsNone() {
+    Instant at = Instant.parse("2026-10-20T10:00:00.123456Z");
+    HomeFeedQueryService.Marker marker = new HomeFeedQueryService.Marker(at, 9L);
+
+    assertThat(HomeFeedQueryService.Marker.parse(marker.toString())).isEqualTo(marker);
+    for (String bad :
+        List.of("b1.0", "b-1.2", "b1", "1.2", "bx.2", "b1.2.3", "b99999999999999999999.1", "")) {
+      assertThat(HomeFeedQueryService.Marker.parse(bad)).as(bad).isNull();
+    }
+    assertThat(HomeFeedQueryService.Marker.parse(null)).isNull();
   }
 
   @Test

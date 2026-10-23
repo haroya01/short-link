@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.seen.Unseen;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
@@ -14,6 +15,7 @@ import com.example.short_link.post.domain.repository.SeriesSubscriptionRepositor
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,6 +165,67 @@ public class PublicFeedQueryService {
   public PostSlice recentAt(Long viewerId, int offset, int limit, Unseen unseen) {
     List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit, unseen);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
+  }
+
+  public List<PooledPost> pool(Long viewerId, Instant since, Instant until, int limit) {
+    return postRepository.findHomePool(viewerId, since, until, limit).stream()
+        .map(
+            row ->
+                new PooledPost(
+                    row.id(),
+                    row.userId(),
+                    row.language(),
+                    row.publishedAt(),
+                    row.tags(),
+                    row.likes(),
+                    row.quotes(),
+                    row.highlights()))
+        .toList();
+  }
+
+  // In the order asked, leaving out a post no longer listed.
+  public List<PostCard> cards(Long viewerId, List<Long> postIds) {
+    if (postIds.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, PostEntity> byId = new HashMap<>();
+    postRepository.findAllByIdIn(postIds).forEach(post -> byId.put(post.getId(), post));
+    List<PostEntity> rows =
+        postIds.stream()
+            .map(byId::get)
+            .filter(post -> post != null && PostAccessPolicy.isListed(post))
+            .toList();
+    return slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
+        .map(PostSlice.At::post)
+        .toList();
+  }
+
+  public BlogSlice blogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
+    List<PostEntity> rows = postRepository.findBlogBelow(viewerId, publishedAt, id, limit + 1);
+    boolean more = rows.size() > limit;
+    return blog(more ? rows.subList(0, limit) : rows, more, viewerId);
+  }
+
+  public BlogSlice blogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
+    List<PostEntity> rows =
+        new ArrayList<>(postRepository.findBlogAbove(viewerId, publishedAt, id, limit + 1));
+    boolean more = rows.size() > limit;
+    List<PostEntity> nearest = more ? rows.subList(0, limit) : rows;
+    return blog(nearest.reversed(), more, viewerId);
+  }
+
+  private BlogSlice blog(List<PostEntity> rows, boolean more, Long viewerId) {
+    if (rows.isEmpty()) {
+      return BlogSlice.EMPTY;
+    }
+    List<PostCard> cards =
+        slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
+            .map(PostSlice.At::post)
+            .toList();
+    PostEntity first = rows.getFirst();
+    PostEntity last = rows.getLast();
+    return new BlogSlice(
+        cards, first.getPublishedAt(), first.getId(), last.getPublishedAt(), last.getId(), more);
   }
 
   public PostSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
