@@ -5,9 +5,11 @@ import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.domain.LocalPoolRow;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -249,6 +251,32 @@ public class NoteQueryService {
   @Transactional(readOnly = true)
   public NoteSlice everyoneAt(Long viewerId, int offset, int limit, Unseen unseen) {
     return slice(notes.topLevel(viewerId, offset, limit, unseen), offset, limit, viewerId);
+  }
+
+  @Transactional(readOnly = true)
+  public List<PooledNote> pool(Long viewerId, Instant since, Instant until, int limit) {
+    List<LocalPoolRow> rows = notes.localPool(viewerId, since, until, limit);
+    if (rows.isEmpty()) {
+      return List.of();
+    }
+    List<Long> ids = rows.stream().map(LocalPoolRow::id).toList();
+    Map<Long, NoteStats> stats = notes.stats(ids);
+    Map<Long, List<String>> tags = notes.tagsOf(ids);
+    return rows.stream()
+        .map(
+            row -> {
+              NoteStats count = stats.getOrDefault(row.id(), NoteStats.NONE);
+              return new PooledNote(
+                  row.id(),
+                  row.userId(),
+                  row.language(),
+                  row.createdAt(),
+                  tags.getOrDefault(row.id(), List.of()),
+                  count.likes(),
+                  count.reposts(),
+                  count.replies());
+            })
+        .toList();
   }
 
   @Transactional(readOnly = true)

@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.common.user.HeardSql;
@@ -15,6 +16,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.NativeQuery;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -190,7 +193,7 @@ class PostRepositoryAdapter implements PostRepository {
         em.createNativeQuery(
             "SELECT p.* FROM posts p WHERE "
                 + (unseen == null ? shown : "(" + shown + ")" + Unseen.sql("p", Unseen.POST))
-                + " ORDER BY p.published_at DESC",
+                + " ORDER BY p.published_at DESC, p.id DESC",
             PostEntity.class);
     if (unseen != null) {
       unseen.bind(query, Unseen.POST);
@@ -201,6 +204,107 @@ class PostRepositoryAdapter implements PostRepository {
         .setParameter("viewer", HeardSql.viewer(viewerId))
         .setParameter("now", Instant.now())
         .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PoolRow> findHomePool(Long viewerId, Instant since, Instant until, int limit) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT p.id, p.user_id, p.language_tag, p.published_at, p.like_count,"
+                    + " (SELECT COUNT(*) FROM note q WHERE q.quoted_post_id = p.id AND "
+                    + NoteAccessSql.shareable("q")
+                    + ") AS quotes,"
+                    + " (SELECT COUNT(*) FROM post_highlight h WHERE h.post_id = p.id) AS highlights"
+                    + " FROM posts p WHERE "
+                    + JpaPostRepository.BROWSE_CONDITION
+                    + " AND p.published_at >= :since AND p.published_at <= :until"
+                    + " ORDER BY p.published_at DESC, p.id DESC")
+            .setParameter("lang", null)
+            .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
+            .setParameter("since", since)
+            .setParameter("until", until)
+            .setParameter("viewer", HeardSql.viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .setMaxResults(limit)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("user_id", Long.class)
+            .addScalar("language_tag", String.class)
+            .addScalar("published_at", Instant.class)
+            .addScalar("like_count", Long.class)
+            .addScalar("quotes", Long.class)
+            .addScalar("highlights", Long.class)
+            .getResultList();
+    if (rows.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, List<String>> tags = new HashMap<>();
+    List<Object[]> tagRows =
+        em.createNativeQuery("SELECT post_id, tag FROM post_tag WHERE post_id IN (:ids)")
+            .setParameter("ids", rows.stream().map(row -> (Long) row[0]).toList())
+            .unwrap(NativeQuery.class)
+            .addScalar("post_id", Long.class)
+            .addScalar("tag", String.class)
+            .getResultList();
+    tagRows.forEach(
+        row -> tags.computeIfAbsent((Long) row[0], id -> new ArrayList<>()).add((String) row[1]));
+    return rows.stream()
+        .map(
+            row ->
+                new PoolRow(
+                    (Long) row[0],
+                    (Long) row[1],
+                    (String) row[2],
+                    (Instant) row[3],
+                    (Long) row[4],
+                    (Long) row[5],
+                    (Long) row[6],
+                    tags.getOrDefault((Long) row[0], List.of())))
+        .toList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findBlogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
+    Query query =
+        em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + JpaPostRepository.BROWSE_CONDITION
+                + (publishedAt == null
+                    ? ""
+                    : " AND (p.published_at < :at OR (p.published_at = :at AND p.id < :id))")
+                + " ORDER BY p.published_at DESC, p.id DESC",
+            PostEntity.class);
+    if (publishedAt != null) {
+      query.setParameter("at", publishedAt).setParameter("id", id);
+    }
+    return blog(query, viewerId, limit);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostEntity> findBlogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
+    Query query =
+        em.createNativeQuery(
+            "SELECT p.* FROM posts p WHERE "
+                + JpaPostRepository.BROWSE_CONDITION
+                + " AND (p.published_at > :at OR (p.published_at = :at AND p.id > :id))"
+                + " ORDER BY p.published_at, p.id",
+            PostEntity.class);
+    query.setParameter("at", publishedAt).setParameter("id", id);
+    return blog(query, viewerId, limit);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<PostEntity> blog(Query query, Long viewerId, int limit) {
+    return query
+        .setParameter("lang", null)
+        .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
         .setMaxResults(limit)
         .getResultList();
   }
@@ -320,7 +424,7 @@ class PostRepositoryAdapter implements PostRepository {
                     + PostAccessSql.inFeedRooms("p")
                     + "))"
                     + HeardSql.POST_AUTHOR
-                    + " ORDER BY p.published_at DESC",
+                    + " ORDER BY p.published_at DESC, p.id DESC",
                 PostEntity.class)
             .setParameter("authorIds", idsForIn(authorIds))
             .setParameter("viewer", HeardSql.viewer(viewerId))

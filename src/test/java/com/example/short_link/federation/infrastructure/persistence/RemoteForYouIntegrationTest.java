@@ -117,7 +117,7 @@ class RemoteForYouIntegrationTest {
   }
 
   private List<Long> pool(Long viewerId) {
-    return notes.remotePool(viewerId, NOW.minus(Duration.ofHours(72)), NOW, 1_000).stream()
+    return notes.remotePool(viewerId, NOW.minus(Duration.ofHours(72)), NOW, 1_000, false).stream()
         .filter(row -> row.domain().endsWith(tag + ".example"))
         .map(NoteViewReader.Pooled::id)
         .toList();
@@ -139,7 +139,7 @@ class RemoteForYouIntegrationTest {
 
     assertThat(pool(viewer)).containsExactly(tagged, newest);
     NoteViewReader.Pooled row =
-        notes.remotePool(viewer, NOW.minus(Duration.ofHours(72)), NOW, 1_000).stream()
+        notes.remotePool(viewer, NOW.minus(Duration.ofHours(72)), NOW, 1_000, false).stream()
             .filter(pooled -> pooled.id().equals(tagged))
             .findFirst()
             .orElseThrow();
@@ -162,6 +162,28 @@ class RemoteForYouIntegrationTest {
         bob);
     assertThat(pool(viewer)).isEmpty();
     assertThat(pool(null)).containsExactly(tagged, newest);
+  }
+
+  @Test
+  void theHomesPoolKeepsAccountsTheViewerFollowsAndWhenEachNoteCameIn() {
+    Instant came = NOW.minus(Duration.ofMinutes(30));
+    Long followed = note(alice, NOW.minus(Duration.ofHours(2)), "ko", null, false);
+    relayed.markPulled(followed, "pulled-" + tag + ".example", came);
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        viewer,
+        alice,
+        "https://kurl.me/follow/home-" + tag);
+
+    List<NoteViewReader.Pooled> home =
+        notes.remotePool(viewer, NOW.minus(Duration.ofHours(72)), NOW, 1_000, true).stream()
+            .filter(row -> row.id().equals(followed))
+            .toList();
+
+    assertThat(pool(viewer)).doesNotContain(followed);
+    assertThat(home).hasSize(1);
+    assertThat(home.getFirst().receivedAt()).isEqualTo(came);
   }
 
   @Test
