@@ -2,6 +2,7 @@ package com.example.short_link.home.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -37,8 +38,9 @@ class HomeFeedQueryServiceTest {
   private final NoteQueryService notes = mock(NoteQueryService.class);
   private final PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
   private final LocalSeen seen = mock(LocalSeen.class);
+  private final HomeForYou forYou = mock(HomeForYou.class);
   private final HomeFeedQueryService home =
-      new HomeFeedQueryService(notes, posts, seen, Clock.fixed(NOW, ZoneOffset.UTC));
+      new HomeFeedQueryService(notes, posts, seen, forYou, Clock.fixed(NOW, ZoneOffset.UTC));
 
   private static NoteSlice.At note(int position, String at) {
     return note(position, at, position + 100L);
@@ -77,6 +79,21 @@ class HomeFeedQueryServiceTest {
 
   private static List<String> kinds(HomeFeedQueryService.Page page) {
     return page.items().stream().map(HomeFeedQueryService.Item::kind).toList();
+  }
+
+  @Test
+  void forYouIsTheOneRankedListWithoutSinceAndTheOldTabsStayAsTheyWere() {
+    SeenViewer reader = SeenViewer.member(7L);
+    HomeFeedQueryService.Page ranked = new HomeFeedQueryService.Page(List.of(), "r1.40");
+    when(forYou.page(7L, reader, "ja", "r1.20", 40, true)).thenReturn(ranked);
+
+    assertThat(home.page(7L, reader, "ja", "for-you", "r1.20", "3.4", 500, true)).isSameAs(ranked);
+    verifyNoInteractions(notes, posts, seen);
+    when(notes.everyoneAt(null, 0, 3, null)).thenReturn(new NoteSlice(List.of(), true));
+    when(posts.recentAt(null, 0, 3, null)).thenReturn(new PostSlice(List.of(), true));
+    home.page(null, null, "latest", null, null, 2, false);
+    home.page(null, null, "nonsense", null, null, 2, false);
+    verify(forYou, times(1)).page(any(), any(), any(), any(), anyInt(), any(Boolean.class));
   }
 
   @Test

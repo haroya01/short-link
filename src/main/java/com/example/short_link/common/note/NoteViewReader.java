@@ -23,9 +23,11 @@ public interface NoteViewReader {
       String language,
       Instant createdAt,
       String uri,
-      List<String> tags) {}
+      List<String> tags,
+      Instant receivedAt) {}
 
-  List<Pooled> remotePool(Long viewerId, Instant since, Instant until, int limit);
+  List<Pooled> remotePool(
+      Long viewerId, Instant since, Instant until, int limit, boolean withFollowed);
 
   // In the order given, leaving out a note that is gone.
   List<Listed> listed(Long viewerId, List<Long> noteIds);

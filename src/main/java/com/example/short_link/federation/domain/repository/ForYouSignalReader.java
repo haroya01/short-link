@@ -25,4 +25,8 @@ public interface ForYouSignalReader {
   List<Signal> signals(SeenViewer viewer, Instant since, int perKind, int minDwellMs);
 
   Set<Long> followed(long userId);
+
+  // Everyone a member follows, as the authors a signal names: "u" and a member's id, "r" and an
+  // account's from elsewhere once the follow is accepted.
+  Set<String> follows(long userId);
 }

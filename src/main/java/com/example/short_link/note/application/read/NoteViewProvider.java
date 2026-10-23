@@ -43,8 +43,9 @@ class NoteViewProvider implements NoteViewReader {
 
   @Override
   @Transactional(readOnly = true)
-  public List<Pooled> remotePool(Long viewerId, Instant since, Instant until, int limit) {
-    List<RemotePoolRow> rows = notes.remotePool(viewerId, since, until, limit);
+  public List<Pooled> remotePool(
+      Long viewerId, Instant since, Instant until, int limit, boolean withFollowed) {
+    List<RemotePoolRow> rows = notes.remotePool(viewerId, since, until, limit, withFollowed);
     Map<Long, List<String>> tags = notes.tagsOf(rows.stream().map(RemotePoolRow::id).toList());
     return rows.stream()
         .map(
@@ -56,7 +57,8 @@ class NoteViewProvider implements NoteViewReader {
                     row.language(),
                     row.createdAt(),
                     row.uri(),
-                    tags.getOrDefault(row.id(), List.of())))
+                    tags.getOrDefault(row.id(), List.of()),
+                    row.receivedAt()))
         .toList();
   }
 

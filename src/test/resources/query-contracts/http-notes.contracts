@@ -316,3 +316,18 @@
 @junit | home-seen-kurl-arrived | 0 | 0 | 0 | 0 | 0
 @junit | home-latest-hidden-since | 13 | 0 | 0 | 0 | 13
 @junit | home-latest-hidden-heavy | 10 | 0 | 0 | 0 | 10
+# For you, measured 2026-10-23. A first page ranks one pool: the kept posts from elsewhere of the
+# last three days with their tags and counts, this week's member notes with their counts and tags,
+# this week's posts with their likes, quoting notes and highlights in one statement and their tags,
+# the reader's signals, a member's language and whom they follow (members and accounts elsewhere
+# in one statement), and with seen=hide which of the pool the reader saw, kurl and elsewhere apart.
+# The page is then built as any note page (notes and kept posts in one fetch) and any post card
+# page. A later page is cut from the ranking held in memory, so it only builds its rows. A device
+# has no language or follows to read. Handing over a kurl key and a uri only fills memory; a flush
+# writes each kind in one INSERT.
+@junit | home-for-you-first | 20 | 0 | 0 | 0 | 20
+@junit | home-for-you-next | 11 | 0 | 0 | 0 | 11
+@junit | home-for-you-device | 21 | 0 | 0 | 0 | 21
+@junit | home-for-you-seen | 0 | 0 | 0 | 0 | 0
+@junit | home-for-you-seen-flush | 0 | 2 | 0 | 0 | 2
+@junit | home-for-you-device-hide | 21 | 0 | 0 | 0 | 21

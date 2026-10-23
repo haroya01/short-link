@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.seen.Unseen;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
@@ -14,6 +15,7 @@ import com.example.short_link.post.domain.repository.SeriesSubscriptionRepositor
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,6 +165,39 @@ public class PublicFeedQueryService {
   public PostSlice recentAt(Long viewerId, int offset, int limit, Unseen unseen) {
     List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit, unseen);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
+  }
+
+  public List<PooledPost> pool(Long viewerId, Instant since, Instant until, int limit) {
+    return postRepository.findHomePool(viewerId, since, until, limit).stream()
+        .map(
+            row ->
+                new PooledPost(
+                    row.id(),
+                    row.userId(),
+                    row.language(),
+                    row.publishedAt(),
+                    row.tags(),
+                    row.likes(),
+                    row.quotes(),
+                    row.highlights()))
+        .toList();
+  }
+
+  // In the order asked, leaving out a post no longer listed.
+  public List<PostCard> cards(Long viewerId, List<Long> postIds) {
+    if (postIds.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, PostEntity> byId = new HashMap<>();
+    postRepository.findAllByIdIn(postIds).forEach(post -> byId.put(post.getId(), post));
+    List<PostEntity> rows =
+        postIds.stream()
+            .map(byId::get)
+            .filter(post -> post != null && PostAccessPolicy.isListed(post))
+            .toList();
+    return slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
+        .map(PostSlice.At::post)
+        .toList();
   }
 
   public PostSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {

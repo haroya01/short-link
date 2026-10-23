@@ -7,6 +7,7 @@ import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.ForYouRanking;
 import com.example.short_link.federation.domain.foryou.ForYouReader;
+import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -117,18 +118,10 @@ public class RemoteForYou {
         }
       }
     } else if (!stored) {
-      List<String> unknown = new ArrayList<>();
       for (int i = from; i < to; i++) {
-        TrendingStatusReader.Read read = (TrendingStatusReader.Read) ranking.refs().get(i);
-        seenFrom = seenFrom == null ? seenAt(ranking, from, i, items.size()) : seenFrom;
-        items.add(read.note().seenBy(viewerId != null));
-        if (read.note().author().remoteId() == null && !unknown.contains(read.actorUri())) {
-          unknown.add(read.actorUri());
-        }
+        seenFrom = seenFrom == null ? seenAt(ranking, from, i, i - from) : seenFrom;
       }
-      if (viewerId != null && !unknown.isEmpty()) {
-        authors.warm(unknown);
-      }
+      items.addAll(showHeld(viewerId, slice));
     }
     String next = to < end ? "f" + at.asOf().toEpochMilli() + "." + to : null;
     return new RemoteTrendingFeed.Page(items, next, null, seenFrom);
@@ -138,8 +131,53 @@ public class RemoteForYou {
     return ranking.seenFrom() >= from && index >= ranking.seenFrom() ? shown : null;
   }
 
+  public boolean enabled() {
+    return latestProps.enabled();
+  }
+
+  public Set<String> follows(Long viewerId) {
+    return viewerId == null ? Set.of() : signals.follows(viewerId);
+  }
+
+  public List<Object> showHeld(Long viewerId, List<Object> refs) {
+    List<Object> shown = new ArrayList<>(refs.size());
+    List<String> unknown = new ArrayList<>();
+    for (Object ref : refs) {
+      TrendingStatusReader.Read read = (TrendingStatusReader.Read) ref;
+      shown.add(read.note().seenBy(viewerId != null));
+      if (read.note().author().remoteId() == null && !unknown.contains(read.actorUri())) {
+        unknown.add(read.actorUri());
+      }
+    }
+    if (viewerId != null && !unknown.isEmpty()) {
+      authors.warm(unknown);
+    }
+    return shown;
+  }
+
+  // The posts from elsewhere the home ranks with its own: the same pool, with the accounts the
+  // reader follows kept in. A ref is a kept note's id when posts are stored, else the post read.
+  public List<HomeCandidate> homePool(Long viewerId, Instant asOf) {
+    return latestProps.pulling() ? stored(viewerId, asOf, true) : held(viewerId, asOf, true);
+  }
+
   private Ranking rank(
       Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf, boolean stored) {
+    ForYouReader reader = reader(viewerId, viewer, accepted, asOf);
+    List<ForYouCandidate> pool =
+        (stored ? stored(viewerId, asOf, false) : held(viewerId, asOf, false))
+            .stream().map(HomeCandidate::item).toList();
+    Set<String> seenUris =
+        viewer == null || pool.isEmpty()
+            ? Set.of()
+            : seen.seenBefore(viewer, pool.stream().map(ForYouCandidate::uri).toList(), asOf);
+    ForYouRanking.Ranked ranked = ForYouRanking.rank(pool, reader, seenUris, asOf);
+    return new Ranking(
+        ranked.items().stream().map(ForYouCandidate::ref).toList(), ranked.seenFrom());
+  }
+
+  public ForYouReader reader(
+      Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf) {
     List<ForYouProfile.Signal> read = new ArrayList<>();
     if (viewer != null) {
       for (ForYouSignalReader.Signal signal :
@@ -151,22 +189,15 @@ public class RemoteForYou {
     }
     List<String> languages =
         viewerId == null ? accepted : signals.locale(viewerId).map(List::of).orElse(List.of());
-    ForYouReader reader = ForYouProfile.of(languages, read);
-    List<ForYouCandidate> pool = stored ? stored(viewerId, asOf) : held(viewerId, asOf);
-    Set<String> seenUris =
-        viewer == null || pool.isEmpty()
-            ? Set.of()
-            : seen.seenBefore(viewer, pool.stream().map(ForYouCandidate::uri).toList(), asOf);
-    ForYouRanking.Ranked ranked = ForYouRanking.rank(pool, reader, seenUris, asOf);
-    return new Ranking(
-        ranked.items().stream().map(ForYouCandidate::ref).toList(), ranked.seenFrom());
+    return ForYouProfile.of(languages, read);
   }
 
-  private List<ForYouCandidate> stored(Long viewerId, Instant asOf) {
-    List<NoteViewReader.Pooled> rows = notes.remotePool(viewerId, asOf.minus(WINDOW), asOf, POOL);
+  private List<HomeCandidate> stored(Long viewerId, Instant asOf, boolean withFollowed) {
+    List<NoteViewReader.Pooled> rows =
+        notes.remotePool(viewerId, asOf.minus(WINDOW), asOf, POOL, withFollowed);
     Map<Long, RemoteNoteReachRepository.Reach> counts =
         reach.of(rows.stream().map(NoteViewReader.Pooled::id).toList());
-    List<ForYouCandidate> pool = new ArrayList<>(rows.size());
+    List<HomeCandidate> pool = new ArrayList<>(rows.size());
     for (NoteViewReader.Pooled row : rows) {
       RemoteNoteReachRepository.Reach known = counts.get(row.id());
       if (known != null && known.gone()) {
@@ -175,29 +206,32 @@ public class RemoteForYou {
       RemoteNoteReachRepository.Counts count =
           known == null ? RemoteNoteReachRepository.Counts.NONE : known.counts();
       pool.add(
-          new ForYouCandidate(
+          HomeCandidate.remote(
+              new ForYouCandidate(
+                  row.id(),
+                  row.uri() == null ? "note:" + row.id() : row.uri(),
+                  "r" + row.remoteActorId(),
+                  row.domain(),
+                  row.language(),
+                  new HashSet<>(row.tags()),
+                  row.createdAt(),
+                  count.likes(),
+                  count.reposts(),
+                  count.replies(),
+                  row.id()),
               row.id(),
-              row.uri() == null ? "note:" + row.id() : row.uri(),
-              "r" + row.remoteActorId(),
-              row.domain(),
-              row.language(),
-              new HashSet<>(row.tags()),
-              row.createdAt(),
-              count.likes(),
-              count.reposts(),
-              count.replies(),
-              row.id()));
+              row.receivedAt()));
     }
     return pool;
   }
 
-  private List<ForYouCandidate> held(Long viewerId, Instant asOf) {
+  private List<HomeCandidate> held(Long viewerId, Instant asOf, boolean withFollowed) {
     Map<String, TrendingStatusReader.Read> byUri = new LinkedHashMap<>();
     trending.pool(viewerId).forEach(read -> byUri.putIfAbsent(read.note().uri(), read));
     latest.pool(viewerId).forEach(read -> byUri.putIfAbsent(read.note().uri(), read));
-    Set<Long> followed = viewerId == null ? Set.of() : signals.followed(viewerId);
+    Set<Long> followed = viewerId == null || withFollowed ? Set.of() : signals.followed(viewerId);
     Instant since = asOf.minus(WINDOW);
-    List<ForYouCandidate> pool = new ArrayList<>(byUri.size());
+    List<HomeCandidate> pool = new ArrayList<>(byUri.size());
     for (TrendingStatusReader.Read read : byUri.values()) {
       TrendingNote note = read.note();
       Long remoteId = note.author().remoteId();
@@ -209,18 +243,21 @@ public class RemoteForYou {
         continue;
       }
       pool.add(
-          new ForYouCandidate(
-              read,
-              note.uri(),
-              remoteId == null ? read.actorUri() : "r" + remoteId,
-              read.domain(),
-              note.language(),
-              new HashSet<>(Hashtags.of(note.body())),
-              note.createdAt(),
-              note.likeCount(),
-              note.repostCount(),
-              note.replyCount(),
-              note.createdAt().toEpochMilli()));
+          HomeCandidate.remote(
+              new ForYouCandidate(
+                  read,
+                  note.uri(),
+                  remoteId == null ? read.actorUri() : "r" + remoteId,
+                  read.domain(),
+                  note.language(),
+                  new HashSet<>(Hashtags.of(note.body())),
+                  note.createdAt(),
+                  note.likeCount(),
+                  note.repostCount(),
+                  note.replyCount(),
+                  note.createdAt().toEpochMilli()),
+              null,
+              null));
     }
     return pool;
   }

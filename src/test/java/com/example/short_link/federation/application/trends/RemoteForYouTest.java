@@ -82,7 +82,8 @@ class RemoteForYouTest {
         language,
         NOW.minus(Duration.ofHours(1)),
         uri(id),
-        List.of(tags));
+        List.of(tags),
+        NOW.minus(Duration.ofMinutes(30)));
   }
 
   private void hydrates() {
@@ -109,7 +110,7 @@ class RemoteForYouTest {
                 new ForYouSignalReader.Signal(Kind.LIKED, "r201", "ko", List.of("java")),
                 new ForYouSignalReader.Signal(Kind.DWELT, "r999", "ko", List.of())));
     when(signals.locale(7L)).thenReturn(Optional.of("ja"));
-    when(notes.remotePool(7L, AS_OF.minus(Duration.ofHours(72)), AS_OF, 1_000))
+    when(notes.remotePool(7L, AS_OF.minus(Duration.ofHours(72)), AS_OF, 1_000, false))
         .thenReturn(
             List.of(
                 pooled(1, "ja"),
@@ -139,7 +140,7 @@ class RemoteForYouTest {
     assertThat(views(second)).containsExactly("view1");
     assertThat(second.seenFrom()).isZero();
     assertThat(second.next()).isNull();
-    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt());
+    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt(), eq(false));
     verify(signals, times(1)).locale(7L);
   }
 
@@ -147,7 +148,7 @@ class RemoteForYouTest {
   void theLineBeforeWhatWasSeenFallsWhereTheFirstSeenNoteIsShown() {
     when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(signals.locale(7L)).thenReturn(Optional.empty());
-    when(notes.remotePool(eq(7L), any(), any(), anyInt()))
+    when(notes.remotePool(eq(7L), any(), any(), anyInt(), eq(false)))
         .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko"), pooled(3, "ko")));
     when(reach.of(any())).thenReturn(Map.of());
     when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of(uri(1)));
@@ -164,7 +165,7 @@ class RemoteForYouTest {
   void theHomeEndsTheSameRankingWhereTheSeenWouldStart() {
     when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(signals.locale(7L)).thenReturn(Optional.empty());
-    when(notes.remotePool(eq(7L), any(), any(), anyInt()))
+    when(notes.remotePool(eq(7L), any(), any(), anyInt(), eq(false)))
         .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko"), pooled(3, "ko")));
     when(reach.of(any())).thenReturn(Map.of());
     when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of(uri(1)));
@@ -187,14 +188,14 @@ class RemoteForYouTest {
     assertThat(past.next()).isNull();
     assertThat(views(explore)).containsExactly("view1");
     assertThat(explore.seenFrom()).isZero();
-    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt());
+    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt(), eq(false));
   }
 
   @Test
   void withNothingSeenTheHomeGetsTheWholeRanking() {
     when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(signals.locale(7L)).thenReturn(Optional.empty());
-    when(notes.remotePool(eq(7L), any(), any(), anyInt()))
+    when(notes.remotePool(eq(7L), any(), any(), anyInt(), eq(false)))
         .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko")));
     when(reach.of(any())).thenReturn(Map.of());
     when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of());
@@ -210,7 +211,8 @@ class RemoteForYouTest {
   void aCursorThatIsNotOursStartsOverAndAFarOffsetIsAnEmptyEnd() {
     when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(signals.locale(7L)).thenReturn(Optional.empty());
-    when(notes.remotePool(eq(7L), any(), any(), anyInt())).thenReturn(List.of(pooled(1, "ko")));
+    when(notes.remotePool(eq(7L), any(), any(), anyInt(), eq(false)))
+        .thenReturn(List.of(pooled(1, "ko")));
     when(reach.of(any())).thenReturn(Map.of());
     when(seen.seenBefore(any(), any(), any())).thenReturn(Set.of());
     hydrates();
@@ -223,7 +225,7 @@ class RemoteForYouTest {
         forYou.page(7L, MEMBER, null, "f" + AS_OF.toEpochMilli() + ".9", 20, false);
     assertThat(past.items()).isEmpty();
     assertThat(past.next()).isNull();
-    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt());
+    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt(), eq(false));
   }
 
   private static TrendingStatusReader.Read read(
@@ -345,7 +347,7 @@ class RemoteForYouTest {
   @Test
   void anEmptyPoolAsksNothingOfWhatWasSeenAndAnOffFeedIsEmpty() {
     when(signals.signals(eq(DEVICE), any(), anyInt(), anyInt())).thenReturn(List.of());
-    when(notes.remotePool(eq(null), any(), any(), anyInt())).thenReturn(List.of());
+    when(notes.remotePool(eq(null), any(), any(), anyInt(), eq(false))).thenReturn(List.of());
     when(reach.of(List.of())).thenReturn(Map.of());
 
     RemoteTrendingFeed.Page page = forYou(true, true).page(null, DEVICE, null, null, 20, false);
@@ -362,7 +364,7 @@ class RemoteForYouTest {
     Map<Long, Integer> asked = new HashMap<>();
     when(signals.signals(any(), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(signals.locale(any(Long.class))).thenReturn(Optional.empty());
-    when(notes.remotePool(any(), any(), any(), anyInt()))
+    when(notes.remotePool(any(), any(), any(), anyInt(), eq(false)))
         .thenAnswer(
             call -> {
               Long viewer = call.getArgument(0);

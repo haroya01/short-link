@@ -58,24 +58,11 @@ public final class ForYouRanking {
       Set<String> seen,
       Instant now,
       Weights weights) {
-    Map<String, Double> idf = inverseDocumentFrequency(pool);
-    Map<String, Double> interest = new HashMap<>();
-    reader
-        .tags()
-        .forEach(
-            (tag, weight) -> {
-              Double tagIdf = idf.get(tag);
-              if (tagIdf != null) {
-                interest.put(tag, weight * tagIdf);
-              }
-            });
-    double interestNorm = norm(interest.values());
+    Taste taste = Taste.of(pool, reader);
     List<Scored> unseen = new ArrayList<>();
     List<Scored> already = new ArrayList<>();
     for (ForYouCandidate candidate : pool) {
-      Scored scored =
-          new Scored(
-              candidate, score(candidate, reader, interest, interestNorm, idf, now, weights));
+      Scored scored = new Scored(candidate, score(candidate, reader, taste, now, weights));
       (seen.contains(candidate.uri()) ? already : unseen).add(scored);
     }
     unseen.sort(BEST_FIRST);
@@ -89,20 +76,35 @@ public final class ForYouRanking {
     return new Ranked(items.size() > MAX_RANKED ? items.subList(0, MAX_RANKED) : items, seenFrom);
   }
 
+  record Taste(Map<String, Double> idf, Map<String, Double> interest, double interestNorm) {
+
+    static Taste of(Collection<ForYouCandidate> pool, ForYouReader reader) {
+      Map<String, Double> idf = inverseDocumentFrequency(pool);
+      Map<String, Double> interest = new HashMap<>();
+      reader
+          .tags()
+          .forEach(
+              (tag, weight) -> {
+                Double tagIdf = idf.get(tag);
+                if (tagIdf != null) {
+                  interest.put(tag, weight * tagIdf);
+                }
+              });
+      return new Taste(idf, interest, norm(interest.values()));
+    }
+
+    double liking(ForYouCandidate candidate, ForYouReader reader) {
+      double topic = cosine(candidate, interest, interestNorm, idf);
+      double author = Math.min(1.0, reader.authors().getOrDefault(candidate.author(), 0.0) / 3.0);
+      return 1 - (1 - topic) * (1 - author);
+    }
+  }
+
   private static double score(
-      ForYouCandidate candidate,
-      ForYouReader reader,
-      Map<String, Double> interest,
-      double interestNorm,
-      Map<String, Double> idf,
-      Instant now,
-      Weights weights) {
-    double topic = cosine(candidate, interest, interestNorm, idf);
-    double author = Math.min(1.0, reader.authors().getOrDefault(candidate.author(), 0.0) / 3.0);
-    double liking = 1 - (1 - topic) * (1 - author);
+      ForYouCandidate candidate, ForYouReader reader, Taste taste, Instant now, Weights weights) {
     return weights.reaction() * StrictMath.log1p(candidate.engagement())
         + weights.language() * language(candidate, reader)
-        + weights.interest() * liking
+        + weights.interest() * taste.liking(candidate, reader)
         - age(candidate, now, weights.freshness());
   }
 
@@ -117,17 +119,26 @@ public final class ForYouRanking {
   }
 
   private static List<ForYouCandidate> mix(List<Scored> ranked, Weights weights) {
-    LinkedList<ForYouCandidate> remaining = new LinkedList<>();
-    ranked.forEach(scored -> remaining.add(scored.candidate()));
+    return mix(
+        ranked.stream().map(Scored::candidate).toList(),
+        weights.block(),
+        weights.authorSlots(),
+        weights.hostSlots(),
+        MAX_RANKED);
+  }
+
+  static List<ForYouCandidate> mix(
+      List<ForYouCandidate> ranked, int block, int authorSlots, int hostSlots, int max) {
+    LinkedList<ForYouCandidate> remaining = new LinkedList<>(ranked);
     List<ForYouCandidate> mixed = new ArrayList<>(ranked.size());
-    while (!remaining.isEmpty() && mixed.size() < MAX_RANKED) {
+    while (!remaining.isEmpty() && mixed.size() < max) {
       Map<String, Integer> authors = new HashMap<>();
       Map<String, Integer> hosts = new HashMap<>();
-      int blockEnd = Math.min(mixed.size() + weights.block(), mixed.size() + remaining.size());
+      int blockEnd = Math.min(mixed.size() + block, mixed.size() + remaining.size());
       while (mixed.size() < blockEnd) {
-        ForYouCandidate pick = take(remaining, authors, hosts, weights, true);
+        ForYouCandidate pick = take(remaining, authors, hosts, authorSlots, hostSlots, true);
         if (pick == null) {
-          pick = take(remaining, authors, hosts, weights, false);
+          pick = take(remaining, authors, hosts, authorSlots, hostSlots, false);
         }
         if (pick == null) {
           pick = remaining.removeFirst();
@@ -144,12 +155,13 @@ public final class ForYouRanking {
       LinkedList<ForYouCandidate> remaining,
       Map<String, Integer> authors,
       Map<String, Integer> hosts,
-      Weights weights,
+      int authorSlots,
+      int hostSlots,
       boolean withHosts) {
     for (Iterator<ForYouCandidate> it = remaining.iterator(); it.hasNext(); ) {
       ForYouCandidate candidate = it.next();
-      if (authors.getOrDefault(candidate.author(), 0) < weights.authorSlots()
-          && (!withHosts || hosts.getOrDefault(candidate.host(), 0) < weights.hostSlots())) {
+      if (authors.getOrDefault(candidate.author(), 0) < authorSlots
+          && (!withHosts || hosts.getOrDefault(candidate.host(), 0) < hostSlots)) {
         it.remove();
         return candidate;
       }

@@ -24,7 +24,8 @@ import org.springframework.stereotype.Service;
 // writing time and a post's publishing time (a repost stands at its note's time); trending takes
 // the two trending orders in turn. The cursor is the next position in each source,
 // "<notes>.<posts>". Latest can leave out what the reader already had on screen: its cursor is then
-// "h<asOf>.<notes>.<posts>", positions in the list without what was seen before asOf.
+// "h<asOf>.<notes>.<posts>", positions in the list without what was seen before asOf. For you is
+// one ranked list of notes, posts and posts from elsewhere, which HomeForYou makes.
 @Service
 @RequiredArgsConstructor
 public class HomeFeedQueryService {
@@ -35,16 +36,18 @@ public class HomeFeedQueryService {
   private final NoteQueryService notes;
   private final PublicFeedQueryService posts;
   private final LocalSeen seen;
+  private final HomeForYou forYou;
   private final Clock clock;
 
   public enum Tab {
     FOLLOWING,
     LATEST,
-    TRENDING
+    TRENDING,
+    FOR_YOU
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record Item(String kind, Object note, Object post) {}
+  public record Item(String kind, Object note, Object post, Object remote) {}
 
   public record Page(
       List<Item> items,
@@ -61,9 +64,21 @@ public class HomeFeedQueryService {
 
   record At(Instant asOf, int notes, int posts) {}
 
+  Page page(
+      Long viewerId,
+      SeenViewer viewer,
+      String tab,
+      String cursor,
+      String since,
+      int limit,
+      boolean hideSeen) {
+    return page(viewerId, viewer, null, tab, cursor, since, limit, hideSeen);
+  }
+
   public Page page(
       Long viewerId,
       SeenViewer viewer,
+      String languages,
       String tab,
       String cursor,
       String since,
@@ -74,6 +89,9 @@ public class HomeFeedQueryService {
       return new Page(List.of(), null);
     }
     int size = Math.clamp(limit, 1, MAX_LIMIT);
+    if (chosen == Tab.FOR_YOU) {
+      return forYou.page(viewerId, viewer, languages, cursor, size, hideSeen);
+    }
     boolean hiding = chosen == Tab.LATEST && viewer != null;
     if (since != null && cursor == null) {
       return newer(viewerId, hiding && hideSeen ? viewer : null, chosen, since, size);
@@ -204,7 +222,7 @@ public class HomeFeedQueryService {
   private NoteSlice notes(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> notes.followingAt(viewerId, offset, limit);
-      case LATEST -> notes.everyoneAt(viewerId, offset, limit, unseen);
+      case LATEST, FOR_YOU -> notes.everyoneAt(viewerId, offset, limit, unseen);
       case TRENDING -> notes.trendingAt(viewerId, offset, limit);
     };
   }
@@ -212,7 +230,7 @@ public class HomeFeedQueryService {
   private PostSlice posts(Tab chosen, Long viewerId, int offset, int limit, Unseen unseen) {
     return switch (chosen) {
       case FOLLOWING -> posts.followingAt(viewerId, offset, limit);
-      case LATEST -> posts.recentAt(viewerId, offset, limit, unseen);
+      case LATEST, FOR_YOU -> posts.recentAt(viewerId, offset, limit, unseen);
       case TRENDING -> posts.trendingAt(viewerId, offset, limit);
     };
   }
@@ -240,9 +258,9 @@ public class HomeFeedQueryService {
                 .isBefore(postQueue.get(p).post().item().publishedAt());
       }
       if (takeNote) {
-        items.add(new Item("note", noteQueue.get(n++).note(), null));
+        items.add(new Item("note", noteQueue.get(n++).note(), null, null));
       } else {
-        items.add(new Item("post", null, postQueue.get(p++).post()));
+        items.add(new Item("post", null, postQueue.get(p++).post(), null));
       }
       noteTurn = !takeNote;
     }
@@ -261,7 +279,7 @@ public class HomeFeedQueryService {
       return Tab.LATEST;
     }
     try {
-      return Tab.valueOf(raw.strip().toUpperCase(Locale.ROOT));
+      return Tab.valueOf(raw.strip().replace('-', '_').toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException unknown) {
       return Tab.LATEST;
     }

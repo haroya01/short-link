@@ -89,4 +89,16 @@ class ForYouSignalReaderAdapter implements ForYouSignalReader {
             Long.class,
             userId));
   }
+
+  @Override
+  public Set<String> follows(long userId) {
+    return new HashSet<>(
+        jdbcTemplate.queryForList(
+            "SELECT CONCAT('u', following_id) FROM user_follow WHERE follower_id = ?"
+                + " UNION ALL SELECT CONCAT('r', remote_actor_id) FROM federation_following"
+                + " WHERE user_id = ? AND accepted_at IS NOT NULL",
+            String.class,
+            userId,
+            userId));
+  }
 }
