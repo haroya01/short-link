@@ -21,7 +21,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -278,9 +277,6 @@ class HomeHideSeenIntegrationTest {
   }
 
   @Test
-  @Disabled(
-      "버그: findHomeRecentAt 이 published_at 만으로 정렬해, 같은 시각 글이 오프셋 페이지 사이에서"
-          + " 겹치거나 빠진다(숨김 여부와 무관). 형제 쿼리처럼 p.id DESC 동점 규칙이 필요하다")
   void postsPublishedAtTheSameInstantComeOnceEachAcrossPages() {
     List<String> posts = new ArrayList<>();
     for (int minute = 0; minute < 3; minute++) {
@@ -303,6 +299,35 @@ class HomeHideSeenIntegrationTest {
             .as("hide %s, pages of %d", hide, size)
             .isEqualTo(posts.stream().sorted().toList());
       }
+    }
+  }
+
+  @Test
+  void followedPostsPublishedAtTheSameInstantComeOnceEachAcrossPages() {
+    List<String> posts = new ArrayList<>();
+    for (int minute = 0; minute < 3; minute++) {
+      for (int i = 0; i < 25; i++) {
+        long author = member("fw");
+        jdbc.update(
+            "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+            reader,
+            author);
+        posts.add("post:" + post(author, 10 + minute));
+      }
+    }
+
+    for (int size = 1; size <= 7; size++) {
+      List<String> shown = new ArrayList<>();
+      HomeFeedQueryService.Page at =
+          home.page(reader, viewer, "following", null, null, size, false);
+      shown.addAll(keys(at));
+      for (int turn = 0; turn < 500 && at.next() != null; turn++) {
+        at = home.page(reader, viewer, "following", at.next(), null, size, false);
+        shown.addAll(keys(at));
+      }
+      assertThat(shown.stream().filter(posts::contains).sorted().toList())
+          .as("pages of %d", size)
+          .isEqualTo(posts.stream().sorted().toList());
     }
   }
 
