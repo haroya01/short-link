@@ -16,7 +16,9 @@ import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouReader;
+import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.PooledNote;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
@@ -24,6 +26,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +85,40 @@ class HomeForYouTest {
     assertThat(shown(page)).containsExactly("note 2", "note 1");
     verify(notes).pool(7L, NOW.minus(Duration.ofDays(7)), NOW, HomeForYou.LOCAL_POOL);
     verify(posts).pool(7L, NOW.minus(Duration.ofDays(7)), NOW, HomeForYou.LOCAL_POOL);
+  }
+
+  @Test
+  void kurlIsOneServerForTheTenPerBlockCap() {
+    List<PooledNote> kurl = new ArrayList<>();
+    for (long id = 1; id <= 12; id++) {
+      kurl.add(new PooledNote(id, 100 + id, "ko", NOW.minusSeconds(id), List.of(), 50, 0, 0));
+    }
+    List<HomeCandidate> elsewhere = new ArrayList<>();
+    for (long id = 1; id <= 10; id++) {
+      elsewhere.add(
+          HomeCandidate.remote(
+              new ForYouCandidate(
+                  500 + id,
+                  "https://h" + id + ".example/s/" + id,
+                  "r" + id,
+                  "h" + id + ".example",
+                  "ko",
+                  Set.of(),
+                  NOW.minus(Duration.ofHours(1)),
+                  0,
+                  0,
+                  0,
+                  500 + id),
+              500 + id,
+              NOW.minus(Duration.ofHours(1))));
+    }
+    when(notes.pool(any(), any(), any(), anyInt())).thenReturn(kurl);
+    when(remote.homePool(any(), any())).thenReturn(elsewhere);
+
+    HomeFeedQueryService.Page page = forYou.page(7L, READER, null, null, 20, true);
+
+    assertThat(page.items()).hasSize(20);
+    assertThat(page.items().stream().filter(item -> item.kind().equals("note"))).hasSize(10);
   }
 
   @Test
