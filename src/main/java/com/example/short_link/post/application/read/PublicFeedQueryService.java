@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
@@ -159,8 +160,8 @@ public class PublicFeedQueryService {
         seriesNotes(refs.stream().filter(r -> r.type() == SeriesItemType.NOTE).toList()));
   }
 
-  public PostSlice recentAt(Long viewerId, int offset, int limit) {
-    List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit);
+  public PostSlice recentAt(Long viewerId, int offset, int limit, Unseen unseen) {
+    List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit, unseen);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
   }
 

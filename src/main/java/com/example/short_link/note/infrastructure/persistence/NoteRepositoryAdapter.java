@@ -6,6 +6,7 @@ import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.reply.ReplyPreview;
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
@@ -23,6 +24,7 @@ import com.example.short_link.note.domain.TrendingTag;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -138,8 +140,10 @@ class NoteRepositoryAdapter implements NoteRepository {
   // the whole table. A branch can hold no more than offset + limit of the page.
   @Override
   @SuppressWarnings("unchecked")
-  public List<NoteEntity> topLevel(Long viewerId, int offset, int limit) {
-    return em.createNativeQuery(
+  public List<NoteEntity> topLevel(Long viewerId, int offset, int limit, Unseen unseen) {
+    String hidden = unseen == null ? "" : Unseen.sql("n", Unseen.NOTE);
+    Query query =
+        em.createNativeQuery(
             "SELECT u.* FROM ((SELECT n.* FROM note n FORCE INDEX (idx_note_local_top_level) WHERE "
                 + notReply("n")
                 + " AND "
@@ -147,6 +151,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " AND n.remote_actor_id IS NULL"
                 + heard("n")
                 + inLanguages("n")
+                + hidden
                 + " ORDER BY n.id DESC LIMIT :reach) UNION ALL (SELECT n.* FROM note n"
                 + " FORCE INDEX (idx_note_room) WHERE "
                 + NoteAccessSql.inFeedRooms("n")
@@ -154,8 +159,13 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + notReply("n")
                 + heard("n")
                 + inLanguages("n")
+                + hidden
                 + " ORDER BY n.id DESC LIMIT :reach)) u ORDER BY u.id DESC",
-            NoteEntity.class)
+            NoteEntity.class);
+    if (unseen != null) {
+      unseen.bind(query, Unseen.NOTE);
+    }
+    return query
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setParameter("reach", (int) Math.min((long) offset + limit, Integer.MAX_VALUE))

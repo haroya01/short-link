@@ -77,7 +77,7 @@ class NoteQueryServiceTest {
   @Test
   void pagesFetchOneExtraRowToKnowIfMoreFollow() {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
-    when(notes.topLevel(7L, 2, 3)).thenReturn(three);
+    when(notes.topLevel(7L, 2, 3, null)).thenReturn(three);
     when(views.ofFeed(three.subList(0, 2), 7L))
         .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
@@ -160,7 +160,7 @@ class NoteQueryServiceTest {
 
   @Test
   void pageAndSizeAreClamped() {
-    when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
+    when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1, null)).thenReturn(List.of());
     when(views.ofFeed(List.of(), null)).thenReturn(List.of());
 
     NoteFeedView feed = service.everyone(-3, 10_000, null);

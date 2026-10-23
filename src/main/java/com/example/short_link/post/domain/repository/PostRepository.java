@@ -1,5 +1,6 @@
 package com.example.short_link.post.domain.repository;
 
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostPerformanceSort;
@@ -74,7 +75,7 @@ public interface PostRepository {
 
   // The home's latest: what discovery lists, and the room posts of the viewer's rooms they keep in
   // their feed.
-  List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit);
+  List<PostEntity> findHomeRecentAt(Long viewerId, int offset, int limit, Unseen unseen);
 
   List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit);
 

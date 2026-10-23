@@ -1,5 +1,6 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
@@ -26,10 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class RemoteTrendsController {
 
   public static final String DEVICE_HEADER = "X-Kurl-Device";
+  public static final String HIDE_SEEN = "hide";
 
   private final RemoteTrendingFeed trending;
   private final RemoteSeen seen;
   private final RemoteForYou forYou;
+  private final LocalSeen local;
 
   @GetMapping("/trending")
   public RemoteTrendingFeed.Page trending(
@@ -55,8 +58,15 @@ public class RemoteTrendsController {
       @RequestHeader(name = DEVICE_HEADER, required = false) String device,
       @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false) String languages,
       @RequestParam(defaultValue = "20") int limit,
-      @RequestParam(required = false) String cursor) {
-    return forYou.page(viewerId, SeenViewer.of(viewerId, device), languages, cursor, limit);
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) String seen) {
+    return forYou.page(
+        viewerId,
+        SeenViewer.of(viewerId, device),
+        languages,
+        cursor,
+        limit,
+        HIDE_SEEN.equals(seen));
   }
 
   @PostMapping("/seen")
@@ -70,6 +80,7 @@ public class RemoteTrendsController {
       throw new FederationException(FederationErrorCode.SEEN_WITHOUT_VIEWER);
     }
     if (request != null) {
+      local.record(viewer, request.uris());
       seen.record(
           viewer,
           request.uris(),

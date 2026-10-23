@@ -1,5 +1,6 @@
 package com.example.short_link.federation.scheduler;
 
+import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,19 +13,23 @@ import org.springframework.stereotype.Component;
 public class RemoteSeenJob {
 
   private final RemoteSeen seen;
+  private final LocalSeen local;
 
   @Scheduled(fixedDelayString = "${short-link.federation.seen.flush-every:PT5S}")
   public void flush() {
     seen.flush();
+    local.flush();
   }
 
   @Scheduled(cron = "${short-link.federation.seen.cleanup-cron:0 35 4 * * *}", zone = "Asia/Seoul")
   public void sweep() {
     long started = System.nanoTime();
     int deleted = seen.sweep();
+    int localDeleted = local.sweep();
     log.info(
-        "federation seen cleanup deleted={} tookMs={}",
+        "federation seen cleanup deleted={} local={} tookMs={}",
         deleted,
+        localDeleted,
         (System.nanoTime() - started) / 1_000_000);
   }
 }

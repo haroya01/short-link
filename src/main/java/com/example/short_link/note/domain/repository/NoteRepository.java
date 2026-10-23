@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain.repository;
 
 import com.example.short_link.common.reply.ReplyPreview;
+import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteReplyPolicy;
@@ -33,7 +34,7 @@ public interface NoteRepository {
 
   void delete(NoteEntity note);
 
-  List<NoteEntity> topLevel(Long viewerId, int offset, int limit);
+  List<NoteEntity> topLevel(Long viewerId, int offset, int limit, Unseen unseen);
 
   List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit);
 

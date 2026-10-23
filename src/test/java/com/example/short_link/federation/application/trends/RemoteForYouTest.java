@@ -127,14 +127,14 @@ class RemoteForYouTest {
     hydrates();
     RemoteForYou forYou = forYou(true, true);
 
-    RemoteTrendingFeed.Page first = forYou.page(7L, MEMBER, "en", null, 2);
+    RemoteTrendingFeed.Page first = forYou.page(7L, MEMBER, "en", null, 2, false);
 
     assertThat(views(first)).containsExactly("view3", "view2");
     assertThat(first.next()).isEqualTo("f" + AS_OF.toEpochMilli() + ".2");
     assertThat(first.seenFrom()).isNull();
     assertThat(first.gap()).isNull();
 
-    RemoteTrendingFeed.Page second = forYou.page(7L, MEMBER, "en", first.next(), 2);
+    RemoteTrendingFeed.Page second = forYou.page(7L, MEMBER, "en", first.next(), 2, false);
 
     assertThat(views(second)).containsExactly("view1");
     assertThat(second.seenFrom()).isZero();
@@ -153,10 +153,56 @@ class RemoteForYouTest {
     when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of(uri(1)));
     hydrates();
 
-    RemoteTrendingFeed.Page page = forYou(true, true).page(7L, MEMBER, null, "nonsense", 20);
+    RemoteTrendingFeed.Page page = forYou(true, true).page(7L, MEMBER, null, "nonsense", 20, false);
 
     assertThat(views(page)).containsExactly("view3", "view2", "view1");
     assertThat(page.seenFrom()).isEqualTo(2);
+    assertThat(page.next()).isNull();
+  }
+
+  @Test
+  void theHomeEndsTheSameRankingWhereTheSeenWouldStart() {
+    when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
+    when(signals.locale(7L)).thenReturn(Optional.empty());
+    when(notes.remotePool(eq(7L), any(), any(), anyInt()))
+        .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko"), pooled(3, "ko")));
+    when(reach.of(any())).thenReturn(Map.of());
+    when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of(uri(1)));
+    hydrates();
+    RemoteForYou forYou = forYou(true, true);
+
+    RemoteTrendingFeed.Page first = forYou.page(7L, MEMBER, null, null, 1, true);
+    RemoteTrendingFeed.Page last = forYou.page(7L, MEMBER, null, first.next(), 1, true);
+    RemoteTrendingFeed.Page past =
+        forYou.page(7L, MEMBER, null, "f" + AS_OF.toEpochMilli() + ".2", 1, true);
+    RemoteTrendingFeed.Page explore =
+        forYou.page(7L, MEMBER, null, "f" + AS_OF.toEpochMilli() + ".2", 1, false);
+
+    assertThat(views(first)).containsExactly("view3");
+    assertThat(first.next()).isEqualTo("f" + AS_OF.toEpochMilli() + ".1");
+    assertThat(views(last)).containsExactly("view2");
+    assertThat(last.next()).isNull();
+    assertThat(last.seenFrom()).isNull();
+    assertThat(past.items()).isEmpty();
+    assertThat(past.next()).isNull();
+    assertThat(views(explore)).containsExactly("view1");
+    assertThat(explore.seenFrom()).isZero();
+    verify(notes, times(1)).remotePool(any(), any(), any(), anyInt());
+  }
+
+  @Test
+  void withNothingSeenTheHomeGetsTheWholeRanking() {
+    when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(List.of());
+    when(signals.locale(7L)).thenReturn(Optional.empty());
+    when(notes.remotePool(eq(7L), any(), any(), anyInt()))
+        .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko")));
+    when(reach.of(any())).thenReturn(Map.of());
+    when(seen.seenBefore(eq(MEMBER), any(), eq(AS_OF))).thenReturn(Set.of());
+    hydrates();
+
+    RemoteTrendingFeed.Page page = forYou(true, true).page(7L, MEMBER, null, null, 20, true);
+
+    assertThat(views(page)).containsExactly("view2", "view1");
     assertThat(page.next()).isNull();
   }
 
@@ -171,10 +217,10 @@ class RemoteForYouTest {
     RemoteForYou forYou = forYou(true, true);
 
     for (String cursor : List.of("f", "fx.1", "f1.x", "f-1.0", "f1.-2", "r12", "u1.t2")) {
-      assertThat(views(forYou.page(7L, MEMBER, null, cursor, 20))).containsExactly("view1");
+      assertThat(views(forYou.page(7L, MEMBER, null, cursor, 20, false))).containsExactly("view1");
     }
     RemoteTrendingFeed.Page past =
-        forYou.page(7L, MEMBER, null, "f" + AS_OF.toEpochMilli() + ".9", 20);
+        forYou.page(7L, MEMBER, null, "f" + AS_OF.toEpochMilli() + ".9", 20, false);
     assertThat(past.items()).isEmpty();
     assertThat(past.next()).isNull();
     verify(notes, times(1)).remotePool(any(), any(), any(), anyInt());
@@ -238,7 +284,8 @@ class RemoteForYouTest {
                 latestJa,
                 latestKo));
 
-    RemoteTrendingFeed.Page page = forYou(true, false).page(null, null, "ko-KR,ko;q=0.9", null, 20);
+    RemoteTrendingFeed.Page page =
+        forYou(true, false).page(null, null, "ko-KR,ko;q=0.9", null, 20, false);
 
     assertThat(uris(page))
         .containsExactly(
@@ -265,7 +312,7 @@ class RemoteForYouTest {
     when(signals.locale(7L)).thenReturn(Optional.of("ko"));
     when(seen.seenBefore(eq(MEMBER), any(), any())).thenReturn(Set.of());
 
-    RemoteTrendingFeed.Page page = forYou(true, false).page(7L, MEMBER, null, null, 20);
+    RemoteTrendingFeed.Page page = forYou(true, false).page(7L, MEMBER, null, null, 20, false);
 
     assertThat(uris(page))
         .containsExactly(
@@ -286,7 +333,7 @@ class RemoteForYouTest {
         .thenReturn(List.of(new ForYouSignalReader.Signal(Kind.DWELT, "r1", "ja", List.of("自転車"))));
     when(seen.seenBefore(eq(DEVICE), any(), any())).thenReturn(Set.of());
 
-    RemoteTrendingFeed.Page page = forYou(true, false).page(null, DEVICE, "ja", null, 20);
+    RemoteTrendingFeed.Page page = forYou(true, false).page(null, DEVICE, "ja", null, 20, false);
 
     assertThat(uris(page))
         .containsExactly(
@@ -301,11 +348,11 @@ class RemoteForYouTest {
     when(notes.remotePool(eq(null), any(), any(), anyInt())).thenReturn(List.of());
     when(reach.of(List.of())).thenReturn(Map.of());
 
-    RemoteTrendingFeed.Page page = forYou(true, true).page(null, DEVICE, null, null, 20);
+    RemoteTrendingFeed.Page page = forYou(true, true).page(null, DEVICE, null, null, 20, false);
 
     assertThat(page.items()).isEmpty();
     assertThat(page.next()).isNull();
-    assertThat(forYou(false, true).page(7L, MEMBER, null, null, 20).items()).isEmpty();
+    assertThat(forYou(false, true).page(7L, MEMBER, null, null, 20, false).items()).isEmpty();
     verifyNoInteractions(seen);
     verify(notes, never()).listed(any(), any());
   }
@@ -325,12 +372,12 @@ class RemoteForYouTest {
     when(reach.of(any())).thenReturn(Map.of());
     RemoteForYou forYou = forYou(true, true);
 
-    forYou.page(7L, MEMBER, null, null, 20);
-    forYou.page(8L, SeenViewer.member(8L), null, null, 20);
-    forYou.page(null, null, "ko", null, 20);
-    forYou.page(null, null, "ko", null, 20);
-    forYou.page(null, null, "ja", null, 20);
-    forYou.page(7L, MEMBER, null, "f1.0", 20);
+    forYou.page(7L, MEMBER, null, null, 20, false);
+    forYou.page(8L, SeenViewer.member(8L), null, null, 20, false);
+    forYou.page(null, null, "ko", null, 20, false);
+    forYou.page(null, null, "ko", null, 20, false);
+    forYou.page(null, null, "ja", null, 20, false);
+    forYou.page(7L, MEMBER, null, "f1.0", 20, false);
 
     assertThat(asked).containsEntry(7L, 2).containsEntry(8L, 1).containsEntry(0L, 2);
   }

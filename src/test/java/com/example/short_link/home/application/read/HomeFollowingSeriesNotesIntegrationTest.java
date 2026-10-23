@@ -58,7 +58,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, episode, 0);
     long outside = note(serial, "PUBLIC", 30);
 
-    List<Long> shown = noteIds(home.page(reader, "following", null, null, 20));
+    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
 
     assertThat(shown).contains(episode).doesNotContain(outside);
   }
@@ -68,7 +68,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     long both = note(followed, "PUBLIC", 60);
     inSeries(followedSeries, both, 0);
 
-    List<Long> shown = noteIds(home.page(reader, "following", null, null, 20));
+    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
 
     assertThat(shown).containsOnlyOnce(both);
   }
@@ -81,7 +81,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, restricted, 1);
     jdbc.update("INSERT INTO note_recipient (note_id, user_id) VALUES (?, ?)", restricted, reader);
 
-    List<Long> shown = noteIds(home.page(reader, "following", null, null, 20));
+    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
 
     assertThat(shown).contains(unlisted).doesNotContain(restricted);
   }
@@ -96,7 +96,8 @@ class HomeFollowingSeriesNotesIntegrationTest {
         reader,
         serial);
 
-    assertThat(noteIds(home.page(reader, "following", null, null, 20))).doesNotContain(episode);
+    assertThat(noteIds(home.page(reader, null, "following", null, null, 20, false)))
+        .doesNotContain(episode);
 
     jdbc.update("DELETE FROM user_mute WHERE user_id = ?", reader);
     jdbc.update(
@@ -104,7 +105,8 @@ class HomeFollowingSeriesNotesIntegrationTest {
         serial,
         reader);
 
-    assertThat(noteIds(home.page(reader, "following", null, null, 20))).doesNotContain(episode);
+    assertThat(noteIds(home.page(reader, null, "following", null, null, 20, false)))
+        .doesNotContain(episode);
   }
 
   @Test
@@ -114,14 +116,16 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, episode, 0);
     long newest = note(followed, "PUBLIC", 60);
 
-    HomeFeedQueryService.Page first = home.page(reader, "following", null, null, 2);
+    HomeFeedQueryService.Page first = home.page(reader, null, "following", null, null, 2, false);
     assertThat(noteIds(first)).containsExactly(newest, episode);
-    HomeFeedQueryService.Page second = home.page(reader, "following", first.next(), null, 2);
+    HomeFeedQueryService.Page second =
+        home.page(reader, null, "following", first.next(), null, 2, false);
     assertThat(noteIds(second)).containsExactly(older);
 
     long arrived = note(serial, "PUBLIC", 0);
     inSeries(series, arrived, 1);
-    HomeFeedQueryService.Page refreshed = home.page(reader, "following", null, first.newest(), 20);
+    HomeFeedQueryService.Page refreshed =
+        home.page(reader, null, "following", null, first.newest(), 20, false);
     assertThat(refreshed.gap()).isFalse();
     assertThat(noteIds(refreshed)).containsExactly(arrived);
   }

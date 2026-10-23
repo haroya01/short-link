@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
@@ -34,6 +35,7 @@ class RemoteTrendsControllerTest {
   @MockitoBean private RemoteTrendingFeed feed;
   @MockitoBean private RemoteSeen seen;
   @MockitoBean private RemoteForYou forYou;
+  @MockitoBean private LocalSeen local;
 
   @Test
   void aSignedOutDeviceAndAMemberBothHandOverWhatTheySaw() throws Exception {
@@ -91,9 +93,9 @@ class RemoteTrendsControllerTest {
   void forYouTellsTheRankingWhoIsReadingInWhichLanguagesFromWhere() throws Exception {
     when(feed.latest(null, null, null, null, 20))
         .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
-    when(forYou.page(7L, SeenViewer.member(7L), "ko-KR,ko;q=0.9", "f1.20", 10))
+    when(forYou.page(7L, SeenViewer.member(7L), "ko-KR,ko;q=0.9", "f1.20", 10, false))
         .thenReturn(new RemoteTrendingFeed.Page(List.of(Map.of("uri", "b")), "f1.30", null, 3));
-    when(forYou.page(null, SeenViewer.of(null, DEVICE), null, null, 20))
+    when(forYou.page(null, SeenViewer.of(null, DEVICE), null, null, 20, false))
         .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
 
     mvc.perform(
@@ -116,6 +118,31 @@ class RemoteTrendsControllerTest {
   }
 
   @Test
+  void theHomeAsksForYouToLeaveOutWhatWasSeenAndHandsOverKurlRowsToo() throws Exception {
+    when(forYou.page(7L, SeenViewer.member(7L), null, null, 20, true))
+        .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
+    List<String> sent =
+        List.of("kurl:note:12", "kurl:post:3", "https://a.example/users/a/statuses/1");
+
+    mvc.perform(
+            get("/api/v1/federation/for-you?seen=hide")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
+        .andExpect(status().isOk());
+    mvc.perform(
+            post("/api/v1/federation/seen")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"uris\":[\"kurl:note:12\",\"kurl:post:3\","
+                        + "\"https://a.example/users/a/statuses/1\"]}"))
+        .andExpect(status().isAccepted());
+
+    verify(forYou).page(7L, SeenViewer.member(7L), null, null, 20, true);
+    verify(local).record(SeenViewer.member(7L), sent);
+    verify(seen).record(SeenViewer.member(7L), sent, null, null);
+  }
+
+  @Test
   void withoutASignInOrARandomDeviceIdNothingIsTaken() throws Exception {
     mvc.perform(
             post("/api/v1/federation/seen").contentType(MediaType.APPLICATION_JSON).content(BODY))
@@ -128,7 +155,7 @@ class RemoteTrendsControllerTest {
                 .content(BODY))
         .andExpect(status().isUnauthorized());
 
-    verifyNoInteractions(seen);
+    verifyNoInteractions(seen, local);
   }
 
   @Test
