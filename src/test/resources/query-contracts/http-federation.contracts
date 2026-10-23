@@ -514,8 +514,11 @@
 @junit | federation-for-you-device-hide | 10 | 0 | 0 | 0 | 10
 @junit | federation-for-you-wide | 12 | 0 | 0 | 0 | 12
 @junit | federation-reach-round | 3 | 1 | 0 | 0 | 4
-# A quote kept from elsewhere carries its quoted post as a member's quote does.
-@junit | remote-quote-member-note | 0 | 0 | 0 | 0 | 0
-@junit | remote-quote-note | 0 | 0 | 0 | 0 | 0
-@junit | remote-quote-federation-for-you | 0 | 0 | 0 | 0 | 0
-@junit | remote-quote-home-for-you | 0 | 0 | 0 | 0 | 0
+# A quote kept from elsewhere carries its quoted post as a member's quote does, measured
+# 2026-10-24: the quoted note comes in the note views' own fetch of quoted notes, so a page or a
+# thread with one costs what any does. A member's note also asks for its series; a note from
+# elsewhere has none. For you here is the member's without seen=hide and with no post on the page.
+@junit | remote-quote-member-note | 10 | 0 | 0 | 0 | 10
+@junit | remote-quote-note | 9 | 0 | 0 | 0 | 9
+@junit | remote-quote-federation-for-you | 13 | 0 | 0 | 0 | 13
+@junit | remote-quote-home-for-you | 18 | 0 | 0 | 0 | 18
