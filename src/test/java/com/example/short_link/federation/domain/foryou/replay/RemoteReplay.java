@@ -59,11 +59,15 @@ final class RemoteReplay {
   private RemoteReplay() {}
 
   static List<Outcome> evaluate(RemoteWorld world, List<Ranker> rankers) {
+    return evaluate(world, rankers, STRIDE);
+  }
+
+  static List<Outcome> evaluate(RemoteWorld world, List<Ranker> rankers, int stride) {
     Instant warm = RemoteWorld.START.plus(Duration.ofDays(WARMUP_DAYS));
     Map<Long, List<RemoteWorld.Read>> history = new HashMap<>();
     List<Outcome> outcomes = new ArrayList<>();
     for (RemoteWorld.Read read : world.reads) {
-      if (!read.at().isBefore(warm) && read.seq() % STRIDE == 0) {
+      if (!read.at().isBefore(warm) && read.seq() % stride == 0) {
         RemoteWorld.Reader reader = world.readers.get((int) read.readerId() - 1);
         Context context =
             context(world, reader, read, history.getOrDefault(reader.id(), List.of()));

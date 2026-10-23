@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -183,6 +184,170 @@ class HomeHideSeenIntegrationTest {
         .isEqualTo(Set.of(new SeenItem(SeenItem.NOTE, 1L)));
   }
 
+  @Test
+  void aMembersSightingsLeaveTheSignedOutDeviceAlone() {
+    long note = note(writer, "PUBLIC", null);
+    SeenViewer device = SeenViewer.of(null, DEVICE);
+    stored(viewer, SeenItem.NOTE, note, Instant.now().minusSeconds(60));
+
+    assertThat(keys(latest(viewer, null, true))).doesNotContain("note:" + note);
+    assertThat(keys(signedOut(device))).contains("note:" + note);
+  }
+
+  @Test
+  void aCursorFromBeforeHidingGoesOnWithoutHidingEvenWhenAskedToHide() {
+    List<Long> written = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      written.add(note(writer, "PUBLIC", null));
+    }
+    stored(viewer, SeenItem.NOTE, written.get(0), Instant.now().minusSeconds(60));
+    HomeFeedQueryService.Page first = home.page(reader, viewer, "latest", null, null, 1, false);
+    assertThat(first.next()).doesNotStartWith("h");
+
+    List<String> rest = new ArrayList<>();
+    HomeFeedQueryService.Page at = first;
+    for (int turn = 0; turn < 40 && at.next() != null; turn++) {
+      at = home.page(reader, viewer, "latest", at.next(), null, 1, true);
+      assertThat(at.next() == null || !at.next().startsWith("h")).isTrue();
+      rest.addAll(keys(at));
+    }
+
+    assertThat(rest).contains("note:" + written.get(0));
+  }
+
+  @Test
+  void aHidingCursorKeepsHidingWhenTheNextRequestLeavesTheParameterOut() {
+    List<Long> written = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      written.add(note(writer, "PUBLIC", null));
+    }
+    stored(viewer, SeenItem.NOTE, written.get(0), Instant.now().minusSeconds(60));
+    HomeFeedQueryService.Page at = home.page(reader, viewer, "latest", null, null, 1, true);
+    List<String> shown = new ArrayList<>(keys(at));
+    for (int turn = 0; turn < 40 && at.next() != null; turn++) {
+      assertThat(at.next()).startsWith("h");
+      at = home.page(reader, viewer, "latest", at.next(), null, 1, false);
+      shown.addAll(keys(at));
+    }
+
+    assertThat(shown).doesNotContain("note:" + written.get(0));
+    assertThat(shown)
+        .contains("note:" + written.get(1), "note:" + written.get(2), "note:" + written.get(3));
+  }
+
+  @Test
+  void aHiddenScrollInAnyPageSizeIsTheWholeListWithoutTheSeenButNotTheReadersOwn() {
+    for (long seed = 1; seed <= 4; seed++) {
+      Random random = new Random(seed);
+      reader = member("rd");
+      writer = member("wr");
+      em.flush();
+      viewer = SeenViewer.member(reader);
+      List<String> hidden = new ArrayList<>();
+      Instant before = Instant.now().minusSeconds(60);
+      for (int i = 0; i < 14; i++) {
+        boolean mine = random.nextInt(5) == 0;
+        long note = note(mine ? reader : writer, "PUBLIC", null);
+        if (random.nextBoolean()) {
+          stored(viewer, SeenItem.NOTE, note, before);
+          if (!mine) {
+            hidden.add("note:" + note);
+          }
+        }
+      }
+      for (int i = 0; i < 6; i++) {
+        boolean mine = random.nextInt(5) == 0;
+        long post = post(mine ? reader : writer, seed * 10 + i);
+        if (random.nextBoolean()) {
+          stored(viewer, SeenItem.POST, post, before);
+          if (!mine) {
+            hidden.add("post:" + post);
+          }
+        }
+      }
+      List<String> whole = scroll(false, 40);
+      int size = 1 + random.nextInt(5);
+
+      List<String> scrolled = scroll(true, size);
+
+      assertThat(scrolled)
+          .as("seed %d, pages of %d", seed, size)
+          .isEqualTo(whole.stream().filter(key -> !hidden.contains(key)).toList());
+    }
+  }
+
+  @Test
+  void postsPublishedAtTheSameInstantComeOnceEachAcrossPages() {
+    List<String> posts = new ArrayList<>();
+    for (int minute = 0; minute < 3; minute++) {
+      for (int i = 0; i < 10; i++) {
+        long author = i == 0 ? writer : member("tw");
+        posts.add("post:" + post(author, 10 + minute));
+      }
+    }
+
+    for (boolean hide : new boolean[] {false, true}) {
+      for (int size = 1; size <= 7; size++) {
+        List<String> shown = new ArrayList<>();
+        HomeFeedQueryService.Page at = home.page(reader, viewer, "latest", null, null, size, hide);
+        shown.addAll(keys(at));
+        for (int turn = 0; turn < 500 && at.next() != null; turn++) {
+          at = home.page(reader, viewer, "latest", at.next(), null, size, hide);
+          shown.addAll(keys(at));
+        }
+        assertThat(shown.stream().filter(posts::contains).sorted().toList())
+            .as("hide %s, pages of %d", hide, size)
+            .isEqualTo(posts.stream().sorted().toList());
+      }
+    }
+  }
+
+  @Test
+  void followedPostsPublishedAtTheSameInstantComeOnceEachAcrossPages() {
+    List<String> posts = new ArrayList<>();
+    for (int minute = 0; minute < 3; minute++) {
+      for (int i = 0; i < 25; i++) {
+        long author = member("fw");
+        jdbc.update(
+            "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+            reader,
+            author);
+        posts.add("post:" + post(author, 10 + minute));
+      }
+    }
+
+    for (int size = 1; size <= 7; size++) {
+      List<String> shown = new ArrayList<>();
+      HomeFeedQueryService.Page at =
+          home.page(reader, viewer, "following", null, null, size, false);
+      shown.addAll(keys(at));
+      for (int turn = 0; turn < 500 && at.next() != null; turn++) {
+        at = home.page(reader, viewer, "following", at.next(), null, size, false);
+        shown.addAll(keys(at));
+      }
+      assertThat(shown.stream().filter(posts::contains).sorted().toList())
+          .as("pages of %d", size)
+          .isEqualTo(posts.stream().sorted().toList());
+    }
+  }
+
+  private List<String> scroll(boolean hide, int size) {
+    List<String> shown = new ArrayList<>();
+    HomeFeedQueryService.Page at = page(viewer, null, size, hide);
+    shown.addAll(keys(at));
+    for (int turn = 0; turn < 500 && at.next() != null; turn++) {
+      at = page(viewer, at.next(), size, hide);
+      shown.addAll(keys(at));
+    }
+    return shown;
+  }
+
+  private HomeFeedQueryService.Page signedOut(SeenViewer device) {
+    HomeFeedQueryService.Page page = home.page(null, device, "latest", null, null, 40, true);
+    return new HomeFeedQueryService.Page(
+        page.items().stream().filter(this::ours).toList(), page.next(), page.newest(), page.gap());
+  }
+
   private HomeFeedQueryService.Page latest(SeenViewer who, String cursor, boolean hide) {
     HomeFeedQueryService.Page page = home.page(reader, who, "latest", cursor, null, 40, hide);
     return new HomeFeedQueryService.Page(
@@ -190,7 +355,11 @@ class HomeHideSeenIntegrationTest {
   }
 
   private HomeFeedQueryService.Page page(SeenViewer who, String cursor, int size) {
-    HomeFeedQueryService.Page page = home.page(reader, who, "latest", cursor, null, size, true);
+    return page(who, cursor, size, true);
+  }
+
+  private HomeFeedQueryService.Page page(SeenViewer who, String cursor, int size, boolean hide) {
+    HomeFeedQueryService.Page page = home.page(reader, who, "latest", cursor, null, size, hide);
     return new HomeFeedQueryService.Page(
         page.items().stream().filter(this::ours).toList(), page.next(), page.newest(), page.gap());
   }

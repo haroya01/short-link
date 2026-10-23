@@ -190,7 +190,7 @@ class PostRepositoryAdapter implements PostRepository {
         em.createNativeQuery(
             "SELECT p.* FROM posts p WHERE "
                 + (unseen == null ? shown : "(" + shown + ")" + Unseen.sql("p", Unseen.POST))
-                + " ORDER BY p.published_at DESC",
+                + " ORDER BY p.published_at DESC, p.id DESC",
             PostEntity.class);
     if (unseen != null) {
       unseen.bind(query, Unseen.POST);
@@ -320,7 +320,7 @@ class PostRepositoryAdapter implements PostRepository {
                     + PostAccessSql.inFeedRooms("p")
                     + "))"
                     + HeardSql.POST_AUTHOR
-                    + " ORDER BY p.published_at DESC",
+                    + " ORDER BY p.published_at DESC, p.id DESC",
                 PostEntity.class)
             .setParameter("authorIds", idsForIn(authorIds))
             .setParameter("viewer", HeardSql.viewer(viewerId))
