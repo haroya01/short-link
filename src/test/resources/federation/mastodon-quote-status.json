@@ -1,0 +1,153 @@
+{
+ "id": "117491551754057458",
+ "created_at": "2026-10-23T18:06:44.840Z",
+ "in_reply_to_id": null,
+ "in_reply_to_account_id": null,
+ "sensitive": false,
+ "spoiler_text": "",
+ "visibility": "public",
+ "language": "en",
+ "uri": "https://mastodon.example/users/ana/statuses/117491551754057458",
+ "url": "https://mastodon.example/@ana/117491551754057458",
+ "replies_count": 1,
+ "reblogs_count": 15,
+ "favourites_count": 27,
+ "quotes_count": 0,
+ "edited_at": null,
+ "content": "<p class=\"quote-inline\">RE: <a href=\"https://news.example/@desk/117491245825695182\" target=\"_blank\" rel=\"nofollow noopener\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">news.example/@desk/</span><span class=\"invisible\">117491245825695182</span></a></p><p>The answer to that headline is no.</p>",
+ "reblog": null,
+ "application": {
+  "name": "Web",
+  "website": null
+ },
+ "account": {
+  "id": "108194428751240116",
+  "username": "ana",
+  "acct": "ana",
+  "display_name": "Ana",
+  "locked": true,
+  "bot": false,
+  "discoverable": true,
+  "indexable": false,
+  "group": false,
+  "created_at": "2022-04-25T00:00:00.000Z",
+  "note": "<p>Ana</p>",
+  "url": "https://mastodon.example/@ana",
+  "uri": "https://mastodon.example/users/ana",
+  "avatar": "https://files.mastodon.example/avatars/ana.png",
+  "avatar_static": "https://files.mastodon.example/avatars/ana.png",
+  "avatar_description": "",
+  "header": "https://files.mastodon.example/headers/ana.png",
+  "header_static": "https://files.mastodon.example/headers/ana.png",
+  "header_description": "",
+  "followers_count": 18667,
+  "following_count": 1537,
+  "statuses_count": 16896,
+  "last_status_at": "2026-10-23",
+  "hide_collections": false,
+  "show_media": true,
+  "show_media_replies": true,
+  "show_featured": true,
+  "noindex": false,
+  "feature_approval": {
+   "automatic": [
+    "followers"
+   ],
+   "manual": [],
+   "current_user": "denied"
+  },
+  "emojis": [],
+  "roles": [],
+  "fields": []
+ },
+ "media_attachments": [],
+ "mentions": [],
+ "tags": [],
+ "emojis": [],
+ "tagged_collections": [],
+ "quote": {
+  "state": "accepted",
+  "quoted_status": {
+   "id": "117491246295471905",
+   "created_at": "2026-10-23T16:48:56.000Z",
+   "in_reply_to_id": null,
+   "in_reply_to_account_id": null,
+   "sensitive": false,
+   "spoiler_text": "",
+   "visibility": "public",
+   "language": "en",
+   "uri": "https://news.example/users/desk/statuses/117491245825695182",
+   "url": "https://news.example/@desk/117491245825695182",
+   "replies_count": 0,
+   "reblogs_count": 6,
+   "favourites_count": 3,
+   "quotes_count": 1,
+   "edited_at": null,
+   "content": "<p>Satellites will triple by 2035. Is that a problem in orbit?</p>",
+   "reblog": null,
+   "account": {
+    "id": "110187684287763833",
+    "username": "desk",
+    "acct": "desk@news.example",
+    "display_name": "News Desk",
+    "locked": false,
+    "bot": false,
+    "discoverable": true,
+    "indexable": true,
+    "group": false,
+    "created_at": "2023-03-22T00:00:00.000Z",
+    "note": "<p>News Desk</p>",
+    "url": "https://news.example/@desk",
+    "uri": "https://news.example/users/desk",
+    "avatar": "https://files.news.example/avatars/desk.png",
+    "avatar_static": "https://files.news.example/avatars/desk.png",
+    "avatar_description": "",
+    "header": "https://files.news.example/headers/desk.png",
+    "header_static": "https://files.news.example/headers/desk.png",
+    "header_description": "",
+    "followers_count": 12080,
+    "following_count": 583,
+    "statuses_count": 7074,
+    "last_status_at": "2026-10-23",
+    "hide_collections": false,
+    "show_media": true,
+    "show_media_replies": true,
+    "show_featured": true,
+    "feature_approval": {
+     "automatic": [
+      "public"
+     ],
+     "manual": [],
+     "current_user": "denied"
+    },
+    "emojis": [],
+    "fields": [],
+    "roles": []
+   },
+   "media_attachments": [],
+   "mentions": [],
+   "tags": [],
+   "emojis": [],
+   "tagged_collections": [],
+   "quote": null,
+   "card": null,
+   "poll": null,
+   "quote_approval": {
+    "automatic": [
+     "public"
+    ],
+    "manual": [],
+    "current_user": "denied"
+   }
+  }
+ },
+ "card": null,
+ "poll": null,
+ "quote_approval": {
+  "automatic": [
+   "public"
+  ],
+  "manual": [],
+  "current_user": "denied"
+ }
+}

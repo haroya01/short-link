@@ -1,0 +1,22 @@
+{
+ "@context": [
+  "https://www.w3.org/ns/activitystreams",
+  {
+   "gts": "https://gotosocial.org/ns#",
+   "QuoteAuthorization": "https://w3id.org/fep/044f#QuoteAuthorization",
+   "interactingObject": {
+    "@id": "gts:interactingObject",
+    "@type": "@id"
+   },
+   "interactionTarget": {
+    "@id": "gts:interactionTarget",
+    "@type": "@id"
+   }
+  }
+ ],
+ "id": "https://news.example/users/desk/quote_authorizations/117491551939300305",
+ "type": "QuoteAuthorization",
+ "attributedTo": "https://news.example/users/desk",
+ "interactingObject": "https://mastodon.example/users/ana/statuses/117491551754057458",
+ "interactionTarget": "https://news.example/users/desk/statuses/117491245825695182"
+}

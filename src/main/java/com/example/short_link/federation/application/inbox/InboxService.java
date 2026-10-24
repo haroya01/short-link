@@ -362,7 +362,8 @@ public class InboxService {
                     RemoteNoteParser.updated(revise.object()),
                     note.media(),
                     note.language(),
-                    note.shape()))
+                    note.shape(),
+                    note.quote() == null ? null : note.quote().link()))
             ? InboxOutcome.accepted("update")
             : InboxOutcome.ignored("unknown-note");
       }

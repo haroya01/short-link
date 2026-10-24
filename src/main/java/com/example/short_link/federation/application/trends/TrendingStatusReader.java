@@ -36,7 +36,14 @@ class TrendingStatusReader {
   private final RemoteNoteParser parser;
   private final JsonMapper json;
 
-  record Read(TrendingNote note, String actorUri, String domain, JsonNode object) {}
+  // quoteAccepted: the server's API says the quoted author's server authorized the quote.
+  record Read(
+      TrendingNote note, String actorUri, String domain, JsonNode object, boolean quoteAccepted) {
+
+    Read(TrendingNote note, String actorUri, String domain, JsonNode object) {
+      this(note, actorUri, domain, object, false);
+    }
+  }
 
   Optional<Read> read(JsonNode status, String server) {
     String uri = text(status.get("uri"));
@@ -66,7 +73,7 @@ class TrendingStatusReader {
     }
     TrendingNote note =
         new TrendingNote(
-            parsed.body(),
+            parsed.linkedBody(),
             parsed.publishedAt(),
             RemoteNoteParser.updated(object),
             count(status.get("favourites_count")),
@@ -93,7 +100,13 @@ class TrendingStatusReader {
             uri,
             parsed.url() != null ? parsed.url() : uri,
             List.of(server));
-    return Optional.of(new Read(note, actorUri, domain, object));
+    return Optional.of(
+        new Read(
+            note,
+            actorUri,
+            domain,
+            object,
+            object.has("quote") && "accepted".equals(text(status.path("quote").get("state")))));
   }
 
   private ObjectNode object(JsonNode status, String uri) {
@@ -113,6 +126,10 @@ class TrendingStatusReader {
       object.putObject("contentMap").set(language, status.get("content"));
     }
     object.putArray("to").add(ActivityStreams.PUBLIC);
+    String quoted = text(status.path("quote").path("quoted_status").get("uri"));
+    if (quoted != null) {
+      object.put("quote", quoted);
+    }
     ArrayNode attachments = object.putArray("attachment");
     for (JsonNode media : status.path("media_attachments")) {
       ObjectNode attachment = attachments.addObject();

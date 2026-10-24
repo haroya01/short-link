@@ -183,7 +183,8 @@ public class TrendingPosts {
                         read.note().by(read.note().author().known(ids.get(read.actorUri()))),
                         read.actorUri(),
                         read.domain(),
-                        read.object())
+                        read.object(),
+                        read.quoteAccepted())
                     : read)
         .toList();
   }
@@ -333,7 +334,8 @@ public class TrendingPosts {
           first.note().on(List.copyOf(servers), likes, reposts, replies),
           first.actorUri(),
           first.domain(),
-          first.object());
+          first.object(),
+          first.quoteAccepted());
     }
   }
 }

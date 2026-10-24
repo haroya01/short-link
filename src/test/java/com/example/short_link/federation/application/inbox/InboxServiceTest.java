@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,7 @@ import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.RemoteActorResolver;
+import com.example.short_link.federation.application.RemoteDocuments;
 import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
@@ -99,7 +101,8 @@ class InboxServiceTest {
             notes,
             resolver,
             earlyDeletes,
-            URLS),
+            URLS,
+            mock(RemoteDocuments.class)),
         followingRows,
         URLS,
         JsonMapper.builder().build(),

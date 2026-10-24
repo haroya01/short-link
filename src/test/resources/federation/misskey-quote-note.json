@@ -1,0 +1,59 @@
+{
+ "@context": [
+  "https://www.w3.org/ns/activitystreams",
+  "https://w3id.org/security/v1",
+  {
+   "Key": "sec:Key",
+   "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+   "sensitive": "as:sensitive",
+   "Hashtag": "as:Hashtag",
+   "quoteUrl": "as:quoteUrl",
+   "toot": "http://joinmastodon.org/ns#",
+   "Emoji": "toot:Emoji",
+   "featured": "toot:featured",
+   "discoverable": "toot:discoverable",
+   "schema": "http://schema.org#",
+   "PropertyValue": "schema:PropertyValue",
+   "value": "schema:value",
+   "misskey": "https://misskey-hub.net/ns#",
+   "_misskey_content": "misskey:_misskey_content",
+   "_misskey_quote": "misskey:_misskey_quote",
+   "_misskey_reaction": "misskey:_misskey_reaction",
+   "_misskey_votes": "misskey:_misskey_votes",
+   "_misskey_summary": "misskey:_misskey_summary",
+   "_misskey_followedMessage": "misskey:_misskey_followedMessage",
+   "_misskey_requireSigninToViewContents": "misskey:_misskey_requireSigninToViewContents",
+   "_misskey_makeNotesFollowersOnlyBefore": "misskey:_misskey_makeNotesFollowersOnlyBefore",
+   "_misskey_makeNotesHiddenBefore": "misskey:_misskey_makeNotesHiddenBefore",
+   "_misskey_license": "misskey:_misskey_license",
+   "freeText": {
+    "@id": "misskey:freeText",
+    "@type": "schema:text"
+   },
+   "isCat": "misskey:isCat",
+   "vcard": "http://www.w3.org/2006/vcard/ns#"
+  }
+ ],
+ "id": "https://misskey.example/notes/asowbw61iutt03ky",
+ "type": "Note",
+ "attributedTo": "https://misskey.example/users/9abcdefghi",
+ "content": "<p><span>Finished this drawing with a gradient map.<br></span><a href=\"https://assets.example/detail?id=1\">https://assets.example/detail?id=1</a><br><br><span class=\"quote-inline\">RE: <a href=\"https://misskey.example/notes/asomfy31zvbr0b6k\">https://misskey.example/notes/asomfy31zvbr0b6k</a></span></p>",
+ "_misskey_content": "Finished this drawing with a gradient map.\nhttps://assets.example/detail?id=1",
+ "source": {
+  "content": "Finished this drawing with a gradient map.\nhttps://assets.example/detail?id=1",
+  "mediaType": "text/x.misskeymarkdown"
+ },
+ "_misskey_quote": "https://misskey.example/notes/asomfy31zvbr0b6k",
+ "quoteUrl": "https://misskey.example/notes/asomfy31zvbr0b6k",
+ "published": "2026-10-23T18:57:17.209Z",
+ "to": [
+  "https://www.w3.org/ns/activitystreams#Public"
+ ],
+ "cc": [
+  "https://misskey.example/users/9abcdefghi/followers"
+ ],
+ "inReplyTo": null,
+ "attachment": [],
+ "sensitive": false,
+ "tag": []
+}

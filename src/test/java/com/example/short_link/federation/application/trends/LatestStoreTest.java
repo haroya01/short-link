@@ -3,6 +3,7 @@ package com.example.short_link.federation.application.trends;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -21,12 +22,14 @@ import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.foryou.ReachTarget;
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
+import com.example.short_link.testsupport.FederationFixtures;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -50,6 +53,12 @@ class LatestStoreTest {
 
   @Mock private RemoteActorResolver resolver;
   @Mock private RemoteNoteIntake intake;
+
+  @BeforeEach
+  void quotesPassThrough() {
+    lenient().when(intake.quoted(any())).thenAnswer(call -> call.getArgument(0));
+  }
+
   @Mock private FederationRelayedNoteRepository relayed;
   @Mock private RemoteNoteReachRepository reach;
   @Mock private RemoteNotes remoteNotes;
@@ -127,6 +136,34 @@ class LatestStoreTest {
     order.verify(transactions).commit(any());
     assertThat(note.getValue().uri()).isEqualTo(ALICE + "/statuses/1");
     assertThat(tally.today("pulled")).isEqualTo(1);
+  }
+
+  @Test
+  void aQuoteTheServerAcceptedIsResolvedBeforeTheTransactionAndKeptWithWhatItQuotes() {
+    when(resolver.byActorUri("https://mastodon.example/users/ana"))
+        .thenReturn(Optional.of(actor("mastodon.example")));
+    TrendingStatusReader.Read read =
+        new TrendingStatusReader(parser, JSON)
+            .read(FederationFixtures.json("mastodon-quote-status.json"), "mastodon.example")
+            .orElseThrow();
+    when(intake.quoted(any()))
+        .thenAnswer(
+            call -> call.<RemoteNoteParser.Parsed>getArgument(0).quoting("the answer", 77L));
+    when(intake.relayed(any(), any())).thenReturn(Optional.of(42L));
+
+    assertThat(store(2_000).keep("mastodon.example", read)).isEqualTo("pulled");
+
+    ArgumentCaptor<RemoteNoteParser.Parsed> asked =
+        ArgumentCaptor.forClass(RemoteNoteParser.Parsed.class);
+    ArgumentCaptor<RemoteNoteParser.Parsed> kept =
+        ArgumentCaptor.forClass(RemoteNoteParser.Parsed.class);
+    InOrder order = inOrder(intake, transactions, remoteNotes);
+    order.verify(intake).quoted(asked.capture());
+    order.verify(transactions).getTransaction(any());
+    order.verify(intake).relayed(any(), kept.capture());
+    order.verify(remoteNotes).preview(42L, "the answer", false, null);
+    assertThat(asked.getValue().quote().accepted()).isTrue();
+    assertThat(kept.getValue().quotedNoteId()).isEqualTo(77L);
   }
 
   @Test

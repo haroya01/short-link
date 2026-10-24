@@ -11,6 +11,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,6 +62,15 @@ public class RemoteNoteParser {
   private static final Pattern TAG = Pattern.compile("<(/?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)>");
   private static final Pattern ATTRIBUTE =
       Pattern.compile("([a-zA-Z-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"'>]+))");
+  private static final Pattern QUOTE_INLINE =
+      Pattern.compile(
+          "<(p|span|div)\\b[^>]*\\bclass\\s*=\\s*[\"'][^\"']*\\bquote-inline\\b[^\"']*[\"'][^>]*>(.*?)</\\1\\s*>",
+          Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+  private static final Pattern HREF =
+      Pattern.compile("<a\\b[^>]*\\bhref\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+  private static final List<String> QUOTE_FIELDS =
+      List.of("quote", "quoteUrl", "quoteUri", "_misskey_quote");
+  private static final int MAX_URI = 512;
 
   private final FederationUrls urls;
 
@@ -77,7 +87,62 @@ public class RemoteNoteParser {
       Set<String> addressedPublicIds,
       List<RemoteNotes.Media> media,
       String language,
-      Shape shape) {}
+      Shape shape,
+      Quote quote,
+      Long quotedNoteId) {
+
+    public Parsed quoting(String body, Long quotedNoteId) {
+      return new Parsed(
+          uri,
+          url,
+          body,
+          contentWarning,
+          sensitive,
+          visibility,
+          publishedAt,
+          inReplyToLocalId,
+          inReplyToUri,
+          addressedPublicIds,
+          media,
+          language,
+          shape,
+          null,
+          quotedNoteId);
+    }
+
+    public String linkedBody() {
+      if (quote == null) {
+        return body;
+      }
+      return body.isEmpty() ? quote.link() : body + "\n\n" + quote.link();
+    }
+
+    public Parsed acceptingQuote() {
+      return quote == null
+          ? this
+          : new Parsed(
+              uri,
+              url,
+              body,
+              contentWarning,
+              sensitive,
+              visibility,
+              publishedAt,
+              inReplyToLocalId,
+              inReplyToUri,
+              addressedPublicIds,
+              media,
+              language,
+              shape,
+              new Quote(quote.uri(), quote.link(), quote.authorization(), true),
+              null);
+    }
+  }
+
+  // The post this one quotes: its id, the address to show when it cannot be shown inline, and the
+  // QuoteAuthorization its author's server issued (FEP-044f). accepted is set when the post came
+  // through a server's API that already checked the authorization.
+  public record Quote(String uri, String link, String authorization, boolean accepted) {}
 
   public static Optional<Kind> kindOf(JsonNode object) {
     String type = object == null ? null : text(object.get("type"));
@@ -106,10 +171,17 @@ public class RemoteNoteParser {
       }
     }
     String uri = idOf(object);
+    Quote quote = card ? null : quote(object);
+    String body = card ? excerpt(object) : body(object);
+    if (quote != null) {
+      Quoting quoting = quoting(object, quote);
+      body = quoting.body();
+      quote = new Quote(quote.uri(), quoting.link(), quote.authorization(), false);
+    }
     return new Parsed(
         uri,
         address(object.get("url"), uri),
-        card ? excerpt(object) : body(object),
+        body,
         card ? null : oneLine(object.get("summary")),
         object.path("sensitive").asBoolean(false),
         visibility(to, cc),
@@ -123,7 +195,40 @@ public class RemoteNoteParser {
             kind,
             card ? oneLine(object.get("name")) : null,
             community(object, kind),
-            kind == Kind.QUESTION ? poll(object) : null));
+            kind == Kind.QUESTION ? poll(object) : null),
+        quote,
+        null);
+  }
+
+  private static Quote quote(JsonNode object) {
+    for (String field : QUOTE_FIELDS) {
+      String id = idOf(object.get(field));
+      if (id != null && id.length() <= MAX_URI && RemoteActorParser.host(id) != null) {
+        String authorization = idOf(object.get("quoteAuthorization"));
+        return new Quote(
+            id,
+            null,
+            authorization != null && RemoteActorParser.host(authorization) != null
+                ? authorization
+                : null,
+            false);
+      }
+    }
+    return null;
+  }
+
+  // Mastodon starts a quote's text with "RE: <address>" for servers that cannot show quotes; a
+  // server that can drops it. Only a first line naming one of the addresses goes.
+  public static String withoutReLine(String body, Collection<String> addresses) {
+    for (String address : addresses) {
+      String line = "RE: " + address;
+      if (address != null
+          && body.startsWith(line)
+          && (body.length() == line.length() || body.charAt(line.length()) == '\n')) {
+        return body.substring(line.length()).strip();
+      }
+    }
+    return body;
   }
 
   // The page people open: an http(s) address on the object's own server, or none.
@@ -291,6 +396,25 @@ public class RemoteNoteParser {
 
   String body(JsonNode object) {
     return cut(flatten(html(object, "content", "contentMap")), MAX_BODY);
+  }
+
+  private record Quoting(String body, String link) {}
+
+  // The quote's own paragraph (class quote-inline) goes, and its link is the one to show; without
+  // that paragraph a first line "RE: <the quoted id>" goes instead.
+  private Quoting quoting(JsonNode object, Quote quote) {
+    String html = html(object, "content", "contentMap");
+    Matcher inline = html == null ? null : QUOTE_INLINE.matcher(html);
+    if (inline == null || !inline.find()) {
+      return new Quoting(withoutReLine(body(object), List.of(quote.uri())), quote.uri());
+    }
+    Matcher href = HREF.matcher(inline.group(2));
+    String link = href.find() ? HtmlUtils.htmlUnescape(href.group(1)).strip() : null;
+    return new Quoting(
+        cut(flatten(inline.replaceAll("")), MAX_BODY),
+        link != null && link.startsWith("https://") && link.length() <= MAX_URI
+            ? link
+            : quote.uri());
   }
 
   private static String html(JsonNode object, String field, String mapField) {

@@ -224,6 +224,59 @@ class RemoteNoteRecorderTest {
   }
 
   @Test
+  void aQuoteIsStoredWithWhatItQuotes() {
+    when(notes.insertRemote(any())).thenReturn(Optional.of(902L));
+    RemoteNotes.Received quote =
+        new RemoteNotes.Received(
+            42L,
+            URI,
+            null,
+            "the answer",
+            null,
+            false,
+            NoteVisibility.PUBLIC,
+            null,
+            null,
+            null,
+            List.of(),
+            List.of(),
+            "en",
+            RemoteNotes.Shape.NOTE,
+            true,
+            77L);
+
+    recorder().receive(quote);
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes).insertRemote(row.capture());
+    assertThat(row.getValue().quotedNoteId()).isEqualTo(77L);
+  }
+
+  @Test
+  void anEditOfAQuoteKeepsItsAddressOnlyWhileTheQuotedPostIsNotShown() {
+    NoteEntity linked = kept("the answer\n\nhttps://news.example/@desk/1", null);
+    NoteEntity shown = kept("the answer", null);
+    ReflectionTestUtils.setField(shown, "quotedNoteId", 77L);
+    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(linked), Optional.of(shown));
+    RemoteNotes.Revision edit =
+        new RemoteNotes.Revision(
+            "the answer, edited",
+            null,
+            false,
+            Instant.parse("2026-10-07T02:00:00Z"),
+            List.of(),
+            "en",
+            RemoteNotes.Shape.NOTE,
+            "https://news.example/@desk/1");
+
+    recorder().revise(42L, 900L, edit);
+    recorder().revise(42L, 900L, edit);
+
+    assertThat(linked.getBody()).isEqualTo("the answer, edited\n\nhttps://news.example/@desk/1");
+    assertThat(shown.getBody()).isEqualTo("the answer, edited");
+  }
+
+  @Test
   void anUpdateRewritesTextWarningLanguageAndMediaAndTellsWhoSharedTheNote() {
     NoteEntity note = kept("hello #cats", null);
     when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));

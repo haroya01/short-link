@@ -74,7 +74,7 @@ class LatestStore {
 
   private String kept(String host, TrendingStatusReader.Read read, boolean trended) {
     String prefix = trended ? "trend" : "pull";
-    RemoteNoteParser.Parsed note = parser.parse(read.object(), read.object());
+    RemoteNoteParser.Parsed parsed = parser.parse(read.object(), read.object());
     Optional<RemoteActorEntity> author =
         resolver
             .byActorUri(read.actorUri())
@@ -82,6 +82,8 @@ class LatestStore {
     if (author.isEmpty()) {
       return prefix + "-no-author";
     }
+    RemoteNoteParser.Parsed note =
+        intake.quoted(read.quoteAccepted() ? parsed.acceptingQuote() : parsed);
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     Optional<Long> kept =
         transaction.execute(

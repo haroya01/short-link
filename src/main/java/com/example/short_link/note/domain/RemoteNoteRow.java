@@ -21,7 +21,8 @@ public record RemoteNoteRow(
     String kind,
     String title,
     String community,
-    Poll poll) {
+    Poll poll,
+    Long quotedNoteId) {
 
   public record Poll(
       List<String> options,

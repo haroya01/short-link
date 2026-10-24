@@ -46,7 +46,43 @@ public interface RemoteNotes {
       List<Media> media,
       String language,
       Shape shape,
-      boolean notifies) {
+      boolean notifies,
+      Long quotedNoteId) {
+
+    public Received(
+        Long remoteActorId,
+        String uri,
+        String url,
+        String body,
+        String contentWarning,
+        boolean sensitive,
+        NoteVisibility visibility,
+        Instant publishedAt,
+        Long inReplyToLocalId,
+        String inReplyToUri,
+        Collection<Long> addressedUserIds,
+        List<Media> media,
+        String language,
+        Shape shape,
+        boolean notifies) {
+      this(
+          remoteActorId,
+          uri,
+          url,
+          body,
+          contentWarning,
+          sensitive,
+          visibility,
+          publishedAt,
+          inReplyToLocalId,
+          inReplyToUri,
+          addressedUserIds,
+          media,
+          language,
+          shape,
+          notifies,
+          null);
+    }
 
     public Received(
         Long remoteActorId,
@@ -77,7 +113,8 @@ public interface RemoteNotes {
           media,
           language,
           Shape.NOTE,
-          true);
+          true,
+          null);
     }
   }
 
@@ -94,7 +131,19 @@ public interface RemoteNotes {
       Instant editedAt,
       List<Media> media,
       String language,
-      Shape shape) {
+      Shape shape,
+      String quoteLink) {
+
+    public Revision(
+        String body,
+        String contentWarning,
+        boolean sensitive,
+        Instant editedAt,
+        List<Media> media,
+        String language,
+        Shape shape) {
+      this(body, contentWarning, sensitive, editedAt, media, language, shape, null);
+    }
 
     public Revision(
         String body,
@@ -103,7 +152,7 @@ public interface RemoteNotes {
         Instant editedAt,
         List<Media> media,
         String language) {
-      this(body, contentWarning, sensitive, editedAt, media, language, Shape.NOTE);
+      this(body, contentWarning, sensitive, editedAt, media, language, Shape.NOTE, null);
     }
   }
 
