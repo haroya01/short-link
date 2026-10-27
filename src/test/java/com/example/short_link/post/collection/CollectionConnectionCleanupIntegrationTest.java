@@ -2,7 +2,7 @@ package com.example.short_link.post.collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.application.write.CreateHighlightUseCase;
@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 class CollectionConnectionCleanupIntegrationTest {
 
   @Autowired private CreateHighlightUseCase createHighlight;
-  @Autowired private NoteCommandService noteCommand;
+  @Autowired private NoteThreadControls threads;
   @Autowired private DeletePostUseCase deletePost;
   @Autowired private CollectionConnectionRepository connectionRepository;
   @Autowired private CollectionRepository collectionRepository;
@@ -70,7 +70,7 @@ class CollectionConnectionCleanupIntegrationTest {
         .isEmpty();
     assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(2);
 
-    noteCommand.delete(alice, noteId);
+    threads.delete(alice, noteId);
 
     assertThat(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.NOTE, noteId))
         .isEmpty();

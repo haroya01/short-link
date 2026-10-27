@@ -4,8 +4,8 @@ import com.example.short_link.federation.application.DomainBlocks;
 import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.application.RemoteMutes;
-import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
+import com.example.short_link.note.application.write.NoteInteractions;
 import com.example.short_link.note.application.write.NoteListService;
 import com.example.short_link.portability.domain.ImportKind;
 import com.example.short_link.user.application.write.BlockUseCase;
@@ -34,7 +34,7 @@ class ImportRowApplier {
   private final RemoteBlocks remoteBlocks;
   private final RemoteMutes remoteMutes;
   private final DomainBlocks domainBlocks;
-  private final NoteCommandService notes;
+  private final NoteInteractions notes;
   private final NoteFeedSettingsService feedSettings;
   private final NoteListService lists;
   private final ImportLookup lookup;
@@ -49,7 +49,7 @@ class ImportRowApplier {
       RemoteBlocks remoteBlocks,
       RemoteMutes remoteMutes,
       DomainBlocks domainBlocks,
-      NoteCommandService notes,
+      NoteInteractions notes,
       NoteFeedSettingsService feedSettings,
       NoteListService lists,
       ImportLookup lookup,

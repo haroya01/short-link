@@ -16,8 +16,8 @@ import com.example.short_link.federation.application.RemoteAccountView;
 import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.application.RemoteMutes;
-import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
+import com.example.short_link.note.application.write.NoteInteractions;
 import com.example.short_link.note.application.write.NoteListService;
 import com.example.short_link.portability.domain.ImportKind;
 import com.example.short_link.user.application.write.BlockUseCase;
@@ -40,7 +40,7 @@ class ImportRowApplierTest {
   @Mock private RemoteBlocks remoteBlocks;
   @Mock private RemoteMutes remoteMutes;
   @Mock private DomainBlocks domainBlocks;
-  @Mock private NoteCommandService notes;
+  @Mock private NoteInteractions interactions;
   @Mock private NoteFeedSettingsService feedSettings;
   @Mock private NoteListService lists;
   @Mock private ImportLookup lookup;
@@ -54,7 +54,7 @@ class ImportRowApplierTest {
         remoteBlocks,
         remoteMutes,
         domainBlocks,
-        notes,
+        interactions,
         feedSettings,
         lists,
         lookup,
@@ -187,12 +187,12 @@ class ImportRowApplierTest {
     verify(domainBlocks).block(7L, "spam.example");
     assertThat(applier.apply(7L, ImportKind.BOOKMARKS, List.of("https://kurl.me/ap/notes/5")))
         .isTrue();
-    verify(notes).setBookmark(7L, 5L, true);
+    verify(interactions).setBookmark(7L, 5L, true);
     assertThat(
             applier.apply(
                 7L, ImportKind.BOOKMARKS, List.of("https://mastodon.social/users/a/statuses/1")))
         .isTrue();
-    verify(notes).setBookmark(7L, 9L, true);
+    verify(interactions).setBookmark(7L, 9L, true);
     assertThat(applier.apply(7L, ImportKind.BOOKMARKS, List.of("https://gone.example/1")))
         .isFalse();
     assertThat(applier.apply(7L, ImportKind.BOOKMARKS, List.of("https://kurl.me/ap/notes/x")))

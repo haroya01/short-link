@@ -34,40 +34,41 @@ public class RoomItemsQueryService {
   private final PostCommentQueryService comments;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record RoomItem(String kind, Object note, Object post, List<Reply> replies) {}
+  public record RoomItem(String kind, NoteView note, PostCard post, List<Reply> replies) {}
 
   public record Reply(long id, ReplyPreview.Author author, String body) {}
 
   public record Page(List<RoomItem> items, String next) {}
 
   @Transactional(readOnly = true)
-  public Page room(Long roomId, Long viewerId, String cursor, int limit) {
+  public Page room(Long viewerId, Long roomId, String cursor, int limit) {
     int size = Math.clamp(limit, 1, MAX_LIMIT);
-    int[] at = HomeFeedQueryService.positions(cursor);
-    NoteSlice noteSlice = notes.roomAt(roomId, viewerId, at[0], size + 1);
-    PostSlice postSlice = posts.roomAt(roomId, viewerId, at[1], size + 1);
+    HomeCursor.Positions at = HomeCursor.Positions.plain(cursor);
+    NoteSlice noteSlice = notes.roomAt(viewerId, roomId, at.notes(), size + 1);
+    PostSlice postSlice = posts.roomAt(viewerId, roomId, at.posts(), size + 1);
     return page(viewerId, at, size, noteSlice, postSlice);
   }
 
   @Transactional(readOnly = true)
   public Page rooms(Long viewerId, String cursor, int limit) {
     int size = Math.clamp(limit, 1, MAX_LIMIT);
-    int[] at = HomeFeedQueryService.positions(cursor);
-    NoteSlice noteSlice = notes.roomsAt(viewerId, at[0], size + 1);
-    PostSlice postSlice = posts.roomsAt(viewerId, at[1], size + 1);
+    HomeCursor.Positions at = HomeCursor.Positions.plain(cursor);
+    NoteSlice noteSlice = notes.roomsAt(viewerId, at.notes(), size + 1);
+    PostSlice postSlice = posts.roomsAt(viewerId, at.posts(), size + 1);
     return page(viewerId, at, size, noteSlice, postSlice);
   }
 
-  private Page page(Long viewerId, int[] at, int size, NoteSlice noteSlice, PostSlice postSlice) {
+  private Page page(
+      Long viewerId, HomeCursor.Positions at, int size, NoteSlice noteSlice, PostSlice postSlice) {
     Merged merged =
         HomeFeedQueryService.merge(Tab.LATEST, noteSlice.items(), postSlice.items(), size);
     List<Long> noteIds = new ArrayList<>();
     List<Long> postIds = new ArrayList<>();
     for (Item item : merged.items()) {
-      if (item.note() instanceof NoteView note) {
-        noteIds.add(note.id());
-      } else if (item.post() instanceof PostCard post) {
-        postIds.add(post.item().id());
+      if (item.note() != null) {
+        noteIds.add(item.note().id());
+      } else if (item.post() != null) {
+        postIds.add(item.post().item().id());
       }
     }
     Map<Long, List<ReplyPreview>> noteReplies =
@@ -76,11 +77,13 @@ public class RoomItemsQueryService {
         postIds.isEmpty() ? Map.of() : comments.latest(postIds, viewerId, REPLIES);
     List<RoomItem> items = new ArrayList<>(merged.items().size());
     for (Item item : merged.items()) {
-      if (item.note() instanceof NoteView note) {
+      NoteView note = item.note();
+      PostCard post = item.post();
+      if (note != null) {
         items.add(
             new RoomItem(
                 "note", note, null, replies(noteReplies.getOrDefault(note.id(), List.of()))));
-      } else if (item.post() instanceof PostCard post) {
+      } else if (post != null) {
         items.add(
             new RoomItem(
                 "post",
@@ -91,14 +94,14 @@ public class RoomItemsQueryService {
     }
     int nextNote =
         HomeFeedQueryService.next(
-            at[0],
+            at.notes(),
             noteSlice.items().stream().map(NoteSlice.At::position).toList(),
             merged.notesTaken(),
             size,
             noteSlice.exhausted());
     int nextPost =
         HomeFeedQueryService.next(
-            at[1],
+            at.posts(),
             postSlice.items().stream().map(PostSlice.At::position).toList(),
             merged.postsTaken(),
             size,
@@ -108,7 +111,7 @@ public class RoomItemsQueryService {
             || merged.postsTaken() < postSlice.items().size()
             || !noteSlice.exhausted()
             || !postSlice.exhausted();
-    return new Page(items, more ? nextNote + "." + nextPost : null);
+    return new Page(items, more ? at.next(nextNote, nextPost).toString() : null);
   }
 
   private static List<Reply> replies(List<ReplyPreview> previews) {

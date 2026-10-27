@@ -90,7 +90,7 @@ public class PostHomeSlices {
         cards, first.getPublishedAt(), first.getId(), last.getPublishedAt(), last.getId(), more);
   }
 
-  public PostSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
+  public PostSlice roomAt(Long viewerId, Long roomId, int offset, int limit) {
     List<PostEntity> rows = postRepository.findInRoomAt(roomId, viewerId, offset, limit);
     return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
   }

@@ -1,10 +1,11 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -86,15 +87,17 @@ class HomeFeedQueryServiceTest {
   void forYouIsTheOneRankedListWithoutSinceAndTheOldTabsStayAsTheyWere() {
     SeenViewer reader = SeenViewer.member(7L);
     HomeFeedQueryService.Page ranked = new HomeFeedQueryService.Page(List.of(), "r1.40");
-    when(forYou.page(7L, reader, "ja", "r1.20", 40, true)).thenReturn(ranked);
+    HomeAsk ask =
+        new HomeAsk(7L, reader, "ja", HomeFeedQueryService.Tab.FOR_YOU, "r1.20", "3.4", 500, true);
+    when(forYou.page(ask)).thenReturn(ranked);
 
-    assertThat(home.page(7L, reader, "ja", "for-you", "r1.20", "3.4", 500, true)).isSameAs(ranked);
+    assertThat(home.page(ask)).isSameAs(ranked);
     verifyNoInteractions(notes, posts, seen);
     when(notes.everyoneAt(null, 0, 3, null)).thenReturn(new NoteSlice(List.of(), true));
     when(posts.recentAt(null, 0, 3, null)).thenReturn(new PostSlice(List.of(), true));
-    home.page(null, null, "latest", null, null, 2, false);
-    home.page(null, null, "nonsense", null, null, 2, false);
-    verify(forYou, times(1)).page(any(), any(), any(), any(), anyInt(), any(Boolean.class));
+    home.page(ask(null, null, "latest", null, null, 2, false));
+    home.page(ask(null, null, "nonsense", null, null, 2, false));
+    verify(forYou, times(1)).page(any());
   }
 
   @Test
@@ -107,9 +110,9 @@ class HomeFeedQueryServiceTest {
     when(posts.blogBelow(7L, last, 4L, 2))
         .thenReturn(new BlogSlice(List.of(card), last, 3L, last, 3L, false));
 
-    HomeFeedQueryService.Page first = home.page(7L, null, null, "blog", null, null, 2, true);
+    HomeFeedQueryService.Page first = home.page(ask(7L, null, "blog", null, null, 2, true));
     HomeFeedQueryService.Page onward =
-        home.page(7L, null, null, "blog", first.next(), null, 2, true);
+        home.page(ask(7L, null, "blog", first.next(), null, 2, true));
 
     assertThat(kinds(first)).containsExactly("post");
     assertThat(first.next()).isEqualTo("b1792404000000001.4");
@@ -117,19 +120,6 @@ class HomeFeedQueryServiceTest {
     assertThat(onward.next()).isNull();
     assertThat(onward.newest()).isNull();
     verifyNoInteractions(notes, seen, forYou);
-  }
-
-  @Test
-  void aBlogMarkerIsThePublishedMicrosAndIdAndAnythingElseIsNone() {
-    Instant at = Instant.parse("2026-10-20T10:00:00.123456Z");
-    HomeFeedQueryService.Marker marker = new HomeFeedQueryService.Marker(at, 9L);
-
-    assertThat(HomeFeedQueryService.Marker.parse(marker.toString())).isEqualTo(marker);
-    for (String bad :
-        List.of("b1.0", "b-1.2", "b1", "1.2", "bx.2", "b1.2.3", "b99999999999999999999.1", "")) {
-      assertThat(HomeFeedQueryService.Marker.parse(bad)).as(bad).isNull();
-    }
-    assertThat(HomeFeedQueryService.Marker.parse(null)).isNull();
   }
 
   @Test
@@ -141,7 +131,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(null, 0, 3, null)).thenReturn(new NoteSlice(List.of(n0, n2), false));
     when(posts.recentAt(null, 0, 3, null)).thenReturn(new PostSlice(List.of(p0, p1), true));
 
-    HomeFeedQueryService.Page page = home.page(null, null, "latest", null, null, 2, false);
+    HomeFeedQueryService.Page page = home.page(ask(null, null, "latest", null, null, 2, false));
 
     assertThat(kinds(page)).containsExactly("note", "post");
     assertThat(page.items().get(0).note()).isSameAs(n0.note());
@@ -150,7 +140,8 @@ class HomeFeedQueryServiceTest {
 
     when(notes.everyoneAt(null, 1, 3, null)).thenReturn(new NoteSlice(List.of(n2), true));
     when(posts.recentAt(null, 1, 3, null)).thenReturn(new PostSlice(List.of(p1), true));
-    HomeFeedQueryService.Page last = home.page(null, null, "latest", page.next(), null, 2, false);
+    HomeFeedQueryService.Page last =
+        home.page(ask(null, null, "latest", page.next(), null, 2, false));
     assertThat(kinds(last)).containsExactly("note", "post");
     assertThat(last.next()).isNull();
   }
@@ -161,7 +152,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(null, 0, 2, null)).thenReturn(slice);
     when(posts.recentAt(null, 0, 2, null)).thenReturn(new PostSlice(List.of(), true));
 
-    assertThat(home.page(null, null, "latest", null, null, 1, false).next()).isEqualTo("2.0");
+    assertThat(home.page(ask(null, null, "latest", null, null, 1, false)).next()).isEqualTo("2.0");
   }
 
   @Test
@@ -179,13 +170,13 @@ class HomeFeedQueryServiceTest {
     when(notes.trendingAt(7L, 0, 5)).thenReturn(trendingNotes);
     when(posts.trendingAt(7L, 0, 5)).thenReturn(trendingPosts);
 
-    assertThat(kinds(home.page(7L, null, "trending", null, null, 4, false)))
+    assertThat(kinds(home.page(ask(7L, null, "trending", null, null, 4, false))))
         .containsExactly("note", "post", "note", "post");
   }
 
   @Test
   void followingIsEmptyForSomeoneSignedOut() {
-    HomeFeedQueryService.Page page = home.page(null, null, "following", null, null, 20, false);
+    HomeFeedQueryService.Page page = home.page(ask(null, null, "following", null, null, 20, false));
 
     assertThat(page.items()).isEmpty();
     assertThat(page.next()).isNull();
@@ -201,13 +192,14 @@ class HomeFeedQueryServiceTest {
     PostSlice firstPosts = new PostSlice(List.of(seenPost), true);
     when(notes.everyoneAt(null, 0, 21, null)).thenReturn(firstNotes);
     when(posts.recentAt(null, 0, 21, null)).thenReturn(firstPosts);
-    assertThat(home.page(null, null, "latest", null, null, 20, false).newest()).isEqualTo("20.7");
+    assertThat(home.page(ask(null, null, "latest", null, null, 20, false)).newest())
+        .isEqualTo("20.7");
 
     NoteSlice nowNotes = new NoteSlice(List.of(newNote, seenNote), true);
     PostSlice nowPosts = new PostSlice(List.of(seenPost), true);
     when(notes.everyoneAt(null, 0, 51, null)).thenReturn(nowNotes);
     when(posts.recentAt(null, 0, 51, null)).thenReturn(nowPosts);
-    HomeFeedQueryService.Page fresh = home.page(null, null, "latest", null, "20.7", 20, false);
+    HomeFeedQueryService.Page fresh = home.page(ask(null, null, "latest", null, "20.7", 20, false));
 
     assertThat(fresh.items())
         .extracting(HomeFeedQueryService.Item::note)
@@ -227,7 +219,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(null, 0, 21, null)).thenReturn(window);
     when(posts.recentAt(null, 0, 21, null)).thenReturn(none);
 
-    HomeFeedQueryService.Page page = home.page(null, null, "latest", null, "20.0", 20, false);
+    HomeFeedQueryService.Page page = home.page(ask(null, null, "latest", null, "20.0", 20, false));
 
     assertThat(page.gap()).isTrue();
     assertThat(page.items())
@@ -237,13 +229,29 @@ class HomeFeedQueryServiceTest {
   }
 
   @Test
+  void aSinceThatIsNotANoteAndAPostIdIsAGap() {
+    NoteSlice window = new NoteSlice(List.of(note(0, "2026-10-20T12:00:00Z", 99L)), true);
+    when(notes.everyoneAt(null, 0, 21, null)).thenReturn(window);
+    when(posts.recentAt(null, 0, 21, null)).thenReturn(new PostSlice(List.of(), true));
+
+    for (String since : List.of("x.7", "20", "20.7.1", "", "b1.2", "h1.2.3")) {
+      HomeFeedQueryService.Page page = home.page(ask(null, null, "latest", null, since, 20, false));
+      assertThat(page.gap()).as(since).isTrue();
+      assertThat(page.newest()).as(since).isEqualTo("99.0");
+      assertThat(page.next()).as(since).isNull();
+    }
+    verify(notes, never()).everyoneAt(null, 0, 51, null);
+  }
+
+  @Test
   void trendingHasNothingAboveSoSinceStartsOver() {
     NoteSlice ranked = new NoteSlice(List.of(note(0, "2026-10-20T12:00:00Z")), true);
     PostSlice none = new PostSlice(List.of(), true);
     when(notes.trendingAt(7L, 0, 21)).thenReturn(ranked);
     when(posts.trendingAt(7L, 0, 21)).thenReturn(none);
 
-    HomeFeedQueryService.Page page = home.page(7L, null, "trending", null, "100.500", 20, false);
+    HomeFeedQueryService.Page page =
+        home.page(ask(7L, null, "trending", null, "100.500", 20, false));
 
     assertThat(page.gap()).isTrue();
     assertThat(page.items()).hasSize(1);
@@ -263,14 +271,15 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(7L, 0, 3, UNSEEN)).thenReturn(new NoteSlice(List.of(n0, n1), true));
     when(posts.recentAt(7L, 0, 3, UNSEEN)).thenReturn(new PostSlice(List.of(p0), true));
 
-    HomeFeedQueryService.Page page = home.page(7L, READER, "latest", null, null, 2, true);
+    HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", null, null, 2, true));
 
     assertThat(page.next()).isEqualTo("h" + AS_OF.toEpochMilli() + ".1.1");
     assertThat(page.newest()).isEqualTo("100.500");
 
     when(notes.everyoneAt(7L, 1, 3, UNSEEN)).thenReturn(new NoteSlice(List.of(n1), true));
     when(posts.recentAt(7L, 1, 3, UNSEEN)).thenReturn(new PostSlice(List.of(), true));
-    HomeFeedQueryService.Page last = home.page(7L, READER, "latest", page.next(), null, 2, false);
+    HomeFeedQueryService.Page last =
+        home.page(ask(7L, READER, "latest", page.next(), null, 2, false));
 
     assertThat(last.items()).extracting(HomeFeedQueryService.Item::note).containsExactly(n1.note());
     assertThat(last.next()).isNull();
@@ -282,7 +291,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(7L, 4, 3, null)).thenReturn(new NoteSlice(List.of(), false));
     when(posts.recentAt(7L, 2, 3, null)).thenReturn(new PostSlice(List.of(), true));
 
-    HomeFeedQueryService.Page page = home.page(7L, READER, "latest", "4.2", null, 2, true);
+    HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", "4.2", null, 2, true));
 
     assertThat(page.next()).isEqualTo("7.2");
     verifyNoInteractions(seen);
@@ -296,7 +305,7 @@ class HomeFeedQueryServiceTest {
 
     for (String cursor :
         List.of("h", "hx.1.2", "h1.2", "h1.x.2", "h-1.0.0", "h1.-1.0", "h1.0.-1")) {
-      HomeFeedQueryService.Page page = home.page(7L, READER, "latest", cursor, null, 2, true);
+      HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", cursor, null, 2, true));
       assertThat(page.items()).as(cursor).isEmpty();
       assertThat(page.next()).as(cursor).isNull();
     }
@@ -310,8 +319,8 @@ class HomeFeedQueryServiceTest {
     when(notes.trendingAt(7L, 0, 3)).thenReturn(new NoteSlice(List.of(), true));
     when(posts.trendingAt(7L, 0, 3)).thenReturn(new PostSlice(List.of(), true));
 
-    home.page(null, null, "latest", null, null, 2, true);
-    home.page(7L, READER, "trending", null, null, 2, true);
+    home.page(ask(null, null, "latest", null, null, 2, true));
+    home.page(ask(7L, READER, "trending", null, null, 2, true));
 
     verifyNoInteractions(seen);
   }
@@ -337,7 +346,7 @@ class HomeFeedQueryServiceTest {
                 new SeenItem(SeenItem.POST, 8L),
                 new SeenItem(SeenItem.POST, 6L)));
 
-    HomeFeedQueryService.Page page = home.page(7L, READER, "latest", null, "20.7", 20, true);
+    HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", null, "20.7", 20, true));
 
     assertThat(page.items())
         .extracting(item -> item.note() == null ? item.post() : item.note())
@@ -362,7 +371,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(7L, 0, 51, null)).thenReturn(new NoteSlice(List.of(marker), true));
     when(posts.recentAt(7L, 0, 51, null)).thenReturn(new PostSlice(List.of(), true));
 
-    HomeFeedQueryService.Page page = home.page(7L, READER, "latest", null, "20.0", 20, true);
+    HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", null, "20.0", 20, true));
 
     assertThat(page.items()).isEmpty();
     verifyNoInteractions(seen);
@@ -377,7 +386,7 @@ class HomeFeedQueryServiceTest {
     when(notes.everyoneAt(7L, 0, 21, UNSEEN)).thenReturn(new NoteSlice(List.of(other), false));
     when(posts.recentAt(7L, 0, 21, UNSEEN)).thenReturn(new PostSlice(List.of(), true));
 
-    HomeFeedQueryService.Page page = home.page(7L, READER, "latest", null, "20.0", 20, true);
+    HomeFeedQueryService.Page page = home.page(ask(7L, READER, "latest", null, "20.0", 20, true));
 
     assertThat(page.gap()).isTrue();
     assertThat(page.next())

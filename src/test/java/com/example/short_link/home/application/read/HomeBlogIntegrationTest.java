@@ -1,9 +1,9 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.SeenViewer;
-import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -127,13 +127,13 @@ class HomeBlogIntegrationTest {
   }
 
   private HomeFeedQueryService.Page blog(String cursor, String since, int size) {
-    return home.page(reader, SeenViewer.member(reader), null, "blog", cursor, since, size, true);
+    return home.page(ask(reader, SeenViewer.member(reader), "blog", cursor, since, size, true));
   }
 
   private List<Long> ids(HomeFeedQueryService.Page page) {
     Set<Long> ours = Set.of(writer, blocked, reader);
     return page.items().stream()
-        .map(item -> (PostCard) item.post())
+        .map(HomeFeedQueryService.Item::post)
         .filter(card -> ours.contains(card.item().author().id()))
         .map(card -> card.item().id())
         .toList();

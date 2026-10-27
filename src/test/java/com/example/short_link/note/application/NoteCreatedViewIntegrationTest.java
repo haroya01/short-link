@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PageAsk;
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteCreatedViewIntegrationTest {
 
-  @Autowired private NoteCommandService command;
+  @Autowired private NoteComposer command;
   @Autowired private NoteQueryService query;
   @Autowired private UserRepository users;
   @PersistenceContext private EntityManager em;

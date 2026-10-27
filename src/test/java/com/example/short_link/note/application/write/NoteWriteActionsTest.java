@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
@@ -51,7 +52,6 @@ import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
-import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -77,14 +77,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-class NoteCommandServiceTest {
+class NoteWriteActionsTest {
 
   private static final Instant NOW = Instant.parse("2026-10-06T00:00:00.123456789Z");
   private static final NoteAuthor WRITER = new NoteAuthor(7L, "writer", null);
 
   @Mock private NoteRepository notes;
   @Mock private NotePageReader pages;
-  @Mock private RoomNoteErasureRepository erasures;
   @Mock private NoteAccessReader lookups;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
@@ -101,14 +100,13 @@ class NoteCommandServiceTest {
   @Mock private SeriesItemCleaner seriesItems;
   @Mock private ApplicationEventPublisher events;
 
-  private NoteCommandService service() {
-    return new NoteCommandService(
+  private NoteWriteGuard guard() {
+    return new NoteWriteGuard(notes, new NoteAccess(lookups), blocks);
+  }
+
+  private NoteComposer composer() {
+    return new NoteComposer(
         notes,
-        pages,
-        erasures,
-        likes,
-        reposts,
-        bookmarks,
         media,
         quotedPosts,
         people,
@@ -117,11 +115,34 @@ class NoteCommandServiceTest {
         new NoteAccess(lookups),
         rooms,
         moderation,
-        blocks,
+        guard(),
+        events,
+        FakeTransactions.template(),
+        Clock.fixed(NOW, ZoneOffset.UTC));
+  }
+
+  private NoteInteractions interactions() {
+    return new NoteInteractions(
+        guard(),
+        notes,
+        pages,
+        likes,
+        reposts,
+        bookmarks,
+        moderation,
+        events,
+        Clock.fixed(NOW, ZoneOffset.UTC));
+  }
+
+  private NoteThreadControls threads() {
+    return new NoteThreadControls(
+        notes,
+        guard(),
+        media,
+        likes,
         connections,
         seriesItems,
         events,
-        FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -159,7 +180,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
     List<NoteView> thread =
-        service()
+        composer()
             .createThread(
                 7L,
                 List.of(
@@ -192,7 +213,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
     List<NoteView> thread =
-        service()
+        composer()
             .createThread(
                 7L,
                 List.of(
@@ -209,7 +230,7 @@ class NoteCommandServiceTest {
 
     ids.set(200L);
     List<NoteView> marked =
-        service()
+        composer()
             .createThread(
                 7L,
                 List.of(
@@ -225,12 +246,12 @@ class NoteCommandServiceTest {
     NoteDraft one = new NoteDraft("하나", List.of(), null, null);
     for (List<NoteDraft> drafts :
         List.of(List.of(one), Collections.nCopies(NoteEntity.MAX_THREAD_NOTES + 1, one))) {
-      assertThatThrownBy(() -> service().createThread(7L, drafts))
+      assertThatThrownBy(() -> composer().createThread(7L, drafts))
           .isInstanceOfSatisfying(
               NoteException.class,
               e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_THREAD_SIZE));
     }
-    assertThatThrownBy(() -> service().createThread(7L, null)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> composer().createThread(7L, null)).isInstanceOf(NoteException.class);
     verify(notes, never()).save(any());
   }
 
@@ -248,7 +269,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
     NoteView view =
-        service()
+        composer()
             .create(
                 7L,
                 new NoteDraft(
@@ -285,7 +306,7 @@ class NoteCommandServiceTest {
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    service().create(7L, new NoteDraft("only us", null, 5L, null, null, null, false, "PRIVATE"));
+    composer().create(7L, new NoteDraft("only us", null, 5L, null, null, null, false, "PRIVATE"));
 
     verify(events, never()).publishEvent(any(PostQuotedEvent.class));
     verify(events, never()).publishEvent(any(ImageVariantsRequested.class));
@@ -296,9 +317,9 @@ class NoteCommandServiceTest {
     saving();
     when(images.verifyAll(any(), any()))
         .thenReturn(List.of(new NoteImages.StoredImage("k", "u", "image/png", null)));
-    service().create(7L, new NoteDraft(null, List.of(new NoteDraft.Image("k", null)), null, null));
+    composer().create(7L, new NoteDraft(null, List.of(new NoteDraft.Image("k", null)), null, null));
 
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("   ", null, null, null)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("   ", null, null, null)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_BODY_REQUIRED));
@@ -308,10 +329,10 @@ class NoteCommandServiceTest {
   void bodyLengthCountsCharactersNotUtf16Units() {
     saving();
     String fiveHundredEmoji = "😀".repeat(NoteEntity.MAX_BODY_LENGTH);
-    service().create(7L, new NoteDraft(fiveHundredEmoji, null, null, null));
+    composer().create(7L, new NoteDraft(fiveHundredEmoji, null, null, null));
 
     assertThatThrownBy(
-            () -> service().create(7L, new NoteDraft(fiveHundredEmoji + "x", null, null, null)))
+            () -> composer().create(7L, new NoteDraft(fiveHundredEmoji + "x", null, null, null)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_BODY_TOO_LONG));
@@ -342,8 +363,8 @@ class NoteCommandServiceTest {
         .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
     NoteDraft photo = new NoteDraft("사진", List.of(new NoteDraft.Image("k", null)), null, null);
 
-    service().create(7L, photo);
-    service().createThread(7L, List.of(photo, photo));
+    composer().create(7L, photo);
+    composer().createThread(7L, List.of(photo, photo));
 
     assertThat(seen)
         .containsExactly(
@@ -359,7 +380,7 @@ class NoteCommandServiceTest {
   void aQuoteMustBeAPublishedPost() {
     when(quotedPosts.publishedByIds(Set.of(9L))).thenReturn(Map.of());
 
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, 9L, null)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, 9L, null)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_NOT_FOUND));
@@ -369,25 +390,32 @@ class NoteCommandServiceTest {
   void repliesFollowTheParentAndRespectBlocksBothWays() {
     saving();
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
-    NoteView reply = service().create(7L, new NoteDraft("re", null, null, 50L));
+    NoteView reply = composer().create(7L, new NoteDraft("re", null, null, 50L));
     assertThat(reply.inReplyToId()).isEqualTo(50L);
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re", 50L));
+                NoteInteractionEvent.Type.REPLY,
+                8L,
+                Actor.member(7L),
+                50L,
+                "parent",
+                100L,
+                "re",
+                50L));
 
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("re", null, null, 50L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_BLOCKED));
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(false);
     when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("re", null, null, 50L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
         .isInstanceOf(NoteException.class);
 
     when(notes.findById(51L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("re", null, null, 51L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 51L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_FOUND));
@@ -399,9 +427,9 @@ class NoteCommandServiceTest {
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
     when(notes.findById(60L)).thenReturn(Optional.of(note(60L, 7L, "first")));
 
-    service().create(7L, new NoteDraft("hello", null, null, null));
-    service().create(7L, new NoteDraft("re", null, null, 50L));
-    service().create(7L, new NoteDraft("and then", null, null, 60L));
+    composer().create(7L, new NoteDraft("hello", null, null, null));
+    composer().create(7L, new NoteDraft("re", null, null, 50L));
+    composer().create(7L, new NoteDraft("and then", null, null, 60L));
 
     ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
     verify(events, org.mockito.Mockito.atLeastOnce()).publishEvent(published.capture());
@@ -417,7 +445,7 @@ class NoteCommandServiceTest {
     saving();
 
     NoteView view =
-        service()
+        composer()
             .create(
                 7L,
                 new NoteDraft("hello", null, null, null, null, null, false, null, null, " EN "));
@@ -425,7 +453,7 @@ class NoteCommandServiceTest {
     assertThat(view.language()).isEqualTo("en");
     assertThatThrownBy(
             () ->
-                service()
+                composer()
                     .create(
                         7L,
                         new NoteDraft(
@@ -439,7 +467,7 @@ class NoteCommandServiceTest {
   void aNewNoteComesBackWithItsWritersOwnMarksAllOff() {
     saving();
 
-    NoteView view = service().create(7L, new NoteDraft("hello", null, null, null));
+    NoteView view = composer().create(7L, new NoteDraft("hello", null, null, null));
 
     assertThat(view.likedByMe()).isFalse();
     assertThat(view.repostedByMe()).isFalse();
@@ -451,7 +479,7 @@ class NoteCommandServiceTest {
   @Test
   void aDirectNoteIsNeverBroadcast() {
     saving();
-    service()
+    composer()
         .create(7L, new NoteDraft("psst", null, null, null, null, null, false, "DIRECT", null));
 
     verify(events, never()).publishEvent(any(NoteBroadcastEvent.class));
@@ -466,7 +494,7 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(50L)))
         .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
 
-    NoteView view = service().create(7L, new NoteDraft("so true", null, null, null, 50L));
+    NoteView view = composer().create(7L, new NoteDraft("so true", null, null, null, 50L));
 
     ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
     verify(notes).save(saved.capture());
@@ -484,8 +512,7 @@ class NoteCommandServiceTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.QUOTE,
                 8L,
-                7L,
-                null,
+                Actor.member(7L),
                 50L,
                 "original",
                 100L,
@@ -495,7 +522,7 @@ class NoteCommandServiceTest {
 
   @Test
   void aNoteQuotesAPostOrANoteButNeverBoth() {
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, 5L, null, 50L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, 5L, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_CONFLICT));
@@ -505,20 +532,20 @@ class NoteCommandServiceTest {
   @Test
   void aQuotedNoteMustExistHaveAnActiveAuthorAndNotCrossABlock() {
     when(notes.findById(51L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 51L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 51L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
 
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER));
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 50L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
 
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 50L)))
+    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
@@ -534,20 +561,20 @@ class NoteCommandServiceTest {
     when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
     when(pages.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3, 0)));
 
-    assertThat(service().setRepost(8L, 1L, true))
-        .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
-    service().setRepost(8L, 1L, true);
-    assertThat(service().setRepost(8L, 1L, false))
-        .isEqualTo(new NoteCommandService.RepostStatus(false, 3L));
-    service().setRepost(8L, 1L, false);
+    assertThat(interactions().setRepost(8L, 1L, true))
+        .isEqualTo(new NoteInteractions.RepostStatus(true, 3L));
+    interactions().setRepost(8L, 1L, true);
+    assertThat(interactions().setRepost(8L, 1L, false))
+        .isEqualTo(new NoteInteractions.RepostStatus(false, 3L));
+    interactions().setRepost(8L, 1L, false);
 
     verify(moderation, times(2)).requireCanWrite(8L);
     verify(events, times(1)).publishEvent(new NoteRepostedEvent(900L, 1L, 8L));
     verify(events, times(1)).publishEvent(new NoteUnrepostedEvent(900L, 1L, 8L));
 
     when(reposts.addIfAbsent(1L, 7L)).thenReturn(Optional.empty());
-    assertThat(service().setRepost(7L, 1L, true))
-        .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
+    assertThat(interactions().setRepost(7L, 1L, true))
+        .isEqualTo(new NoteInteractions.RepostStatus(true, 3L));
   }
 
   @Test
@@ -555,7 +582,7 @@ class NoteCommandServiceTest {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
     when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
 
-    assertThatThrownBy(() -> service().setRepost(8L, 1L, true))
+    assertThatThrownBy(() -> interactions().setRepost(8L, 1L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
@@ -576,12 +603,12 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
     saving();
 
-    assertThat(service().setLike(8L, 1L, true).liked()).isTrue();
-    service().setLike(8L, 1L, false);
-    assertThat(service().setBookmark(8L, 1L, true).bookmarked()).isTrue();
-    service().setRepost(8L, 1L, true);
-    service().setRepost(8L, 1L, false);
-    service().create(8L, new NoteDraft("an answer", null, null, 1L, null));
+    assertThat(interactions().setLike(8L, 1L, true).liked()).isTrue();
+    interactions().setLike(8L, 1L, false);
+    assertThat(interactions().setBookmark(8L, 1L, true).bookmarked()).isTrue();
+    interactions().setRepost(8L, 1L, true);
+    interactions().setRepost(8L, 1L, false);
+    composer().create(8L, new NoteDraft("an answer", null, null, 1L, null));
 
     verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, true));
     verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, false));
@@ -602,7 +629,7 @@ class NoteCommandServiceTest {
     when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of(42L, alice));
     saving();
 
-    NoteView quoting = service().create(8L, new NoteDraft("look", null, null, null, 1L));
+    NoteView quoting = composer().create(8L, new NoteDraft("look", null, null, null, 1L));
 
     assertThat(quoting.quotedNote().id()).isEqualTo(1L);
     assertThat(quoting.quotedNote().author()).isEqualTo(alice);
@@ -619,7 +646,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
     when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of());
 
-    assertThatThrownBy(() -> service().create(8L, new NoteDraft("look", null, null, null, 1L)))
+    assertThatThrownBy(() -> composer().create(8L, new NoteDraft("look", null, null, null, 1L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
@@ -631,7 +658,7 @@ class NoteCommandServiceTest {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    service().create(7L, new NoteDraft("hi @bob@mastodon.social", null, null, null));
+    composer().create(7L, new NoteDraft("hi @bob@mastodon.social", null, null, null));
 
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L, true));
   }
@@ -639,12 +666,12 @@ class NoteCommandServiceTest {
   @Test
   void aNoteWithAnAddressAsksForItsCardButPhotosAndQuotesAlreadyCarryOne() {
     saving();
-    service().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));
+    composer().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));
     verify(events).publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/a"));
 
     when(images.verifyAll(any(), any()))
         .thenReturn(List.of(new NoteImages.StoredImage("k", "u", "image/png", null)));
-    service()
+    composer()
         .create(
             7L,
             new NoteDraft(
@@ -662,7 +689,7 @@ class NoteCommandServiceTest {
         .when(moderation)
         .requireCanWrite(7L);
 
-    assertThatThrownBy(() -> service().edit(7L, 1L, "changed while suspended", null, null))
+    assertThatThrownBy(() -> composer().edit(7L, 1L, "changed while suspended", null, null))
         .isInstanceOfSatisfying(
             UserException.class,
             e -> assertThat(e.errorCode()).isEqualTo(UserErrorCode.ACCOUNT_SUSPENDED));
@@ -678,13 +705,13 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "typo fixed https://example.com/a", null, null);
+    composer().edit(7L, 1L, "typo fixed https://example.com/a", null, null);
     verify(events, never()).publishEvent(any(NoteLinkPreviewRequested.class));
 
-    service().edit(7L, 1L, "now https://example.com/b", null, null);
+    composer().edit(7L, 1L, "now https://example.com/b", null, null);
     verify(events).publishEvent(new NoteLinkPreviewRequested(1L, "https://example.com/b"));
 
-    service().edit(7L, 1L, "no address any more", null, null);
+    composer().edit(7L, 1L, "no address any more", null, null);
     verify(events).publishEvent(new NoteLinkPreviewRequested(1L, null));
   }
 
@@ -692,7 +719,7 @@ class NoteCommandServiceTest {
   void aNoteKeepsItsHashtagsAndAnEditRewritesThemOnlyWhenTheSetChanges() {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
-    service().create(7L, new NoteDraft("오늘 #스프링 #Boot", List.of(), null, null));
+    composer().create(7L, new NoteDraft("오늘 #스프링 #Boot", List.of(), null, null));
     verify(notes).tag(100L, List.of("스프링", "Boot"));
 
     NoteEntity mine = note(1L, 7L, "#a #b");
@@ -700,10 +727,10 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "#B then #A", null, null);
+    composer().edit(7L, 1L, "#B then #A", null, null);
     verify(notes, never()).retag(any(), any());
 
-    service().edit(7L, 1L, "only #c now", null, null);
+    composer().edit(7L, 1L, "only #c now", null, null);
     verify(notes).retag(1L, List.of("c"));
   }
 
@@ -717,7 +744,7 @@ class NoteCommandServiceTest {
         .thenReturn(Map.of(7L, WRITER, 9L, mina, 11L, yuki));
 
     NoteView view =
-        service().create(7L, new NoteDraft("@mina @Yuki @writer @ghost 안녕", List.of(), null, 5L));
+        composer().create(7L, new NoteDraft("@mina @Yuki @writer @ghost 안녕", List.of(), null, 5L));
 
     assertThat(view.mentions()).containsExactly("mina", "yuki", "writer");
     verify(events)
@@ -725,8 +752,7 @@ class NoteCommandServiceTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 11L,
-                7L,
-                null,
+                Actor.member(7L),
                 100L,
                 "@mina @Yuki @writer @ghost 안녕",
                 null,
@@ -751,15 +777,14 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(List.of(), List.of("yuki")))
         .thenReturn(Map.of(11L, new NoteAuthor(11L, "yuki", null)));
 
-    service().edit(7L, 1L, "@mina and @yuki hi", null, null);
+    composer().edit(7L, 1L, "@mina and @yuki hi", null, null);
 
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 11L,
-                7L,
-                null,
+                Actor.member(7L),
                 1L,
                 "@mina and @yuki hi",
                 null,
@@ -773,18 +798,18 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
     NoteView warned =
-        service().create(7L, new NoteDraft("결말", List.of(), null, null, null, "  스포일러  ", false));
+        composer().create(7L, new NoteDraft("결말", List.of(), null, null, null, "  스포일러  ", false));
     assertThat(warned.contentWarning()).isEqualTo("스포일러");
     assertThat(warned.sensitive()).isTrue();
 
     NoteView plain =
-        service().create(7L, new NoteDraft("평범", List.of(), null, null, null, "   ", false));
+        composer().create(7L, new NoteDraft("평범", List.of(), null, null, null, "   ", false));
     assertThat(plain.contentWarning()).isNull();
     assertThat(plain.sensitive()).isFalse();
 
     assertThatThrownBy(
             () ->
-                service()
+                composer()
                     .create(
                         7L,
                         new NoteDraft("x", List.of(), null, null, null, "가".repeat(101), false)))
@@ -801,10 +826,10 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "body only", null, null);
+    composer().edit(7L, 1L, "body only", null, null);
     assertThat(mine.getContentWarning()).isEqualTo("스포일러");
 
-    service().edit(7L, 1L, "no warning", "", false);
+    composer().edit(7L, 1L, "no warning", "", false);
     assertThat(mine.getContentWarning()).isNull();
     assertThat(mine.isSensitive()).isFalse();
   }
@@ -815,14 +840,14 @@ class NoteCommandServiceTest {
     when(notes.findById(1L)).thenReturn(Optional.of(mine));
     when(notes.countPinned(7L)).thenReturn(4L);
 
-    assertThat(service().setPin(7L, 1L, true).pinned()).isTrue();
+    assertThat(threads().setPin(7L, 1L, true).pinned()).isTrue();
     assertThat(mine.getPinnedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
-    assertThat(service().setPin(7L, 1L, true).pinned()).isTrue();
-    assertThat(service().setPin(7L, 1L, false).pinned()).isFalse();
+    assertThat(threads().setPin(7L, 1L, true).pinned()).isTrue();
+    assertThat(threads().setPin(7L, 1L, false).pinned()).isFalse();
     assertThat(mine.isPinned()).isFalse();
 
     when(notes.countPinned(7L)).thenReturn(5L);
-    assertThatThrownBy(() -> service().setPin(7L, 1L, true))
+    assertThatThrownBy(() -> threads().setPin(7L, 1L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_LIMIT));
@@ -830,16 +855,16 @@ class NoteCommandServiceTest {
     NoteEntity reply = new NoteEntity(7L, "reply", 9L, null);
     ReflectionTestUtils.setField(reply, "id", 2L);
     when(notes.findById(2L)).thenReturn(Optional.of(reply));
-    assertThatThrownBy(() -> service().setPin(7L, 2L, true))
+    assertThatThrownBy(() -> threads().setPin(7L, 2L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
     ReflectionTestUtils.setField(reply, "inReplyToId", null);
-    assertThatThrownBy(() -> service().setPin(7L, 2L, true))
+    assertThatThrownBy(() -> threads().setPin(7L, 2L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
-    assertThatThrownBy(() -> service().setPin(8L, 1L, true)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> threads().setPin(8L, 1L, true)).isInstanceOf(NoteException.class);
   }
 
   @Test
@@ -850,15 +875,15 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "처음", null, null);
+    composer().edit(7L, 1L, "처음", null, null);
     verify(notes, never()).recordVersion(any(), any());
 
-    service().edit(7L, 1L, "고친 글", null, null);
+    composer().edit(7L, 1L, "고친 글", null, null);
     verify(notes)
         .recordVersion(
             1L, new NoteVersion("처음", null, false, Instant.parse("2026-10-01T00:00:00Z")));
 
-    service().edit(7L, 1L, "고친 글", "스포일러", null);
+    composer().edit(7L, 1L, "고친 글", "스포일러", null);
     verify(notes)
         .recordVersion(
             1L, new NoteVersion("고친 글", null, false, Instant.parse("2026-10-06T00:00:00.123456Z")));
@@ -872,7 +897,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
     when(lookups.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
 
-    service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
+    composer().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
 
     verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
   }
@@ -888,7 +913,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(7L), List.of("mina")))
         .thenReturn(Map.of(7L, WRITER, 11L, mina));
 
-    NoteView reply = service().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
+    NoteView reply = composer().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
 
     assertThat(reply.visibility()).isEqualTo("private");
     verify(notes).addRecipients(100L, Set.of(11L, 9L));
@@ -911,12 +936,12 @@ class NoteCommandServiceTest {
             });
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    NoteView created = service().create(7L, draftWithPolicy("우리끼리", null, "Mentioned"));
+    NoteView created = composer().create(7L, draftWithPolicy("우리끼리", null, "Mentioned"));
 
     assertThat(saved.getValue().getReplyPolicy()).isEqualTo(NoteReplyPolicy.MENTIONED);
     assertThat(created.replyPolicy()).isEqualTo("mentioned");
     assertThat(created.canReply()).isTrue();
-    assertThatThrownBy(() -> service().create(7L, draftWithPolicy("x", null, "friends")))
+    assertThatThrownBy(() -> composer().create(7L, draftWithPolicy("x", null, "friends")))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_INVALID));
@@ -938,20 +963,20 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(Set.of(9L)))
         .thenReturn(Map.of(9L, new NoteAuthor(9L, "owner", null)));
 
-    NoteView named = service().create(7L, draftWithPolicy("저요", 6L, "everyone"));
+    NoteView named = composer().create(7L, draftWithPolicy("저요", 6L, "everyone"));
     assertThat(named.replyPolicy()).isEqualTo("mentioned");
-    assertThatThrownBy(() -> service().create(8L, draftWithPolicy("저도", 6L, null)))
+    assertThatThrownBy(() -> composer().create(8L, draftWithPolicy("저도", 6L, null)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_RESTRICTED));
-    service().create(9L, draftWithPolicy("제 스레드", 6L, null));
+    composer().create(9L, draftWithPolicy("제 스레드", 6L, null));
 
     root.limitReplies(NoteReplyPolicy.FOLLOWING);
     middle.answer(root);
     when(people.followersOf(8L, Set.of(9L))).thenReturn(Set.of(), Set.of(9L));
-    assertThatThrownBy(() -> service().create(8L, draftWithPolicy("팔로우 전", 6L, null)))
+    assertThatThrownBy(() -> composer().create(8L, draftWithPolicy("팔로우 전", 6L, null)))
         .isInstanceOf(NoteException.class);
-    service().create(8L, draftWithPolicy("팔로우 뒤", 6L, null));
+    composer().create(8L, draftWithPolicy("팔로우 뒤", 6L, null));
   }
 
   @Test
@@ -962,17 +987,17 @@ class NoteCommandServiceTest {
     when(notes.findById(5L)).thenReturn(Optional.of(root));
     when(notes.findById(6L)).thenReturn(Optional.of(reply));
 
-    assertThat(service().setReplyPolicy(7L, 5L, "following").replyPolicy()).isEqualTo("following");
+    assertThat(threads().setReplyPolicy(7L, 5L, "following").replyPolicy()).isEqualTo("following");
     verify(notes).applyReplyPolicy(5L, NoteReplyPolicy.FOLLOWING);
-    assertThatThrownBy(() -> service().setReplyPolicy(8L, 5L, "following"))
+    assertThatThrownBy(() -> threads().setReplyPolicy(8L, 5L, "following"))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
-    assertThatThrownBy(() -> service().setReplyPolicy(7L, 6L, "following"))
+    assertThatThrownBy(() -> threads().setReplyPolicy(7L, 6L, "following"))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_ON_REPLY));
-    assertThatThrownBy(() -> service().setReplyPolicy(7L, 5L, "nobody"))
+    assertThatThrownBy(() -> threads().setReplyPolicy(7L, 5L, "nobody"))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_INVALID));
@@ -987,15 +1012,15 @@ class NoteCommandServiceTest {
     when(notes.findById(5L)).thenReturn(Optional.of(root));
     when(notes.findById(6L)).thenReturn(Optional.of(reply));
 
-    assertThat(service().setReplyHidden(7L, 6L, true).hidden()).isTrue();
+    assertThat(threads().setReplyHidden(7L, 6L, true).hidden()).isTrue();
     assertThat(reply.isReplyHidden()).isTrue();
-    assertThat(service().setReplyHidden(7L, 6L, false).hidden()).isFalse();
+    assertThat(threads().setReplyHidden(7L, 6L, false).hidden()).isFalse();
     assertThat(reply.isReplyHidden()).isFalse();
-    assertThatThrownBy(() -> service().setReplyHidden(8L, 6L, true))
+    assertThatThrownBy(() -> threads().setReplyHidden(8L, 6L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
-    assertThatThrownBy(() -> service().setReplyHidden(7L, 5L, true))
+    assertThatThrownBy(() -> threads().setReplyHidden(7L, 5L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_A_REPLY));
@@ -1016,16 +1041,16 @@ class NoteCommandServiceTest {
     when(notes.findById(6L)).thenReturn(Optional.of(members));
     when(notes.findById(7L)).thenReturn(Optional.of(remote));
 
-    assertThatThrownBy(() -> service().delete(9L, 6L))
+    assertThatThrownBy(() -> threads().delete(9L, 6L))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
-    service().delete(7L, 7L);
+    threads().delete(7L, 7L);
     assertThat(remote.getInReplyToId()).isNull();
     assertThat(remote.isTopLevel()).isFalse();
     verify(notes, never()).delete(remote);
 
-    service().delete(7L, 6L);
+    threads().delete(7L, 6L);
     verify(notes).delete(members);
     verify(events).publishEvent(new NoteDeletedEvent(6L, 8L, List.of(), 5L, List.of(), null));
   }
@@ -1035,7 +1060,7 @@ class NoteCommandServiceTest {
     NoteEntity hidden = note(5L, 9L, "secret");
     hidden.showTo(NoteVisibility.DIRECT);
     when(notes.findById(5L)).thenReturn(Optional.of(hidden));
-    assertThatThrownBy(() -> service().setLike(7L, 5L, true))
+    assertThatThrownBy(() -> interactions().setLike(7L, 5L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_FOUND));
@@ -1044,14 +1069,14 @@ class NoteCommandServiceTest {
     followersOnly.showTo(NoteVisibility.PRIVATE);
     when(notes.findById(6L)).thenReturn(Optional.of(followersOnly));
     when(lookups.visibleTo(7L, Set.of(6L))).thenReturn(Set.of(6L));
-    assertThatThrownBy(() -> service().setRepost(7L, 6L, true))
+    assertThatThrownBy(() -> interactions().setRepost(7L, 6L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_SHAREABLE));
 
     assertThatThrownBy(
             () ->
-                service()
+                composer()
                     .create(
                         7L,
                         new NoteDraft("x", List.of(), null, null, null, null, false, "everyone")))
@@ -1068,13 +1093,13 @@ class NoteCommandServiceTest {
     NoteView edited = NoteViewFixtures.note(1L, "new", WRITER, null, 0L);
     when(views.of(List.of(mine), 7L)).thenReturn(List.of(edited));
 
-    assertThat(service().edit(7L, 1L, " new ", null, null)).isEqualTo(edited);
+    assertThat(composer().edit(7L, 1L, " new ", null, null)).isEqualTo(edited);
     assertThat(mine.getBody()).isEqualTo("new");
     assertThat(mine.getEditedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
     verify(events).publishEvent(new NoteEditedEvent(1L, 7L));
-    verify(events).publishEvent(new NoteRevisedEvent(1L, 7L, null, "new"));
+    verify(events).publishEvent(new NoteRevisedEvent(1L, Actor.member(7L), "new"));
 
-    assertThatThrownBy(() -> service().edit(8L, 1L, "theirs", null, null))
+    assertThatThrownBy(() -> composer().edit(8L, 1L, "theirs", null, null))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
@@ -1088,7 +1113,7 @@ class NoteCommandServiceTest {
         .thenReturn(List.of(new NoteMediaEntity(1L, 0, "k", "u", "image/png", null)));
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "", null, null);
+    composer().edit(7L, 1L, "", null, null);
 
     assertThat(mine.getBody()).isEmpty();
   }
@@ -1102,8 +1127,8 @@ class NoteCommandServiceTest {
     when(views.of(List.of(reply), 7L))
         .thenReturn(List.of(NoteViewFixtures.note(2L, "고친 답", WRITER, null, 0L)));
 
-    service().edit(7L, 2L, "고친 답", null, null);
-    service().delete(7L, 2L);
+    composer().edit(7L, 2L, "고친 답", null, null);
+    threads().delete(7L, 2L);
 
     verify(events).publishEvent(new NoteEditedEvent(2L, 7L, true));
     verify(events).publishEvent(new NoteDeletedEvent(2L, 7L, List.of(), 50L, List.of(), null));
@@ -1116,7 +1141,7 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L)))
         .thenReturn(List.of(new NoteMediaEntity(1L, 0, "k", "u", "image/png", null)));
 
-    service().delete(7L, 1L);
+    threads().delete(7L, 1L);
 
     verify(likes).deleteAllByNoteId(1L);
     verify(connections).purgeForNote(1L);
@@ -1132,18 +1157,18 @@ class NoteCommandServiceTest {
     when(likes.addIfAbsent(1L, 7L)).thenReturn(false);
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true, false);
 
-    assertThat(service().setLike(7L, 1L, true))
-        .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
-    assertThat(service().setLike(8L, 1L, true))
-        .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
-    assertThat(service().setLike(8L, 1L, false))
-        .isEqualTo(new NoteCommandService.LikeStatus(false, 5L));
-    service().setLike(8L, 1L, true);
+    assertThat(interactions().setLike(7L, 1L, true))
+        .isEqualTo(new NoteInteractions.LikeStatus(true, 5L));
+    assertThat(interactions().setLike(8L, 1L, true))
+        .isEqualTo(new NoteInteractions.LikeStatus(true, 5L));
+    assertThat(interactions().setLike(8L, 1L, false))
+        .isEqualTo(new NoteInteractions.LikeStatus(false, 5L));
+    interactions().setLike(8L, 1L, true);
     verify(likes).delete(1L, 8L);
     verify(events, times(1))
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null, 1L));
+                NoteInteractionEvent.Type.LIKE, 7L, Actor.member(8L), 1L, "x", null, null, 1L));
   }
 
   @Test
@@ -1153,8 +1178,8 @@ class NoteCommandServiceTest {
     when(notes.findById(60L)).thenReturn(Optional.of(reply));
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 7L, "root")));
 
-    assertThat(service().setConversationMuted(9L, 60L, true).muted()).isTrue();
-    assertThat(service().setConversationMuted(9L, 50L, false).muted()).isFalse();
+    assertThat(interactions().setConversationMuted(9L, 60L, true).muted()).isTrue();
+    assertThat(interactions().setConversationMuted(9L, 50L, false).muted()).isFalse();
 
     verify(notes).muteConversation(9L, 50L, NOW);
     verify(notes).unmuteConversation(9L, 50L);
@@ -1168,7 +1193,7 @@ class NoteCommandServiceTest {
     when(notes.findById(60L)).thenReturn(Optional.of(middle));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    service().create(7L, new NoteDraft("deeper", null, null, 60L));
+    composer().create(7L, new NoteDraft("deeper", null, null, 60L));
 
     ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
     verify(notes).save(saved.capture());
@@ -1190,9 +1215,9 @@ class NoteCommandServiceTest {
         .thenReturn(
             List.of(new NoteMediaEntity(2L, 0, "", "https://elsewhere/a.png", "image/png", null)));
 
-    service().takeDown(1L);
-    service().takeDown(2L);
-    service().takeDown(3L);
+    threads().takeDown(1L);
+    threads().takeDown(2L);
+    threads().takeDown(3L);
 
     verify(notes).delete(mine);
     verify(notes).delete(remote);
@@ -1205,10 +1230,10 @@ class NoteCommandServiceTest {
   void aBookmarkIsTheReadersOwnAndQuiet() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
 
-    assertThat(service().setBookmark(8L, 1L, true))
-        .isEqualTo(new NoteCommandService.BookmarkStatus(true));
-    assertThat(service().setBookmark(8L, 1L, false))
-        .isEqualTo(new NoteCommandService.BookmarkStatus(false));
+    assertThat(interactions().setBookmark(8L, 1L, true))
+        .isEqualTo(new NoteInteractions.BookmarkStatus(true));
+    assertThat(interactions().setBookmark(8L, 1L, false))
+        .isEqualTo(new NoteInteractions.BookmarkStatus(false));
 
     verify(bookmarks).addIfAbsent(1L, 8L);
     verify(bookmarks).delete(1L, 8L);
@@ -1233,7 +1258,7 @@ class NoteCommandServiceTest {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    NoteView view = service().create(7L, polled(List.of("  강남 ", "홍대\n입구"), 3600L, true));
+    NoteView view = composer().create(7L, polled(List.of("  강남 ", "홍대\n입구"), 3600L, true));
 
     ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
     verify(notes).save(saved.capture());
@@ -1266,7 +1291,7 @@ class NoteCommandServiceTest {
             null,
             new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
 
-    service().create(7L, draft);
+    composer().create(7L, draft);
 
     verify(events, never()).publishEvent(any(NoteLinkPreviewRequested.class));
   }
@@ -1285,7 +1310,7 @@ class NoteCommandServiceTest {
             polled(List.of("a", "b"), null, false),
             polled(List.of("a", "b"), 299L, false),
             polled(List.of("a", "b"), 2_629_747L, false))) {
-      assertThatThrownBy(() -> service().create(7L, draft))
+      assertThatThrownBy(() -> composer().create(7L, draft))
           .isInstanceOfSatisfying(
               NoteException.class,
               e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_POLL_INVALID));
@@ -1301,7 +1326,7 @@ class NoteCommandServiceTest {
             false,
             null,
             new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
-    assertThatThrownBy(() -> service().create(7L, withImage))
+    assertThatThrownBy(() -> composer().create(7L, withImage))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_POLL_WITH_MEDIA));

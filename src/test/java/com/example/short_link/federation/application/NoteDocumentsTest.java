@@ -318,8 +318,8 @@ class NoteDocumentsTest {
                 "hello",
                 null,
                 List.of(
-                    new Image("https://cdn/a.png", "image/png", "cat", 1200, 900),
-                    new Image("https://cdn/b.png", "image/png", null, null, null)),
+                    new Image("https://cdn/a.png", "cat", "image/png", 1200, 900),
+                    new Image("https://cdn/b.png", null, "image/png", null, null)),
                 null),
             "pid",
             Addressing.NONE);
@@ -338,7 +338,7 @@ class NoteDocumentsTest {
             note(
                 "hello",
                 null,
-                List.of(new Image("https://cdn/a.png", "image/png", "cat", null, null)),
+                List.of(new Image("https://cdn/a.png", "cat", "image/png", null, null)),
                 41L),
             "pid",
             Addressing.NONE);

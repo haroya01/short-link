@@ -43,6 +43,8 @@ public interface RoomRepository {
 
   void pin(Long roomId, Long userId, Instant at);
 
+  void unpin(Long roomId, Long userId);
+
   void readUpTo(Long roomId, Long userId, Long noteId);
 
   long unread(Long roomId, Long userId);
@@ -81,7 +83,7 @@ public interface RoomRepository {
 
   void dismissSuggestions(Long userId, Collection<Long> friendIds, Instant at);
 
-  int invite(Long roomId, Long inviterId, Collection<Long> userIds, Instant at);
+  int addInvitations(Long roomId, Long inviterId, Collection<Long> userIds, Instant at);
 
   long countInvitees(Long roomId);
 

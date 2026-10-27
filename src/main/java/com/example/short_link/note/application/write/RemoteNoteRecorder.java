@@ -1,10 +1,11 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.Hashtags;
-import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Poll;
@@ -15,6 +16,7 @@ import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.ReplyGate;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -26,7 +28,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -151,14 +152,13 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (!received.notifies()) {
       return stored;
     }
-    String excerpt = NoteEntity.excerptOf(received.body());
+    String excerpt = Excerpt.of(received.body());
     if (parent != null && parent.getUserId() != null) {
       events.publishEvent(
           new NoteInteractionEvent(
               NoteInteractionEvent.Type.REPLY,
               parent.getUserId(),
-              null,
-              received.remoteActorId(),
+              Actor.remote(received.remoteActorId()),
               parent.getId(),
               parent.excerpt(),
               noteId,
@@ -171,8 +171,7 @@ class RemoteNoteRecorder implements RemoteNotes {
           new NoteInteractionEvent(
               NoteInteractionEvent.Type.MENTION,
               member,
-              null,
-              received.remoteActorId(),
+              Actor.remote(received.remoteActorId()),
               noteId,
               excerpt,
               null,
@@ -196,12 +195,10 @@ class RemoteNoteRecorder implements RemoteNotes {
       return true;
     }
     NoteAuthor sender = people.remoteAuthors(Set.of(remoteActorId), null).get(remoteActorId);
-    if (sender != null
-        && Mentions.remote(root.getBody()).contains(sender.username().toLowerCase(Locale.ROOT))) {
-      return true;
-    }
-    return root.getReplyPolicy() == NoteReplyPolicy.FOLLOWING
-        && people.followsRemote(root.getUserId(), remoteActorId);
+    return ReplyGate.admits(
+        root,
+        new ReplyGate.Remote(sender == null ? null : sender.username()),
+        () -> people.followsRemote(root.getUserId(), remoteActorId));
   }
 
   // As on Mastodon, an Update older than the edit already kept changes nothing, and only a change
@@ -254,7 +251,7 @@ class RemoteNoteRecorder implements RemoteNotes {
       media.saveAll(attached);
     }
     events.publishEvent(
-        new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(body)));
+        new NoteRevisedEvent(noteId, Actor.remote(remoteActorId), Excerpt.of(body)));
     return true;
   }
 

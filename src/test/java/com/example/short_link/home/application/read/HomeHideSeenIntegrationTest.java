@@ -1,12 +1,11 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.domain.SeenItem;
 import com.example.short_link.federation.domain.SeenViewer;
-import com.example.short_link.note.application.read.NoteView;
-import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -139,7 +138,7 @@ class HomeHideSeenIntegrationTest {
 
     assertThat(keys(latest(viewer, null, true))).containsExactly("note:" + note);
     assertThat(
-            keys(home.page(null, device, "latest", null, null, 40, true)).stream()
+            keys(home.page(ask(null, device, "latest", null, null, 40, true))).stream()
                 .filter(key -> key.equals("note:" + note)))
         .isEmpty();
   }
@@ -156,7 +155,7 @@ class HomeHideSeenIntegrationTest {
     stored(viewer, SeenItem.NOTE, ownAbove, Instant.now().minusSeconds(1));
 
     HomeFeedQueryService.Page refreshed =
-        home.page(reader, viewer, "latest", null, first.newest(), 20, true);
+        home.page(ask(reader, viewer, "latest", null, first.newest(), 20, true));
 
     assertThat(refreshed.gap()).isFalse();
     assertThat(keys(refreshed)).containsExactly("note:" + fresh, "note:" + ownAbove);
@@ -201,13 +200,14 @@ class HomeHideSeenIntegrationTest {
       written.add(note(writer, "PUBLIC", null));
     }
     stored(viewer, SeenItem.NOTE, written.get(0), Instant.now().minusSeconds(60));
-    HomeFeedQueryService.Page first = home.page(reader, viewer, "latest", null, null, 1, false);
+    HomeFeedQueryService.Page first =
+        home.page(ask(reader, viewer, "latest", null, null, 1, false));
     assertThat(first.next()).doesNotStartWith("h");
 
     List<String> rest = new ArrayList<>();
     HomeFeedQueryService.Page at = first;
     for (int turn = 0; turn < 40 && at.next() != null; turn++) {
-      at = home.page(reader, viewer, "latest", at.next(), null, 1, true);
+      at = home.page(ask(reader, viewer, "latest", at.next(), null, 1, true));
       assertThat(at.next() == null || !at.next().startsWith("h")).isTrue();
       rest.addAll(keys(at));
     }
@@ -222,11 +222,11 @@ class HomeHideSeenIntegrationTest {
       written.add(note(writer, "PUBLIC", null));
     }
     stored(viewer, SeenItem.NOTE, written.get(0), Instant.now().minusSeconds(60));
-    HomeFeedQueryService.Page at = home.page(reader, viewer, "latest", null, null, 1, true);
+    HomeFeedQueryService.Page at = home.page(ask(reader, viewer, "latest", null, null, 1, true));
     List<String> shown = new ArrayList<>(keys(at));
     for (int turn = 0; turn < 40 && at.next() != null; turn++) {
       assertThat(at.next()).startsWith("h");
-      at = home.page(reader, viewer, "latest", at.next(), null, 1, false);
+      at = home.page(ask(reader, viewer, "latest", at.next(), null, 1, false));
       shown.addAll(keys(at));
     }
 
@@ -289,10 +289,11 @@ class HomeHideSeenIntegrationTest {
     for (boolean hide : new boolean[] {false, true}) {
       for (int size = 1; size <= 7; size++) {
         List<String> shown = new ArrayList<>();
-        HomeFeedQueryService.Page at = home.page(reader, viewer, "latest", null, null, size, hide);
+        HomeFeedQueryService.Page at =
+            home.page(ask(reader, viewer, "latest", null, null, size, hide));
         shown.addAll(keys(at));
         for (int turn = 0; turn < 500 && at.next() != null; turn++) {
-          at = home.page(reader, viewer, "latest", at.next(), null, size, hide);
+          at = home.page(ask(reader, viewer, "latest", at.next(), null, size, hide));
           shown.addAll(keys(at));
         }
         assertThat(shown.stream().filter(posts::contains).sorted().toList())
@@ -319,10 +320,10 @@ class HomeHideSeenIntegrationTest {
     for (int size = 1; size <= 7; size++) {
       List<String> shown = new ArrayList<>();
       HomeFeedQueryService.Page at =
-          home.page(reader, viewer, "following", null, null, size, false);
+          home.page(ask(reader, viewer, "following", null, null, size, false));
       shown.addAll(keys(at));
       for (int turn = 0; turn < 500 && at.next() != null; turn++) {
-        at = home.page(reader, viewer, "following", at.next(), null, size, false);
+        at = home.page(ask(reader, viewer, "following", at.next(), null, size, false));
         shown.addAll(keys(at));
       }
       assertThat(shown.stream().filter(posts::contains).sorted().toList())
@@ -343,13 +344,13 @@ class HomeHideSeenIntegrationTest {
   }
 
   private HomeFeedQueryService.Page signedOut(SeenViewer device) {
-    HomeFeedQueryService.Page page = home.page(null, device, "latest", null, null, 40, true);
+    HomeFeedQueryService.Page page = home.page(ask(null, device, "latest", null, null, 40, true));
     return new HomeFeedQueryService.Page(
         page.items().stream().filter(this::ours).toList(), page.next(), page.newest(), page.gap());
   }
 
   private HomeFeedQueryService.Page latest(SeenViewer who, String cursor, boolean hide) {
-    HomeFeedQueryService.Page page = home.page(reader, who, "latest", cursor, null, 40, hide);
+    HomeFeedQueryService.Page page = home.page(ask(reader, who, "latest", cursor, null, 40, hide));
     return new HomeFeedQueryService.Page(
         page.items().stream().filter(this::ours).toList(), page.next(), page.newest(), page.gap());
   }
@@ -359,16 +360,15 @@ class HomeHideSeenIntegrationTest {
   }
 
   private HomeFeedQueryService.Page page(SeenViewer who, String cursor, int size, boolean hide) {
-    HomeFeedQueryService.Page page = home.page(reader, who, "latest", cursor, null, size, hide);
+    HomeFeedQueryService.Page page =
+        home.page(ask(reader, who, "latest", cursor, null, size, hide));
     return new HomeFeedQueryService.Page(
         page.items().stream().filter(this::ours).toList(), page.next(), page.newest(), page.gap());
   }
 
   private boolean ours(HomeFeedQueryService.Item item) {
     long author =
-        item.kind().equals("note")
-            ? ((NoteView) item.note()).author().id()
-            : ((PostCard) item.post()).item().author().id();
+        item.kind().equals("note") ? item.note().author().id() : item.post().item().author().id();
     return author == reader || author == writer;
   }
 
@@ -377,8 +377,8 @@ class HomeHideSeenIntegrationTest {
         .map(
             item ->
                 item.kind().equals("note")
-                    ? "note:" + ((NoteView) item.note()).id()
-                    : "post:" + ((PostCard) item.post()).item().id())
+                    ? "note:" + item.note().id()
+                    : "post:" + item.post().item().id())
         .toList();
   }
 
