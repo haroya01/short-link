@@ -1,3 +1,13 @@
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|html#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/read/NoteSnapshotProvider.java|find#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|setLike#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/UpdatePostMetadataUseCase.java|execute#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#2=1
+AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/user/presentation/security/ApiKeyAuthenticationFilter.java|doFilterInternal#1=1
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=19
 CognitiveComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=24
 CognitiveComplexity|src/main/java/com/example/short_link/common/csv/CsvRows.java|parse(String)#1=22

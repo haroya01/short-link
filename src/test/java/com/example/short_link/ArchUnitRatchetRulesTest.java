@@ -22,6 +22,7 @@ import jakarta.persistence.Entity;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,8 @@ class ArchUnitRatchetRulesTest {
           "moduleInternalsStayInTheirModule", 22,
           "theSystemClockIsReadInConfigAlone", 0,
           "transactionsDoNotReachOutboundClients", 26,
-          "springDataRepositoriesStayBehindPorts", 2);
+          "springDataRepositoriesStayBehindPorts", 2,
+          "constructorCallsPassFewerThanTenArguments", 147);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");
@@ -52,6 +54,8 @@ class ArchUnitRatchetRulesTest {
 
   private static final Set<String> SYSTEM_CLOCKS =
       Set.of("systemUTC", "systemDefaultZone", "system");
+
+  private static final int LONG_PARAMETER_LIST = 10;
 
   static final ArchRule moduleInternalsStayInTheirModule =
       classes()
@@ -78,6 +82,11 @@ class ArchUnitRatchetRulesTest {
           .should(reachPersistenceOnlyThroughADomainPort())
           .as("springDataRepositoriesStayBehindPorts");
 
+  static final ArchRule constructorCallsPassFewerThanTenArguments =
+      classes()
+          .should(callConstructorsThatTakeFewerThanTenParameters())
+          .as("constructorCallsPassFewerThanTenArguments");
+
   @ArchTest
   static void noNewOutboundCallReachedFromATransaction(JavaClasses classes) {
     checkAgainstTheStore(transactionsDoNotReachOutboundClients, classes);
@@ -96,6 +105,11 @@ class ArchUnitRatchetRulesTest {
   @ArchTest
   static void noNewSpringDataRepositoryInApplicationOrDomain(JavaClasses classes) {
     checkAgainstTheStore(springDataRepositoriesStayBehindPorts, classes);
+  }
+
+  @ArchTest
+  static void noNewConstructorCallWithTenOrMoreArguments(JavaClasses classes) {
+    checkAgainstTheStore(constructorCallsPassFewerThanTenArguments, classes);
   }
 
   private static void checkAgainstTheStore(ArchRule rule, JavaClasses classes) {
@@ -235,6 +249,29 @@ class ArchUnitRatchetRulesTest {
         }
         clear.add(unit);
         return Reach.NO;
+      }
+    };
+  }
+
+  private static ArchCondition<JavaClass> callConstructorsThatTakeFewerThanTenParameters() {
+    return new ArchCondition<>("call constructors that take fewer than ten parameters") {
+      @Override
+      public void check(JavaClass from, ConditionEvents events) {
+        from.getConstructorCallsFromSelf().stream()
+            .filter(call -> call.getTarget().getRawParameterTypes().size() >= LONG_PARAMETER_LIST)
+            .map(
+                call ->
+                    SimpleConditionEvent.violated(
+                        call,
+                        call.getOriginOwner().getName()
+                            + "."
+                            + call.getOrigin().getName()
+                            + " calls the constructor of "
+                            + call.getTargetOwner().getName()
+                            + " in "
+                            + call.getSourceCodeLocation()))
+            .sorted(Comparator.comparing(event -> event.getDescriptionLines().getFirst()))
+            .forEach(events::add);
       }
     };
   }
