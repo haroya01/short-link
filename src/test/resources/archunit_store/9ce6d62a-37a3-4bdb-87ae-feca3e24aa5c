@@ -51,12 +51,3 @@ com.example.short_link.profile.infrastructure.JpaPublicHandleReader reaches com.
 com.example.short_link.profile.infrastructure.JpaPublicHandleReader reaches com.example.short_link.user.infrastructure.persistence.JpaUserRepository
 com.example.short_link.tag.application.read.LinkTagQueryService reaches com.example.short_link.link.domain.LinkEntity
 com.example.short_link.tag.application.read.LinkTagQueryService reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.user.application.dto.UserDataExport$ExportedClick reaches com.example.short_link.link.stats.domain.ClickEventEntity
-com.example.short_link.user.application.dto.UserDataExport$ExportedLink reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.user.application.read.UserDataExportService reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.user.application.read.UserDataExportService reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.user.application.read.UserDataExportService reaches com.example.short_link.link.stats.domain.ClickEventEntity
-com.example.short_link.user.application.read.UserDataExportService reaches com.example.short_link.link.stats.domain.repository.ClickEventRepository
-com.example.short_link.user.application.write.UserDeletionService reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.user.application.write.UserDeletionService reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.user.application.write.UserDeletionService reaches com.example.short_link.link.stats.domain.repository.ClickEventRepository

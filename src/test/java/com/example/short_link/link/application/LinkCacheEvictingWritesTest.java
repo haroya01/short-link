@@ -83,8 +83,7 @@ class LinkCacheEvictingWritesTest {
     UserDeletionService deletion =
         new UserDeletionService(
             users,
-            links,
-            mock(ClickEventRepository.class),
+            new LinkAccountData(links, mock(ClickEventRepository.class), cache),
             mock(FollowRepository.class),
             mock(BlockRepository.class),
             mock(MuteRepository.class),
@@ -95,7 +94,6 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            cache,
             mock(ProfileCacheInvalidator.class));
 
     deletion.hardDelete(9L);
@@ -114,8 +112,7 @@ class LinkCacheEvictingWritesTest {
     UserDeletionService deletion =
         new UserDeletionService(
             users,
-            links,
-            mock(ClickEventRepository.class),
+            new LinkAccountData(links, mock(ClickEventRepository.class), cache),
             mock(FollowRepository.class),
             mock(BlockRepository.class),
             mock(MuteRepository.class),
@@ -126,7 +123,6 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            cache,
             profiles);
 
     deletion.deleteAccount(9L);
