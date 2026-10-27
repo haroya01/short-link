@@ -10,6 +10,8 @@ import com.example.short_link.post.application.write.CommentNotifications;
 import com.example.short_link.post.application.write.PostAccessSettings;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRoomReader;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
@@ -24,13 +26,22 @@ public final class PostAccessFixtures {
   }
 
   public static PostAccessPolicy policy(FollowRepository follows, String readerCountry) {
+    return policy(follows, readerCountry, mock(PostRoomReader.class));
+  }
+
+  public static PostAccessPolicy policy(PostRoomReader rooms) {
+    return policy(mock(FollowRepository.class), null, rooms);
+  }
+
+  private static PostAccessPolicy policy(
+      FollowRepository follows, String readerCountry, PostRoomReader rooms) {
     GeoIpResolver geo =
         mock(GeoIpResolver.class, invocation -> new GeoLocation(readerCountry, null, null));
     return new PostAccessPolicy(
-        follows,
+        new FollowingReader(follows),
         new PostGrants("", Clock.systemUTC()),
         new ReaderCountryResolver(geo),
-        mock(PostRoomReader.class));
+        rooms);
   }
 
   public static PostRoomReader roomReader() {
@@ -47,7 +58,7 @@ public final class PostAccessFixtures {
 
   public static CommentNotifications notifications() {
     return new CommentNotifications(
-        mock(UserRepository.class),
+        new UserSummaryReader(mock(UserRepository.class)),
         mock(PostRepository.class),
         mock(ApplicationEventPublisher.class),
         mock(BlogNotificationMuteReader.class),
@@ -55,6 +66,7 @@ public final class PostAccessFixtures {
   }
 
   public static PostUnlistedUrls unlistedUrls() {
-    return new PostUnlistedUrls("https://blog.kurl.me", mock(UserRepository.class));
+    return new PostUnlistedUrls(
+        "https://blog.kurl.me", new UserSummaryReader(mock(UserRepository.class)));
   }
 }
