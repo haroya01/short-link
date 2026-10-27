@@ -24,6 +24,7 @@ public class RoomInvitationService {
   static final int MAX_AT_ONCE = 20;
 
   private final RoomRepository rooms;
+  private final RoomWriteGuard guard;
   private final Clock clock;
 
   // Any member asks people in by name. The room is locked so two members cannot both pass the
@@ -35,20 +36,20 @@ public class RoomInvitationService {
     if (ids.isEmpty() || ids.size() > MAX_AT_ONCE) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATION_INVALID, MAX_AT_ONCE);
     }
-    locked(roomId);
-    requireMember(roomId, userId);
+    guard.locked(roomId);
+    guard.requireMember(userId, roomId);
     if (rooms.countInvitees(roomId) + ids.size() > RoomEntity.MAX_MEMBERS) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATIONS_PILED, RoomEntity.MAX_MEMBERS);
     }
-    rooms.invite(roomId, userId, ids, now());
+    rooms.addInvitations(roomId, userId, ids, now());
     return rooms.invitees(roomId);
   }
 
   // The inviter or the owner takes an invitation back before it is answered.
   @Transactional
   public void cancel(Long userId, Long roomId, Long inviteeId) {
-    RoomEntity room = locked(roomId);
-    requireMember(roomId, userId);
+    RoomEntity room = guard.locked(roomId);
+    guard.requireMember(userId, roomId);
     rooms
         .inviterOf(roomId, inviteeId)
         .filter(inviter -> inviter.equals(userId) || room.isOwnedBy(userId))
@@ -102,18 +103,6 @@ public class RoomInvitationService {
   public void decline(Long userId, Long roomId) {
     if (!rooms.declineInvitation(roomId, userId, now())) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
-    }
-  }
-
-  private RoomEntity locked(Long roomId) {
-    return rooms
-        .lock(roomId)
-        .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId));
-  }
-
-  private void requireMember(Long roomId, Long userId) {
-    if (!rooms.isMember(roomId, userId)) {
-      throw new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId);
     }
   }
 

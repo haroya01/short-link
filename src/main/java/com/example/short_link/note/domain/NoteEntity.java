@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.NoteVisibility;
 import jakarta.persistence.Column;
 import jakarta.persistence.ColumnResult;
@@ -43,7 +44,6 @@ public class NoteEntity extends BaseCreatedEntity {
   public static final int MAX_POLL_OPTION_LENGTH = 50;
   public static final long MIN_POLL_SECONDS = 300;
   public static final long MAX_POLL_SECONDS = 2_629_746;
-  private static final int EXCERPT_LENGTH = 80;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -205,15 +205,7 @@ public class NoteEntity extends BaseCreatedEntity {
   }
 
   public String excerpt() {
-    return excerptOf(body);
-  }
-
-  public static String excerptOf(String body) {
-    String flat = body == null ? "" : body.strip().replaceAll("\\s+", " ");
-    if (flat.codePointCount(0, flat.length()) <= EXCERPT_LENGTH) {
-      return flat;
-    }
-    return flat.substring(0, flat.offsetByCodePoints(0, EXCERPT_LENGTH)) + "…";
+    return Excerpt.of(body);
   }
 
   // As on Mastodon, a warning hides the photos too, so a note with one is always sensitive.

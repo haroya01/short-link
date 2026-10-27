@@ -92,7 +92,7 @@ public class RoomController {
 
   @GetMapping("/{id}")
   public RoomView detail(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return query.detail(id, userId);
+    return query.detail(userId, id);
   }
 
   @PatchMapping("/{id}")
@@ -157,7 +157,7 @@ public class RoomController {
 
   @GetMapping("/{id}/invites")
   public List<RoomInviteView> invites(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return query.invites(id, userId);
+    return query.invites(userId, id);
   }
 
   @PostMapping("/{id}/invites")
@@ -181,7 +181,7 @@ public class RoomController {
 
   @GetMapping("/{id}/invitations")
   public List<RoomInvitee> invitees(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return query.invitees(id, userId);
+    return query.invitees(userId, id);
   }
 
   @PostMapping("/{id}/invitations")
@@ -203,7 +203,7 @@ public class RoomController {
   @GetMapping("/{id}/requests")
   public List<RoomJoinRequest> requests(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return query.requests(id, userId);
+    return query.requests(userId, id);
   }
 
   @PostMapping("/{id}/requests/{memberId}")

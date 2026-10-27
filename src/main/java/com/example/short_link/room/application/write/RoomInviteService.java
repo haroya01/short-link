@@ -43,6 +43,7 @@ public class RoomInviteService {
   public record JoinResult(Joined status, Long roomId) {}
 
   private final RoomRepository rooms;
+  private final RoomWriteGuard guard;
   private final RoomInviteUrls urls;
   private final CreateLinkUseCase links;
   private final Clock clock;
@@ -52,7 +53,7 @@ public class RoomInviteService {
   @Transactional
   public RoomInviteView create(
       Long userId, Long roomId, Integer maxUses, Long expiresInSeconds, Boolean approval) {
-    requireMember(roomId, userId);
+    guard.requireMember(userId, roomId);
     if ((maxUses != null && (maxUses < 1 || maxUses > MAX_USES))
         || (expiresInSeconds != null
             && (expiresInSeconds < SHORTEST.toSeconds()
@@ -144,7 +145,7 @@ public class RoomInviteService {
 
   @Transactional
   public void approve(Long ownerId, Long roomId, Long userId) {
-    RoomEntity room = owned(roomId, ownerId);
+    RoomEntity room = guard.owned(ownerId, roomId);
     if (!rooms.withdrawRequest(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REQUEST_NOT_FOUND, userId);
     }
@@ -156,27 +157,9 @@ public class RoomInviteService {
 
   @Transactional
   public void reject(Long ownerId, Long roomId, Long userId) {
-    owned(roomId, ownerId);
+    guard.owned(ownerId, roomId);
     if (!rooms.withdrawRequest(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REQUEST_NOT_FOUND, userId);
-    }
-  }
-
-  private RoomEntity owned(Long roomId, Long userId) {
-    RoomEntity room =
-        rooms
-            .lock(roomId)
-            .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId));
-    requireMember(roomId, userId);
-    if (!room.isOwnedBy(userId)) {
-      throw new RoomException(RoomErrorCode.ROOM_OWNER_ONLY);
-    }
-    return room;
-  }
-
-  private void requireMember(Long roomId, Long userId) {
-    if (!rooms.isMember(roomId, userId)) {
-      throw new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId);
     }
   }
 

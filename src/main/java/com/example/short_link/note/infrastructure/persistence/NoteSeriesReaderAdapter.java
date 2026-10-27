@@ -1,8 +1,8 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.post.PostAccessSql;
-import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteSeries;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import jakarta.persistence.EntityManager;
@@ -55,9 +55,7 @@ class NoteSeriesReaderAdapter implements NoteSeriesReader {
             ((Number) first[0]).longValue(), (String) first[1], (String) first[2], entries));
   }
 
-  // A warned note is listed by its warning, never by the text the warning hides.
   private static String excerpt(String body, String contentWarning) {
-    return NoteEntity.excerptOf(
-        contentWarning != null && !contentWarning.isBlank() ? contentWarning : body);
+    return Excerpt.of(body, contentWarning);
   }
 }
