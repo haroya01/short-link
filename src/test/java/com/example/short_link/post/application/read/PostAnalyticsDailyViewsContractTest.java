@@ -15,7 +15,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -52,7 +51,7 @@ class PostAnalyticsDailyViewsContractTest {
   @Autowired private PostViewEventRepository views;
   @Autowired private PostAnalyticsQueryService analytics;
   @PersistenceContext private EntityManager em;
-  @MockitoBean private Clock clock;
+  @MockitoSpyBean private Clock clock;
 
   private UserEntity author;
   private PostEntity post;
@@ -60,7 +59,6 @@ class PostAnalyticsDailyViewsContractTest {
   @BeforeEach
   void aPostViewedOverTheLastFourWeeks() {
     when(clock.instant()).thenReturn(NOW);
-    when(clock.getZone()).thenReturn(ZoneOffset.UTC);
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     author = users.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix));
     post = posts.save(new PostEntity(author.getId(), "p-" + suffix, "Title", "ko"));
