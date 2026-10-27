@@ -390,6 +390,22 @@ public class NoteCommandService {
     if (previewUrl != null) {
       events.publishEvent(new NoteLinkPreviewRequested(note.getId(), previewUrl));
     }
+    return NoteViews.assemble(
+        note,
+        NoteBatch.justWritten(
+            note,
+            authors,
+            quotedNote,
+            checked.quotedAuthor(),
+            quoted,
+            images(note, rows, quotedNote),
+            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
+            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
+        userId);
+  }
+
+  private Map<Long, List<NoteView.Media>> images(
+      NoteEntity note, List<NoteMediaEntity> rows, NoteEntity quotedNote) {
     Map<Long, List<NoteView.Media>> images = new HashMap<>();
     images.put(note.getId(), rows.stream().map(NoteView.Media::of).toList());
     if (quotedNote != null) {
@@ -399,18 +415,7 @@ public class NoteCommandService {
               .map(NoteView.Media::of)
               .toList());
     }
-    return NoteViews.assemble(
-        note,
-        NoteBatch.justWritten(
-            note,
-            authors,
-            quotedNote,
-            checked.quotedAuthor(),
-            quoted,
-            images,
-            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
-            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
-        userId);
+    return images;
   }
 
   static String language(String raw) {
