@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteVisibility;
@@ -78,7 +79,7 @@ class InboxClassifierTest {
   }
 
   private static NoteSnapshot note(Long id, NoteVisibility visibility) {
-    return new NoteSnapshot(
+    return NoteSnapshotFixtures.note(
         id,
         7L,
         "haroya",
