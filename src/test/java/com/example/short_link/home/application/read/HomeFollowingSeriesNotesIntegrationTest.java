@@ -1,8 +1,8 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -58,7 +58,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, episode, 0);
     long outside = note(serial, "PUBLIC", 30);
 
-    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
+    List<Long> shown = noteIds(home.page(ask(reader, null, "following", null, null, 20, false)));
 
     assertThat(shown).contains(episode).doesNotContain(outside);
   }
@@ -68,7 +68,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     long both = note(followed, "PUBLIC", 60);
     inSeries(followedSeries, both, 0);
 
-    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
+    List<Long> shown = noteIds(home.page(ask(reader, null, "following", null, null, 20, false)));
 
     assertThat(shown).containsOnlyOnce(both);
   }
@@ -81,7 +81,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, restricted, 1);
     jdbc.update("INSERT INTO note_recipient (note_id, user_id) VALUES (?, ?)", restricted, reader);
 
-    List<Long> shown = noteIds(home.page(reader, null, "following", null, null, 20, false));
+    List<Long> shown = noteIds(home.page(ask(reader, null, "following", null, null, 20, false)));
 
     assertThat(shown).contains(unlisted).doesNotContain(restricted);
   }
@@ -96,7 +96,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
         reader,
         serial);
 
-    assertThat(noteIds(home.page(reader, null, "following", null, null, 20, false)))
+    assertThat(noteIds(home.page(ask(reader, null, "following", null, null, 20, false))))
         .doesNotContain(episode);
 
     jdbc.update("DELETE FROM user_mute WHERE user_id = ?", reader);
@@ -105,7 +105,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
         serial,
         reader);
 
-    assertThat(noteIds(home.page(reader, null, "following", null, null, 20, false)))
+    assertThat(noteIds(home.page(ask(reader, null, "following", null, null, 20, false))))
         .doesNotContain(episode);
   }
 
@@ -116,16 +116,17 @@ class HomeFollowingSeriesNotesIntegrationTest {
     inSeries(series, episode, 0);
     long newest = note(followed, "PUBLIC", 60);
 
-    HomeFeedQueryService.Page first = home.page(reader, null, "following", null, null, 2, false);
+    HomeFeedQueryService.Page first =
+        home.page(ask(reader, null, "following", null, null, 2, false));
     assertThat(noteIds(first)).containsExactly(newest, episode);
     HomeFeedQueryService.Page second =
-        home.page(reader, null, "following", first.next(), null, 2, false);
+        home.page(ask(reader, null, "following", first.next(), null, 2, false));
     assertThat(noteIds(second)).containsExactly(older);
 
     long arrived = note(serial, "PUBLIC", 0);
     inSeries(series, arrived, 1);
     HomeFeedQueryService.Page refreshed =
-        home.page(reader, null, "following", null, first.newest(), 20, false);
+        home.page(ask(reader, null, "following", null, first.newest(), 20, false));
     assertThat(refreshed.gap()).isFalse();
     assertThat(noteIds(refreshed)).containsExactly(arrived);
   }
@@ -133,7 +134,7 @@ class HomeFollowingSeriesNotesIntegrationTest {
   private static List<Long> noteIds(HomeFeedQueryService.Page page) {
     return page.items().stream()
         .filter(item -> item.kind().equals("note"))
-        .map(item -> ((NoteView) item.note()).id())
+        .map(item -> item.note().id())
         .toList();
   }
 

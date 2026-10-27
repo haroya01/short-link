@@ -11,6 +11,7 @@ import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.federation.domain.foryou.HomeRanking;
 import com.example.short_link.note.application.read.NoteQueryService;
+import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PooledNote;
 import com.example.short_link.post.application.read.PooledPost;
 import com.example.short_link.post.application.read.PostCard;
@@ -50,8 +51,6 @@ public class HomeForYou {
 
   record Ref(HomeCandidate.Source source, Object ref) {}
 
-  record Position(Instant asOf, int offset, Boolean hide) {}
-
   public HomeForYou(
       RemoteForYou remote,
       NoteQueryService notes,
@@ -69,25 +68,21 @@ public class HomeForYou {
     this.clock = clock;
   }
 
-  public HomeFeedQueryService.Page page(
-      Long viewerId,
-      SeenViewer viewer,
-      String languages,
-      String cursor,
-      int size,
-      boolean hideSeen) {
-    Position at = position(cursor, clock.instant().truncatedTo(ChronoUnit.MILLIS));
-    boolean hiding = (at.hide() == null ? hideSeen : at.hide()) && viewer != null;
-    List<String> accepted = ForYouProfile.accepted(languages);
+  public HomeFeedQueryService.Page page(HomeAsk ask) {
+    Long viewerId = ask.viewerId();
+    SeenViewer viewer = ask.viewer();
+    HomeCursor.Ranked at = HomeCursor.Ranked.parse(ask.cursor());
+    Instant asOf = at == null ? clock.instant().truncatedTo(ChronoUnit.MILLIS) : at.asOf();
+    boolean hiding = (at == null ? ask.hideSeen() : at.hide()) && viewer != null;
+    List<String> accepted = ForYouProfile.accepted(ask.languages());
     String key =
         (viewer == null ? "anon:" + String.join(",", accepted) : viewer.kind() + ":" + viewer.key())
             + (hiding ? "|hide|" : "|all|")
-            + at.asOf().toEpochMilli();
-    List<Ref> refs = rankings.get(key, made -> rank(viewerId, viewer, accepted, at.asOf(), hiding));
-    int from = Math.min(at.offset(), refs.size());
-    int to = Math.min(from + size, refs.size());
-    String next =
-        to < refs.size() ? (hiding ? "rh" : "r") + at.asOf().toEpochMilli() + "." + to : null;
+            + asOf.toEpochMilli();
+    List<Ref> refs = rankings.get(key, made -> rank(viewerId, viewer, accepted, asOf, hiding));
+    int from = Math.min(at == null ? 0 : at.offset(), refs.size());
+    int to = Math.min(from + ask.size(), refs.size());
+    String next = to < refs.size() ? new HomeCursor.Ranked(asOf, to, hiding).toString() : null;
     return new HomeFeedQueryService.Page(show(viewerId, refs.subList(from, to)), next);
   }
 
@@ -176,7 +171,7 @@ public class HomeForYou {
         case NOTE -> {
           NoteViewReader.Listed row = shownNotes.get((Long) ref.ref());
           if (row != null) {
-            items.add(new HomeFeedQueryService.Item("note", row.view(), null, null));
+            items.add(new HomeFeedQueryService.Item("note", (NoteView) row.view(), null, null));
           }
         }
         case POST -> {
@@ -203,28 +198,5 @@ public class HomeForYou {
       }
     }
     return items;
-  }
-
-  // A cursor goes on hiding the seen, or not, as its first page did.
-  static Position position(String cursor, Instant now) {
-    Position first = new Position(now, 0, null);
-    if (cursor == null || !cursor.startsWith("r")) {
-      return first;
-    }
-    boolean hide = cursor.startsWith("rh");
-    int start = hide ? 2 : 1;
-    int dot = cursor.indexOf('.');
-    if (dot <= start) {
-      return first;
-    }
-    try {
-      long asOf = Long.parseLong(cursor.substring(start, dot));
-      int offset = Integer.parseInt(cursor.substring(dot + 1));
-      return asOf >= 0 && offset >= 0
-          ? new Position(Instant.ofEpochMilli(asOf), offset, hide)
-          : first;
-    } catch (NumberFormatException malformed) {
-      return first;
-    }
   }
 }

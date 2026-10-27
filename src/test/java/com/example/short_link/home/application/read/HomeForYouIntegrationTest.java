@@ -1,5 +1,6 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.SeenItem;
@@ -118,7 +119,7 @@ class HomeForYouIntegrationTest {
     stored(SeenItem.NOTE, written.get(1), now.minusSeconds(60));
 
     HomeFeedQueryService.Page first =
-        home.page(reader, viewer, null, "for-you", null, null, 1, true);
+        home.page(ask(reader, viewer, "for-you", null, null, 1, true));
     List<String> shown = new ArrayList<>(keys(first));
     String cursor = first.next();
     long arrived = note(writer, "PUBLIC", null, null, Instant.now().plusSeconds(1));
@@ -126,7 +127,7 @@ class HomeForYouIntegrationTest {
     for (int turn = 0; turn < 400 && cursor != null; turn++) {
       assertThat(cursor).startsWith("rh");
       HomeFeedQueryService.Page page =
-          home.page(reader, viewer, null, "for-you", cursor, null, 1, false);
+          home.page(ask(reader, viewer, "for-you", cursor, null, 1, false));
       shown.addAll(keys(page));
       cursor = page.next();
     }
@@ -203,19 +204,19 @@ class HomeForYouIntegrationTest {
   }
 
   private HomeFeedQueryService.Page forYou(String cursor, int size, boolean hide) {
-    return home.page(reader, viewer, null, "for-you", cursor, null, size, hide);
+    return home.page(ask(reader, viewer, "for-you", cursor, null, size, hide));
   }
 
   private List<String> keys(HomeFeedQueryService.Page page) {
     List<String> keys = new ArrayList<>();
     for (HomeFeedQueryService.Item item : page.items()) {
       if (item.kind().equals("note")) {
-        NoteView note = (NoteView) item.note();
+        NoteView note = item.note();
         if (ours(note.author().id())) {
           keys.add("note:" + note.id());
         }
       } else if (item.kind().equals("post")) {
-        PostCard card = (PostCard) item.post();
+        PostCard card = item.post();
         if (ours(card.item().author().id())) {
           keys.add("post:" + card.item().id());
         }

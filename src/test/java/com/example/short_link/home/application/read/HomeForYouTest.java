@@ -1,5 +1,6 @@
 package com.example.short_link.home.application.read;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -20,6 +21,7 @@ import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouReader;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.note.application.read.NoteQueryService;
+import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.note.application.read.PooledNote;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
 import java.time.Clock;
@@ -59,7 +61,10 @@ class HomeForYouTest {
         .thenAnswer(
             call ->
                 call.<List<Long>>getArgument(1).stream()
-                    .map(id -> new NoteViewReader.Listed(id, "note " + id, null))
+                    .map(
+                        id ->
+                            new NoteViewReader.Listed(
+                                id, NoteViewFixtures.note(id, "note " + id, null, null, 0L), null))
                     .toList());
   }
 
@@ -67,11 +72,8 @@ class HomeForYouTest {
     return new PooledNote(id, author, "ko", NOW.minus(age), List.of(), 0, 0, 0);
   }
 
-  private static List<Object> shown(HomeFeedQueryService.Page page) {
-    return page.items().stream()
-        .map(HomeFeedQueryService.Item::note)
-        .map(Object.class::cast)
-        .toList();
+  private static List<String> shown(HomeFeedQueryService.Page page) {
+    return page.items().stream().map(item -> item.note().body()).toList();
   }
 
   @Test
@@ -80,7 +82,7 @@ class HomeForYouTest {
         .thenReturn(List.of(note(1, 20, Duration.ofHours(1)), note(2, 30, Duration.ofHours(3))));
     when(remote.follows(7L)).thenReturn(Set.of("u30"));
 
-    HomeFeedQueryService.Page page = forYou.page(7L, READER, null, null, 20, true);
+    HomeFeedQueryService.Page page = forYou.page(ask(7L, READER, "for-you", null, null, 20, true));
 
     assertThat(shown(page)).containsExactly("note 2", "note 1");
     verify(notes).pool(7L, NOW.minus(Duration.ofDays(7)), NOW, HomeForYou.LOCAL_POOL);
@@ -115,7 +117,7 @@ class HomeForYouTest {
     when(notes.pool(any(), any(), any(), anyInt())).thenReturn(kurl);
     when(remote.homePool(any(), any())).thenReturn(elsewhere);
 
-    HomeFeedQueryService.Page page = forYou.page(7L, READER, null, null, 20, true);
+    HomeFeedQueryService.Page page = forYou.page(ask(7L, READER, "for-you", null, null, 20, true));
 
     assertThat(page.items()).hasSize(20);
     assertThat(page.items().stream().filter(item -> item.kind().equals("note"))).hasSize(10);
@@ -130,8 +132,9 @@ class HomeForYouTest {
                 note(2, 21, Duration.ofHours(2)),
                 note(3, 22, Duration.ofHours(3))));
 
-    HomeFeedQueryService.Page first = forYou.page(7L, READER, null, null, 2, true);
-    HomeFeedQueryService.Page last = forYou.page(7L, READER, null, first.next(), 2, false);
+    HomeFeedQueryService.Page first = forYou.page(ask(7L, READER, "for-you", null, null, 2, true));
+    HomeFeedQueryService.Page last =
+        forYou.page(ask(7L, READER, "for-you", first.next(), null, 2, false));
 
     assertThat(shown(first)).containsExactly("note 1", "note 2");
     assertThat(first.next()).isEqualTo("rh" + NOW.toEpochMilli() + ".2");
@@ -146,7 +149,10 @@ class HomeForYouTest {
     when(notes.pool(any(), any(), any(), anyInt()))
         .thenReturn(List.of(note(1, 20, Duration.ofHours(1)), note(2, 21, Duration.ofHours(2))));
 
-    HomeFeedQueryService.Page page = forYou.page(null, null, "ko-KR,en", null, 1, true);
+    HomeFeedQueryService.Page page =
+        forYou.page(
+            new HomeAsk(
+                null, null, "ko-KR,en", HomeFeedQueryService.Tab.FOR_YOU, null, null, 1, true));
 
     assertThat(page.next()).isEqualTo("r" + NOW.toEpochMilli() + ".1");
     verifyNoInteractions(localSeen, remoteSeen);
@@ -158,7 +164,7 @@ class HomeForYouTest {
     when(remote.enabled()).thenReturn(false);
     when(notes.pool(any(), any(), any(), anyInt())).thenReturn(List.of());
 
-    assertThat(forYou.page(7L, READER, null, null, 20, true).items()).isEmpty();
+    assertThat(forYou.page(ask(7L, READER, "for-you", null, null, 20, true)).items()).isEmpty();
     verify(remote, never()).homePool(any(), any());
   }
 }
