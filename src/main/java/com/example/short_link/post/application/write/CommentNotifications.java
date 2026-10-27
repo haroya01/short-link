@@ -13,8 +13,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class CommentNotifications {
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
   private final PostRepository postRepository;
   private final ApplicationEventPublisher events;
   private final BlogNotificationMuteReader muteReader;
@@ -134,7 +134,7 @@ public class CommentNotifications {
   }
 
   private String ownerUsername(PostEntity post) {
-    return userRepository.findById(post.getUserId()).map(UserEntity::getUsername).orElse(null);
+    return users.find(post.getUserId()).map(UserSummary::username).orElse(null);
   }
 
   private void suppressMentionUnlessMuted(
@@ -150,7 +150,7 @@ public class CommentNotifications {
       Set<Long> recipients,
       Consumer<Long> publish) {
     for (String handle : handles) {
-      Long recipient = userRepository.findByUsername(handle).map(UserEntity::getId).orElse(null);
+      Long recipient = users.findByUsername(handle).map(UserSummary::id).orElse(null);
       if (recipient != null
           && !recipient.equals(actorId)
           && reads(post, recipient)

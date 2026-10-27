@@ -67,7 +67,7 @@ class PublicProfileCacheEvictionTest {
   @Test
   void disablingAProfileLinkDropsTheCachedProfile() {
     assertDropsTheProfile(
-        (owner, code) -> moderation.disable(code, LinkDisableReason.SAFE_BROWSING, null));
+        (owner, code) -> moderation.disable(null, code, LinkDisableReason.SAFE_BROWSING));
   }
 
   @Test

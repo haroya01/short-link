@@ -1,6 +1,7 @@
 package com.example.short_link.user.application.read;
 
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowListReader;
@@ -33,7 +34,7 @@ public class FollowQueryService {
     Optional<FollowEntity> follow =
         viewerId == null
             ? Optional.empty()
-            : followRepository.findByFollowerIdAndFollowingId(viewerId, target.getId());
+            : followRepository.find(FollowEdge.follower(viewerId).following(target.getId()));
     boolean following = follow.isPresent();
     boolean notifyNotes = follow.map(FollowEntity::isNotifyNotes).orElse(false);
     // Only a locked account can have a request waiting, so only then is it looked up.
@@ -41,7 +42,7 @@ public class FollowQueryService {
         !following
             && viewerId != null
             && target.isLocked()
-            && followRequests.exists(viewerId, target.getId());
+            && followRequests.exists(FollowEdge.follower(viewerId).following(target.getId()));
     FollowStatus status =
         target.isHideFollowerCount()
             ? FollowStatus.hidden(following)

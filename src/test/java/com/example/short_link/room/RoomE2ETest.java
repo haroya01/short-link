@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.example.short_link.note.application.write.RoomNoteErasures;
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -578,9 +579,9 @@ class RoomE2ETest {
 
   @Test
   void mutualFollowsWithoutARoomAreSuggestedUntilWavedOff() throws Exception {
-    follows.save(new FollowEntity(owner.id(), friend.id()));
-    follows.save(new FollowEntity(friend.id(), owner.id()));
-    follows.save(new FollowEntity(owner.id(), stranger.id()));
+    follows.save(new FollowEntity(FollowEdge.follower(owner.id()).following(friend.id())));
+    follows.save(new FollowEntity(FollowEdge.follower(friend.id()).following(owner.id())));
+    follows.save(new FollowEntity(FollowEdge.follower(owner.id()).following(stranger.id())));
     List<String> suggested =
         send(owner, get("/api/v1/rooms/suggestions"), null).at("$.friends[*].username");
     assertThat(suggested).containsExactly(friend.username());

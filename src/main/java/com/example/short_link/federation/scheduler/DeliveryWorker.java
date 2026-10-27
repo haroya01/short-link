@@ -13,7 +13,6 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,17 +29,7 @@ public class DeliveryWorker {
   private final MeterRegistry meters;
   private final Clock clock;
 
-  @Autowired
   public DeliveryWorker(
-      DeliveryLedger ledger,
-      FederationHttp http,
-      SigningKeys signingKeys,
-      DeliveryProperties props,
-      MeterRegistry meters) {
-    this(ledger, http, signingKeys, props, meters, Clock.systemUTC());
-  }
-
-  DeliveryWorker(
       DeliveryLedger ledger,
       FederationHttp http,
       SigningKeys signingKeys,
