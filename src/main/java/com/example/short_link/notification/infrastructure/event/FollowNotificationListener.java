@@ -15,7 +15,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 // on Mastodon.
 @Component
 @RequiredArgsConstructor
-public class FollowRequestNotificationListener {
+public class FollowNotificationListener {
 
   private final NotificationRepository notifications;
 
