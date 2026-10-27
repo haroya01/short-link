@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
@@ -42,10 +43,9 @@ class EventCoverImageServiceTest {
   private EventCoverImageService service(S3StorageProperties storageProperties) {
     when(objectStorage.isConfigured()).thenReturn(storageProperties.isConfigured());
     return new EventCoverImageService(
-        UPLOAD_POLICY,
-        objectStorage,
-        eventRepository,
-        new ObjectStoragePublicUrls(storageProperties));
+        new ImageUploads(
+            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)),
+        eventRepository);
   }
 
   private EventEntity ownedEvent() {

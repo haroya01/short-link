@@ -146,7 +146,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/notification/infrastru
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/infrastructure/BlogPushUrl.java|of(String, PushRoute)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/presentation/response/NotificationResponse.java|from(NotificationView)#1=21
 CyclomaticComplexity|src/main/java/com/example/short_link/portability/application/AccountImportService.java|start(Long, String, String)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/post/application/image/PostImageService.java|commitUpload(Long, Long, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostListItem.java|of(PostEntity, PostAccess, OwnerAudience)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostQueryService.java|findPreviewPost(String, PostReader)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|MarkdownBlockParser#1=85
@@ -172,7 +171,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/Bl
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/Socials.java|normalize(String)#1=22
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/Socials.java|validateUrl(String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/email/EmailFormConfig.java|normalize(String)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/image/ProfileImageService.java|commitUpload(Long, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/oembed/EmbedProvider.java|resolve(String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/read/PublicProfileLoader.java|blockEntry(ProfileBlockEntity)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/write/ReorderProfileUseCase.java|execute(ReorderProfileCommand)#1=10
@@ -192,7 +190,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact/TextBlockBody.java|normalize(String)#1=15
 CyclomaticComplexity|src/main/java/com/example/short_link/room/application/write/RoomInvitationService.java|accept(Long, Long)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/room/application/write/RoomInviteService.java|create(Long, Long, Integer, Long, Boolean)#1=10
-CyclomaticComplexity|src/main/java/com/example/short_link/user/application/write/avatar/UserImageUpload.java|commit(Long, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/user/domain/UserEntity.java|updateProfileTheme(String)#1=15
 ExcessiveParameterList|src/main/java/com/example/short_link/common/event/BlogInteractionEvent.java|BlogInteractionEvent#1=11
 ExcessiveParameterList|src/main/java/com/example/short_link/event/domain/EventEntity.java|EventEntity#1=13
