@@ -63,12 +63,16 @@ jobs:
       # MaxMind's daily download quota on every PR. Production downloads use the key.
       - run: ./gradlew test verifyHttpEndpointCoverage
 
+      - run: ./gradlew pitest
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: build/reports/tests/
+          path: |
+            build/reports/tests/
+            build/reports/pitest/
 
       - name: Upload coverage to Codecov
         if: always()

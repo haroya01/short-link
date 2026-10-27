@@ -6,6 +6,7 @@ plugins {
 	id 'com.diffplug.spotless' version '8.10.4'
 	id 'net.ltgt.errorprone' version '5.1.1'
 	id 'pmd'
+	id 'info.solidsoft.pitest' version '1.19.0'
 }
 
 group = 'com.example'
@@ -339,6 +340,29 @@ tasks.register('pmdSizeBaselineWrite') {
 
 tasks.named('check') {
 	dependsOn 'pmdSizeRatchet'
+}
+
+pitest {
+	pitestVersion = '1.30.1'
+	junit5PluginVersion = '1.2.3'
+	addJUnitPlatformLauncher = false
+	targetClasses = [
+		'com.example.short_link.notification.domain.policy.*',
+		'com.example.short_link.federation.domain.foryou.*',
+		'com.example.short_link.link.classifier.application.helper.*',
+	]
+	targetTests = [
+		'com.example.short_link.notification.domain.policy.*',
+		'com.example.short_link.federation.domain.foryou.*',
+		'com.example.short_link.home.HomeRankVectorsTest',
+		'com.example.short_link.link.classifier.application.helper.*',
+	]
+	excludedTestClasses = ['com.example.short_link.federation.domain.foryou.replay.*']
+	threads = 4
+	outputFormats = ['XML', 'HTML']
+	timestampedReports = false
+	jvmArgs = ['-Xmx1g']
+	mutationThreshold = 93
 }
 
 tasks.register('downloadGeoLite2Asn') {
