@@ -11,8 +11,8 @@ import com.example.short_link.link.classifier.application.helper.LanguageExtract
 import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
 import com.example.short_link.link.classifier.application.helper.SourceChannelNormalizer;
 import com.example.short_link.link.classifier.application.helper.VisitorHasher;
+import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
-import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;

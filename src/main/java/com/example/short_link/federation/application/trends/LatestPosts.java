@@ -26,7 +26,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -83,31 +82,7 @@ public class LatestPosts {
 
   public record Page(List<TrendingNote> items, boolean more, List<String> unknownAuthors) {}
 
-  @Autowired
   public LatestPosts(
-      LatestProperties props,
-      FederationHttp http,
-      SigningKeys signingKeys,
-      FederationDomainBlockRepository serverBlocks,
-      RemoteAccountStandingReader standings,
-      TrendingStatusReader reader,
-      LatestStore store,
-      FederationUrls urls,
-      JsonMapper json) {
-    this(
-        props,
-        http,
-        signingKeys,
-        serverBlocks,
-        standings,
-        reader,
-        store,
-        urls,
-        json,
-        Clock.systemUTC());
-  }
-
-  LatestPosts(
       LatestProperties props,
       FederationHttp http,
       SigningKeys signingKeys,

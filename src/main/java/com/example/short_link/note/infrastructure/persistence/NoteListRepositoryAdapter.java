@@ -129,12 +129,12 @@ class NoteListRepositoryAdapter implements NoteListRepository {
             "SELECT n.* FROM note n JOIN note_list_member m"
                 + " ON m.member_id = n.user_id AND m.list_id = :list"
                 + " WHERE "
-                + NoteRepositoryAdapter.notReply("n")
+                + NoteSql.notReply("n")
                 + " AND "
                 + NoteAccessSql.readable("n")
                 + " AND "
                 + NoteAccessSql.outsideRooms("n")
-                + NoteRepositoryAdapter.heard("n")
+                + NoteSql.heard("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("list", listId)
