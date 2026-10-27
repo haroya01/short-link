@@ -312,7 +312,6 @@ src/main/java/com/example/short_link/link/notice/scheduler/LinkExpiryNoticeJob.j
 src/main/java/com/example/short_link/link/og/application/LinkOgFetchService.java=1
 src/main/java/com/example/short_link/link/og/application/OgCardImageRenderer.java=7
 src/main/java/com/example/short_link/link/og/application/dto/LinkPreview.java=2
-src/main/java/com/example/short_link/link/og/domain/LinkOgMetadataEntity.java=1
 src/main/java/com/example/short_link/link/redirect/application/LinkPreviewCrawlerDetector.java=4
 src/main/java/com/example/short_link/link/redirect/application/LinkRedirectFlow.java=6
 src/main/java/com/example/short_link/link/redirect/application/read/LinkPreviewQueryService.java=3

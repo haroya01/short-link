@@ -8,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.properties.OgFetchProperties;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class LinkOgFetchTransactionTest {
         new LinkOgFetchService(
             scraper,
             links,
-            mock(LinkOgMetadataRepository.class),
+            mock(LinkSidecars.class),
             new SimpleMeterRegistry(),
             mock(LinkCacheEviction.class),
             mock(OgFetchProperties.class));

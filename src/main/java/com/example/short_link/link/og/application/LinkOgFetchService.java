@@ -3,11 +3,10 @@ package com.example.short_link.link.og.application;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class LinkOgFetchService {
 
   private final OgScraper scraper;
   private final LinkRepository repository;
-  private final LinkOgMetadataRepository ogMetadataRepository;
+  private final LinkSidecars sidecars;
   private final MeterRegistry meterRegistry;
   private final LinkCacheEviction linkCacheEviction;
   private final OgFetchProperties ogFetch;
@@ -44,19 +43,13 @@ public class LinkOgFetchService {
       return;
     }
     Instant now = Instant.now();
-    LinkOgMetadataEntity ogMeta =
-        ogMetadataRepository
-            .findById(entity.getId())
-            .orElseGet(() -> new LinkOgMetadataEntity(entity.linkId()));
     if (og.hasAny()) {
-      ogMeta.applyFetched(og.title(), og.description(), og.image(), now);
-      ogMetadataRepository.save(ogMeta);
+      sidecars.recordOgFetched(entity, og.title(), og.description(), og.image(), now);
       repository.recordOgFetched(entity.getId(), og.title(), og.description(), og.image(), now);
       meterRegistry.counter("short_link.og_fetch", "result", "ok").increment();
     } else {
       boolean willRetry = entity.getOgFetchAttempts() + 1 < ogFetch.maxAttempts();
-      ogMeta.markFetchFailed(now, willRetry);
-      ogMetadataRepository.save(ogMeta);
+      sidecars.recordOgFetchFailed(entity, now, willRetry);
       repository.recordOgFetchFailed(entity.getId(), now, willRetry);
       meterRegistry
           .counter("short_link.og_fetch", "result", willRetry ? "retryable" : "error")

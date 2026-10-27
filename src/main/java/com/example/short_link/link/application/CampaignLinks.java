@@ -1,10 +1,9 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import java.time.Instant;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
@@ -15,19 +14,13 @@ import org.springframework.stereotype.Component;
 public class CampaignLinks {
 
   private final LinkRepository links;
-  private final LinkExpirationPolicyRepository expirationPolicies;
+  private final LinkSidecars sidecars;
   private final LinkCacheEviction linkCacheEviction;
 
   public void expire(LinkId linkId, Instant at, String redirectUrl, String message) {
     LinkEntity link = require(linkId);
     link.applyCampaignExpiration(at, redirectUrl, message);
-    LinkExpirationPolicyEntity policy =
-        expirationPolicies
-            .findById(link.getId())
-            .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
-    policy.changeExpiredMessage(link.getExpiredMessage());
-    policy.changeExpiredRedirectUrl(link.getExpiredRedirectUrl());
-    expirationPolicies.save(policy);
+    sidecars.mirrorCampaignExpiration(link);
   }
 
   public void delete(LinkId linkId) {
