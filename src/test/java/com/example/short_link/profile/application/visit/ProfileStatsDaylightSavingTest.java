@@ -1,7 +1,6 @@
 package com.example.short_link.profile.application.visit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.common.analytics.VisitStats;
@@ -22,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -41,13 +40,16 @@ class ProfileStatsDaylightSavingTest {
   @Autowired private ProfileVisitRepository visits;
   @Autowired private ProfileStatsService stats;
   @PersistenceContext private EntityManager em;
-  @MockitoBean private Clock clock;
+  @TestBean private Clock clock;
 
   private UserEntity owner;
 
+  static Clock clock() {
+    return Clock.fixed(NOW, ZoneOffset.UTC);
+  }
+
   @BeforeEach
   void aProfileVisitedOnBothSidesOfNewYorksFallBack() {
-    when(clock.instant()).thenReturn(NOW);
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     owner = users.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix));
     visit(HALF_PAST_MIDNIGHT_BEFORE_FALL_BACK);
