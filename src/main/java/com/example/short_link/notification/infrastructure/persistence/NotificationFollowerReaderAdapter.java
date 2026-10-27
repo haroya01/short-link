@@ -10,15 +10,13 @@ import java.util.Collection;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-// Uses a native query to avoid an entity dependency on the user module.
 @Repository
 class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
 
   @PersistenceContext private EntityManager em;
 
-  // A block either way, or the follower muting the author's notices, keeps a follow from hearing of
-  // new writing; a block does not end the follow itself. The time is bound from Java so a mute's
-  // end is compared in UTC.
+  // A blocker may follow the member they blocked again and a mute never ends a follow, so a follow
+  // alone is not hearing. The time is bound from Java so a mute's end is compared in UTC.
   private static final String HEARS_AUTHOR =
       " AND NOT " + HeardSql.memberSilencedEitherWay("f.follower_id", ":id");
 
@@ -52,9 +50,8 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     String server =
         authorRemoteId == null
             ? ""
-            : " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
-                + " JOIN federation_remote_actor a ON a.domain = d.domain"
-                + " WHERE d.user_id = s.user_id AND a.id = :remote)"
+            : " AND NOT "
+                + HeardSql.domainBlocked("s.user_id", ":remote")
                 + " AND NOT "
                 + HeardSql.remoteSilenced("s.user_id", ":remote");
     String silenced =
