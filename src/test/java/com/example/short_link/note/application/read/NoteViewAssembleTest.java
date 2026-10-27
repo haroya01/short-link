@@ -44,7 +44,6 @@ class NoteViewAssembleTest {
         Map.of(),
         Map.of(1L, new NoteStats(1, 2, 3, 4)),
         marks,
-        true,
         Map.of(),
         Map.of(),
         Set.of(),
@@ -76,7 +75,7 @@ class NoteViewAssembleTest {
   }
 
   @Test
-  void aNoteJustWrittenCountsNothingSaysNothingOfAMuteAndTakesReplies() {
+  void aNoteJustWrittenCountsNothingIsNotMutedAndTakesReplies() {
     NoteEntity fresh = note(100L, 7L);
 
     NoteView view =
@@ -89,7 +88,7 @@ class NoteViewAssembleTest {
     assertThat(view.author()).isEqualTo(ME);
     assertThat(view.likeCount()).isZero();
     assertThat(view.likedByMe()).isFalse();
-    assertThat(view.conversationMuted()).isNull();
+    assertThat(view.conversationMuted()).isFalse();
     assertThat(view.canReply()).isTrue();
     assertThat(view.quotedNote()).isNull();
     assertThat(view.media()).isEmpty();

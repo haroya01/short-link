@@ -25,8 +25,8 @@ import com.example.short_link.home.application.read.HomeForYou;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.post.application.read.PostCard;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PublicFeedItem;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -271,7 +271,7 @@ class HomeRankVectorsTest {
   private static HomeForYou served(Case in) {
     RemoteForYou remote = mock(RemoteForYou.class);
     NoteQueryService notes = mock(NoteQueryService.class);
-    PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
+    PostHomeSlices posts = mock(PostHomeSlices.class);
     NoteViewReader views = mock(NoteViewReader.class);
     LocalSeen localSeen = mock(LocalSeen.class);
     RemoteSeen remoteSeen = mock(RemoteSeen.class);

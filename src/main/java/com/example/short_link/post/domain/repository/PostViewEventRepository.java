@@ -13,9 +13,11 @@ public interface PostViewEventRepository {
 
   PostViewEventEntity save(PostViewEventEntity event);
 
-  List<DailyViewCount> countDailyByPostIdSince(Long postId, Instant since);
+  List<DailyViewCount> countDailyByPostIdBetween(
+      Long postId, Instant from, Instant until, String offset);
 
-  List<DailyViewCount> countDailyByUserIdSince(Long userId, Instant since);
+  List<DailyViewCount> countDailyByUserIdBetween(
+      Long userId, Instant from, Instant until, String offset);
 
   List<ReferrerViewCount> topReferrerHostsByUserSince(Long userId, Instant since, int limit);
 

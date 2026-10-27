@@ -26,8 +26,6 @@ public interface JpaUserRepository extends JpaRepository<UserEntity, Long> {
 
   List<UserEntity> findAllByUsernameInAndDeletedAtIsNull(Collection<String> usernames);
 
-  long countByCreatedAtAfter(Instant since);
-
   long countByUsernameIsNotNullAndDeletedAtIsNull();
 
   List<UserEntity> findAllByUsernameIsNotNullAndDeletedAtIsNullOrderByCreatedAtAsc(

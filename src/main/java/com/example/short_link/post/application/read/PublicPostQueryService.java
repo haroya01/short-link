@@ -3,10 +3,8 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
-import com.example.short_link.cta.domain.CtaEntity;
-import com.example.short_link.cta.domain.repository.CtaRepository;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.cta.application.read.CtaCard;
+import com.example.short_link.cta.application.read.CtaCards;
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostReader;
@@ -31,7 +29,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -51,8 +48,7 @@ public class PublicPostQueryService {
   private final PostBlockRepository postBlockRepository;
   private final SeriesRepository seriesRepository;
   private final SeriesItemReader seriesItemReader;
-  private final CtaRepository ctaRepository;
-  private final ShortLinkUrlBuilder shortLinkUrlBuilder;
+  private final CtaCards ctaCards;
   private final UserBlockChecker userBlocks;
   private final PostAccessPolicy access;
   private final PostUnlistedUrls unlistedUrls;
@@ -185,7 +181,7 @@ public class PublicPostQueryService {
       UserSummary author, PostEntity post, PublicPostListItem item) {
     List<PostBlockEntity> entities =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
-    Map<Long, CtaEntity> ctaMap = hydrateCtas(entities);
+    Map<Long, CtaCard> ctaMap = hydrateCtas(post.getUserId(), entities);
     List<PublicPostBlockView> blocks = new ArrayList<>(entities.size());
     for (PostBlockEntity entity : entities) {
       blocks.add(buildBlockView(entity, ctaMap));
@@ -238,18 +234,17 @@ public class PublicPostQueryService {
         : new PublicPostSeriesNav.ItemLink(entry.type().name(), null, entry.refId(), entry.title());
   }
 
-  private Map<Long, CtaEntity> hydrateCtas(List<PostBlockEntity> entities) {
-    Map<Long, CtaEntity> ctaMap = new HashMap<>();
+  private Map<Long, CtaCard> hydrateCtas(Long authorId, List<PostBlockEntity> entities) {
+    List<Long> ctaIds = new ArrayList<>();
     for (PostBlockEntity entity : entities) {
       if (entity.getType() != PostBlockType.CTA_REF) continue;
       Long ctaId = parseCtaId(entity.getContent());
-      if (ctaId == null || ctaMap.containsKey(ctaId)) continue;
-      ctaRepository.findById(ctaId).ifPresent(c -> ctaMap.put(ctaId, c));
+      if (ctaId != null) ctaIds.add(ctaId);
     }
-    return ctaMap;
+    return ctaCards.findOwnedBy(authorId, ctaIds);
   }
 
-  private PublicPostBlockView buildBlockView(PostBlockEntity entity, Map<Long, CtaEntity> ctaMap) {
+  private PublicPostBlockView buildBlockView(PostBlockEntity entity, Map<Long, CtaCard> ctaMap) {
     if (entity.getType() != PostBlockType.CTA_REF) {
       return PublicPostBlockView.from(entity);
     }
@@ -257,20 +252,15 @@ public class PublicPostQueryService {
     if (ctaId == null) {
       return PublicPostBlockView.from(entity);
     }
-    CtaEntity cta = ctaMap.get(ctaId);
+    CtaCard cta = ctaMap.get(ctaId);
     if (cta == null) {
       // 삭제됐거나 다른 작성자의 CTA는 빈 참조로 반환한다.
       return PublicPostBlockView.from(entity);
     }
-    // 추적 링크가 있으면 이 글의 클릭으로 집계하고, 없으면 원본 URL로 이동한다.
-    String url =
-        cta.getTrackedShortCode() != null
-            ? shortLinkUrlBuilder.build(ShortCode.of(cta.getTrackedShortCode()))
-            : cta.getUrl();
     return PublicPostBlockView.fromWithCta(
         entity,
         new PublicPostBlockView.CtaInfo(
-            cta.getLabel(), url, cta.getStyle().name(), cta.getPurpose().name(), cta.isDeleted()));
+            cta.label(), cta.url(), cta.style(), cta.purpose(), cta.deleted()));
   }
 
   private Long parseCtaId(String content) {

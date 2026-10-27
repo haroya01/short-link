@@ -7,7 +7,6 @@ import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,7 @@ class LinkStatsDimensionBreakdownsReader {
   private static final int TOP_SIZE = 50;
 
   private final ClickDimensionReader clickDimensions;
-  private final ClickTotalsReadRepository clickTotals;
+  private final ClickTotalsReader clickTotals;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkDestinationRepository destinationRepository;
   private final PostTitleReader postTitles;

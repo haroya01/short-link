@@ -10,7 +10,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
 import jakarta.persistence.EntityManager;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
@@ -27,13 +26,12 @@ class LinkSidecarPersisterTest {
     persister.initialize(link.linkId(), null);
 
     ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
-    verify(entityManager, times(4)).persist(sidecars.capture());
+    verify(entityManager, times(3)).persist(sidecars.capture());
     assertThat(sidecars.getAllValues())
         .extracting(Object::getClass)
         .containsExactly(
             LinkOgMetadataEntity.class,
             LinkAccessControlEntity.class,
-            LinkProfileBindingEntity.class,
             LinkExpirationPolicyEntity.class);
     assertThat(sidecars.getAllValues())
         .extracting(LinkSidecarPersisterTest::linkId)
@@ -49,7 +47,7 @@ class LinkSidecarPersisterTest {
     persister.initialize(link.linkId(), "$2a$04$hash");
 
     ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
-    verify(entityManager, times(4)).persist(sidecars.capture());
+    verify(entityManager, times(3)).persist(sidecars.capture());
     assertThat(sidecars.getAllValues())
         .filteredOn(LinkAccessControlEntity.class::isInstance)
         .singleElement()
@@ -65,7 +63,6 @@ class LinkSidecarPersisterTest {
     return switch (sidecar) {
       case LinkOgMetadataEntity e -> e.linkId().value();
       case LinkAccessControlEntity e -> e.linkId().value();
-      case LinkProfileBindingEntity e -> e.linkId().value();
       case LinkExpirationPolicyEntity e -> e.linkId().value();
       default -> throw new IllegalArgumentException("unexpected sidecar: " + sidecar);
     };

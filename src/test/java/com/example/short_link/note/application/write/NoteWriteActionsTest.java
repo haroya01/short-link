@@ -456,6 +456,19 @@ class NoteWriteActionsTest {
   }
 
   @Test
+  void aNewNoteComesBackWithItsWritersOwnMarksAllOff() {
+    saving();
+
+    NoteView view = composer().create(7L, new NoteDraft("hello", null, null, null));
+
+    assertThat(view.likedByMe()).isFalse();
+    assertThat(view.repostedByMe()).isFalse();
+    assertThat(view.bookmarkedByMe()).isFalse();
+    assertThat(view.conversationMuted()).isFalse();
+    assertThat(view.canReply()).isTrue();
+  }
+
+  @Test
   void aDirectNoteIsNeverBroadcast() {
     saving();
     composer()

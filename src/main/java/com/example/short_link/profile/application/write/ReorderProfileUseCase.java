@@ -2,8 +2,6 @@ package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
@@ -20,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReorderProfileUseCase {
 
   private final LinkRepository linkRepository;
-  private final LinkProfileBindingRepository profileBindingRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final ProfileCacheEviction cacheEviction;
 
@@ -42,16 +39,7 @@ public class ReorderProfileUseCase {
       switch (item.kind().toUpperCase(Locale.ROOT)) {
         case "LINK" -> {
           LinkEntity link = ownedLinks.get(item.id());
-          if (link != null) {
-            int next = order++;
-            link.setProfileOrder(next);
-            LinkProfileBindingEntity binding =
-                profileBindingRepository
-                    .findById(link.getId())
-                    .orElseGet(() -> new LinkProfileBindingEntity(link.linkId()));
-            binding.changeProfileOrder(next);
-            profileBindingRepository.save(binding);
-          }
+          if (link != null) link.setProfileOrder(order++);
         }
         case "BLOCK" -> {
           ProfileBlockEntity block = parseBlockId(item.id()).map(ownedBlocks::get).orElse(null);

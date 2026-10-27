@@ -72,9 +72,7 @@ public class RoomInviteService {
     try {
       invite.linkAs(
           links
-              .execute(
-                  new CreateLinkCommand(
-                      urls.page(invite.getCode()), userId, null, null, false, true))
+              .execute(CreateLinkCommand.forOwnPage(urls.page(invite.getCode()), userId))
               .shortCode()
               .value());
     } catch (RuntimeException e) {

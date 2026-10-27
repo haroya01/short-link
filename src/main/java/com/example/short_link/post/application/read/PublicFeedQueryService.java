@@ -1,7 +1,5 @@
 package com.example.short_link.post.application.read;
 
-import com.example.short_link.common.seen.Unseen;
-import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
@@ -11,18 +9,12 @@ import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesItemReader;
-import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
-import com.example.short_link.user.application.read.FollowingReader;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +28,10 @@ public class PublicFeedQueryService {
 
   private final PostRepository postRepository;
   private final UserSummaryReader userSummaries;
-  private final FollowingReader following;
-  private final SeriesSubscriptionRepository seriesSubscriptionRepository;
-  private final TagPrefQueryService tagPrefQueryService;
   private final PostFeedItemAssembler feedItemAssembler;
   private final FollowingFeedReader followingFeedReader;
   private final SeriesItemReader seriesItemReader;
+  private final FollowedTopics followedTopics;
 
   public PublicFeedView feed(Long viewerId, PublicFeedQuery query) {
     return switch (query.selection()) {
@@ -113,19 +103,13 @@ public class PublicFeedQueryService {
   }
 
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
-    List<Long> followingIds = following.followingIds(userId);
-    List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
-    // Match the query's lower() comparison for user-entered tags.
-    List<String> followedTags =
-        tagPrefQueryService.get(userId).followed().stream()
-            .map(t -> t.toLowerCase(Locale.ROOT))
-            .toList();
-    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
+    FollowedTopics.Following following = followedTopics.of(userId);
+    if (following.none()) {
       return new PublicFeedView(List.of(), page, size, false);
     }
-    Following following =
-        new Following(
-            Set.copyOf(followingIds), Set.copyOf(subscribedSeriesIds), Set.copyOf(followedTags));
+    List<Long> followingIds = following.authorIds();
+    List<Long> subscribedSeriesIds = following.seriesIds();
+    List<String> followedTags = following.tags();
     if (subscribedSeriesIds.isEmpty()) {
       List<PostEntity> posts =
           postRepository.findPublishedByAuthorsSeriesOrTags(
@@ -134,7 +118,7 @@ public class PublicFeedQueryService {
           postRepository.countPublishedByAuthorsSeriesOrTags(
               userId, followingIds, subscribedSeriesIds, followedTags);
       return new PublicFeedView(
-          annotate(posts, following), page, size, (long) (page + 1) * size < total);
+          followedTopics.annotate(posts, following), page, size, (long) (page + 1) * size < total);
     }
 
     // A subscribed series can hold notes as well, so the page is cut from posts and notes together.
@@ -154,163 +138,11 @@ public class PublicFeedQueryService {
                 .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     List<PostEntity> posts = postIds.stream().map(loaded::get).filter(Objects::nonNull).toList();
     return new PublicFeedView(
-        annotate(posts, following),
+        followedTopics.annotate(posts, following),
         page,
         size,
         (long) (page + 1) * size < total,
         seriesNotes(refs.stream().filter(r -> r.type() == SeriesItemType.NOTE).toList()));
-  }
-
-  public PostSlice recentAt(Long viewerId, int offset, int limit, Unseen unseen) {
-    List<PostEntity> rows = postRepository.findHomeRecentAt(viewerId, offset, limit, unseen);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
-  }
-
-  public List<PooledPost> pool(Long viewerId, Instant since, Instant until, int limit) {
-    return postRepository.findHomePool(viewerId, since, until, limit).stream()
-        .map(
-            row ->
-                new PooledPost(
-                    row.id(),
-                    row.userId(),
-                    row.language(),
-                    row.publishedAt(),
-                    row.tags(),
-                    row.likes(),
-                    row.quotes(),
-                    row.highlights()))
-        .toList();
-  }
-
-  // In the order asked, leaving out a post no longer listed.
-  public List<PostCard> cards(Long viewerId, List<Long> postIds) {
-    if (postIds.isEmpty()) {
-      return List.of();
-    }
-    Map<Long, PostEntity> byId = new HashMap<>();
-    postRepository.findAllByIdIn(postIds).forEach(post -> byId.put(post.getId(), post));
-    List<PostEntity> rows =
-        postIds.stream()
-            .map(byId::get)
-            .filter(post -> post != null && PostAccessPolicy.isListed(post))
-            .toList();
-    return slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
-        .map(PostSlice.At::post)
-        .toList();
-  }
-
-  public BlogSlice blogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
-    List<PostEntity> rows = postRepository.findBlogBelow(viewerId, publishedAt, id, limit + 1);
-    boolean more = rows.size() > limit;
-    return blog(more ? rows.subList(0, limit) : rows, more, viewerId);
-  }
-
-  public BlogSlice blogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
-    List<PostEntity> rows =
-        new ArrayList<>(postRepository.findBlogAbove(viewerId, publishedAt, id, limit + 1));
-    boolean more = rows.size() > limit;
-    List<PostEntity> nearest = more ? rows.subList(0, limit) : rows;
-    return blog(nearest.reversed(), more, viewerId);
-  }
-
-  private BlogSlice blog(List<PostEntity> rows, boolean more, Long viewerId) {
-    if (rows.isEmpty()) {
-      return BlogSlice.EMPTY;
-    }
-    List<PostCard> cards =
-        slice(rows, feedItemAssembler.assemble(rows), 0, rows.size(), viewerId).items().stream()
-            .map(PostSlice.At::post)
-            .toList();
-    PostEntity first = rows.getFirst();
-    PostEntity last = rows.getLast();
-    return new BlogSlice(
-        cards, first.getPublishedAt(), first.getId(), last.getPublishedAt(), last.getId(), more);
-  }
-
-  public PostSlice roomAt(Long viewerId, Long roomId, int offset, int limit) {
-    List<PostEntity> rows = postRepository.findInRoomAt(roomId, viewerId, offset, limit);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
-  }
-
-  public PostSlice roomsAt(Long viewerId, int offset, int limit) {
-    List<PostEntity> rows = postRepository.findInRoomsOfAt(viewerId, offset, limit);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
-  }
-
-  public PostSlice trendingAt(Long viewerId, int offset, int limit) {
-    List<PostEntity> rows = postRepository.findPublishedTrendingAt(viewerId, offset, limit);
-    return slice(rows, feedItemAssembler.assemble(rows), offset, limit, viewerId);
-  }
-
-  public PostSlice followingAt(Long userId, int offset, int limit) {
-    List<Long> followingIds = following.followingIds(userId);
-    List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
-    List<String> followedTags =
-        tagPrefQueryService.get(userId).followed().stream()
-            .map(t -> t.toLowerCase(Locale.ROOT))
-            .toList();
-    Following following =
-        new Following(
-            Set.copyOf(followingIds), Set.copyOf(subscribedSeriesIds), Set.copyOf(followedTags));
-    List<PostEntity> rows =
-        postRepository.findHomeFollowingAt(
-            userId, followingIds, subscribedSeriesIds, followedTags, offset, limit);
-    return slice(rows, annotate(rows, following), offset, limit, userId);
-  }
-
-  private PostSlice slice(
-      List<PostEntity> rows, List<PublicFeedItem> shown, int offset, int limit, Long viewerId) {
-    Map<Long, PublicFeedItem> byId =
-        shown.stream()
-            .collect(Collectors.toMap(PublicFeedItem::id, Function.identity(), (a, b) -> a));
-    Map<Long, PostRepository.CardMarks> marks =
-        byId.isEmpty() ? Map.of() : postRepository.cardMarks(byId.keySet(), viewerId);
-    List<PostSlice.At> items = new ArrayList<>(rows.size());
-    for (int i = 0; i < rows.size(); i++) {
-      PostEntity row = rows.get(i);
-      PublicFeedItem item = byId.get(row.getId());
-      if (item != null) {
-        PostRepository.CardMarks mark =
-            marks.getOrDefault(row.getId(), new PostRepository.CardMarks(0, false));
-        items.add(
-            new PostSlice.At(
-                offset + i,
-                new PostCard(
-                    item,
-                    PostCard.readMinutes(row.getBodyTextLength()),
-                    mark.comments(),
-                    viewerId == null ? null : mark.liked())));
-      }
-    }
-    return new PostSlice(items, rows.size() < limit);
-  }
-
-  private record Following(Set<Long> authors, Set<Long> series, Set<String> tags) {}
-
-  // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.
-  // Absent reasons leave cards unannotated; Collectors.toMap rejects null values.
-  private List<PublicFeedItem> annotate(List<PostEntity> posts, Following following) {
-    Map<Long, FollowReason> reasonById = new HashMap<>();
-    for (PostEntity p : posts) {
-      FollowReason reason = followReason(p, following);
-      if (reason != null) reasonById.put(p.getId(), reason);
-    }
-    return feedItemAssembler.assemble(posts).stream()
-        .map(it -> it.withFollowReason(reasonById.get(it.id())))
-        .toList();
-  }
-
-  private FollowReason followReason(PostEntity post, Following following) {
-    if (post.isInRoom()) return null;
-    if (following.authors().contains(post.getUserId())) return FollowReason.author();
-    if (post.getSeriesId() != null && following.series().contains(post.getSeriesId())) {
-      return FollowReason.series();
-    }
-    return post.getTags().stream()
-        .filter(t -> following.tags().contains(t.toLowerCase(Locale.ROOT)))
-        .findFirst()
-        .map(FollowReason::topic)
-        .orElse(null);
   }
 
   private List<FeedSeriesNote> seriesNotes(List<FollowingFeedRef> refs) {

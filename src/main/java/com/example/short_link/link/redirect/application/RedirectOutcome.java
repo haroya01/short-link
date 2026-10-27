@@ -19,7 +19,7 @@ public sealed interface RedirectOutcome {
 
   record PasswordRequired() implements RedirectOutcome {}
 
-  record Blocked() implements RedirectOutcome {}
+  record CountryBlocked() implements RedirectOutcome {}
 
   record DomainBlocked() implements RedirectOutcome {}
 

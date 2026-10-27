@@ -72,7 +72,7 @@ public class PasswordUnlockController {
       ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
       outcome =
           switch (result) {
-            case RedirectOutcome.Blocked b -> "blocked";
+            case RedirectOutcome.CountryBlocked b -> "blocked";
             case RedirectOutcome.DomainBlocked db -> "blocked";
             case RedirectOutcome.ExpiredWithMessage em -> "expired";
             case RedirectOutcome.NotYetOpen n -> "not_open";
@@ -103,7 +103,7 @@ public class PasswordUnlockController {
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
       case RedirectOutcome.Redirect r -> handoff.unlocked(r, userAgent, locale);
-      case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
+      case RedirectOutcome.CountryBlocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());

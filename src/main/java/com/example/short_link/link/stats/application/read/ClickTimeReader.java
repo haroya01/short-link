@@ -1,14 +1,14 @@
-package com.example.short_link.link.stats.domain.repository;
+package com.example.short_link.link.stats.application.read;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.time.Instant;
 import java.util.List;
 
-public interface ClickTimeReadRepository {
+public interface ClickTimeReader {
 
   List<DailyClickBucketRow> findDailyClickBucketsByLinkIds(
       List<Long> ids, List<Instant> dayStarts, Instant until);

@@ -56,6 +56,14 @@ public class RemoteAccountFinder {
     return webFinger(handle).flatMap(resolver::byActorUri).map(actor -> knownAt(actor, handle));
   }
 
+  public Optional<RemoteActorEntity> known(String raw) {
+    Handle handle = parse(raw);
+    if (handle.domain().equals(urls.domain())) {
+      return Optional.empty();
+    }
+    return actors.findByAcct(handle.username(), handle.domain());
+  }
+
   public RemoteActorEntity resolve(String raw) {
     Handle handle = parse(raw);
     String asked = handle.username() + "@" + handle.domain();

@@ -82,12 +82,13 @@ public class ProfileVisitRecorder {
       String utmTerm,
       String utmContent,
       boolean gpc) {
+    ProfileVisitEntity event;
     try {
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
       AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
       BotClassifier.Verdict bot = botClassifier.classify(ua, asnInfo, clientIp);
-      ProfileVisitEntity event =
+      event =
           ProfileVisitEntity.builder()
               .profileUserId(profileUserId)
               .referrer(ReferrerNormalizer.normalize(referrer))
@@ -114,9 +115,10 @@ public class ProfileVisitRecorder {
               .asn(asnInfo.asn())
               .asnOrg(asnInfo.organization())
               .build();
-      repository.save(event);
     } catch (RuntimeException e) {
-      log.warn("failed to record profile visit for userId={}", profileUserId, e);
+      log.warn("profile visit enrichment failed for userId={}", profileUserId, e);
+      event = ProfileVisitEntity.builder().profileUserId(profileUserId).build();
     }
+    repository.save(event);
   }
 }

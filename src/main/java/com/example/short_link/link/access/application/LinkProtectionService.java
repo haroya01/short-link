@@ -4,11 +4,9 @@ import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkErrorCode;
-import com.example.short_link.link.exception.LinkException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,17 +15,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LinkProtectionService {
 
-  private final LinkRepository repository;
+  private final LinkOwnership ownership;
   private final LinkAccessControlRepository accessControlRepository;
   private final PasswordEncoder encoder;
   private final LinkCacheEviction linkCacheEviction;
 
   public LinkProtectionService(
-      LinkRepository repository,
+      LinkOwnership ownership,
       LinkAccessControlRepository accessControlRepository,
       @Qualifier("linkPasswordEncoder") PasswordEncoder encoder,
       LinkCacheEviction linkCacheEviction) {
-    this.repository = repository;
+    this.ownership = ownership;
     this.accessControlRepository = accessControlRepository;
     this.encoder = encoder;
     this.linkCacheEviction = linkCacheEviction;
@@ -36,13 +34,7 @@ public class LinkProtectionService {
   @Transactional
   public LinkProtectionResult update(
       Long userId, ShortCode shortCode, String password, Integer maxViews) {
-    LinkEntity link =
-        repository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
-    }
+    LinkEntity link = ownership.requireOwned(userId, shortCode);
     LinkAccessControlEntity access =
         accessControlRepository
             .findById(link.getId())

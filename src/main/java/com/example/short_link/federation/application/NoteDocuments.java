@@ -31,20 +31,10 @@ public class NoteDocuments {
   public record Addressee(String actorUri, String handle, String profileUrl) {}
 
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId) {
-    return note(note, actorPublicId, null, List.of());
+    return note(note, actorPublicId, null, List.of(), null);
   }
 
   public Map<String, Object> note(
-      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
-    return note(note, actorPublicId, parent, List.of());
-  }
-
-  public Map<String, Object> note(
-      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
-    return note(note, actorPublicId, parent, named, null);
-  }
-
-  private Map<String, Object> note(
       NoteSnapshot note,
       String actorPublicId,
       RemoteParents.Parent parent,

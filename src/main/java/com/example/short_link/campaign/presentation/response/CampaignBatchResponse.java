@@ -2,7 +2,7 @@ package com.example.short_link.campaign.presentation.response;
 
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
@@ -22,14 +22,14 @@ public record CampaignBatchResponse(
     Instant createdAt) {
 
   public static CampaignBatchResponse from(
-      CampaignBatchEntity batch, LinkEntity link, ShortLinkUrlBuilder urlBuilder) {
+      CampaignBatchEntity batch, LinkRef link, ShortLinkUrlBuilder urlBuilder) {
     return new CampaignBatchResponse(
         batch.getId(),
         batch.getCampaignId(),
         link.linkId(),
-        link.getShortCode(),
-        urlBuilder.build(link.getShortCode()),
-        link.getOriginalUrl(),
+        link.shortCode(),
+        urlBuilder.build(link.shortCode()),
+        link.originalUrl(),
         batch.getName(),
         batch.getDistributorName(),
         batch.getAreaLabel(),

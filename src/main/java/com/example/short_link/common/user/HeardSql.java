@@ -60,6 +60,29 @@ public final class HeardSql {
         + " AND (hrn.expires_at IS NULL OR hrn.expires_at > :now)))";
   }
 
+  public static String memberSilenced(String recipientExpr, String actorExpr) {
+    return "(EXISTS (SELECT 1 FROM user_block hsb WHERE hsb.blocker_id = "
+        + recipientExpr
+        + " AND hsb.blocked_id = "
+        + actorExpr
+        + ") OR EXISTS (SELECT 1 FROM user_mute hsm WHERE hsm.user_id = "
+        + recipientExpr
+        + " AND hsm.muted_user_id = "
+        + actorExpr
+        + " AND hsm.hide_notifications"
+        + " AND (hsm.expires_at IS NULL OR hsm.expires_at > :now)))";
+  }
+
+  public static String memberSilencedEitherWay(String recipientExpr, String actorExpr) {
+    return "("
+        + memberSilenced(recipientExpr, actorExpr)
+        + " OR EXISTS (SELECT 1 FROM user_block hab WHERE hab.blocker_id = "
+        + actorExpr
+        + " AND hab.blocked_id = "
+        + recipientExpr
+        + "))";
+  }
+
   public static String unblockedRemote(String remoteActorColumn) {
     return " AND NOT " + remoteBlocked(":viewer", remoteActorColumn);
   }

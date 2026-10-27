@@ -26,15 +26,17 @@ class PostViewEventRepositoryAdapter implements PostViewEventRepository {
   }
 
   @Override
-  public List<DailyViewCount> countDailyByPostIdSince(Long postId, Instant since) {
-    return jpa.countDailyByPostId(postId, since).stream()
+  public List<DailyViewCount> countDailyByPostIdBetween(
+      Long postId, Instant from, Instant until, String offset) {
+    return jpa.countDailyByPostId(postId, from, until, offset).stream()
         .map(r -> new DailyViewCount(r.getViewDate(), r.getViews()))
         .toList();
   }
 
   @Override
-  public List<DailyViewCount> countDailyByUserIdSince(Long userId, Instant since) {
-    return jpa.countDailyByUserId(userId, since).stream()
+  public List<DailyViewCount> countDailyByUserIdBetween(
+      Long userId, Instant from, Instant until, String offset) {
+    return jpa.countDailyByUserId(userId, from, until, offset).stream()
         .map(r -> new DailyViewCount(r.getViewDate(), r.getViews()))
         .toList();
   }

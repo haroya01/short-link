@@ -1,4 +1,4 @@
-package com.example.short_link.link.stats.domain.repository.projection;
+package com.example.short_link.link.stats.domain.projection;
 
 import java.time.LocalDate;
 

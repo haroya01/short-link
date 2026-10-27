@@ -62,8 +62,8 @@ class CampaignBatchServiceTest {
             new CampaignBatchCreateRequest("east", "A", "Shinjuku East", 500, null, null)
                 .toCommand());
 
-    assertThat(result.batch().getLinkId()).isEqualTo(result.link().getId());
-    assertThat(result.link().getOriginalUrl()).isEqualTo("https://example.com/landing");
+    assertThat(result.batch().getLinkId()).isEqualTo(result.link().linkId().value());
+    assertThat(result.link().originalUrl()).isEqualTo("https://example.com/landing");
     assertThat(result.batch().getQuantity()).isEqualTo(500);
   }
 
@@ -80,7 +80,7 @@ class CampaignBatchServiceTest {
                     "south", null, null, 100, "https://example.com/special", null)
                 .toCommand());
 
-    assertThat(result.link().getOriginalUrl()).isEqualTo("https://example.com/special");
+    assertThat(result.link().originalUrl()).isEqualTo("https://example.com/special");
   }
 
   @Test

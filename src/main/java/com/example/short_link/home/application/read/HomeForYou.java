@@ -15,7 +15,7 @@ import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PooledNote;
 import com.example.short_link.post.application.read.PooledPost;
 import com.example.short_link.post.application.read.PostCard;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Clock;
@@ -41,7 +41,7 @@ public class HomeForYou {
 
   private final RemoteForYou remote;
   private final NoteQueryService notes;
-  private final PublicFeedQueryService posts;
+  private final PostHomeSlices posts;
   private final NoteViewReader noteViews;
   private final LocalSeen localSeen;
   private final RemoteSeen remoteSeen;
@@ -54,7 +54,7 @@ public class HomeForYou {
   public HomeForYou(
       RemoteForYou remote,
       NoteQueryService notes,
-      PublicFeedQueryService posts,
+      PostHomeSlices posts,
       NoteViewReader noteViews,
       LocalSeen localSeen,
       RemoteSeen remoteSeen,

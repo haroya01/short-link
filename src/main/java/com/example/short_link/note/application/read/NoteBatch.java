@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-// mutesRead is false only for a note just posted: its view says nothing about a muted conversation.
 public record NoteBatch(
     List<NoteEntity> visible,
     Map<Long, NoteAuthor> members,
@@ -21,7 +20,6 @@ public record NoteBatch(
     Map<Long, QuotedPost> quotedPosts,
     Map<Long, NoteStats> stats,
     NoteViewerMarks marks,
-    boolean mutesRead,
     Map<Long, NoteView.LinkPreview> cards,
     Map<Long, NoteView.Poll> polls,
     Set<Long> closedThreads,
@@ -38,7 +36,6 @@ public record NoteBatch(
           Map.of(),
           Map.of(),
           NoteViewerMarks.NONE,
-          true,
           Map.of(),
           Map.of(),
           Set.of(),
@@ -65,7 +62,6 @@ public record NoteBatch(
         quotedPost == null ? Map.of() : Map.of(note.getQuotedPostId(), quotedPost),
         Map.of(),
         NoteViewerMarks.NONE,
-        false,
         Map.of(),
         poll == null ? Map.of() : Map.of(note.getId(), poll),
         Set.of(),

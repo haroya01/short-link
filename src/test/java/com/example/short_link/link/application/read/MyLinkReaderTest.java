@@ -3,16 +3,17 @@ package com.example.short_link.link.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTimeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,16 +33,22 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class MyLinkReaderTest {
-  @Mock private ClickTotalsReadRepository totals;
-  @Mock private ClickTimeReadRepository time;
+  @Mock private ClickTotalsReader totals;
+  @Mock private ClickTimeReader time;
   @Mock private LinkTagLookup tags;
   private MyLinkReader reader;
   private LinkEntity link;
   private static final Instant NOW = Instant.parse("2026-09-11T23:59:59.999999999Z");
 
+  private static UserAccessLookup inUtc() {
+    UserAccessLookup users = mock(UserAccessLookup.class);
+    lenient().when(users.timezone(any())).thenReturn(Optional.of("UTC"));
+    return users;
+  }
+
   @BeforeEach
   void setUp() {
-    reader = new MyLinkReader(totals, time, tags, Clock.fixed(NOW, ZoneOffset.UTC));
+    reader = new MyLinkReader(totals, time, tags, Clock.fixed(NOW, ZoneOffset.UTC), inUtc());
     link = new LinkEntity("https://example.com/updated", "read123", 7L, null);
     ReflectionTestUtils.setField(link, "id", 42L);
   }
@@ -90,7 +97,7 @@ class MyLinkReaderTest {
   void midnightRolloverCannotSplitTheWindowStartAndItsDayBuckets() {
     Clock clock = mock(Clock.class);
     when(clock.instant()).thenReturn(NOW, NOW.plusNanos(1));
-    reader = new MyLinkReader(totals, time, tags, clock);
+    reader = new MyLinkReader(totals, time, tags, clock, inUtc());
     when(tags.tagNamesByLinkIds(List.of(42L))).thenReturn(Map.of());
     DailyClickBucketRow todayCount = daily(6, 1L);
     when(time.findDailyClickBucketsByLinkIds(eq(List.of(42L)), any(), eq(NOW)))

@@ -9,8 +9,8 @@ import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.post.application.read.BlogSlice;
 import com.example.short_link.post.application.read.PostCard;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PostSlice;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Clock;
 import java.time.Instant;
@@ -35,7 +35,7 @@ public class HomeFeedQueryService {
   static final int SINCE_LIMIT = 50;
 
   private final NoteQueryService notes;
-  private final PublicFeedQueryService posts;
+  private final PostHomeSlices posts;
   private final LocalSeen seen;
   private final HomeForYou forYou;
   private final Clock clock;

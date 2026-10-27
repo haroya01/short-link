@@ -87,6 +87,18 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void thePasswordPromptCountsAsPasswordRequiredAtAnyStatus() {
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                renderer.passwordPromptResponse(KO, HttpStatus.OK, CODE, false, "0xKEY")))
+        .isEqualTo("password_required");
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                renderer.passwordPromptResponse(KO, HttpStatus.UNAUTHORIZED, CODE, true, "0xKEY")))
+        .isEqualTo("password_required");
+  }
+
+  @Test
   void blockedAndExpiredPages_render() {
     assertThat(renderer.blockedPageResponse(KO).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     ResponseEntity<byte[]> expired = renderer.expiredPageResponse(KO, "만료된 캠페인 <link>");

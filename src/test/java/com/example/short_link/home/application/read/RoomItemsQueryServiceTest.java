@@ -11,8 +11,8 @@ import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.post.application.read.PostCommentQueryService;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PostSlice;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RoomItemsQueryServiceTest {
 
   @Mock private NoteQueryService notes;
-  @Mock private PublicFeedQueryService posts;
+  @Mock private PostHomeSlices posts;
   @Mock private PostCommentQueryService comments;
 
   @Test

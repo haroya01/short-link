@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -24,9 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -40,7 +41,14 @@ class ReplaceLinkTagsUseCaseTest {
   @Mock private TagRepository tagRepository;
   @Mock private LinkTagRepository linkTagRepository;
   @Mock private LinkCacheEviction linkCacheEviction;
-  @InjectMocks private ReplaceLinkTagsUseCase useCase;
+  private ReplaceLinkTagsUseCase useCase;
+
+  @BeforeEach
+  void setUp() {
+    useCase =
+        new ReplaceLinkTagsUseCase(
+            new LinkOwnership(linkRepository), tagRepository, linkTagRepository, linkCacheEviction);
+  }
 
   private static final long USER = 7L;
   private static final ShortCode CODE = new ShortCode("abcde1");

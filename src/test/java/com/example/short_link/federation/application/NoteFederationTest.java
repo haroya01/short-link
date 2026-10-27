@@ -2,6 +2,8 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +61,7 @@ class NoteFederationTest {
     return new NoteFederation(
         notes,
         remoteParents,
-        finder,
+        new NoteAddressing(remoteParents, finder),
         localActors,
         settings,
         actors,
@@ -67,7 +71,8 @@ class NoteFederationTest {
                 new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
         deliveries,
         JSON,
-        Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC));
+        Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC),
+        new TransactionTemplate(mock(PlatformTransactionManager.class)));
   }
 
   private void federating() {
@@ -366,7 +371,9 @@ class NoteFederationTest {
             NoteVisibility.DIRECT);
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     when(notes.find(44L)).thenReturn(Optional.of(directQuote));
-    federating();
+    lenient()
+        .when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
     service().edited(44L, 7L, true);
@@ -667,7 +674,8 @@ class NoteFederationTest {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find(any())).thenReturn(Optional.empty());
-    federating();
+    when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
 
@@ -688,7 +696,8 @@ class NoteFederationTest {
     when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(suspended));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
-    federating();
+    when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
 
