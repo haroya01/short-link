@@ -10,8 +10,8 @@ import com.example.short_link.post.domain.repository.HighlightReplyLikeRepositor
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -31,7 +31,7 @@ public class PostHighlightReplyQueryService {
   private final HighlightReplyLikeRepository likeRepository;
   private final PostHighlightRepository highlightRepository;
   private final PostRepository postRepository;
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final CommentMentions mentions;
   private final PostAccessPolicy access;
 
@@ -54,9 +54,9 @@ public class PostHighlightReplyQueryService {
         replyRepository.findHeardByHighlightId(highlightId, viewerId);
     List<Long> authorIds =
         replies.stream().map(PostHighlightReplyEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> authors =
+        userSummaries.findAll(authorIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     Function<String, List<String>> mentioned =
         mentions.in(replies.stream().map(PostHighlightReplyEntity::getBody).toList());
     Map<Long, Likes> likes =
@@ -66,7 +66,7 @@ public class PostHighlightReplyQueryService {
     return replies.stream()
         .map(
             r -> {
-              UserEntity author = authors.get(r.getUserId());
+              UserSummary author = authors.get(r.getUserId());
               Likes liked = likes.getOrDefault(r.getId(), NO_LIKES);
               return new HighlightReplyView(
                   r.getId(),

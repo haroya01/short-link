@@ -5,8 +5,8 @@ import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesSummary;
 import com.example.short_link.post.domain.repository.SeriesRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,16 +19,15 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PostFeedItemAssembler {
 
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final SeriesRepository seriesRepository;
   private final PostRooms rooms;
 
   public List<PublicFeedItem> assemble(List<PostEntity> posts) {
     List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> authors =
+        userSummaries.findAllActive(authorIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     List<PostEntity> visible =
         posts.stream().filter(p -> authors.containsKey(p.getUserId())).toList();
     Map<Long, FeedSeriesRef> series = seriesOf(visible);
@@ -53,7 +52,7 @@ public class PostFeedItemAssembler {
         .collect(Collectors.toMap(SeriesSummary::seriesId, FeedSeriesRef::from));
   }
 
-  public PublicFeedItem toItem(PostEntity post, UserEntity author) {
+  public PublicFeedItem toItem(PostEntity post, UserSummary author) {
     PostAccess card = PostAccessPolicy.card(post);
     boolean redacted = card.redacted();
     return new PublicFeedItem(

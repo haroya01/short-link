@@ -18,8 +18,19 @@ public class UserSummaryReader {
     return users.findById(id).map(UserSummaryReader::summary);
   }
 
+  public Optional<UserSummary> findActive(Long id) {
+    return users.findById(id).filter(UserSummaryReader::active).map(UserSummaryReader::summary);
+  }
+
   public List<UserSummary> findAll(Collection<Long> ids) {
     return users.findAllByIdIn(ids).stream().map(UserSummaryReader::summary).toList();
+  }
+
+  public List<UserSummary> findAllActive(Collection<Long> ids) {
+    return users.findAllByIdIn(ids).stream()
+        .filter(UserSummaryReader::active)
+        .map(UserSummaryReader::summary)
+        .toList();
   }
 
   public Optional<UserSummary> findByUsername(String username) {
@@ -31,6 +42,12 @@ public class UserSummaryReader {
         .findByUsername(username)
         .filter(UserSummaryReader::active)
         .map(UserSummaryReader::summary);
+  }
+
+  public List<UserSummary> findActiveByUsernames(Collection<String> usernames) {
+    return users.findActiveByUsernameIn(usernames).stream()
+        .map(UserSummaryReader::summary)
+        .toList();
   }
 
   private static boolean active(UserEntity user) {

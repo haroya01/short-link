@@ -7,6 +7,7 @@ import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
@@ -33,7 +34,9 @@ class QuotingPostsQueryServiceTest {
         new QuotingPostsQueryService(
             postRepository,
             new PostFeedItemAssembler(
-                userRepository, seriesRepository, PostAccessFixtures.rooms()));
+                new UserSummaryReader(userRepository),
+                seriesRepository,
+                PostAccessFixtures.rooms()));
   }
 
   private static PostEntity published(long id) {

@@ -72,7 +72,7 @@ class CreateCommentUseCaseTest {
                 events,
                 muteReader,
                 PostAccessFixtures.policy()),
-            new CommentMentions(userRepository));
+            new CommentMentions(new UserSummaryReader(userRepository)));
   }
 
   private PostEntity publishedPost() {

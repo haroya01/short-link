@@ -74,7 +74,7 @@ class CreateHighlightReplyUseCaseTest {
                 events,
                 muteReader,
                 PostAccessFixtures.policy()),
-            new CommentMentions(userRepository));
+            new CommentMentions(new UserSummaryReader(userRepository)));
   }
 
   private PostHighlightEntity highlight(long authorId) {

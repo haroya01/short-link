@@ -49,6 +49,31 @@ class UserSummaryReaderTest {
   }
 
   @Test
+  void activeLookupsByIdSkipDeletedAccounts() {
+    UserEntity gone = user(2L, "gone");
+    gone.softDelete();
+    when(users.findById(1L)).thenReturn(Optional.of(user(1L, "alice")));
+    when(users.findById(2L)).thenReturn(Optional.of(gone));
+    when(users.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice"), gone));
+
+    assertThat(reader.findActive(1L)).map(UserSummary::username).contains("alice");
+    assertThat(reader.findActive(2L)).isEmpty();
+    assertThat(reader.findAllActive(List.of(1L, 2L)))
+        .extracting(UserSummary::username)
+        .containsExactly("alice");
+  }
+
+  @Test
+  void activeHandlesComeFromTheRepositorysOwnActiveQuery() {
+    when(users.findActiveByUsernameIn(List.of("alice", "gone")))
+        .thenReturn(List.of(user(1L, "alice")));
+
+    assertThat(reader.findActiveByUsernames(List.of("alice", "gone")))
+        .extracting(UserSummary::username)
+        .containsExactly("alice");
+  }
+
+  @Test
   void anActiveLookupByUsernameSkipsADeletedAccount() {
     UserEntity gone = user(2L, "gone");
     gone.softDelete();
