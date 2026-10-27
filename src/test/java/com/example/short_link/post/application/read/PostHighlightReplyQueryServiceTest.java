@@ -15,6 +15,7 @@ import com.example.short_link.post.domain.repository.HighlightReplyLikeRepositor
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -45,8 +46,8 @@ class PostHighlightReplyQueryServiceTest {
             likeRepository,
             highlightRepository,
             postRepository,
-            userRepository,
-            new CommentMentions(userRepository),
+            new UserSummaryReader(userRepository),
+            new CommentMentions(new UserSummaryReader(userRepository)),
             PostAccessFixtures.policy());
   }
 

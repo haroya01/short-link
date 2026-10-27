@@ -4,6 +4,7 @@ import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.application.helper.EventQuestions.QuestionSpec;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.EventQuestionEntity;
+import com.example.short_link.event.domain.RegistrationStatus;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -56,7 +57,8 @@ public class UpdateEventUseCase {
   private List<EventQuestionEntity> prepareQuestions(EventEntity event, List<QuestionSpec> specs) {
     if (specs == null) return null;
     event.requireQuestionChangesAllowed(
-        registrationRepository.countConfirmedByEventId(event.getId()));
+        registrationRepository.countByEventIdAndStatus(
+            event.getId(), RegistrationStatus.CONFIRMED));
     EventQuestions.validateSpecs(specs);
     return EventQuestions.toEntities(event.getId(), specs);
   }

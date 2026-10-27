@@ -3,6 +3,8 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.common.note.NoteViewReader;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.RemotePoolRow;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import java.time.Instant;
 import java.util.HashMap;
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 class NoteViewProvider implements NoteViewReader {
 
   private final NoteRepository notes;
+  private final NoteFeedReader feeds;
+  private final NotePageReader pages;
   private final NoteViews views;
 
   @Override
@@ -32,21 +36,21 @@ class NoteViewProvider implements NoteViewReader {
   @Override
   @Transactional(readOnly = true)
   public List<Listed> received(Long viewerId, Long beforeId, int limit) {
-    return listed(notes.federatedBefore(viewerId, beforeId, limit), viewerId);
+    return listed(feeds.federatedBefore(viewerId, beforeId, limit), viewerId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<Listed> latest(Long viewerId, Long beforeId, int limit) {
-    return listed(notes.latestBefore(viewerId, beforeId, limit), viewerId);
+    return listed(feeds.latestBefore(viewerId, beforeId, limit), viewerId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<Pooled> remotePool(
       Long viewerId, Instant since, Instant until, int limit, boolean withFollowed) {
-    List<RemotePoolRow> rows = notes.remotePool(viewerId, since, until, limit, withFollowed);
-    Map<Long, List<String>> tags = notes.tagsOf(rows.stream().map(RemotePoolRow::id).toList());
+    List<RemotePoolRow> rows = feeds.remotePool(viewerId, since, until, limit, withFollowed);
+    Map<Long, List<String>> tags = pages.tagsOf(rows.stream().map(RemotePoolRow::id).toList());
     return rows.stream()
         .map(
             row ->

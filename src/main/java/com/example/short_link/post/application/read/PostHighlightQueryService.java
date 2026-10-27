@@ -7,9 +7,9 @@ import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.FollowRepository;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +29,8 @@ public class PostHighlightQueryService {
   private final PostHighlightRepository highlightRepository;
   private final PostHighlightReplyRepository replyRepository;
   private final PostRepository postRepository;
-  private final UserRepository userRepository;
-  private final FollowRepository followRepository;
+  private final UserSummaryReader userSummaries;
+  private final FollowingReader following;
   private final PostAccessPolicy access;
 
   public PostScoped<List<HighlightView>> listForPost(Long postId, PostReader reader) {
@@ -38,16 +38,16 @@ public class PostHighlightQueryService {
     if (post == null || !access.readable(post, reader)) {
       return new PostScoped<>(List.of(), false);
     }
-    return new PostScoped<>(highlights(postId, reader.viewerId()), !PostAccessPolicy.isOpen(post));
+    return new PostScoped<>(highlights(reader.viewerId(), postId), !PostAccessPolicy.isOpen(post));
   }
 
-  private List<HighlightView> highlights(Long postId, Long viewerId) {
+  private List<HighlightView> highlights(Long viewerId, Long postId) {
     List<PostHighlightEntity> highlights = highlightRepository.findHeardByPostId(postId, viewerId);
     List<Long> userIds =
         highlights.stream().map(PostHighlightEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> users =
-        userRepository.findAllByIdIn(userIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> users =
+        userSummaries.findAll(userIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     Map<Long, Long> replyCounts =
         replyRepository.countByHighlightIds(
             highlights.stream().map(PostHighlightEntity::getId).toList());
@@ -55,7 +55,7 @@ public class PostHighlightQueryService {
     return highlights.stream()
         .map(
             h -> {
-              UserEntity user = users.get(h.getUserId());
+              UserSummary user = users.get(h.getUserId());
               return new HighlightView(
                   h.getId(),
                   user == null ? null : PublicAuthorView.from(user),
@@ -87,22 +87,22 @@ public class PostHighlightQueryService {
             .collect(Collectors.toSet());
     posts.keySet().removeAll(left);
     List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> authors =
+        userSummaries.findAll(authorIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
 
     return highlights.stream()
         .filter(h -> !left.contains(h.getPostId()))
         .map(
             h -> {
               PostEntity post = posts.get(h.getPostId());
-              UserEntity author = post == null ? null : authors.get(post.getUserId());
+              UserSummary author = post == null ? null : authors.get(post.getUserId());
               return new MyHighlightView(
                   h.getId(),
                   h.getQuote(),
                   h.getBlockOrder(),
                   h.getEndBlockOrder(),
-                  author == null ? null : author.getUsername(),
+                  author == null ? null : author.username(),
                   post == null ? null : post.getSlug(),
                   post == null ? null : post.getTitle(),
                   h.getCreatedAt(),
@@ -117,7 +117,7 @@ public class PostHighlightQueryService {
     if (forceGlobal) {
       return globalFeed(userId, page, size);
     }
-    List<Long> followingIds = followRepository.findFollowingIds(userId);
+    List<Long> followingIds = following.followingIds(userId);
     if (followingIds.isEmpty()) {
       return globalFeed(userId, page, size);
     }
@@ -149,9 +149,9 @@ public class PostHighlightQueryService {
             .map(PostHighlightEntity::getUserId)
             .collect(Collectors.toCollection(HashSet::new));
     posts.values().forEach(p -> userIds.add(p.getUserId()));
-    Map<Long, UserEntity> users =
-        userRepository.findAllByIdIn(userIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> users =
+        userSummaries.findAll(userIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
 
     Map<Long, Long> replyCounts =
         replyRepository.countByHighlightIds(
@@ -163,15 +163,15 @@ public class PostHighlightQueryService {
                 h -> {
                   PostEntity post = posts.get(h.getPostId());
                   if (post == null) return null;
-                  UserEntity curator = users.get(h.getUserId());
-                  UserEntity author = users.get(post.getUserId());
+                  UserSummary curator = users.get(h.getUserId());
+                  UserSummary author = users.get(post.getUserId());
                   return new HighlightFeedItem(
                       h.getId(),
                       h.getPostId(),
                       curator == null ? null : PublicAuthorView.from(curator),
                       post.getSlug(),
                       post.getTitle(),
-                      author == null ? null : author.getUsername(),
+                      author == null ? null : author.username(),
                       h.getBlockOrder(),
                       h.getEndBlockOrder(),
                       h.getStartOffset(),

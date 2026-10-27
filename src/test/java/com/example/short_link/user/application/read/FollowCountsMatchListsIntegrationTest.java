@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.write.FollowUseCase;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -42,11 +43,11 @@ class FollowCountsMatchListsIntegrationTest {
     long unnamed =
         userRepository.save(new UserEntity("fcm-unnamed@x.com", "google", "g-unnamed")).getId();
     for (long follower : new long[] {ann, ben, leaving, unnamed}) {
-      followRepository.save(new FollowEntity(follower, target));
+      followRepository.save(new FollowEntity(FollowEdge.follower(follower).following(target)));
     }
-    followRepository.save(new FollowEntity(target, ann));
-    followRepository.save(new FollowEntity(target, leaving));
-    followRepository.save(new FollowEntity(leaving, ann));
+    followRepository.save(new FollowEntity(FollowEdge.follower(target).following(ann)));
+    followRepository.save(new FollowEntity(FollowEdge.follower(target).following(leaving)));
+    followRepository.save(new FollowEntity(FollowEdge.follower(leaving).following(ann)));
     userRepository.findById(leaving).orElseThrow().softDelete();
   }
 
@@ -82,7 +83,7 @@ class FollowCountsMatchListsIntegrationTest {
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.USER_NOT_FOUND);
-    assertThat(followRepository.existsByFollowerIdAndFollowingId(ann, leaving)).isFalse();
+    assertThat(followRepository.exists(FollowEdge.follower(ann).following(leaving))).isFalse();
   }
 
   private long user(String handle) {

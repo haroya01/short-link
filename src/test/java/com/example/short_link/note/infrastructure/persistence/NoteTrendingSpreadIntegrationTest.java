@@ -3,7 +3,7 @@ package com.example.short_link.note.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteTrendsReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteTrendingSpreadIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteTrendsReader trends;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -110,7 +110,7 @@ class NoteTrendingSpreadIntegrationTest {
   }
 
   private List<Long> ranked(Set<Long> mine) {
-    return notes.trending(null, 0, 500).stream()
+    return trends.trending(null, 0, 500).stream()
         .map(NoteEntity::getId)
         .filter(mine::contains)
         .toList();
@@ -146,9 +146,9 @@ class NoteTrendingSpreadIntegrationTest {
     List<Long> all = ranked(mine);
     assertThat(all).containsExactly(a5, a4, b1, a3);
     List<Long> paged = new ArrayList<>();
-    int total = notes.trending(null, 0, 500).size();
+    int total = trends.trending(null, 0, 500).size();
     for (int offset = 0; offset < total; offset += 2) {
-      notes.trending(null, offset, 2).stream()
+      trends.trending(null, offset, 2).stream()
           .map(NoteEntity::getId)
           .filter(mine::contains)
           .forEach(paged::add);

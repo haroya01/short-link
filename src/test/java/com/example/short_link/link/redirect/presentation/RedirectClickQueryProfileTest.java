@@ -9,7 +9,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.ClickBuffer;
 import com.example.short_link.link.stats.application.ClickFlusher;
-import io.queryaudit.junit5.ExpectMaxQueryCount;
+import io.queryaudit.junit5.ExpectQueries;
 import io.queryaudit.junit5.QueryAudit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +67,7 @@ class RedirectClickQueryProfileTest {
 
   // 7 = 셋업·티어다운 6 + custom_domain 캐시 여유 1. 동기 INSERT 부활 시 클릭당 +1 로 초과.
   @Test
-  @ExpectMaxQueryCount(7)
+  @ExpectQueries(total = 7)
   void repeatClickOnWarmCache() throws Exception {
     mvc.perform(get("/" + CODE)).andExpect(status().isFound());
     mvc.perform(get("/" + CODE)).andExpect(status().isFound());

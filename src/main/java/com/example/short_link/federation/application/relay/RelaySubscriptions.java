@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -74,19 +73,7 @@ public class RelaySubscriptions {
     }
   }
 
-  @Autowired
   public RelaySubscriptions(
-      FederationRelayRepository relays,
-      FederationRelayedNoteRepository relayed,
-      RemoteActorResolver resolver,
-      DeliveryQueue deliveries,
-      FederationUrls urls,
-      JsonMapper json,
-      RelayProperties props) {
-    this(relays, relayed, resolver, deliveries, urls, json, props, Clock.systemUTC());
-  }
-
-  RelaySubscriptions(
       FederationRelayRepository relays,
       FederationRelayedNoteRepository relayed,
       RemoteActorResolver resolver,

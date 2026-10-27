@@ -12,6 +12,10 @@ public record Addressing(
 
   public static final Addressing NONE = new Addressing(null, List.of(), null);
 
+  public Addressing naming(List<RemoteActorEntity> people) {
+    return new Addressing(parent, people, quoted);
+  }
+
   public boolean isEmpty() {
     return parent == null && named.isEmpty() && quoted == null;
   }

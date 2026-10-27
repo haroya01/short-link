@@ -87,7 +87,9 @@ class NoteAddressingTest {
             "https://mastodon.example/@carol/9"),
         null,
         false,
-        visibility);
+        visibility,
+        null,
+        null);
   }
 
   @Test
@@ -107,9 +109,12 @@ class NoteAddressingTest {
     when(remoteParents.of(900L)).thenReturn(Optional.of(ALICE_POST));
     when(finder.find("bob@misskey.example")).thenReturn(Optional.of(bob));
     when(finder.find("eve@suspended.example")).thenReturn(Optional.of(eve));
+    NoteAddressing addressing = new NoteAddressing(remoteParents, finder);
 
-    assertThat(new NoteAddressing(remoteParents, finder).lookedUp(note(NoteVisibility.DIRECT)))
-        .isEqualTo(new Addressing(ALICE_POST, List.of(bob), null));
+    assertThat(addressing.remoteNotes(note(NoteVisibility.DIRECT)))
+        .isEqualTo(new Addressing(ALICE_POST, List.of(), null));
+    assertThat(addressing.lookedUp(List.of("bob@misskey.example", "eve@suspended.example")))
+        .containsExactly(bob);
     verify(finder, never()).known(anyString());
     verify(remoteParents, never()).of(77L);
   }

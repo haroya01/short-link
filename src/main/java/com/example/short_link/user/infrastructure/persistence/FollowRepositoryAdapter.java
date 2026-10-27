@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.util.Collection;
@@ -18,13 +19,13 @@ class FollowRepositoryAdapter implements FollowRepository {
   private final JpaFollowRepository jpa;
 
   @Override
-  public boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId) {
-    return jpa.existsByFollowerIdAndFollowingId(followerId, followingId);
+  public boolean exists(FollowEdge edge) {
+    return jpa.existsByFollowerIdAndFollowingId(edge.follower(), edge.following());
   }
 
   @Override
-  public Optional<FollowEntity> findByFollowerIdAndFollowingId(Long followerId, Long followingId) {
-    return jpa.findByFollowerIdAndFollowingId(followerId, followingId);
+  public Optional<FollowEntity> find(FollowEdge edge) {
+    return jpa.findByFollowerIdAndFollowingId(edge.follower(), edge.following());
   }
 
   @Override

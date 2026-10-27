@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
@@ -21,7 +22,7 @@ class NoteDocumentsTest {
           new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")));
 
   private static NoteSnapshot note(String body, Quote quote, List<Image> images, Long reply) {
-    return new NoteSnapshot(42L, 7L, "yuki", body, CREATED, null, reply, quote, images);
+    return NoteSnapshotFixtures.note(42L, 7L, "yuki", body, CREATED, null, reply, quote, images);
   }
 
   @Test
@@ -46,7 +47,7 @@ class NoteDocumentsTest {
   @Test
   void unlistedAndFollowersOnlyNotesAreAddressedAsMastodonDoes() {
     NoteSnapshot unlisted =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -61,7 +62,7 @@ class NoteDocumentsTest {
             false,
             NoteVisibility.UNLISTED);
     NoteSnapshot followersOnly =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -87,7 +88,7 @@ class NoteDocumentsTest {
   @Test
   void aDirectNoteAddressedToNoOneElsewhereIsNeverAddressedToFollowers() {
     NoteSnapshot direct =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -142,7 +143,7 @@ class NoteDocumentsTest {
   @Test
   void aContentWarningTravelsAsTheSummaryAndMarksTheNoteSensitive() {
     NoteSnapshot warned =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L, 7L, "yuki", "spoilers", CREATED, null, null, null, List.of(), null, "결말 포함", true);
 
     Map<String, Object> note = documents.note(warned, "pid", Addressing.NONE);
@@ -206,7 +207,7 @@ class NoteDocumentsTest {
   @Test
   void aQuotedNoteCarriesTheQuoteFieldsAndAnReFallbackForServersWithoutThem() {
     NoteSnapshot quoting =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -236,7 +237,7 @@ class NoteDocumentsTest {
   @Test
   void aQuotedNoteFromElsewhereIsNamedByItsIdThereAndLinkedToItsPageOrElseItsId() {
     NoteSnapshot quoting =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -262,7 +263,7 @@ class NoteDocumentsTest {
                 + "https://m.example/@alice/1</a></p>");
 
     NoteSnapshot withoutPage =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L,
             7L,
             "yuki",
@@ -318,7 +319,7 @@ class NoteDocumentsTest {
                 null,
                 List.of(
                     new Image("https://cdn/a.png", "image/png", "cat", 1200, 900),
-                    new Image("https://cdn/b.png", "image/png", null)),
+                    new Image("https://cdn/b.png", "image/png", null, null, null)),
                 null),
             "pid",
             Addressing.NONE);
@@ -334,7 +335,11 @@ class NoteDocumentsTest {
   void createCarriesTheNoteAddressedToThePublicAndFollowers() {
     Map<String, Object> create =
         documents.create(
-            note("hello", null, List.of(new Image("https://cdn/a.png", "image/png", "cat")), 41L),
+            note(
+                "hello",
+                null,
+                List.of(new Image("https://cdn/a.png", "image/png", "cat", null, null)),
+                41L),
             "pid",
             Addressing.NONE);
 
@@ -363,7 +368,7 @@ class NoteDocumentsTest {
   @SuppressWarnings("unchecked")
   void eachEditIsANewUpdateAndDeleteSendsATombstone() {
     NoteSnapshot edited =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             42L, 7L, "yuki", "x", CREATED, Instant.ofEpochMilli(1_000), null, null, List.of());
 
     Map<String, Object> update = documents.update(edited, "pid", Addressing.NONE);
@@ -402,7 +407,8 @@ class NoteDocumentsTest {
             Instant.parse("2026-10-08T01:02:03.999Z"),
             multiple,
             4,
-            closed));
+            closed),
+        null);
   }
 
   @Test
