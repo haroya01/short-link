@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.user.BlockRelation;
@@ -239,7 +240,7 @@ class FollowUseCaseTest {
     assertThat(status.locked()).isTrue();
     verify(followRequests).save(any(FollowRequestEntity.class));
     verify(followRepository, never()).save(any());
-    verify(events).publishEvent(new FollowRequestedEvent(2L, 9L, null));
+    verify(events).publishEvent(new FollowRequestedEvent(2L, Actor.member(9L)));
   }
 
   @Test
@@ -275,7 +276,7 @@ class FollowUseCaseTest {
     FollowStatus status = useCase.unfollow(9L, "bob");
 
     assertThat(status.requested()).isFalse();
-    verify(events).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
+    verify(events).publishEvent(new FollowRequestSettledEvent(2L, Actor.member(9L)));
   }
 
   @Test

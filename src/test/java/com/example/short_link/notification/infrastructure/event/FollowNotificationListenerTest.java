@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 import com.example.short_link.common.event.AccountUnlockedEvent;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -48,8 +49,8 @@ class FollowNotificationListenerTest {
   void aFollowRequestNotifiesTheLockedMemberUnlessTheyMutedTheAsker() {
     stored.silence(2L, 3L);
 
-    listener().onFollowRequested(new FollowRequestedEvent(2L, null, 7L));
-    listener().onFollowRequested(new FollowRequestedEvent(2L, 3L, null));
+    listener().onFollowRequested(new FollowRequestedEvent(2L, Actor.remote(7L)));
+    listener().onFollowRequested(new FollowRequestedEvent(2L, Actor.member(3L)));
 
     assertThat(stored.rows())
         .containsExactly(new Row(2L, NotificationType.FOLLOW_REQUEST, null, 7L, null, null));
@@ -58,9 +59,9 @@ class FollowNotificationListenerTest {
 
   @Test
   void aSettledRequestTakesItsNotificationWithIt() {
-    listener().onSettled(new FollowRequestSettledEvent(2L, null, 7L));
+    listener().onSettled(new FollowRequestSettledEvent(2L, Actor.remote(7L)));
 
-    verify(notifications).deleteFollowRequest(2L, null, 7L);
+    verify(notifications).deleteFollowRequest(2L, Actor.remote(7L));
   }
 
   @Test
