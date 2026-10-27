@@ -1,6 +1,6 @@
 package com.example.short_link.post.domain.repository;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
+import com.example.short_link.common.analytics.VisitProjections;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -21,24 +21,24 @@ public interface PostReadStatsReader {
 
   Instant lastViewedAt(Collection<Long> postIds);
 
-  List<ClickProjections.DailyClickRow> daily(Collection<Long> postIds, Instant from, String tz);
+  List<VisitProjections.DailyVisitRow> daily(Collection<Long> postIds, Instant from, String tz);
 
-  List<ClickProjections.HourClickRow> hourly(Collection<Long> postIds, String tz);
+  List<VisitProjections.HourVisitRow> hourly(Collection<Long> postIds, String tz);
 
-  List<ClickProjections.HeatmapRow> heatmap(Collection<Long> postIds, String tz);
+  List<VisitProjections.HeatmapVisitRow> heatmap(Collection<Long> postIds, String tz);
 
-  List<ClickProjections.CountryClickRow> topCountries(Collection<Long> postIds, int limit);
+  List<VisitProjections.CountryVisitRow> topCountries(Collection<Long> postIds, int limit);
 
-  List<ClickProjections.DeviceClickRow> topDevices(Collection<Long> postIds, int limit);
+  List<VisitProjections.DeviceVisitRow> topDevices(Collection<Long> postIds, int limit);
 
-  List<ClickProjections.BrowserClickRow> topBrowsers(Collection<Long> postIds, int limit);
+  List<VisitProjections.BrowserVisitRow> topBrowsers(Collection<Long> postIds, int limit);
 
-  List<ClickProjections.ReferrerHostClickRow> topReferrerHosts(Collection<Long> postIds, int limit);
+  List<VisitProjections.ReferrerHostVisitRow> topReferrerHosts(Collection<Long> postIds, int limit);
 
-  List<ClickProjections.SourceChannelClickRow> topSourceChannels(
+  List<VisitProjections.SourceChannelVisitRow> topSourceChannels(
       Collection<Long> postIds, int limit);
 
-  List<ClickProjections.UtmCampaignClickRow> topUtmCampaigns(Collection<Long> postIds, int limit);
+  List<VisitProjections.UtmCampaignVisitRow> topUtmCampaigns(Collection<Long> postIds, int limit);
 
-  List<ClickProjections.UtmSourceClickRow> topUtmSources(Collection<Long> postIds, int limit);
+  List<VisitProjections.UtmSourceVisitRow> topUtmSources(Collection<Long> postIds, int limit);
 }

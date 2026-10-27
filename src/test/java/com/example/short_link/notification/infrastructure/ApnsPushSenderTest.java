@@ -15,6 +15,7 @@ import com.example.short_link.notification.application.push.ApnsProperties;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.io.IOException;
@@ -49,7 +50,8 @@ class ApnsPushSenderTest {
       new ApnsProperties("TEAM123456", "KEY1234567", null, null, false, null);
 
   private ApnsPushSender sender() {
-    return new ApnsPushSender(props, deviceTokens, jsonMapper, tokenProvider, http, Runnable::run);
+    return new ApnsPushSender(
+        props, new DevicePushTargets(deviceTokens), jsonMapper, tokenProvider, http, Runnable::run);
   }
 
   @Test
@@ -88,7 +90,8 @@ class ApnsPushSenderTest {
     when(mapper.writeValueAsString(any())).thenReturn("encoded-payload");
     List<Runnable> pending = new ArrayList<>();
     ApnsPushSender sender =
-        new ApnsPushSender(props, deviceTokens, mapper, tokenProvider, http, pending::add);
+        new ApnsPushSender(
+            props, new DevicePushTargets(deviceTokens), mapper, tokenProvider, http, pending::add);
 
     sender.send(1L, new PushSender.PushMessage("kurl", "제목 줄", "본문"));
 

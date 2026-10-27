@@ -3,6 +3,7 @@ package com.example.short_link.note.application.write;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.note.RemoteNotePollVotes;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NotePolls;
@@ -59,7 +60,8 @@ public class NotePollService implements RemoteNotePollVotes {
       throw new NoteException(NoteErrorCode.NOTE_POLL_ENDED);
     }
     int picked = mask(note, choices);
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_BLOCKED);
     }
     if (!polls.vote(noteId, userId, picked)) {

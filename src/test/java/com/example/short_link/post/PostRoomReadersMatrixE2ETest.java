@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.example.short_link.common.post.PostTitleReader;
 import com.example.short_link.post.application.write.RoomPostErasures;
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -99,7 +100,7 @@ class PostRoomReadersMatrixE2ETest {
     }
     long author = ids.get(Viewer.AUTHOR);
     authorName = users.findById(author).orElseThrow().getUsername();
-    follows.save(new FollowEntity(ids.get(Viewer.FOLLOWER), author));
+    follows.save(new FollowEntity(FollowEdge.follower(ids.get(Viewer.FOLLOWER)).following(author)));
     em.flush();
     room = room(author, Viewer.ROOMMATE, Viewer.LEFT);
     otherRoom = room(author);

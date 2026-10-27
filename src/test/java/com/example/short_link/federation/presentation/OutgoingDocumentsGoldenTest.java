@@ -163,7 +163,7 @@ class OutgoingDocumentsGoldenTest {
       draft(53L, "사진 두 장")
           .images(
               new Image("https://cdn.kurl.me/n/53/a.webp", "image/webp", "창가의 고양이", 1200, 800),
-              new Image("https://cdn.kurl.me/n/53/b.png", "image/png", null))
+              new Image("https://cdn.kurl.me/n/53/b.png", "image/png", null, null, null))
           .sensitive()
           .snapshot();
   private static final NoteSnapshot EDITED_NOTE = draft(54L, "고친 글").edited(EDITED).snapshot();

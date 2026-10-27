@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
@@ -85,35 +86,36 @@ public class NoteFederation {
   // A note that answers a note from another server, or names someone there, reaches those servers
   // too, even when the writer has no followers on them; a direct note goes only to them. Handles
   // that resolve to no one are left as text, and a note that reaches no one elsewhere takes the
-  // usual path. The people it names are looked up before the transaction opens: those lookups
-  // wait on other servers.
+  // usual path. The people it names are looked up between two transactions: those lookups wait on
+  // other servers.
   public void createdElsewhere(Long noteId, Long authorId) {
-    Optional<LocalActor> actor = localActors.byUserId(authorId);
-    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty() || !found.get().visibility().federates()) {
-      return;
-    }
-    NoteSnapshot note = found.get();
-    Addressing elsewhere = addressing.lookedUp(note);
-    transaction.executeWithoutResult(
-        status -> {
-          if (elsewhere.isEmpty()) {
-            deliver(authorId, creation(noteId));
-            return;
-          }
-          send(
-              authorId,
-              documents.create(
-                  note,
-                  actor.get().publicId(),
-                  elsewhere.parent(),
-                  elsewhere.addressees(),
-                  elsewhere.quoted()),
-              elsewhere.inboxes(
-                  note.visibility().followersRead()
-                      ? followers.deliveryInboxes(authorId)
-                      : List.of()));
-        });
+    transaction
+        .execute(status -> stored(noteId, authorId))
+        .ifPresent(
+            stored -> {
+              NoteSnapshot note = stored.note();
+              String publicId = stored.actor().publicId();
+              Addressing reach =
+                  stored.addressing().naming(addressing.lookedUp(Mentions.remote(note.body())));
+              transaction.executeWithoutResult(
+                  status -> {
+                    List<String> followerInboxes =
+                        note.visibility().followersRead()
+                            ? followers.deliveryInboxes(authorId)
+                            : List.of();
+                    if (reach.isEmpty()) {
+                      if (!followerInboxes.isEmpty()) {
+                        send(authorId, documents.create(note, publicId), followerInboxes);
+                      }
+                      return;
+                    }
+                    send(
+                        authorId,
+                        documents.create(
+                            note, publicId, reach.parent(), reach.addressees(), reach.quoted()),
+                        reach.inboxes(followerInboxes));
+                  });
+            });
   }
 
   // An edit goes wherever the note went: to the writer's followers, and to the server of the note
@@ -123,33 +125,34 @@ public class NoteFederation {
       transaction.executeWithoutResult(status -> deliver(authorId, edit(noteId)));
       return;
     }
-    Optional<LocalActor> actor = localActors.byUserId(authorId);
-    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty() || !found.get().visibility().federates()) {
-      return;
-    }
-    NoteSnapshot note = found.get();
-    Addressing elsewhere = addressing.lookedUp(note);
-    transaction.executeWithoutResult(
-        status -> {
-          List<String> inboxes =
-              elsewhere.inboxes(
-                  note.visibility().followersRead()
-                      ? followers.deliveryInboxes(authorId)
-                      : List.of());
-          if (inboxes.isEmpty()) {
-            return;
-          }
-          send(
-              authorId,
-              documents.update(
-                  note,
-                  actor.get().publicId(),
-                  elsewhere.parent(),
-                  elsewhere.addressees(),
-                  elsewhere.quoted()),
-              inboxes);
-        });
+    transaction
+        .execute(status -> stored(noteId, authorId))
+        .ifPresent(
+            stored -> {
+              NoteSnapshot note = stored.note();
+              Addressing reach =
+                  stored.addressing().naming(addressing.lookedUp(Mentions.remote(note.body())));
+              transaction.executeWithoutResult(
+                  status -> {
+                    List<String> inboxes =
+                        reach.inboxes(
+                            note.visibility().followersRead()
+                                ? followers.deliveryInboxes(authorId)
+                                : List.of());
+                    if (inboxes.isEmpty()) {
+                      return;
+                    }
+                    send(
+                        authorId,
+                        documents.update(
+                            note,
+                            stored.actor().publicId(),
+                            reach.parent(),
+                            reach.addressees(),
+                            reach.quoted()),
+                        inboxes);
+                  });
+            });
   }
 
   // The note is already gone, so what it answered and whom it named come with the call.
@@ -163,15 +166,28 @@ public class NoteFederation {
     if (actor.isEmpty()) {
       return;
     }
-    Addressing elsewhere = addressing.lookedUp(inReplyToId, handles, quotedNoteId);
+    Addressing reach =
+        addressing.remoteNotes(inReplyToId, quotedNoteId).naming(addressing.lookedUp(handles));
     transaction.executeWithoutResult(
         status -> {
-          List<String> inboxes = elsewhere.inboxes(followers.deliveryInboxes(authorId));
+          List<String> inboxes = reach.inboxes(followers.deliveryInboxes(authorId));
           if (inboxes.isEmpty()) {
             return;
           }
           send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
         });
+  }
+
+  private record Stored(LocalActor actor, NoteSnapshot note, Addressing addressing) {}
+
+  private Optional<Stored> stored(Long noteId, Long authorId) {
+    Optional<LocalActor> actor = localActors.byUserId(authorId);
+    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
+    if (found.isEmpty() || !found.get().visibility().federates()) {
+      return Optional.empty();
+    }
+    NoteSnapshot note = found.get();
+    return Optional.of(new Stored(actor.get(), note, addressing.remoteNotes(note)));
   }
 
   @Transactional

@@ -10,6 +10,10 @@ import java.util.Set;
 public record Addressing(
     RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
 
+  public Addressing naming(List<RemoteActorEntity> people) {
+    return new Addressing(parent, people, quoted);
+  }
+
   public boolean isEmpty() {
     return parent == null && named.isEmpty() && quoted == null;
   }

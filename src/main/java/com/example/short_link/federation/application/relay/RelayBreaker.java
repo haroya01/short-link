@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 // Stops all relay work by itself when the queue stays four-fifths full for five minutes or five
@@ -26,12 +25,7 @@ public class RelayBreaker {
   private Instant backlogSince;
   private int slowInARow;
 
-  @Autowired
-  public RelayBreaker(RelayProperties props, RelayTally tally, RelaySubscriptions subscriptions) {
-    this(props, tally, subscriptions, Clock.systemUTC());
-  }
-
-  RelayBreaker(
+  public RelayBreaker(
       RelayProperties props, RelayTally tally, RelaySubscriptions subscriptions, Clock clock) {
     this.props = props;
     this.tally = tally;

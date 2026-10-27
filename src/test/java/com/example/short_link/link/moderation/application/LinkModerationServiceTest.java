@@ -54,7 +54,7 @@ class LinkModerationServiceTest {
     when(links.findById(5L)).thenReturn(Optional.of(link));
     when(moderations.findByLinkId(5L)).thenReturn(Optional.empty());
 
-    assertThat(service.disable(5L, LinkDisableReason.ABUSE_REPORT, 1L)).isTrue();
+    assertThat(service.disable(1L, 5L, LinkDisableReason.ABUSE_REPORT)).isTrue();
 
     ArgumentCaptor<LinkModerationEntity> saved =
         ArgumentCaptor.forClass(LinkModerationEntity.class);
@@ -73,7 +73,7 @@ class LinkModerationServiceTest {
         .thenReturn(
             Optional.of(new LinkModerationEntity(5L, LinkDisableReason.SAFE_BROWSING, null, NOW)));
 
-    assertThat(service.disable(5L, LinkDisableReason.ADMIN, 1L)).isFalse();
+    assertThat(service.disable(1L, 5L, LinkDisableReason.ADMIN)).isFalse();
 
     verify(moderations, never()).insert(any());
     verify(linkCacheEviction, never()).evictAfterCommit(any(LinkEntity.class));
@@ -84,7 +84,7 @@ class LinkModerationServiceTest {
     when(links.findByShortCode(ShortCode.of("abc123"))).thenReturn(Optional.of(link));
     when(moderations.findByLinkId(5L)).thenReturn(Optional.empty());
 
-    assertThat(service.disable(ShortCode.of("abc123"), LinkDisableReason.ADMIN, 1L)).isTrue();
+    assertThat(service.disable(1L, ShortCode.of("abc123"), LinkDisableReason.ADMIN)).isTrue();
 
     ArgumentCaptor<LinkModerationEntity> saved =
         ArgumentCaptor.forClass(LinkModerationEntity.class);
@@ -120,7 +120,7 @@ class LinkModerationServiceTest {
   void anUnknownLinkIsNotFound() {
     when(links.findById(9L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.disable(9L, LinkDisableReason.ADMIN, 1L))
+    assertThatThrownBy(() -> service.disable(1L, 9L, LinkDisableReason.ADMIN))
         .isInstanceOf(LinkException.class)
         .satisfies(
             e ->

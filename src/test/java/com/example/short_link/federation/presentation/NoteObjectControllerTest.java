@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.federation.application.FederationActorService;
@@ -48,7 +49,7 @@ class NoteObjectControllerTest {
   }
 
   private static final NoteSnapshot NOTE =
-      new NoteSnapshot(
+      NoteSnapshotFixtures.note(
           42L,
           7L,
           "yuki",

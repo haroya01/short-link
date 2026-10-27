@@ -19,33 +19,33 @@ public class NoteAddressing {
   private final RemoteParents remoteParents;
   private final RemoteAccountFinder finder;
 
-  public Addressing lookedUp(NoteSnapshot note) {
-    return lookedUp(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
+  public Addressing remoteNotes(NoteSnapshot note) {
+    return remoteNotes(note.inReplyToId(), quotedElsewhere(note));
   }
 
-  public Addressing lookedUp(Long inReplyToId, List<String> handles, Long quotedNoteId) {
-    return addressing(inReplyToId, handles, finder::find, quotedNoteId);
+  public Addressing remoteNotes(Long inReplyToId, Long quotedNoteId) {
+    return new Addressing(remoteNote(inReplyToId), List.of(), remoteNote(quotedNoteId));
+  }
+
+  public List<RemoteActorEntity> lookedUp(List<String> handles) {
+    return accounts(handles, finder::find);
   }
 
   public Addressing stored(NoteSnapshot note) {
-    return addressing(
-        note.inReplyToId(), Mentions.remote(note.body()), finder::known, quotedElsewhere(note));
+    return remoteNotes(note).naming(accounts(Mentions.remote(note.body()), finder::known));
   }
 
-  private Addressing addressing(
-      Long inReplyToId,
-      List<String> handles,
-      Function<String, Optional<RemoteActorEntity>> account,
-      Long quotedNoteId) {
-    RemoteParents.Parent parent =
-        inReplyToId == null ? null : remoteParents.of(inReplyToId).orElse(null);
+  private RemoteParents.Parent remoteNote(Long noteId) {
+    return noteId == null ? null : remoteParents.of(noteId).orElse(null);
+  }
+
+  private static List<RemoteActorEntity> accounts(
+      List<String> handles, Function<String, Optional<RemoteActorEntity>> account) {
     List<RemoteActorEntity> named = new ArrayList<>();
     for (String handle : handles) {
       account.apply(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
     }
-    RemoteParents.Parent quoted =
-        quotedNoteId == null ? null : remoteParents.of(quotedNoteId).orElse(null);
-    return new Addressing(parent, named, quoted);
+    return named;
   }
 
   private static Long quotedElsewhere(NoteSnapshot note) {
