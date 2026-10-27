@@ -123,29 +123,29 @@ class WebPushSenderTest {
 
   @Test
   void blogPushOpensTheSpotItPointsAt() {
-    assertThat(urlOf(new PushRoute("yuki", "me", "my-post", null, null, 77L, null)))
+    assertThat(urlOf(new PushRoute("yuki", "me", "my-post", null, null, 77L, null, null)))
         .isEqualTo("https://blog.kurl.me/@me/my-post#comment-77");
-    assertThat(urlOf(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L)))
+    assertThat(urlOf(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L, null)))
         .isEqualTo("https://blog.kurl.me/@mika/their-post?highlightId=41&thread=1");
-    assertThat(urlOf(new PushRoute("yuki", "yuki", "fresh", null, null, null, null)))
+    assertThat(urlOf(new PushRoute("yuki", "yuki", "fresh", null, null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@yuki/fresh");
   }
 
   @Test
   void blogPushOpensSeriesCollectionAndProfile() {
-    assertThat(urlOf(new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null)))
+    assertThat(urlOf(new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@me/series/tokyo-walks");
-    assertThat(urlOf(new PushRoute("yuki", null, null, null, 42L, null, null)))
+    assertThat(urlOf(new PushRoute("yuki", null, null, null, 42L, null, null, null)))
         .isEqualTo("https://blog.kurl.me/collections/42");
-    assertThat(urlOf(new PushRoute("stranger99", null, null, null, null, null, null)))
+    assertThat(urlOf(new PushRoute("stranger99", null, null, null, null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@stranger99");
   }
 
   @Test
   void blogPushEncodesPathSegmentsAndFallsBackHomeWithoutRoute() {
-    assertThat(urlOf(new PushRoute("yuki", "me", "도쿄 산책", null, null, null, null)))
+    assertThat(urlOf(new PushRoute("yuki", "me", "도쿄 산책", null, null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@me/%EB%8F%84%EC%BF%84%20%EC%82%B0%EC%B1%85");
-    assertThat(urlOf(new PushRoute(null, null, null, null, null, null, null))).isEqualTo("/");
+    assertThat(urlOf(new PushRoute(null, null, null, null, null, null, null, null))).isEqualTo("/");
     assertThat(
             jsonMapper
                 .readTree(configured().payload(new PushSender.PushMessage("kurl", "글", "새 글")))

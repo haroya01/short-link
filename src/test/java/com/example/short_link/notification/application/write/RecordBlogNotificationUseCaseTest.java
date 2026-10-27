@@ -441,11 +441,11 @@ class RecordBlogNotificationUseCaseTest {
     assertThat(pushed.getAllValues())
         .extracting(PushSender.PushMessage::route)
         .containsExactly(
-            new PushRoute("yuki", "me", "my-post", null, null, null, null),
-            new PushRoute("yuki", "mika", "their-post", null, null, 77L, null),
-            new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null),
-            new PushRoute("yuki", null, null, null, 42L, null, null),
-            new PushRoute("yuki", null, null, null, null, null, null));
+            new PushRoute("yuki", "me", "my-post", null, null, null, null, null),
+            new PushRoute("yuki", "mika", "their-post", null, null, 77L, null, null),
+            new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null, null),
+            new PushRoute("yuki", null, null, null, 42L, null, null, null),
+            new PushRoute("yuki", null, null, null, null, null, null, null));
   }
 
   @Test
@@ -468,7 +468,7 @@ class RecordBlogNotificationUseCaseTest {
     org.mockito.Mockito.verify(pushSender)
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
     assertThat(pushed.getValue().route())
-        .isEqualTo(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L));
+        .isEqualTo(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L, null));
   }
 
   @Test
@@ -501,7 +501,7 @@ class RecordBlogNotificationUseCaseTest {
         .extracting(PushSender.PushMessage::route)
         .containsExactly(
             new PushRoute("yuki", "yuki", null, null, null, null, null, 300L),
-            new PushRoute("yuki", "yuki", "their-post", null, null, null, null));
+            new PushRoute("yuki", "yuki", "their-post", null, null, null, null, null));
   }
 
   @Test
@@ -523,7 +523,7 @@ class RecordBlogNotificationUseCaseTest {
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
     assertThat(pushed.getValue().route())
-        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null));
+        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null, null));
   }
 
   @Test
@@ -556,7 +556,7 @@ class RecordBlogNotificationUseCaseTest {
     assertThat(pushed.getValue().subtitle()).isEqualTo("글 제목");
     assertThat(pushed.getValue().app()).isEqualTo(PushApp.BLOG);
     assertThat(pushed.getValue().route())
-        .isEqualTo(new PushRoute(null, "me", "3", null, null, null, null));
+        .isEqualTo(new PushRoute(null, "me", "3", null, null, null, null, null));
   }
 
   @Test
