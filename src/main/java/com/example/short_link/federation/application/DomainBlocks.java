@@ -39,7 +39,7 @@ public class DomainBlocks {
 
   @Transactional(readOnly = true)
   public List<View> list(Long userId) {
-    return blocks.list(userId).stream().map(View::of).toList();
+    return blocks.findByUserIdOrderByDomainAsc(userId).stream().map(View::of).toList();
   }
 
   @Transactional
@@ -47,7 +47,7 @@ public class DomainBlocks {
     String domain = normalize(raw);
     UserDomainBlockEntity row =
         blocks
-            .find(userId, domain)
+            .findByUserIdAndDomain(userId, domain)
             .orElseGet(() -> blocks.save(new UserDomainBlockEntity(userId, domain)));
     following.leaveDomain(userId, domain);
     followers.rejectDomain(userId, domain);

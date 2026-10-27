@@ -92,7 +92,7 @@ class DirectorySyncTest {
 
   private FederationDirectorySourceEntity source(int cap) {
     FederationDirectorySourceEntity source = new FederationDirectorySourceEntity(HOST, true, cap);
-    when(sources.find(HOST)).thenReturn(Optional.of(source));
+    when(sources.findById(HOST)).thenReturn(Optional.of(source));
     return source;
   }
 
@@ -286,8 +286,8 @@ class DirectorySyncTest {
     FederationDirectorySourceEntity waiting =
         new FederationDirectorySourceEntity("wait.example", true, 80);
     waiting.failed("HTTP 503", NOW.plusSeconds(60));
-    when(sources.list()).thenReturn(List.of(due, off, waiting));
-    when(sources.find("due.example")).thenReturn(Optional.of(due));
+    when(sources.findAllByOrderByHostAsc()).thenReturn(List.of(due, off, waiting));
+    when(sources.findById("due.example")).thenReturn(Optional.of(due));
     when(http.getJson(any(), any(), any())).thenReturn(ok(List.of()));
     when(actors.forgetUnlisted(NOW.minus(Duration.ofDays(3)))).thenReturn(4);
 
@@ -305,10 +305,11 @@ class DirectorySyncTest {
         new FederationDirectorySourceEntity("broken.example", true, 80);
     FederationDirectorySourceEntity last =
         new FederationDirectorySourceEntity("last.example", true, 80);
-    when(sources.list()).thenReturn(List.of(first, broken, last));
-    when(sources.find("first.example")).thenReturn(Optional.of(first));
-    when(sources.find("broken.example")).thenThrow(new IllegalStateException("lost connection"));
-    when(sources.find("last.example")).thenReturn(Optional.of(last));
+    when(sources.findAllByOrderByHostAsc()).thenReturn(List.of(first, broken, last));
+    when(sources.findById("first.example")).thenReturn(Optional.of(first));
+    when(sources.findById("broken.example"))
+        .thenThrow(new IllegalStateException("lost connection"));
+    when(sources.findById("last.example")).thenReturn(Optional.of(last));
     when(http.getJson(any(), any(), any())).thenReturn(ok(List.of()));
     List<String> saved = new ArrayList<>();
     when(sources.save(any()))
@@ -343,24 +344,27 @@ class DirectorySyncTest {
     FederationDirectorySourceEntity read = row("read.example", true, since.plusSeconds(1), null);
     DirectorySync sync = sync(100);
 
-    when(sources.list()).thenReturn(List.of(read));
+    when(sources.findAllByOrderByHostAsc()).thenReturn(List.of(read));
     assertThat(sync.unreadSince(since)).isFalse();
 
-    when(sources.list()).thenReturn(List.of(read, row("new.example", true, null, null)));
+    when(sources.findAllByOrderByHostAsc())
+        .thenReturn(List.of(read, row("new.example", true, null, null)));
     assertThat(sync.unreadSince(since)).isTrue();
 
-    when(sources.list())
+    when(sources.findAllByOrderByHostAsc())
         .thenReturn(List.of(read, row("cut.example", true, since.minusSeconds(1), null)));
     assertThat(sync.unreadSince(since)).isTrue();
 
-    when(sources.list()).thenReturn(List.of(read, row("off.example", false, null, null)));
+    when(sources.findAllByOrderByHostAsc())
+        .thenReturn(List.of(read, row("off.example", false, null, null)));
     assertThat(sync.unreadSince(since)).isFalse();
 
-    when(sources.list())
+    when(sources.findAllByOrderByHostAsc())
         .thenReturn(List.of(read, row("waits.example", true, null, NOW.plusSeconds(1))));
     assertThat(sync.unreadSince(since)).isFalse();
 
-    when(sources.list()).thenReturn(List.of(read, row("waited.example", true, null, NOW)));
+    when(sources.findAllByOrderByHostAsc())
+        .thenReturn(List.of(read, row("waited.example", true, null, NOW)));
     assertThat(sync.unreadSince(since)).isTrue();
   }
 }
