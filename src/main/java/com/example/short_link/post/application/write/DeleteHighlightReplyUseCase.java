@@ -26,7 +26,7 @@ public class DeleteHighlightReplyUseCase {
             .orElseThrow(
                 () -> new PostException(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND, cmd.replyId()));
 
-    if (!reply.isOwnedBy(cmd.userId()) && !isPostOwner(reply.getHighlightId(), cmd.userId())) {
+    if (!reply.isOwnedBy(cmd.userId()) && !isPostOwner(cmd.userId(), reply.getHighlightId())) {
       throw new PostException(PostErrorCode.HIGHLIGHT_REPLY_PERMISSION_DENIED)
           .with("replyId", cmd.replyId());
     }
@@ -34,7 +34,7 @@ public class DeleteHighlightReplyUseCase {
     replyRepository.delete(reply);
   }
 
-  private boolean isPostOwner(Long highlightId, Long userId) {
+  private boolean isPostOwner(Long userId, Long highlightId) {
     return highlightRepository
         .findById(highlightId)
         .flatMap(h -> postRepository.findById(h.getPostId()))

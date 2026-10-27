@@ -31,7 +31,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -56,7 +56,7 @@ class LinkStatsDailyClicksContractTest {
   @Autowired private ClickEventRepository clicks;
   @Autowired private LinkStatsQueryService stats;
   @PersistenceContext private EntityManager em;
-  @MockitoBean private Clock clock;
+  @MockitoSpyBean private Clock clock;
 
   private UserEntity owner;
   private LinkEntity link;

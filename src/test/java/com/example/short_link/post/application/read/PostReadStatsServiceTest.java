@@ -10,15 +10,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitProjections;
 import com.example.short_link.common.analytics.VisitStats;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.post.application.write.SeriesOwnership;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostReadStatsReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,19 +37,21 @@ import org.mockito.quality.Strictness;
 class PostReadStatsServiceTest {
 
   private static final long USER = 7L;
+  private static final Instant NOW = Instant.parse("2026-07-01T00:00:00Z");
 
   @Mock private PostReadStatsReader reader;
   @Mock private PostRepository postRepository;
   @Mock private SeriesOwnership seriesOwnership;
-  @Mock private UserRepository userRepository;
+  @Mock private UserAccessLookup users;
 
   private PostReadStatsService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostReadStatsService(reader, postRepository, seriesOwnership, userRepository);
-    UserEntity owner = new UserEntity("o@x.com", "google", "g-1");
-    when(userRepository.findById(USER)).thenReturn(Optional.of(owner));
+    service =
+        new PostReadStatsService(
+            reader, postRepository, seriesOwnership, users, Clock.fixed(NOW, ZoneOffset.UTC));
+    when(users.timezone(USER)).thenReturn(Optional.of(""));
   }
 
   private PostEntity ownedPost() {
@@ -73,8 +78,8 @@ class PostReadStatsServiceTest {
     assertThat(stats.dailyVisits()).isEmpty();
   }
 
-  private static ClickProjections.HeatmapRow heat(int dow) {
-    return new ClickProjections.HeatmapRow() {
+  private static VisitProjections.HeatmapVisitRow heat(int dow) {
+    return new VisitProjections.HeatmapVisitRow() {
       @Override
       public Integer getDow() {
         return dow;
@@ -95,7 +100,7 @@ class PostReadStatsServiceTest {
   @Test
   void forPostMapsDimensions() {
     when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
-    ClickProjections.HourClickRow h = mock(ClickProjections.HourClickRow.class);
+    VisitProjections.HourVisitRow h = mock(VisitProjections.HourVisitRow.class);
     when(h.getHour()).thenReturn(21);
     when(h.getCount()).thenReturn(50L);
     when(reader.hourly(any(), any())).thenReturn(List.of(h));
@@ -103,7 +108,7 @@ class PostReadStatsServiceTest {
     when(reader.heatmap(any(), any()))
         .thenReturn(
             List.of(heat(0), heat(1), heat(2), heat(3), heat(4), heat(5), heat(6), heat(7)));
-    ClickProjections.CountryClickRow c = mock(ClickProjections.CountryClickRow.class);
+    VisitProjections.CountryVisitRow c = mock(VisitProjections.CountryVisitRow.class);
     when(c.getCountry()).thenReturn(null);
     when(c.getCount()).thenReturn(7L);
     when(reader.topCountries(any(), anyInt())).thenReturn(List.of(c));
@@ -126,9 +131,26 @@ class PostReadStatsServiceTest {
   }
 
   @Test
+  void forPostReadsTheOwnersOffsetAndWindowAtTheClocksInstant() {
+    when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
+    when(users.timezone(USER)).thenReturn(Optional.of("America/New_York"));
+    VisitProjections.DailyVisitRow day = mock(VisitProjections.DailyVisitRow.class);
+    when(day.getDay()).thenReturn(LocalDate.of(2026, 6, 30));
+    when(day.getCount()).thenReturn(4L);
+    when(reader.daily(List.of(1L), Instant.parse("2026-06-01T00:00:00Z"), "-04:00"))
+        .thenReturn(List.of(day));
+
+    VisitStats stats = service.forPost(USER, 1L);
+
+    assertThat(stats.timezone()).isEqualTo("America/New_York");
+    assertThat(stats.dailyVisits())
+        .containsExactly(new VisitStats.DailyVisit(LocalDate.of(2026, 6, 30), 4L));
+  }
+
+  @Test
   void forPostFallsBackToDefaultTimezoneWhenUserMissing() {
     when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
-    when(userRepository.findById(USER)).thenReturn(Optional.empty());
+    when(users.timezone(USER)).thenReturn(Optional.empty());
 
     VisitStats stats = service.forPost(USER, 1L);
 
@@ -158,7 +180,7 @@ class PostReadStatsServiceTest {
     when(m1.getId()).thenReturn(11L);
     when(m2.getId()).thenReturn(12L);
     when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(5L)).thenReturn(List.of(m1, m2));
-    when(reader.countViews(any())).thenReturn(300L);
+    when(reader.countViews(List.of(11L, 12L))).thenReturn(300L);
 
     VisitStats stats = service.forSeries(USER, 5L);
 

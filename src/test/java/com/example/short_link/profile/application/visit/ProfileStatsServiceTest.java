@@ -8,24 +8,26 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.analytics.VisitProjections.BrowserVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.CountryVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.DailyVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.DeviceVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.HeatmapVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.HourVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.ReferrerHostVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.SourceChannelVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.UtmCampaignVisitRow;
+import com.example.short_link.common.analytics.VisitProjections.UtmSourceVisitRow;
 import com.example.short_link.common.analytics.VisitStats;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BrowserClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerHostClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.SourceChannelClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmCampaignClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
-import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
+import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,15 +43,16 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ProfileStatsServiceTest {
 
+  private static final Instant NOW = Instant.parse("2026-07-01T00:00:00Z");
+
   @Mock private UserRepository userRepository;
   @Mock private ProfileVisitRepository visits;
-  @Mock private ProfileVisitBreakdownReader breakdowns;
 
   private ProfileStatsService service;
 
   @BeforeEach
   void setUp() {
-    service = new ProfileStatsService(userRepository, visits, breakdowns);
+    service = new ProfileStatsService(userRepository, visits, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private UserEntity user(long id, String tz, boolean publicStats) {
@@ -84,8 +87,8 @@ class ProfileStatsServiceTest {
   void statsAggregatesAndPicksPeakHour() {
     UserEntity u = user(1L, "Asia/Seoul", false);
     stubVisits(1L);
-    HourClickRow hour1 = hourRow(0, 10L);
-    HourClickRow hour2 = hourRow(21, 99L);
+    HourVisitRow hour1 = hourRow(0, 10L);
+    HourVisitRow hour2 = hourRow(21, 99L);
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of(hour1, hour2));
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
@@ -117,9 +120,14 @@ class ProfileStatsServiceTest {
   @Test
   void summaryReturnsAllBuckets() {
     when(visits.countByProfileUserIdAndBotFalse(7L)).thenReturn(100L);
-    when(visits.countByProfileUserIdAndBotFalseAndVisitedAtAfter(anyLong(), any(Instant.class)))
-        .thenReturn(10L)
-        .thenReturn(30L)
+    when(visits.countByProfileUserIdAndBotFalseAndVisitedAtAfter(
+            7L, Instant.parse("2026-06-30T00:00:00Z")))
+        .thenReturn(10L);
+    when(visits.countByProfileUserIdAndBotFalseAndVisitedAtAfter(
+            7L, Instant.parse("2026-06-24T00:00:00Z")))
+        .thenReturn(30L);
+    when(visits.countByProfileUserIdAndBotFalseAndVisitedAtAfter(
+            7L, Instant.parse("2026-06-01T00:00:00Z")))
         .thenReturn(70L);
     ProfileVisitSummary s = service.summaryForOwner(7L);
     assertThat(s.allTime()).isEqualTo(100L);
@@ -143,7 +151,7 @@ class ProfileStatsServiceTest {
     UserEntity u = user(1L, "Asia/Seoul", false);
     stubVisits(1L);
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
-    List<HeatmapRow> rows =
+    List<HeatmapVisitRow> rows =
         List.of(
             heat(1, 0, 1L),
             heat(2, 1, 2L),
@@ -181,16 +189,16 @@ class ProfileStatsServiceTest {
     when(visits.findDailyVisits(anyLong(), any(Instant.class), any())).thenReturn(List.of());
     when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
     when(visits.findHeatmap(anyLong(), any())).thenReturn(List.of());
-    CountryClickRow nullCountry = country(null, 3L);
-    DeviceClickRow nullDevice = device(null, 3L);
-    BrowserClickRow nullBrowser = browser(null, 3L);
-    when(breakdowns.topCountries(anyLong(), anyInt())).thenReturn(List.of(nullCountry));
+    CountryVisitRow nullCountry = country(null, 3L);
+    DeviceVisitRow nullDevice = device(null, 3L);
+    BrowserVisitRow nullBrowser = browser(null, 3L);
+    when(visits.topCountries(anyLong(), anyInt())).thenReturn(List.of(nullCountry));
     when(visits.findDeviceVisits(anyLong())).thenReturn(List.of(nullDevice));
-    when(breakdowns.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(nullBrowser));
-    when(breakdowns.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of());
-    when(breakdowns.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of());
-    when(breakdowns.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of());
-    when(breakdowns.topUtmSources(anyLong(), anyInt())).thenReturn(List.of());
+    when(visits.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(nullBrowser));
+    when(visits.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of());
+    when(visits.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of());
+    when(visits.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of());
+    when(visits.topUtmSources(anyLong(), anyInt())).thenReturn(List.of());
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
     VisitStats out = service.statsForOwner(1L);
@@ -205,16 +213,31 @@ class ProfileStatsServiceTest {
         .containsExactly("unknown");
   }
 
+  @Test
+  void statsReadTheOwnersOffsetAndWindowAtTheClocksInstant() {
+    UserEntity u = user(1L, "America/New_York", false);
+    DailyVisitRow day = mockDaily(LocalDate.of(2026, 6, 30), 4L);
+    when(visits.findDailyVisits(1L, Instant.parse("2026-06-01T00:00:00Z"), "-04:00"))
+        .thenReturn(List.of(day));
+    when(userRepository.findById(1L)).thenReturn(Optional.of(u));
+
+    VisitStats out = service.statsForOwner(1L);
+
+    assertThat(out.timezone()).isEqualTo("America/New_York");
+    assertThat(out.dailyVisits())
+        .containsExactly(new VisitStats.DailyVisit(LocalDate.of(2026, 6, 30), 4L));
+  }
+
   private void stubVisits(long uid) {
-    DailyClickRow daily = mockDaily(LocalDate.of(2024, 1, 1), 5L);
-    HeatmapRow heat = heat(2, 9, 5L);
-    CountryClickRow country = country("KR", 50L);
-    DeviceClickRow device = device("Desktop", 30L);
-    BrowserClickRow browser = browser("Chrome", 25L);
-    ReferrerHostClickRow refHost = refHost("twitter.com", 7L);
-    SourceChannelClickRow srcChannel = srcChannel("x", 7L);
-    UtmCampaignClickRow utmCampaign = utmCampaign("launch", 5L);
-    UtmSourceClickRow utmSource = utmSource("twitter", 5L);
+    DailyVisitRow daily = mockDaily(LocalDate.of(2024, 1, 1), 5L);
+    HeatmapVisitRow heat = heat(2, 9, 5L);
+    CountryVisitRow country = country("KR", 50L);
+    DeviceVisitRow device = device("Desktop", 30L);
+    BrowserVisitRow browser = browser("Chrome", 25L);
+    ReferrerHostVisitRow refHost = refHost("twitter.com", 7L);
+    SourceChannelVisitRow srcChannel = srcChannel("x", 7L);
+    UtmCampaignVisitRow utmCampaign = utmCampaign("launch", 5L);
+    UtmSourceVisitRow utmSource = utmSource("twitter", 5L);
     when(visits.countByProfileUserId(uid)).thenReturn(100L);
     when(visits.countByProfileUserIdAndBotFalse(uid)).thenReturn(80L);
     when(visits.countBotByProfileUserId(uid)).thenReturn(20L);
@@ -223,81 +246,81 @@ class ProfileStatsServiceTest {
     when(visits.findLastVisitAt(uid)).thenReturn(Instant.parse("2024-01-02T00:00:00Z"));
     when(visits.findDailyVisits(anyLong(), any(Instant.class), any())).thenReturn(List.of(daily));
     when(visits.findHeatmap(anyLong(), any())).thenReturn(List.of(heat));
-    when(breakdowns.topCountries(anyLong(), anyInt())).thenReturn(List.of(country));
+    when(visits.topCountries(anyLong(), anyInt())).thenReturn(List.of(country));
     when(visits.findDeviceVisits(anyLong())).thenReturn(List.of(device));
-    when(breakdowns.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(browser));
-    when(breakdowns.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of(refHost));
-    when(breakdowns.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of(srcChannel));
-    when(breakdowns.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of(utmCampaign));
-    when(breakdowns.topUtmSources(anyLong(), anyInt())).thenReturn(List.of(utmSource));
+    when(visits.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(browser));
+    when(visits.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of(refHost));
+    when(visits.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of(srcChannel));
+    when(visits.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of(utmCampaign));
+    when(visits.topUtmSources(anyLong(), anyInt())).thenReturn(List.of(utmSource));
   }
 
-  private static HourClickRow hourRow(int hour, long count) {
-    HourClickRow row = Mockito.mock(HourClickRow.class);
+  private static HourVisitRow hourRow(int hour, long count) {
+    HourVisitRow row = Mockito.mock(HourVisitRow.class);
     when(row.getHour()).thenReturn(hour);
     when(row.getCount()).thenReturn(count);
     return row;
   }
 
-  private static DailyClickRow mockDaily(LocalDate d, long count) {
-    DailyClickRow row = Mockito.mock(DailyClickRow.class);
+  private static DailyVisitRow mockDaily(LocalDate d, long count) {
+    DailyVisitRow row = Mockito.mock(DailyVisitRow.class);
     when(row.getDay()).thenReturn(d);
     when(row.getCount()).thenReturn(count);
     return row;
   }
 
-  private static HeatmapRow heat(int dow, int hour, long count) {
-    HeatmapRow r = Mockito.mock(HeatmapRow.class);
+  private static HeatmapVisitRow heat(int dow, int hour, long count) {
+    HeatmapVisitRow r = Mockito.mock(HeatmapVisitRow.class);
     when(r.getDow()).thenReturn(dow);
     when(r.getHour()).thenReturn(hour);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static CountryClickRow country(String name, long count) {
-    CountryClickRow r = Mockito.mock(CountryClickRow.class);
+  private static CountryVisitRow country(String name, long count) {
+    CountryVisitRow r = Mockito.mock(CountryVisitRow.class);
     when(r.getCountry()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static DeviceClickRow device(String name, long count) {
-    DeviceClickRow r = Mockito.mock(DeviceClickRow.class);
+  private static DeviceVisitRow device(String name, long count) {
+    DeviceVisitRow r = Mockito.mock(DeviceVisitRow.class);
     when(r.getDevice()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static BrowserClickRow browser(String name, long count) {
-    BrowserClickRow r = Mockito.mock(BrowserClickRow.class);
+  private static BrowserVisitRow browser(String name, long count) {
+    BrowserVisitRow r = Mockito.mock(BrowserVisitRow.class);
     when(r.getBrowser()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static ReferrerHostClickRow refHost(String name, long count) {
-    ReferrerHostClickRow r = Mockito.mock(ReferrerHostClickRow.class);
+  private static ReferrerHostVisitRow refHost(String name, long count) {
+    ReferrerHostVisitRow r = Mockito.mock(ReferrerHostVisitRow.class);
     when(r.getHost()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static SourceChannelClickRow srcChannel(String name, long count) {
-    SourceChannelClickRow r = Mockito.mock(SourceChannelClickRow.class);
+  private static SourceChannelVisitRow srcChannel(String name, long count) {
+    SourceChannelVisitRow r = Mockito.mock(SourceChannelVisitRow.class);
     when(r.getSource()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static UtmCampaignClickRow utmCampaign(String name, long count) {
-    UtmCampaignClickRow r = Mockito.mock(UtmCampaignClickRow.class);
+  private static UtmCampaignVisitRow utmCampaign(String name, long count) {
+    UtmCampaignVisitRow r = Mockito.mock(UtmCampaignVisitRow.class);
     when(r.getCampaign()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
-  private static UtmSourceClickRow utmSource(String name, long count) {
-    UtmSourceClickRow r = Mockito.mock(UtmSourceClickRow.class);
+  private static UtmSourceVisitRow utmSource(String name, long count) {
+    UtmSourceVisitRow r = Mockito.mock(UtmSourceVisitRow.class);
     when(r.getSource()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;

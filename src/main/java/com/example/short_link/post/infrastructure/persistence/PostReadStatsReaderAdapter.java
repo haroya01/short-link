@@ -1,6 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
+import com.example.short_link.common.analytics.VisitProjections;
 import com.example.short_link.post.domain.repository.PostReadStatsReader;
 import java.time.Instant;
 import java.util.Collection;
@@ -46,56 +46,56 @@ class PostReadStatsReaderAdapter implements PostReadStatsReader {
   }
 
   @Override
-  public List<ClickProjections.DailyClickRow> daily(
+  public List<VisitProjections.DailyVisitRow> daily(
       Collection<Long> postIds, Instant from, String tz) {
     return jpa.daily(postIds, from, tz);
   }
 
   @Override
-  public List<ClickProjections.HourClickRow> hourly(Collection<Long> postIds, String tz) {
+  public List<VisitProjections.HourVisitRow> hourly(Collection<Long> postIds, String tz) {
     return jpa.hourly(postIds, tz);
   }
 
   @Override
-  public List<ClickProjections.HeatmapRow> heatmap(Collection<Long> postIds, String tz) {
+  public List<VisitProjections.HeatmapVisitRow> heatmap(Collection<Long> postIds, String tz) {
     return jpa.heatmap(postIds, tz);
   }
 
   @Override
-  public List<ClickProjections.CountryClickRow> topCountries(Collection<Long> postIds, int limit) {
+  public List<VisitProjections.CountryVisitRow> topCountries(Collection<Long> postIds, int limit) {
     return jpa.topCountries(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.DeviceClickRow> topDevices(Collection<Long> postIds, int limit) {
+  public List<VisitProjections.DeviceVisitRow> topDevices(Collection<Long> postIds, int limit) {
     return jpa.topDevices(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.BrowserClickRow> topBrowsers(Collection<Long> postIds, int limit) {
+  public List<VisitProjections.BrowserVisitRow> topBrowsers(Collection<Long> postIds, int limit) {
     return jpa.topBrowsers(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.ReferrerHostClickRow> topReferrerHosts(
+  public List<VisitProjections.ReferrerHostVisitRow> topReferrerHosts(
       Collection<Long> postIds, int limit) {
     return jpa.topReferrerHosts(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.SourceChannelClickRow> topSourceChannels(
+  public List<VisitProjections.SourceChannelVisitRow> topSourceChannels(
       Collection<Long> postIds, int limit) {
     return jpa.topSourceChannels(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.UtmCampaignClickRow> topUtmCampaigns(
+  public List<VisitProjections.UtmCampaignVisitRow> topUtmCampaigns(
       Collection<Long> postIds, int limit) {
     return jpa.topUtmCampaigns(postIds, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ClickProjections.UtmSourceClickRow> topUtmSources(
+  public List<VisitProjections.UtmSourceVisitRow> topUtmSources(
       Collection<Long> postIds, int limit) {
     return jpa.topUtmSources(postIds, PageRequest.ofSize(limit));
   }

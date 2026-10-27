@@ -1,6 +1,8 @@
 package archfixtures.modules.beta.application;
 
 import archfixtures.modules.alpha.application.AlphaService;
+import archfixtures.modules.alpha.domain.AlphaEntity;
+import archfixtures.modules.alpha.domain.AlphaId;
 import archfixtures.modules.alpha.domain.repository.AlphaRepository;
 import archfixtures.modules.alpha.infrastructure.AlphaStore;
 
@@ -17,6 +19,18 @@ public final class ModuleFixtures {
   public static class ReachesAnotherModulesRepository {
     public String run(AlphaRepository alpha) {
       return alpha.find();
+    }
+  }
+
+  public static class ReachesAnotherModulesEntity {
+    public Long run(AlphaEntity alpha) {
+      return alpha.getId();
+    }
+  }
+
+  public static class PassesAnotherModulesValue {
+    public long run(AlphaId alpha) {
+      return alpha.value();
     }
   }
 
