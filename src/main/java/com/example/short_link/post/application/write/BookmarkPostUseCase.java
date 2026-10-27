@@ -23,7 +23,6 @@ public class BookmarkPostUseCase {
   @Transactional
   public PostBookmarkStatus bookmark(PostReader reader, Long postId) {
     access.requireReadable(requirePost(postId), reader);
-    // INSERT IGNORE makes concurrent duplicate bookmarks a no-op without failing the transaction.
     postBookmarkRepository.insertIgnore(postId, reader.viewerId());
     return new PostBookmarkStatus(true);
   }

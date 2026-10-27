@@ -22,7 +22,6 @@ public class PostPublicationCompletion {
 
   public void complete(PostEntity post, boolean firstPublish, Supplier<Instant> eventTime) {
     revisions.capture(post);
-    // 제목만 입력하고 발행한 글도 검색 대상에 포함한다.
     List<PostBlockEntity> body = searchText.refresh(post);
     if (firstPublish) {
       noteQuotes.indexFirstPublish(post, body);

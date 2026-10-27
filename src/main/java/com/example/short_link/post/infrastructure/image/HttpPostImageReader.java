@@ -35,7 +35,6 @@ public class HttpPostImageReader implements ExternalPostImageReader {
                     new PostException(
                         PostErrorCode.PERMISSION_DENIED, "image url not allowed: " + url));
 
-    // 캡보다 1바이트 더 받아오게 해서, 잘려서 정확히 maxBytes 인 경우와 진짜 초과를 구분한다.
     int fetchCap = (int) Math.min(maxBytes + 1, Integer.MAX_VALUE);
     Map<String, String> headers = new LinkedHashMap<>();
     headers.put("User-Agent", IMPORT_USER_AGENT);

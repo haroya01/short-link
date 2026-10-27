@@ -46,8 +46,8 @@ class FollowedTopics {
     return new Following(followingIds, subscribedSeriesIds, followedTags);
   }
 
-  // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.
-  // Absent reasons leave cards unannotated; Collectors.toMap rejects null values.
+  // Keyed by post id because the assembler may drop posts and shift positions. Collectors.toMap
+  // rejects null values.
   List<PublicFeedItem> annotate(List<PostEntity> posts, Following following) {
     Set<Long> authors = following.authors();
     Set<Long> series = following.series();

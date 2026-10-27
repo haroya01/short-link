@@ -35,7 +35,6 @@ final class MarkdownBlockParser {
   // there; an escaped "\\" stays.
   private static final Pattern TRAILING_HARD_BREAK =
       Pattern.compile("(^|[^\\\\])((?:\\\\\\\\)*)\\\\\\z");
-  // Standalone image URLs become IMAGE blocks before the generic embed rule can claim them.
   private static final Pattern IMAGE_EXT =
       Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LIST_START = Pattern.compile("^(?:[-*]|\\d+\\.)\\s+.*");
@@ -71,8 +70,6 @@ final class MarkdownBlockParser {
 
   private boolean readFence() {
     String line = lines[i];
-    // Consume the whole fence so line-based rules cannot split code at blank or markdown-like
-    // lines.
     Matcher fence = FENCE.matcher(line);
     if (fence.matches()) {
       Pattern closing =
@@ -148,7 +145,6 @@ final class MarkdownBlockParser {
     String line = lines[i];
     Matcher quote = QUOTE.matcher(line);
     if (quote.matches()) {
-      // Coalesce consecutive quote lines so one quote does not render as several adjacent boxes.
       StringBuilder quoteLines = new StringBuilder(quote.group(1));
       i++;
       while (i < lines.length) {
@@ -207,7 +203,6 @@ final class MarkdownBlockParser {
 
   private boolean readImageUrl() {
     String line = lines[i];
-    // Must precede the embed rule, which accepts every standalone HTTP(S) URL.
     String imageUrl = standaloneImageUrl(line);
     if (imageUrl != null) {
       ObjectNode node = json.createObjectNode();

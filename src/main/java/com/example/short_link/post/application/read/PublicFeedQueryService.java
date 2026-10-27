@@ -84,7 +84,6 @@ public class PublicFeedQueryService {
     return postRepository.findPopularTags(limit);
   }
 
-  // Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
   public List<SuggestedAuthorView> suggestedAuthors(Long viewerId, int limit) {
     List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(viewerId, limit * 2);
     Map<Long, UserSummary> authors =
@@ -121,7 +120,6 @@ public class PublicFeedQueryService {
           followedTopics.annotate(posts, following), page, size, (long) (page + 1) * size < total);
     }
 
-    // A subscribed series can hold notes as well, so the page is cut from posts and notes together.
     List<FollowingFeedRef> refs =
         followingFeedReader.page(
             userId, followingIds, subscribedSeriesIds, followedTags, page * size, size);

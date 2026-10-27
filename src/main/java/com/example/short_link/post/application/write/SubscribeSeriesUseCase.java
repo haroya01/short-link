@@ -24,7 +24,6 @@ public class SubscribeSeriesUseCase {
   @Transactional
   public SeriesSubscriptionStatus subscribe(Long userId, Long seriesId) {
     SeriesEntity series = requireSeries(seriesId);
-    // Only a newly inserted row triggers notification; concurrent duplicate inserts return zero.
     int inserted = subscriptionRepository.insertIgnore(userId, seriesId);
     if (inserted > 0) {
       if (!series.getUserId().equals(userId)) {
