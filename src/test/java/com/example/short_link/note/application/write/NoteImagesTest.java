@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,7 +18,9 @@ import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +52,27 @@ class NoteImagesTest {
     assertThatThrownBy(() -> images.presign(7L, "image/svg+xml"))
         .satisfies(e -> assertThat(code(e)).isEqualTo(NoteErrorCode.NOTE_IMAGE_INVALID));
     assertThatThrownBy(() -> images.presign(7L, null)).isInstanceOf(NoteException.class);
+  }
+
+  @Test
+  void atMostFourImagesAndMoreAreTurnedAwayBeforeStorageIsAsked() {
+    List<NoteDraft.Image> five =
+        IntStream.range(0, 5)
+            .mapToObj(i -> new NoteDraft.Image("note-images/7/" + i + ".png", null))
+            .toList();
+    when(storage.objectSize(anyString())).thenReturn(Optional.of(1L));
+
+    assertThatThrownBy(() -> images.verifyAll(7L, five))
+        .satisfies(e -> assertThat(code(e)).isEqualTo(NoteErrorCode.NOTE_TOO_MANY_IMAGES));
+    verify(storage, never()).objectSize(anyString());
+    assertThat(images.verifyAll(7L, five.subList(0, 4)))
+        .extracting(NoteImages.StoredImage::key)
+        .containsExactly(
+            "note-images/7/0.png",
+            "note-images/7/1.png",
+            "note-images/7/2.png",
+            "note-images/7/3.png");
+    assertThat(images.verifyAll(7L, null)).isEmpty();
   }
 
   @Test

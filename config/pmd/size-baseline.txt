@@ -34,9 +34,9 @@ CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentat
 CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/application/write/ReDetectWebhookFormatsUseCase.java|execute()#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=20
 CognitiveComplexity|src/main/java/com/example/short_link/note/application/read/NoteViews.java|of(List<NoteEntity>, Long)#1=22
-CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft)#1=28
-CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|create(Long, NoteDraft)#1=35
+CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft, List<StoredImage>)#1=27
 CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|edit(Long, Long, String, String, Boolean)#1=15
+CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|write(Long, NoteDraft, List<StoredImage>)#1=35
 CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|receive(Received)#1=19
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|payloadJson(PushMessage)#1=21
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|post(String, String, boolean, String, PushMessage)#1=15
@@ -136,12 +136,12 @@ CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/domain/We
 CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/read/NoteSnapshotProvider.java|find(Long)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/read/NoteViews.java|of(List<NoteEntity>, Long)#1=16
-CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|NoteCommandService#1=199
-CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft)#1=31
-CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|create(Long, NoteDraft)#1=29
+CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|NoteCommandService#1=196
+CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft, List<StoredImage>)#1=29
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|edit(Long, Long, String, String, Boolean)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|requireMayAnswer(Long, NoteEntity, NoteAuthor)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|room(Long, Long, NoteVisibility, NoteEntity)#1=11
+CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|write(Long, NoteDraft, List<StoredImage>)#1=29
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteFilterService.java|validate(Draft)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteImages.java|verify(Long, Image)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NotePollService.java|mask(NoteEntity, List<Integer>)#1=12
@@ -260,9 +260,9 @@ NPathComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/p
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/domain/WebhookFilter.java|update(Boolean, Integer, Boolean, Integer, String, String)#1=216
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=309
 NPathComplexity|src/main/java/com/example/short_link/note/application/read/NoteViews.java|of(List<NoteEntity>, Long)#1=4145
-NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft)#1=18806
-NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|create(Long, NoteDraft)#1=2831155200
+NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|check(Long, NoteDraft, List<StoredImage>)#1=18804
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|edit(Long, Long, String, String, Boolean)#1=13832
+NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|write(Long, NoteDraft, List<StoredImage>)#1=2831155200
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteFilterService.java|validate(Draft)#1=328
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|receive(Received)#1=35712
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|revise(Long, Long, Revision)#1=2955
@@ -272,4 +272,4 @@ NPathComplexity|src/main/java/com/example/short_link/post/application/read/Publi
 NPathComplexity|src/main/java/com/example/short_link/post/application/write/PostAccessSettings.java|apply(PostEntity, PostAccessChange)#1=396
 NPathComplexity|src/main/java/com/example/short_link/post/application/write/UpdatePostMetadataUseCase.java|execute(UpdatePostMetadataCommand)#1=155529
 NPathComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|sniffImageType(byte[])#1=1841
-NcssCount|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|create(Long, NoteDraft)#1=65
+NcssCount|src/main/java/com/example/short_link/note/application/write/NoteCommandService.java|write(Long, NoteDraft, List<StoredImage>)#1=65

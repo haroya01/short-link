@@ -62,6 +62,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -87,6 +88,7 @@ public class NoteCommandService {
   private final CollectionConnectionCleaner connections;
   private final SeriesItemCleaner seriesItems;
   private final ApplicationEventPublisher events;
+  private final TransactionTemplate transaction;
   private final Clock clock;
 
   private record Checked(
@@ -104,19 +106,15 @@ public class NoteCommandService {
       NoteReplyPolicy replyPolicy,
       Long roomId) {}
 
-  @Transactional(readOnly = true)
-  public void validate(Long userId, NoteDraft draft) {
-    check(userId, draft);
+  void validate(Long userId, NoteDraft draft, List<NoteImages.StoredImage> stored) {
+    check(userId, draft, stored);
   }
 
-  private Checked check(Long userId, NoteDraft draft) {
+  private Checked check(Long userId, NoteDraft draft, List<NoteImages.StoredImage> stored) {
     moderation.requireCanWrite(userId);
     String body = normalize(draft.body());
     List<NoteDraft.Image> attached = draft.images() == null ? List.of() : draft.images();
     requireContent(body, !attached.isEmpty());
-    if (attached.size() > NoteMediaEntity.MAX_PER_NOTE) {
-      throw new NoteException(NoteErrorCode.NOTE_TOO_MANY_IMAGES, NoteMediaEntity.MAX_PER_NOTE);
-    }
     List<String> pollOptions = draft.poll() == null ? null : pollOptions(draft.poll());
     if (pollOptions != null && !attached.isEmpty()) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_WITH_MEDIA);
@@ -164,9 +162,6 @@ public class NoteCommandService {
         throw new NoteException(NoteErrorCode.NOTE_QUOTE_NOT_FOUND, draft.quotedPostId());
       }
     }
-    List<NoteImages.StoredImage> stored =
-        attached.stream().map(image -> images.verify(userId, image)).toList();
-
     Set<Long> authorIds = new HashSet<>(Set.of(userId));
     if (quotedNote != null && !quotedNote.isRemote()) {
       authorIds.add(quotedNote.getUserId());
@@ -256,30 +251,40 @@ public class NoteCommandService {
   }
 
   // A thread posts as one: each note answers the one before it, and all of them land or none does.
-  @Transactional
   public List<NoteView> createThread(Long userId, List<NoteDraft> drafts) {
     if (drafts == null || drafts.size() < 2 || drafts.size() > NoteEntity.MAX_THREAD_NOTES) {
       throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, NoteEntity.MAX_THREAD_NOTES);
     }
-    List<NoteView> created = new ArrayList<>(drafts.size());
-    NoteView previous = null;
-    for (NoteDraft draft : drafts) {
-      NoteView note =
-          create(
-              userId,
-              previous == null
-                  ? draft
-                  : draft.continuing(
-                      previous.id(), previous.contentWarning(), previous.sensitive()));
-      created.add(note);
-      previous = note;
-    }
-    return created;
+    List<List<NoteImages.StoredImage>> stored =
+        drafts.stream().map(draft -> images.verifyAll(userId, draft.images())).toList();
+    return transaction.execute(
+        status -> {
+          List<NoteView> created = new ArrayList<>(drafts.size());
+          NoteView previous = null;
+          for (int i = 0; i < drafts.size(); i++) {
+            NoteDraft draft = drafts.get(i);
+            NoteView note =
+                write(
+                    userId,
+                    previous == null
+                        ? draft
+                        : draft.continuing(
+                            previous.id(), previous.contentWarning(), previous.sensitive()),
+                    stored.get(i));
+            created.add(note);
+            previous = note;
+          }
+          return created;
+        });
   }
 
-  @Transactional
   public NoteView create(Long userId, NoteDraft draft) {
-    Checked checked = check(userId, draft);
+    List<NoteImages.StoredImage> stored = images.verifyAll(userId, draft.images());
+    return transaction.execute(status -> write(userId, draft, stored));
+  }
+
+  NoteView write(Long userId, NoteDraft draft, List<NoteImages.StoredImage> verified) {
+    Checked checked = check(userId, draft, verified);
     String body = checked.body();
     List<NoteImages.StoredImage> stored = checked.stored();
     List<String> pollOptions = checked.pollOptions();
