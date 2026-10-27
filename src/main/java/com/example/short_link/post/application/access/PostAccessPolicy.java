@@ -8,7 +8,7 @@ import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.application.read.FollowingReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collection;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PostAccessPolicy {
 
-  private final FollowRepository follows;
+  private final FollowingReader follows;
   private final PostGrants grants;
   private final ReaderCountryResolver countries;
   private final PostRoomReader rooms;
@@ -160,7 +160,7 @@ public class PostAccessPolicy {
   }
 
   private boolean follows(Long viewerId, Long authorId) {
-    return viewerId != null && follows.existsByFollowerIdAndFollowingId(viewerId, authorId);
+    return viewerId != null && follows.follows(viewerId, authorId);
   }
 
   public final class Lists {

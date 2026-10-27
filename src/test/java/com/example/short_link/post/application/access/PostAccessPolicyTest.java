@@ -16,6 +16,7 @@ import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.FollowingReader;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -73,7 +74,8 @@ class PostAccessPolicyTest {
           "signing-secret", Clock.fixed(Instant.parse("2026-10-16T00:00:00Z"), ZoneOffset.UTC));
   private final PostRoomReader rooms = mock(PostRoomReader.class);
   private final PostAccessPolicy policy =
-      new PostAccessPolicy(follows, grants, new ReaderCountryResolver(geo), rooms);
+      new PostAccessPolicy(
+          new FollowingReader(follows), grants, new ReaderCountryResolver(geo), rooms);
 
   static Stream<Arguments> table() {
     List<Arguments> cells = new ArrayList<>();
