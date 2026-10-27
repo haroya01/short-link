@@ -250,13 +250,11 @@ public class NoteCommandService {
     throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
   }
 
-  public static final int MAX_THREAD_NOTES = 10;
-
   // A thread posts as one: each note answers the one before it, and all of them land or none does.
   @Transactional
   public List<NoteView> createThread(Long userId, List<NoteDraft> drafts) {
-    if (drafts == null || drafts.size() < 2 || drafts.size() > MAX_THREAD_NOTES) {
-      throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, MAX_THREAD_NOTES);
+    if (drafts == null || drafts.size() < 2 || drafts.size() > NoteEntity.MAX_THREAD_NOTES) {
+      throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, NoteEntity.MAX_THREAD_NOTES);
     }
     List<NoteView> created = new ArrayList<>(drafts.size());
     NoteView previous = null;

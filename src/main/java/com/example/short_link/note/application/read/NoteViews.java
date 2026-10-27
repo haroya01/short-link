@@ -3,7 +3,6 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.application.access.NoteAccess;
-import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -309,7 +308,7 @@ public class NoteViews {
     Map<Long, List<Long>> chains =
         roots.isEmpty()
             ? Map.of()
-            : chains(notes.selfReplies(roots, NoteCommandService.MAX_THREAD_NOTES - 1));
+            : chains(notes.selfReplies(roots, NoteEntity.MAX_THREAD_NOTES - 1));
     if (chains.isEmpty()) {
       return of(page, viewerId);
     }

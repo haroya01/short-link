@@ -4,7 +4,6 @@ import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.application.access.NoteAccess;
-import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.LocalPoolRow;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -423,8 +422,7 @@ public class NoteQueryService {
     batch.addAll(hidden);
     Set<Long> hiddenIds = hidden.stream().map(NoteEntity::getId).collect(Collectors.toSet());
     List<Long> chain =
-        NoteViews.chains(
-                notes.selfReplies(List.of(noteId), NoteCommandService.MAX_THREAD_NOTES - 1))
+        NoteViews.chains(notes.selfReplies(List.of(noteId), NoteEntity.MAX_THREAD_NOTES - 1))
             .getOrDefault(noteId, List.of());
     Set<Long> inBatch = batch.stream().map(NoteEntity::getId).collect(Collectors.toSet());
     List<Long> missing = chain.stream().filter(id -> !inBatch.contains(id)).toList();

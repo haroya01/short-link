@@ -213,7 +213,7 @@ class NoteCommandServiceTest {
   void aThreadHoldsTwoToTenNotes() {
     NoteDraft one = new NoteDraft("하나", List.of(), null, null);
     for (List<NoteDraft> drafts :
-        List.of(List.of(one), Collections.nCopies(NoteCommandService.MAX_THREAD_NOTES + 1, one))) {
+        List.of(List.of(one), Collections.nCopies(NoteEntity.MAX_THREAD_NOTES + 1, one))) {
       assertThatThrownBy(() -> service().createThread(7L, drafts))
           .isInstanceOfSatisfying(
               NoteException.class,
