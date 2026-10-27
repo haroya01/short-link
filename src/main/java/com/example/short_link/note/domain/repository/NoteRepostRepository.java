@@ -10,5 +10,7 @@ public interface NoteRepostRepository {
 
   Optional<NoteRepostEntity> delete(Long noteId, Long userId);
 
+  // Nothing across a block with the reposter, no repost of a note whose author is blocked either
+  // way, none of someone else's note whose author the viewer muted.
   List<Long> recentNoteIdsByUser(Long userId, Long viewerId, int offset, int limit);
 }
