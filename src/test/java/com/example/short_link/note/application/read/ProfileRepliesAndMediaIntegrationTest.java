@@ -151,7 +151,8 @@ class ProfileRepliesAndMediaIntegrationTest {
     long quiet = note(author, "marked sensitive", null, n -> n.markContent(null, true));
     attach(quiet, "quiet");
 
-    List<ProfileMediaView.Item> items = query.mediaByAuthor("pr_author", 0, 20, viewer).items();
+    List<ProfileMediaView.Item> items =
+        query.mediaByAuthor("pr_author", viewer, new PageAsk(0, 20)).items();
 
     assertThat(items)
         .extracting(ProfileMediaView.Item::noteId)
@@ -191,20 +192,20 @@ class ProfileRepliesAndMediaIntegrationTest {
     attach(newer, "b");
     note(author, "newest, with words only", null);
 
-    ProfileRepliesView first = query.repliesByAuthor("pr_author", 0, 1, viewer);
-    ProfileRepliesView second = query.repliesByAuthor("pr_author", 1, 1, viewer);
+    ProfileRepliesView first = query.repliesByAuthor("pr_author", viewer, new PageAsk(0, 1));
+    ProfileRepliesView second = query.repliesByAuthor("pr_author", viewer, new PageAsk(1, 1));
     assertThat(ids(first)).containsExactly(newer);
     assertThat(first.hasNext()).isTrue();
     assertThat(ids(second)).containsExactly(older);
     assertThat(second.hasNext()).isFalse();
 
-    ProfileMediaView firstMedia = query.mediaByAuthor("pr_author", 0, 1, viewer);
+    ProfileMediaView firstMedia = query.mediaByAuthor("pr_author", viewer, new PageAsk(0, 1));
     assertThat(firstMedia.items()).extracting(ProfileMediaView.Item::noteId).containsExactly(newer);
     assertThat(firstMedia.hasNext()).isTrue();
   }
 
   private ProfileRepliesView replies(Long reader) {
-    return query.repliesByAuthor("pr_author", 0, 20, reader);
+    return query.repliesByAuthor("pr_author", reader, new PageAsk(0, 20));
   }
 
   private static List<Long> ids(ProfileRepliesView view) {
@@ -212,7 +213,7 @@ class ProfileRepliesAndMediaIntegrationTest {
   }
 
   private List<Long> mediaIds(Long reader) {
-    return query.mediaByAuthor("pr_author", 0, 20, reader).items().stream()
+    return query.mediaByAuthor("pr_author", reader, new PageAsk(0, 20)).items().stream()
         .map(ProfileMediaView.Item::noteId)
         .toList();
   }
