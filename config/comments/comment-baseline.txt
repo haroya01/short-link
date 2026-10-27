@@ -294,6 +294,7 @@ src/main/java/com/example/short_link/link/classifier/application/ClientAppClassi
 src/main/java/com/example/short_link/link/classifier/application/JndiTxtResolver.java=1
 src/main/java/com/example/short_link/link/classifier/application/ReferrerChannelClassifier.java=1
 src/main/java/com/example/short_link/link/classifier/application/UserAgentWarmup.java=2
+src/main/java/com/example/short_link/link/classifier/application/VisitClassifier.java=1
 src/main/java/com/example/short_link/link/classifier/application/helper/SourceChannelNormalizer.java=2
 src/main/java/com/example/short_link/link/destination/application/write/AddDestinationUseCase.java=1
 src/main/java/com/example/short_link/link/destination/application/write/UpdateDestinationUseCase.java=1
@@ -509,7 +510,7 @@ src/main/java/com/example/short_link/post/application/write/PublishPostUseCase.j
 src/main/java/com/example/short_link/post/application/write/PublishScheduledPostUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/PublishScheduledPostsUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/RecordPostReadUseCase.java=2
-src/main/java/com/example/short_link/post/application/write/RecordPostViewUseCase.java=2
+src/main/java/com/example/short_link/post/application/write/RecordPostViewUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/ReplacePostBlocksCommand.java=1
 src/main/java/com/example/short_link/post/application/write/ReplacePostBlocksUseCase.java=6
 src/main/java/com/example/short_link/post/application/write/RepublishPostUseCase.java=1
@@ -603,7 +604,6 @@ src/main/java/com/example/short_link/profile/application/oembed/EmbedProvider.ja
 src/main/java/com/example/short_link/profile/application/oembed/OembedMetadata.java=1
 src/main/java/com/example/short_link/profile/application/read/ProfileQueryService.java=1
 src/main/java/com/example/short_link/profile/application/read/PublicProfileLoader.java=2
-src/main/java/com/example/short_link/profile/application/visit/ProfileVisitRecorder.java=1
 src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java=1
 src/main/java/com/example/short_link/profile/domain/UsernameHistoryEntity.java=1
 src/main/java/com/example/short_link/profile/domain/contact/Booking.java=3
