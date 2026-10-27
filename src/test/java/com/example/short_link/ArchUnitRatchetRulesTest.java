@@ -43,7 +43,7 @@ class ArchUnitRatchetRulesTest {
           "theSystemClockIsReadInConfigAlone", 0,
           "transactionsDoNotReachOutboundClients", 26,
           "springDataRepositoriesStayBehindPorts", 0,
-          "constructorCallsPassFewerThanTenArguments", 137);
+          "constructorCallsPassFewerThanTenArguments", 135);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");

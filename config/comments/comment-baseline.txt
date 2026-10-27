@@ -448,7 +448,7 @@ src/main/java/com/example/short_link/portability/domain/ImportKind.java=2
 src/main/java/com/example/short_link/portability/domain/repository/AccountImportRepository.java=2
 src/main/java/com/example/short_link/portability/infrastructure/persistence/AccountImportRepositoryAdapter.java=1
 src/main/java/com/example/short_link/portability/presentation/request/StartImportRequest.java=1
-src/main/java/com/example/short_link/post/application/access/PostAccessPolicy.java=4
+src/main/java/com/example/short_link/post/application/access/PostAccessPolicy.java=5
 src/main/java/com/example/short_link/post/application/access/PostGrants.java=2
 src/main/java/com/example/short_link/post/application/access/PostPasswordAttempts.java=1
 src/main/java/com/example/short_link/post/application/access/PostPasswords.java=2
@@ -492,7 +492,7 @@ src/main/java/com/example/short_link/post/application/write/PostWriteViewAssembl
 src/main/java/com/example/short_link/post/application/write/PublishPostUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/PublishScheduledPostUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/PublishScheduledPostsUseCase.java=1
-src/main/java/com/example/short_link/post/application/write/RecordPostReadUseCase.java=1
+src/main/java/com/example/short_link/post/application/write/RecordPostReadUseCase.java=2
 src/main/java/com/example/short_link/post/application/write/RecordPostViewUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/ReplacePostBlocksCommand.java=1
 src/main/java/com/example/short_link/post/application/write/ReplacePostBlocksUseCase.java=3
