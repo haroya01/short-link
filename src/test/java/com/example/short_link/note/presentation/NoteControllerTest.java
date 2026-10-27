@@ -47,7 +47,7 @@ class NoteControllerTest {
 
   @Test
   void anAccountElsewhereHasItsHistoryFilledInBeforeItsFirstPageOnly() throws Exception {
-    when(query.byRemoteActor(eq(42L), eq(7L), any()))
+    when(query.byRemoteActor(eq(7L), eq(42L), any()))
         .thenReturn(new NoteFeedView(List.of(), 0, false));
 
     mvc.perform(
@@ -61,12 +61,12 @@ class NoteControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
         .andExpect(status().isOk());
     verify(remoteHistory, times(1)).fillIn(any(), any());
-    verify(query).byRemoteActor(42L, 7L, new PageAsk(1, 20));
+    verify(query).byRemoteActor(7L, 42L, new PageAsk(1, 20));
   }
 
   @Test
   void aNoteErrorKeepsItsStatusAndCode() throws Exception {
-    when(query.thread(eq(9L), any()))
+    when(query.thread(any(), eq(9L)))
         .thenThrow(new NoteException(NoteErrorCode.NOTE_NOT_FOUND, 9L));
 
     mvc.perform(get("/api/v1/public/notes/9"))

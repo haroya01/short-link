@@ -41,11 +41,11 @@ public class RoomItemsQueryService {
   public record Page(List<RoomItem> items, String next) {}
 
   @Transactional(readOnly = true)
-  public Page room(Long roomId, Long viewerId, String cursor, int limit) {
+  public Page room(Long viewerId, Long roomId, String cursor, int limit) {
     int size = Math.clamp(limit, 1, MAX_LIMIT);
     int[] at = HomeFeedQueryService.positions(cursor);
-    NoteSlice noteSlice = notes.roomAt(roomId, viewerId, at[0], size + 1);
-    PostSlice postSlice = posts.roomAt(roomId, viewerId, at[1], size + 1);
+    NoteSlice noteSlice = notes.roomAt(viewerId, roomId, at[0], size + 1);
+    PostSlice postSlice = posts.roomAt(viewerId, roomId, at[1], size + 1);
     return page(viewerId, at, size, noteSlice, postSlice);
   }
 

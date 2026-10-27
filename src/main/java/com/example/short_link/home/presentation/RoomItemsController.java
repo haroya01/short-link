@@ -20,7 +20,7 @@ public class RoomItemsController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "20") int limit,
       @RequestParam(required = false) String cursor) {
-    return items.room(id, viewerId, cursor, limit);
+    return items.room(viewerId, id, cursor, limit);
   }
 
   @GetMapping("/api/v1/rooms/items")

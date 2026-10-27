@@ -64,7 +64,7 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView byRemoteActor(Long remoteActorId, Long viewerId, PageAsk ask) {
+  public NoteFeedView byRemoteActor(Long viewerId, Long remoteActorId, PageAsk ask) {
     return page(
         ask,
         viewerId,
@@ -72,7 +72,7 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView room(Long roomId, Long viewerId, PageAsk ask) {
+  public NoteFeedView room(Long viewerId, Long roomId, PageAsk ask) {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
@@ -205,12 +205,12 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView quotes(Long noteId, Long viewerId, PageAsk ask) {
+  public NoteFeedView quotes(Long viewerId, Long noteId, PageAsk ask) {
     return page(ask, viewerId, (offset, limit) -> feeds.quotesOf(noteId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public PostQuotesView postQuotes(Long postId, Long viewerId, PageAsk ask) {
+  public PostQuotesView postQuotes(Long viewerId, Long postId, PageAsk ask) {
     NoteFeedView feed =
         page(ask, viewerId, (offset, limit) -> feeds.quotesOfPost(postId, viewerId, offset, limit));
     return new PostQuotesView(
@@ -262,7 +262,7 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteSlice roomAt(Long roomId, Long viewerId, int offset, int limit) {
+  public NoteSlice roomAt(Long viewerId, Long roomId, int offset, int limit) {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
@@ -357,7 +357,7 @@ public class NoteQueryService {
   // It opens for whoever may open the thread: not across a block, not once the writer is gone or
   // their server suspended, and a restricted note only for its readers.
   @Transactional(readOnly = true)
-  public NoteHistoryView history(Long noteId, Long viewerId) {
+  public NoteHistoryView history(Long viewerId, Long noteId) {
     NoteEntity note =
         notes
             .findUnblocked(noteId, viewerId)
@@ -385,7 +385,7 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteThreadView thread(Long noteId, Long viewerId) {
+  public NoteThreadView thread(Long viewerId, Long noteId) {
     NoteEntity note =
         notes
             .findUnblocked(noteId, viewerId)
@@ -459,7 +459,7 @@ public class NoteQueryService {
   // Threads' hidden replies: the replies the thread's writer moved out of the thread under this
   // note, for anyone who may open the note itself.
   @Transactional(readOnly = true)
-  public List<NoteView> hiddenReplies(Long noteId, Long viewerId) {
+  public List<NoteView> hiddenReplies(Long viewerId, Long noteId) {
     NoteEntity note =
         notes
             .findUnblocked(noteId, viewerId)

@@ -111,12 +111,12 @@ public class NoteController {
     if (page <= 0) {
       remoteHistory.fillIn(id, viewerId);
     }
-    return query.byRemoteActor(id, viewerId, new PageAsk(page, size));
+    return query.byRemoteActor(viewerId, id, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/{id}/history")
   public NoteHistoryView history(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
-    return query.history(id, viewerId);
+    return query.history(viewerId, id);
   }
 
   @GetMapping("/api/v1/rooms/{id}/notes")
@@ -125,7 +125,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.room(id, viewerId, new PageAsk(page, size));
+    return query.room(viewerId, id, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/rooms/feed")
@@ -160,13 +160,13 @@ public class NoteController {
 
   @GetMapping("/api/v1/public/notes/{id}")
   public NoteThreadView thread(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
-    return query.thread(id, viewerId);
+    return query.thread(viewerId, id);
   }
 
   @GetMapping("/api/v1/public/notes/{id}/hidden-replies")
   public List<NoteView> hiddenReplies(
       @AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
-    return query.hiddenReplies(id, viewerId);
+    return query.hiddenReplies(viewerId, id);
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/notes")
@@ -311,7 +311,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.postQuotes(id, viewerId, new PageAsk(page, size));
+    return query.postQuotes(viewerId, id, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/{id}/quotes")
@@ -320,7 +320,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.quotes(id, viewerId, new PageAsk(page, size));
+    return query.quotes(viewerId, id, new PageAsk(page, size));
   }
 
   @PutMapping("/api/v1/notes/{id}/pin")

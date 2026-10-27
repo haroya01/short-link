@@ -369,14 +369,14 @@ class HeardRuleIntegrationTest {
     for (String handle : all()) {
       long id = note(writer(handle), null);
       if (BLOCKED.contains(handle)) {
-        assertThatThrownBy(() -> notes.thread(id, viewer))
+        assertThatThrownBy(() -> notes.thread(viewer, id))
             .isInstanceOf(NoteException.class)
             .extracting(e -> ((NoteException) e).errorCode())
             .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
       } else {
-        assertThat(notes.thread(id, viewer).note().id()).isEqualTo(id);
+        assertThat(notes.thread(viewer, id).note().id()).isEqualTo(id);
       }
-      assertThat(notes.thread(id, null).note().id()).isEqualTo(id);
+      assertThat(notes.thread(null, id).note().id()).isEqualTo(id);
     }
 
     long blockerParent = note(writer("hr-blocker"), null);
@@ -385,12 +385,12 @@ class HeardRuleIntegrationTest {
     long underMuted = note(writer("hr-normal"), mutedParent);
     long mutedReply = note(writer("hr-mutedlater"), underMuted);
 
-    assertThat(notes.thread(underBlocker, viewer).parent()).isNull();
-    assertThat(notes.thread(underBlocker, null).parent().id()).isEqualTo(blockerParent);
-    NoteThreadView signedIn = notes.thread(underMuted, viewer);
+    assertThat(notes.thread(viewer, underBlocker).parent()).isNull();
+    assertThat(notes.thread(null, underBlocker).parent().id()).isEqualTo(blockerParent);
+    NoteThreadView signedIn = notes.thread(viewer, underMuted);
     assertThat(signedIn.parent().id()).isEqualTo(mutedParent);
     assertThat(signedIn.replies()).isEmpty();
-    assertThat(notes.thread(underMuted, null).replies())
+    assertThat(notes.thread(null, underMuted).replies())
         .extracting(NoteView::id)
         .containsExactly(mutedReply);
   }
@@ -400,14 +400,14 @@ class HeardRuleIntegrationTest {
     for (String handle : all()) {
       long id = note(writer(handle), null);
       if (BLOCKED.contains(handle)) {
-        assertThatThrownBy(() -> notes.history(id, viewer))
+        assertThatThrownBy(() -> notes.history(viewer, id))
             .isInstanceOf(NoteException.class)
             .extracting(e -> ((NoteException) e).errorCode())
             .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
       } else {
-        assertThat(notes.history(id, viewer).versions()).hasSize(1);
+        assertThat(notes.history(viewer, id).versions()).hasSize(1);
       }
-      assertThat(notes.history(id, null).versions()).hasSize(1);
+      assertThat(notes.history(null, id).versions()).hasSize(1);
     }
 
     NoteEntity forFollowers =
@@ -415,13 +415,13 @@ class HeardRuleIntegrationTest {
     forFollowers.showTo(NoteVisibility.PRIVATE);
     noteRepository.save(forFollowers);
     long hidden = forFollowers.getId();
-    assertThatThrownBy(() -> notes.history(hidden, viewer))
+    assertThatThrownBy(() -> notes.history(viewer, hidden))
         .isInstanceOf(NoteException.class)
         .extracting(e -> ((NoteException) e).errorCode())
         .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
-    assertThatThrownBy(() -> notes.history(hidden, null)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> notes.history(null, hidden)).isInstanceOf(NoteException.class);
     followRepository.save(new FollowEntity(viewer, writer("hr-normal")));
-    assertThat(notes.history(hidden, viewer).versions()).hasSize(1);
+    assertThat(notes.history(viewer, hidden).versions()).hasSize(1);
   }
 
   private long user(String handle) {
