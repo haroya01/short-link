@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
+// A cursor's pages are cut from the ranking made for its asOf, held in this process for half an
+// hour; one made again after that may differ a little, as counts move.
 @Service
 public class HomeForYou {
 

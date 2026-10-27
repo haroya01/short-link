@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// The cursor is "<notes>.<posts>", as on the home feed.
 @Service
 @RequiredArgsConstructor
 public class RoomItemsQueryService {
