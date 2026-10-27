@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.common.user.SilenceCheck;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -38,8 +39,15 @@ class MuteSilenceSqlTextTest {
     return adapter;
   }
 
+  private static String withMainAliases(String statement) {
+    String shared = HeardSql.memberSilenced(":recipient", ":actor");
+    String inline =
+        shared.substring(1, shared.length() - 1).replace("hsb", "b").replace("hsm", "m");
+    return statement.replace(shared, inline);
+  }
+
   @Test
-  void theSilenceCheckSendsTheSameStatementForEachKindOfActor() throws Exception {
+  void theSilenceCheckSendsMainsStatementsUpToTheMemberPredicatesAliases() throws Exception {
     MuteRepositoryAdapter adapter = adapter();
     Instant now = Instant.parse("2026-10-27T00:00:00Z");
 
@@ -49,7 +57,7 @@ class MuteSilenceSqlTextTest {
 
     Files.createDirectories(Path.of("build/silence-sql"));
     Files.write(Path.of("build/silence-sql/mute-silences.sql"), statements);
-    assertThat(statements)
+    assertThat(statements.stream().map(MuteSilenceSqlTextTest::withMainAliases).toList())
         .containsExactlyElementsOf(
             Files.readAllLines(Path.of("src/test/resources/silence-sql/mute-silences.sql")));
   }

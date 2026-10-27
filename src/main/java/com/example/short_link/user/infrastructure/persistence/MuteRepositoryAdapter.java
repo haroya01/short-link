@@ -52,18 +52,10 @@ class MuteRepositoryAdapter implements MuteRepository {
     Long conversationId = check.conversationId();
     List<String> checks = new ArrayList<>();
     if (actorId != null) {
-      checks.add(
-          "EXISTS (SELECT 1 FROM user_block b"
-              + " WHERE b.blocker_id = :recipient AND b.blocked_id = :actor)"
-              + " OR EXISTS (SELECT 1 FROM user_mute m"
-              + " WHERE m.user_id = :recipient AND m.muted_user_id = :actor"
-              + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))");
+      checks.add(HeardSql.memberSilenced(":recipient", ":actor"));
     }
     if (remoteActorId != null) {
-      checks.add(
-          "EXISTS (SELECT 1 FROM user_domain_block d"
-              + " JOIN federation_remote_actor a ON a.domain = d.domain"
-              + " WHERE d.user_id = :recipient AND a.id = :remote)");
+      checks.add(HeardSql.domainBlocked(":recipient", ":remote"));
       checks.add(ServerBlockSql.suspended(":remote"));
       checks.add(ServerBlockSql.limitedFor(":remote", ":recipient"));
       checks.add(HeardSql.remoteSilenced(":recipient", ":remote"));

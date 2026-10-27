@@ -127,7 +127,7 @@ src/main/java/com/example/short_link/common/storage/ImageUploadPolicy.java=2
 src/main/java/com/example/short_link/common/storage/ObjectStorage.java=2
 src/main/java/com/example/short_link/common/storage/s3/S3ObjectStorage.java=3
 src/main/java/com/example/short_link/common/storage/s3/S3StorageConfig.java=2
-src/main/java/com/example/short_link/common/user/HeardSql.java=4
+src/main/java/com/example/short_link/common/user/HeardSql.java=2
 src/main/java/com/example/short_link/common/user/OpenToSuspended.java=2
 src/main/java/com/example/short_link/common/user/UserBlockChecker.java=5
 src/main/java/com/example/short_link/common/user/UserDataEraser.java=3
@@ -449,7 +449,7 @@ src/main/java/com/example/short_link/notification/infrastructure/event/NoteNotif
 src/main/java/com/example/short_link/notification/infrastructure/event/NotificationGroupKey.java=5
 src/main/java/com/example/short_link/notification/infrastructure/event/PostNotificationListener.java=2
 src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationActorReaderAdapter.java=1
-src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationFollowerReaderAdapter.java=4
+src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationFollowerReaderAdapter.java=1
 src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationKeywordFilterReaderAdapter.java=3
 src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationPolicyRepositoryAdapter.java=2
 src/main/java/com/example/short_link/notification/infrastructure/persistence/NotificationRepositoryAdapter.java=6
