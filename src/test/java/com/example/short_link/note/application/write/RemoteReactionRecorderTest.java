@@ -4,6 +4,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.note.domain.NoteEntity;
@@ -40,7 +41,14 @@ class RemoteReactionRecorderTest {
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.REPOST, 9L, null, 7L, 5L, "hello there", null, null, 5L));
+                NoteInteractionEvent.Type.REPOST,
+                9L,
+                Actor.remote(7L),
+                5L,
+                "hello there",
+                null,
+                null,
+                5L));
   }
 
   @Test

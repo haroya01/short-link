@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.Hashtags;
@@ -463,7 +464,7 @@ public class NoteComposer {
             note.getInReplyToId() != null
                 || note.getQuotedNoteId() != null
                 || !Mentions.remote(body).isEmpty()));
-    events.publishEvent(new NoteRevisedEvent(noteId, userId, null, note.excerpt()));
+    events.publishEvent(new NoteRevisedEvent(noteId, Actor.member(userId), note.excerpt()));
     String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
       events.publishEvent(new NoteLinkPreviewRequested(noteId, after));

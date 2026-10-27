@@ -3,6 +3,7 @@ package com.example.short_link.notification.infrastructure.event;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
@@ -42,8 +43,7 @@ class NoteNotificationListenerTest {
     return new NoteInteractionEvent(
         type,
         9L,
-        actorUserId,
-        actorRemoteId,
+        new Actor(actorUserId, actorRemoteId),
         5L,
         "hi",
         type == NoteInteractionEvent.Type.REPLY ? 12L : null,
@@ -91,7 +91,7 @@ class NoteNotificationListenerTest {
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null, null));
+                NoteInteractionEvent.Type.LIKE, 9L, Actor.member(9L), 5L, "hi", null, null, null));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.QUOTE, 3L, null));
 
     assertThat(stored.rows()).isEmpty();
@@ -116,11 +116,18 @@ class NoteNotificationListenerTest {
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 9L, null, 7L, 5L, "hi", null, null, 40L));
+                NoteInteractionEvent.Type.LIKE, 9L, Actor.remote(7L), 5L, "hi", null, null, 40L));
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 9L, null, 7L, 6L, "other", null, null, 41L));
+                NoteInteractionEvent.Type.LIKE,
+                9L,
+                Actor.remote(7L),
+                6L,
+                "other",
+                null,
+                null,
+                41L));
 
     assertThat(stored.rows())
         .extracting(Row::payload)
@@ -176,8 +183,8 @@ class NoteNotificationListenerTest {
     when(followers.noteSharersOf(5L, 7L, null)).thenReturn(List.of(10L));
     when(followers.noteSharersOf(6L, null, 40L)).thenReturn(List.of(11L, 12L));
 
-    listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "고친 문장"));
-    listener().onNoteRevised(new NoteRevisedEvent(6L, null, 40L, "fixed"));
+    listener().onNoteRevised(new NoteRevisedEvent(5L, Actor.member(7L), "고친 문장"));
+    listener().onNoteRevised(new NoteRevisedEvent(6L, Actor.remote(40L), "fixed"));
 
     NotificationNoteRef here = new NotificationNoteRef(5L, "고친 문장", null, null);
     NotificationNoteRef elsewhere = new NotificationNoteRef(6L, "fixed", null, null);
@@ -193,7 +200,7 @@ class NoteNotificationListenerTest {
   void anEditNobodySharedRecordsNothing() {
     when(followers.noteSharersOf(5L, 7L, null)).thenReturn(List.of());
 
-    listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "x"));
+    listener().onNoteRevised(new NoteRevisedEvent(5L, Actor.member(7L), "x"));
 
     assertThat(stored.rows()).isEmpty();
   }

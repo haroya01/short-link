@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
@@ -153,8 +154,7 @@ class RemoteNoteRecorderTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.REPLY,
                 7L,
-                null,
-                42L,
+                Actor.remote(42L),
                 5L,
                 "my question",
                 901L,
@@ -165,8 +165,7 @@ class RemoteNoteRecorderTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 8L,
-                null,
-                42L,
+                Actor.remote(42L),
                 901L,
                 "hello from afar",
                 null,
@@ -319,7 +318,7 @@ class RemoteNoteRecorderTest {
     assertThat(images.getValue())
         .extracting(NoteMediaEntity::getUrl, NoteMediaEntity::getPosition)
         .containsExactly(tuple("https://m.example/1.png", 0), tuple("https://m.example/2.png", 1));
-    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "edited #dogs"));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, Actor.remote(42L), "edited #dogs"));
   }
 
   @Test
@@ -640,8 +639,8 @@ class RemoteNoteRecorderTest {
     assertThat(polled.getPollClosedAt()).isNull();
     assertThat(polled.remoteTally()).isEqualTo(new NotePollTally(0, List.of(), null));
     assertThat(polled.getRemoteKind()).isEqualTo("NOTE");
-    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "a summary"));
-    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "pick one"));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, Actor.remote(42L), "a summary"));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, Actor.remote(42L), "pick one"));
   }
 
   @Test
@@ -671,7 +670,7 @@ class RemoteNoteRecorderTest {
     assertThat(note.pollOptions()).containsExactly("x", "y");
     assertThat(note.getPollClosedAt()).isEqualTo(NOW);
     assertThat(note.getPollExpiresAt()).isNull();
-    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "pick one"));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, Actor.remote(42L), "pick one"));
   }
 
   @Test

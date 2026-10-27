@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
@@ -116,8 +117,7 @@ public class NoteInteractions {
     return new NoteInteractionEvent(
         type,
         target.getUserId(),
-        actorId,
-        null,
+        Actor.member(actorId),
         target.getId(),
         target.excerpt(),
         source == null ? null : source.getId(),

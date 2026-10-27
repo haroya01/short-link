@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
@@ -157,8 +158,7 @@ class RemoteNoteRecorder implements RemoteNotes {
           new NoteInteractionEvent(
               NoteInteractionEvent.Type.REPLY,
               parent.getUserId(),
-              null,
-              received.remoteActorId(),
+              Actor.remote(received.remoteActorId()),
               parent.getId(),
               parent.excerpt(),
               noteId,
@@ -171,8 +171,7 @@ class RemoteNoteRecorder implements RemoteNotes {
           new NoteInteractionEvent(
               NoteInteractionEvent.Type.MENTION,
               member,
-              null,
-              received.remoteActorId(),
+              Actor.remote(received.remoteActorId()),
               noteId,
               excerpt,
               null,
@@ -251,7 +250,8 @@ class RemoteNoteRecorder implements RemoteNotes {
       media.deleteAllByNoteId(noteId);
       media.saveAll(attached);
     }
-    events.publishEvent(new NoteRevisedEvent(noteId, null, remoteActorId, Excerpt.of(body)));
+    events.publishEvent(
+        new NoteRevisedEvent(noteId, Actor.remote(remoteActorId), Excerpt.of(body)));
     return true;
   }
 
