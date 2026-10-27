@@ -415,9 +415,9 @@ class ClickRollupEquivalenceIntegrationTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", "A", "East", 100, null, null).toCommand());
-    Long linkId = batch.link().getId();
+    Long linkId = batch.link().linkId().value();
     backdate(linkId, created);
-    track(linkId, owner, batch.link().getShortCode());
+    track(linkId, owner, batch.link().shortCode());
     return linkId;
   }
 

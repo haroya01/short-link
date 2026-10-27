@@ -1,7 +1,7 @@
 package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.application.dto.LinkUrlRef;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -32,10 +32,8 @@ public class LinkLookupQueryService {
   }
 
   @Transactional(readOnly = true)
-  public List<LinkUrlRef> findWithUrlContaining(String fragment) {
-    return repository.findByOriginalUrlContaining(fragment).stream()
-        .map(link -> new LinkUrlRef(link.getUserId(), link.getShortCode(), link.getOriginalUrl()))
-        .toList();
+  public List<LinkRef> findWithUrlContaining(String fragment) {
+    return repository.findByOriginalUrlContaining(fragment).stream().map(LinkRef::of).toList();
   }
 
   @Transactional(readOnly = true)

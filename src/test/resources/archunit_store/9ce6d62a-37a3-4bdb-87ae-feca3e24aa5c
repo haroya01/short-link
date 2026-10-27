@@ -3,16 +3,6 @@ com.example.short_link.admin.infrastructure.persistence.JpaAdminAnalyticsReposit
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBlogMetricsRepository reaches com.example.short_link.post.domain.PostEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBrowseRepository reaches com.example.short_link.user.domain.UserEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminMetricsRepository reaches com.example.short_link.link.stats.domain.ClickEventEntity
-com.example.short_link.campaign.application.CampaignBatchExportService reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.campaign.application.CampaignBatchService reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.campaign.application.CampaignBatchService reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.campaign.application.CampaignStatsService reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.campaign.application.dto.BatchWithLink reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.campaign.application.write.BatchPolicyApplier reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.campaign.application.write.BatchPolicyApplier reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.campaign.application.write.BatchPolicyApplier reaches com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity
-com.example.short_link.campaign.application.write.BatchPolicyApplier reaches com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository
-com.example.short_link.campaign.presentation.response.CampaignBatchResponse reaches com.example.short_link.link.domain.LinkEntity
 com.example.short_link.event.application.read.EventAnalyticsQueryService reaches com.example.short_link.link.stats.domain.repository.ClickEventRepository
 com.example.short_link.event.application.read.EventQueryService reaches com.example.short_link.link.domain.LinkEntity
 com.example.short_link.event.application.read.EventQueryService reaches com.example.short_link.link.domain.repository.LinkRepository

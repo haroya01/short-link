@@ -10,12 +10,11 @@ import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
-import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.CampaignLinks;
 import com.example.short_link.link.application.dto.LinkCreated;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CampaignBatchService {
 
   private final CampaignBatchRepository batchRepository;
-  private final LinkRepository linkRepository;
   private final CreateLinkUseCase linkCreationService;
   private final CampaignQueryService campaignQuery;
-  private final LinkCacheEviction linkCacheEviction;
+  private final CampaignLinks campaignLinks;
 
   @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {
@@ -106,14 +104,13 @@ public class CampaignBatchService {
   public void delete(Long campaignId, Long batchId, Long ownerId) {
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     batchRepository.delete(current.batch());
-    linkRepository.delete(current.link());
-    linkCacheEviction.evictAfterCommit(current.link());
+    campaignLinks.delete(current.link().linkId());
   }
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
-    LinkEntity link =
-        linkRepository
-            .findById(batch.getLinkId())
+    LinkRef link =
+        campaignLinks
+            .find(batch.linkId())
             .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND));
     return new BatchWithLink(batch, link);
   }
@@ -123,9 +120,9 @@ public class CampaignBatchService {
     // 배치별 추적 코드와 Batch:Link 1:1 관계를 유지하려고 URL 중복 제거를 끈다.
     LinkCreated created =
         linkCreationService.execute(CreateLinkCommand.perBatch(destination, ownerId));
-    LinkEntity link =
-        linkRepository
-            .findByShortCode(created.shortCode())
+    LinkRef link =
+        campaignLinks
+            .find(created.shortCode())
             .orElseThrow(() -> new IllegalStateException("link missing right after create"));
     CampaignBatchEntity batch =
         batchRepository.save(

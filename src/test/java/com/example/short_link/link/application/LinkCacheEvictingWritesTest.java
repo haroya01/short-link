@@ -18,6 +18,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.application.write.UserDeletionService;
@@ -60,7 +61,10 @@ class LinkCacheEvictingWritesTest {
     when(links.findById(3L)).thenReturn(Optional.of(batchLink));
     CampaignBatchService service =
         new CampaignBatchService(
-            batches, links, mock(CreateLinkUseCase.class), mock(CampaignQueryService.class), cache);
+            batches,
+            mock(CreateLinkUseCase.class),
+            mock(CampaignQueryService.class),
+            new CampaignLinks(links, mock(LinkExpirationPolicyRepository.class), cache));
 
     service.delete(5L, 4L, 9L);
 

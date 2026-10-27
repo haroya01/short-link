@@ -10,6 +10,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
+import com.example.short_link.link.application.CampaignLinks;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
@@ -31,7 +32,7 @@ class BatchPolicyApplierTest {
       mock(LinkExpirationPolicyRepository.class);
   private final LinkCacheEviction cache = mock(LinkCacheEviction.class);
   private final BatchPolicyApplier applier =
-      new BatchPolicyApplier(batches, links, policies, cache);
+      new BatchPolicyApplier(batches, new CampaignLinks(links, policies, cache));
   private final List<CampaignBatchEntity> stored = new ArrayList<>();
 
   @Test

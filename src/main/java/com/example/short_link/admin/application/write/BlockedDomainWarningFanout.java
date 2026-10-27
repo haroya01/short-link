@@ -2,7 +2,7 @@ package com.example.short_link.admin.application.write;
 
 import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
 import com.example.short_link.admin.application.helper.WarningCopy;
-import com.example.short_link.link.application.dto.LinkUrlRef;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -26,11 +26,11 @@ public class BlockedDomainWarningFanout {
   private final LinkNotificationDispatcher dispatcher;
 
   public int execute(String domain) {
-    Map<Long, List<LinkUrlRef>> byOwner =
+    Map<Long, List<LinkRef>> byOwner =
         links.findWithUrlContaining(domain).stream()
             .filter(l -> l.userId() != null)
             .filter(l -> isCovered(BlockedDomainNormalizer.hostOf(l.originalUrl()), domain))
-            .collect(Collectors.groupingBy(LinkUrlRef::userId));
+            .collect(Collectors.groupingBy(LinkRef::userId));
     if (byOwner.isEmpty()) {
       return 0;
     }

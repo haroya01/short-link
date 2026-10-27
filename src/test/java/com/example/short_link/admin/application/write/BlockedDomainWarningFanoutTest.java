@@ -11,8 +11,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.admin.application.helper.WarningCopy;
-import com.example.short_link.link.application.dto.LinkUrlRef;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -30,8 +31,8 @@ class BlockedDomainWarningFanoutTest {
   private final BlockedDomainWarningFanout fanout =
       new BlockedDomainWarningFanout(links, users, dispatcher);
 
-  private static LinkUrlRef link(Long owner, String code, String url) {
-    return new LinkUrlRef(owner, new ShortCode(code), url);
+  private static LinkRef link(Long owner, String code, String url) {
+    return new LinkRef(new LinkId(1L), owner, new ShortCode(code), url);
   }
 
   @Test

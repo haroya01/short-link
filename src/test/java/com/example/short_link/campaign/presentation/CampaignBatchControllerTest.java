@@ -23,6 +23,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.testsupport.KurlWebMvcTest;
@@ -52,7 +53,7 @@ class CampaignBatchControllerTest {
     LinkEntity link = new LinkEntity("https://dest.example.com", "abc123", USER_ID, null);
     CampaignBatchEntity batch =
         new CampaignBatchEntity(CAMPAIGN_ID, new LinkId(100L), name, "Kim", "East", quantity, "m");
-    return new BatchWithLink(batch, link);
+    return new BatchWithLink(batch, LinkRef.of(link));
   }
 
   @Test
