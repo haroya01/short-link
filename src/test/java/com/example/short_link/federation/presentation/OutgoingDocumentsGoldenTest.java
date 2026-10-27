@@ -55,6 +55,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -190,7 +192,8 @@ class OutgoingDocumentsGoldenTest {
             documents,
             deliveries,
             json,
-            Clock.fixed(Instant.parse("2026-10-06T02:00:00.789Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-10-06T02:00:00.789Z"), ZoneOffset.UTC),
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
     for (LocalActor actor : List.of(YUKI, MINA)) {
       Long userId = actor.user().id();
       when(localActors.byUserId(userId)).thenReturn(Optional.of(actor));

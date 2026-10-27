@@ -19,6 +19,7 @@ import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 // Sends a note's Create, Update or Delete to the shared inbox of every follower's server, once per
@@ -39,27 +40,16 @@ public class NoteFederation {
   private final DeliveryQueue deliveries;
   private final JsonMapper json;
   private final Clock clock;
+  private final TransactionTemplate transaction;
 
   @Transactional
   public void created(Long noteId, Long authorId) {
-    deliver(
-        authorId,
-        publicId ->
-            notes
-                .find(noteId)
-                .filter(NoteFederation::leaves)
-                .map(note -> documents.create(note, publicId)));
+    deliver(authorId, creation(noteId));
   }
 
   @Transactional
   public void edited(Long noteId, Long authorId) {
-    deliver(
-        authorId,
-        publicId ->
-            notes
-                .find(noteId)
-                .filter(NoteFederation::leaves)
-                .map(note -> documents.update(note, publicId)));
+    deliver(authorId, edit(noteId));
   }
 
   @Transactional
@@ -93,84 +83,107 @@ public class NoteFederation {
 
   @Transactional
   public void deleted(Long noteId, Long authorId) {
-    deliver(authorId, publicId -> Optional.of(documents.delete(noteId, publicId)));
+    deliver(authorId, deletion(noteId));
   }
 
   // A note that answers a note from another server, or names someone there, reaches those servers
   // too, even when the writer has no followers on them; a direct note goes only to them. Handles
   // that resolve to no one are left as text, and a note that reaches no one elsewhere takes the
-  // usual path.
-  @Transactional
+  // usual path. The people it names are looked up between two transactions: those lookups wait on
+  // other servers.
   public void createdElsewhere(Long noteId, Long authorId) {
-    Optional<LocalActor> actor = localActors.byUserId(authorId);
-    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty() || !found.get().visibility().federates()) {
-      return;
-    }
-    NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
-    if (reach.isEmpty()) {
-      created(noteId, authorId);
-      return;
-    }
-    send(
-        authorId,
-        documents.create(
-            note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
-        reach.inboxes(
-            note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of()));
+    transaction
+        .execute(status -> stored(noteId, authorId))
+        .ifPresent(
+            stored -> {
+              NoteSnapshot note = stored.note();
+              String publicId = stored.actor().publicId();
+              Reach reach = stored.reach().naming(named(Mentions.remote(note.body())));
+              transaction.executeWithoutResult(
+                  status -> {
+                    List<String> followerInboxes =
+                        note.visibility().followersRead()
+                            ? followers.deliveryInboxes(authorId)
+                            : List.of();
+                    if (reach.isEmpty()) {
+                      if (!followerInboxes.isEmpty()) {
+                        send(authorId, documents.create(note, publicId), followerInboxes);
+                      }
+                      return;
+                    }
+                    send(
+                        authorId,
+                        documents.create(
+                            note, publicId, reach.parent(), reach.addressees(), reach.quoted()),
+                        reach.inboxes(followerInboxes));
+                  });
+            });
   }
 
   // An edit goes wherever the note went: to the writer's followers, and to the server of the note
   // it answers and of the people it names.
-  @Transactional
   public void edited(Long noteId, Long authorId, boolean reachesElsewhere) {
     if (!reachesElsewhere) {
-      edited(noteId, authorId);
+      transaction.executeWithoutResult(status -> deliver(authorId, edit(noteId)));
       return;
     }
-    Optional<LocalActor> actor = localActors.byUserId(authorId);
-    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
-    if (found.isEmpty() || !found.get().visibility().federates()) {
-      return;
-    }
-    NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
-    List<String> inboxes =
-        reach.inboxes(
-            note.visibility().followersRead() ? followers.deliveryInboxes(authorId) : List.of());
-    if (inboxes.isEmpty()) {
-      return;
-    }
-    send(
-        authorId,
-        documents.update(
-            note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
-        inboxes);
+    transaction
+        .execute(status -> stored(noteId, authorId))
+        .ifPresent(
+            stored -> {
+              NoteSnapshot note = stored.note();
+              Reach reach = stored.reach().naming(named(Mentions.remote(note.body())));
+              transaction.executeWithoutResult(
+                  status -> {
+                    List<String> inboxes =
+                        reach.inboxes(
+                            note.visibility().followersRead()
+                                ? followers.deliveryInboxes(authorId)
+                                : List.of());
+                    if (inboxes.isEmpty()) {
+                      return;
+                    }
+                    send(
+                        authorId,
+                        documents.update(
+                            note,
+                            stored.actor().publicId(),
+                            reach.parent(),
+                            reach.addressees(),
+                            reach.quoted()),
+                        inboxes);
+                  });
+            });
   }
 
   // The note is already gone, so what it answered and whom it named come with the call.
-  @Transactional
   public void deleted(
       Long noteId, Long authorId, Long inReplyToId, List<String> handles, Long quotedNoteId) {
     if (inReplyToId == null && handles.isEmpty() && quotedNoteId == null) {
-      deleted(noteId, authorId);
+      transaction.executeWithoutResult(status -> deliver(authorId, deletion(noteId)));
       return;
     }
     Optional<LocalActor> actor = localActors.byUserId(authorId);
     if (actor.isEmpty()) {
       return;
     }
-    List<String> inboxes =
-        reach(inReplyToId, handles, quotedNoteId).inboxes(followers.deliveryInboxes(authorId));
-    if (inboxes.isEmpty()) {
-      return;
-    }
-    send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
+    Reach reach = reach(inReplyToId, handles, quotedNoteId);
+    transaction.executeWithoutResult(
+        status -> {
+          List<String> inboxes = reach.inboxes(followers.deliveryInboxes(authorId));
+          if (inboxes.isEmpty()) {
+            return;
+          }
+          send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
+        });
   }
 
   private record Reach(
       RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
+
+    Reach naming(List<RemoteActorEntity> people) {
+      return new Reach(parent, people, quoted);
+    }
 
     boolean isEmpty() {
       return parent == null && named.isEmpty() && quoted == null;
@@ -202,16 +215,37 @@ public class NoteFederation {
     }
   }
 
+  private record Stored(LocalActor actor, NoteSnapshot note, Reach reach) {}
+
+  private Optional<Stored> stored(Long noteId, Long authorId) {
+    Optional<LocalActor> actor = localActors.byUserId(authorId);
+    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
+    if (found.isEmpty() || !found.get().visibility().federates()) {
+      return Optional.empty();
+    }
+    NoteSnapshot note = found.get();
+    return Optional.of(
+        new Stored(actor.get(), note, storedReach(note.inReplyToId(), quotedElsewhere(note))));
+  }
+
   private Reach reach(Long inReplyToId, List<String> handles, Long quotedNoteId) {
-    RemoteParents.Parent parent =
-        inReplyToId == null ? null : remoteParents.of(inReplyToId).orElse(null);
+    return storedReach(inReplyToId, quotedNoteId).naming(named(handles));
+  }
+
+  private Reach storedReach(Long inReplyToId, Long quotedNoteId) {
+    return new Reach(remoteParent(inReplyToId), List.of(), remoteParent(quotedNoteId));
+  }
+
+  private RemoteParents.Parent remoteParent(Long noteId) {
+    return noteId == null ? null : remoteParents.of(noteId).orElse(null);
+  }
+
+  private List<RemoteActorEntity> named(List<String> handles) {
     List<RemoteActorEntity> named = new ArrayList<>();
     for (String handle : handles) {
       finder.find(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
     }
-    RemoteParents.Parent quoted =
-        quotedNoteId == null ? null : remoteParents.of(quotedNoteId).orElse(null);
-    return new Reach(parent, named, quoted);
+    return named;
   }
 
   private static Long quotedElsewhere(NoteSnapshot note) {
@@ -261,6 +295,26 @@ public class NoteFederation {
 
   private void send(Long signerId, Map<String, Object> body, List<String> inboxes) {
     deliveries.enqueue(signerId, (String) body.get("id"), json.writeValueAsString(body), inboxes);
+  }
+
+  private Function<String, Optional<Map<String, Object>>> creation(Long noteId) {
+    return publicId ->
+        notes
+            .find(noteId)
+            .filter(NoteFederation::leaves)
+            .map(note -> documents.create(note, publicId));
+  }
+
+  private Function<String, Optional<Map<String, Object>>> edit(Long noteId) {
+    return publicId ->
+        notes
+            .find(noteId)
+            .filter(NoteFederation::leaves)
+            .map(note -> documents.update(note, publicId));
+  }
+
+  private Function<String, Optional<Map<String, Object>>> deletion(Long noteId) {
+    return publicId -> Optional.of(documents.delete(noteId, publicId));
   }
 
   private static boolean leaves(NoteSnapshot note) {
