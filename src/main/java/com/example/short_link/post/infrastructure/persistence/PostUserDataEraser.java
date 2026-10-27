@@ -41,6 +41,20 @@ class PostUserDataEraser implements UserDataEraser {
     execute("DELETE FROM bookmark_folder WHERE user_id = :userId", userId);
     // Replies on surviving highlights must be removed before the user FK can be deleted.
     execute("DELETE FROM highlight_reply WHERE user_id = :userId", userId);
+    // collection_connection.ref_id has no FK; connections in anyone's collection go before targets.
+    execute(
+        "DELETE FROM collection_connection WHERE block_type = 'HIGHLIGHT' AND ref_id IN"
+            + " (SELECT id FROM post_highlight WHERE user_id = :userId"
+            + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId))",
+        userId);
+    execute(
+        "DELETE FROM collection_connection WHERE block_type = 'POST' AND ref_id IN"
+            + " (SELECT id FROM posts WHERE user_id = :userId)",
+        userId);
+    execute(
+        "DELETE FROM collection_connection WHERE block_type = 'NOTE' AND ref_id IN"
+            + " (SELECT id FROM note WHERE user_id = :userId)",
+        userId);
     execute(
         "DELETE FROM post_highlight WHERE user_id = :userId"
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
