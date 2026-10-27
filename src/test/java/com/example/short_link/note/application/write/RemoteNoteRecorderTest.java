@@ -15,6 +15,7 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.note.RemoteNoteFixtures;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -77,7 +78,10 @@ class RemoteNoteRecorderTest {
         parentUri,
         addressed,
         images,
-        "en");
+        "en",
+        RemoteNotes.Shape.NOTE,
+        true,
+        null);
   }
 
   @Test
@@ -288,7 +292,7 @@ class RemoteNoteRecorderTest {
             .revise(
                 42L,
                 900L,
-                new RemoteNotes.Revision(
+                RemoteNoteFixtures.revision(
                     "edited #dogs",
                     "x".repeat(150),
                     false,
@@ -332,7 +336,7 @@ class RemoteNoteRecorderTest {
                 .revise(
                     42L,
                     900L,
-                    new RemoteNotes.Revision(
+                    RemoteNoteFixtures.revision(
                         "an older text", null, false, edited.minusSeconds(60), sameImage, "ja")))
         .isTrue();
     assertThat(note.getBody()).isEqualTo("hello #cats");
@@ -343,7 +347,7 @@ class RemoteNoteRecorderTest {
                 .revise(
                     42L,
                     900L,
-                    new RemoteNotes.Revision(
+                    RemoteNoteFixtures.revision(
                         "hello #cats", " ", false, edited.plusSeconds(60), sameImage, "ja")))
         .isTrue();
     assertThat(note.getEditedAt()).isEqualTo(edited);
@@ -366,7 +370,7 @@ class RemoteNoteRecorderTest {
                 .revise(
                     43L,
                     900L,
-                    new RemoteNotes.Revision("edited", null, false, null, List.of(), null)))
+                    RemoteNoteFixtures.revision("edited", null, false, null, List.of(), null)))
         .isFalse();
     verifyNoInteractions(media, events);
     assertThat(recorder().retract(42L, URI)).isTrue();
@@ -395,6 +399,9 @@ class RemoteNoteRecorderTest {
                 "https://m.example/s/404",
                 List.of(),
                 List.of(),
+                null,
+                RemoteNotes.Shape.NOTE,
+                true,
                 null));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
@@ -468,7 +475,8 @@ class RemoteNoteRecorderTest {
         List.of(),
         null,
         shape,
-        notifies);
+        notifies,
+        null);
   }
 
   private static RemoteNotes.Poll poll(List<String> options, List<Long> votes, Instant endsAt) {
@@ -586,7 +594,8 @@ class RemoteNoteRecorderTest {
                             RemoteNotes.Kind.QUESTION,
                             null,
                             null,
-                            poll(List.of("a", "b"), List.of(6L, 3L), later)))))
+                            poll(List.of("a", "b"), List.of(6L, 3L), later)),
+                        null)))
         .isTrue();
 
     assertThat(note.remoteTally().votes()).containsExactly(6L, 3L);
@@ -617,10 +626,11 @@ class RemoteNoteRecorderTest {
                 null,
                 List.of(),
                 "en",
-                new RemoteNotes.Shape(RemoteNotes.Kind.ARTICLE, "New title", null, null)));
+                new RemoteNotes.Shape(RemoteNotes.Kind.ARTICLE, "New title", null, null),
+                null));
     recorder()
         .revise(
-            42L, 900L, new RemoteNotes.Revision("pick one", null, false, null, List.of(), "en"));
+            42L, 900L, RemoteNoteFixtures.revision("pick one", null, false, null, List.of(), "en"));
 
     assertThat(article.getRemoteTitle()).isEqualTo("New title");
     assertThat(article.getEditedAt()).isEqualTo(NOW);
@@ -653,7 +663,8 @@ class RemoteNoteRecorderTest {
                     RemoteNotes.Kind.QUESTION,
                     null,
                     null,
-                    poll(List.of("x", "y"), List.of(0L, 2L), null))));
+                    poll(List.of("x", "y"), List.of(0L, 2L), null)),
+                null));
 
     assertThat(note.pollOptions()).containsExactly("x", "y");
     assertThat(note.getPollClosedAt()).isEqualTo(NOW);

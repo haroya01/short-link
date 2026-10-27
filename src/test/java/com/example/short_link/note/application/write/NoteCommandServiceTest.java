@@ -428,7 +428,7 @@ class NoteCommandServiceTest {
     assertThat(view.quotedNote().body()).isEqualTo("original");
     assertThat(view.quotedNote().author()).isEqualTo(other);
     assertThat(view.quotedNote().media())
-        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png", null, null));
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isFalse();
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L));

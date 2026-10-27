@@ -231,7 +231,7 @@ class NoteViewsTest {
     assertThat(page.get(1).likedByMe()).isTrue();
     assertThat(page.get(1).replyCount()).isEqualTo(4L);
     assertThat(page.get(1).media())
-        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png", null, null));
   }
 
   @Test
@@ -256,7 +256,7 @@ class NoteViewsTest {
     assertThat(asAuthor.get(0).quotedNote().author()).isEqualTo(them);
     assertThat(asAuthor.get(0).quotedNote().body()).isEqualTo("n50");
     assertThat(asAuthor.get(0).quotedNote().media())
-        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png", null, null));
     assertThat(asAuthor.get(0).media()).isEmpty();
     assertThat(asAuthor.get(0).repostCount()).isEqualTo(2L);
     assertThat(asAuthor.get(1).quotedNote()).isNull();

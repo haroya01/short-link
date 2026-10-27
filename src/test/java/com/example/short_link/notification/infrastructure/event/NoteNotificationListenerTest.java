@@ -49,7 +49,8 @@ class NoteNotificationListenerTest {
         5L,
         "hi",
         type == NoteInteractionEvent.Type.REPLY ? 12L : null,
-        type == NoteInteractionEvent.Type.REPLY ? "me too" : null);
+        type == NoteInteractionEvent.Type.REPLY ? "me too" : null,
+        null);
   }
 
   @Test
@@ -93,7 +94,7 @@ class NoteNotificationListenerTest {
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null));
+                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null, null));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.QUOTE, 3L, null));
 
     verifyNoInteractions(recordUseCase);

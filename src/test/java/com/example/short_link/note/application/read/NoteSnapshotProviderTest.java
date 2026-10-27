@@ -63,7 +63,8 @@ class NoteSnapshotProviderTest {
     assertThat(snapshot.authorUsername()).isEqualTo("yuki");
     assertThat(snapshot.inReplyToId()).isEqualTo(3L);
     assertThat(snapshot.quote()).isEqualTo(new Quote("Essay", "essay", "yuki"));
-    assertThat(snapshot.images()).containsExactly(new Image("https://cdn/k", "image/png", "alt"));
+    assertThat(snapshot.images())
+        .containsExactly(new Image("https://cdn/k", "image/png", "alt", null, null));
   }
 
   @Test
