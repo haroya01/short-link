@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.image.PostImageService;
@@ -31,7 +32,6 @@ import com.example.short_link.post.application.write.LikeCommentUseCase;
 import com.example.short_link.post.application.write.LikePostUseCase;
 import com.example.short_link.post.application.write.RecordPostViewCommand;
 import com.example.short_link.post.application.write.RecordPostViewUseCase;
-import com.example.short_link.post.application.write.ViewContext;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.time.Instant;
@@ -262,7 +262,7 @@ class PostInteractionControllersTest {
         .andExpect(status().isAccepted());
 
     verify(recordPostView)
-        .execute(any(RecordPostViewCommand.class), any(ViewContext.class), any(PostReader.class));
+        .execute(any(RecordPostViewCommand.class), any(VisitRequest.class), any(PostReader.class));
   }
 
   @Test
@@ -276,8 +276,8 @@ class PostInteractionControllersTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isAccepted());
 
-    org.mockito.ArgumentCaptor<ViewContext> ctx =
-        org.mockito.ArgumentCaptor.forClass(ViewContext.class);
+    org.mockito.ArgumentCaptor<VisitRequest> ctx =
+        org.mockito.ArgumentCaptor.forClass(VisitRequest.class);
     verify(recordPostView)
         .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostReader.class));
     org.assertj.core.api.Assertions.assertThat(ctx.getValue().referrer())

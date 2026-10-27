@@ -39,11 +39,11 @@ class ArchUnitRatchetRulesTest {
 
   static final Map<String, Integer> CEILINGS =
       Map.of(
-          "moduleInternalsStayInTheirModule", 9,
+          "moduleInternalsStayInTheirModule", 7,
           "theSystemClockIsReadInConfigAlone", 0,
           "transactionsDoNotReachOutboundClients", 26,
           "springDataRepositoriesStayBehindPorts", 2,
-          "constructorCallsPassFewerThanTenArguments", 139);
+          "constructorCallsPassFewerThanTenArguments", 137);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");

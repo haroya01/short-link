@@ -237,13 +237,10 @@ ExcessiveParameterList|src/main/java/com/example/short_link/post/application/rea
 ExcessiveParameterList|src/main/java/com/example/short_link/post/application/read/PublicFeedItem.java|PublicFeedItem#2=12
 ExcessiveParameterList|src/main/java/com/example/short_link/post/application/read/PublicPostListItem.java|PublicPostListItem#1=12
 ExcessiveParameterList|src/main/java/com/example/short_link/post/application/read/ReadingHistoryEntryView.java|ReadingHistoryEntryView#1=10
-ExcessiveParameterList|src/main/java/com/example/short_link/post/application/write/RecordPostViewUseCase.java|RecordPostViewUseCase#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/post/application/write/UpdatePostMetadataCommand.java|UpdatePostMetadataCommand#1=12
 ExcessiveParameterList|src/main/java/com/example/short_link/post/collection/application/read/DiscoverFeedQueryService.java|view#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/post/infrastructure/persistence/JpaPostRepository.java|searchPublishedTrendingSince#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/post/presentation/PublicPostViewBeaconController.java|recordView#1=15
-ExcessiveParameterList|src/main/java/com/example/short_link/profile/application/visit/ProfileVisitRecorder.java|record#1=12
-ExcessiveParameterList|src/main/java/com/example/short_link/profile/application/visit/ProfileVisitRecorder.java|recordUsername#1=12
 ExcessiveParameterList|src/main/java/com/example/short_link/profile/domain/visit/ProfileVisitEntity.java|ProfileVisitEntity#1=23
 ExcessiveParameterList|src/main/java/com/example/short_link/profile/presentation/visit/PublicProfileVisitController.java|visit#1=11
 NPathComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=524
