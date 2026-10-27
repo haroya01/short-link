@@ -1,5 +1,6 @@
 package com.example.short_link.room.infrastructure.persistence;
 
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.room.domain.RoomEntity;
 import com.example.short_link.room.domain.RoomInvitation;
@@ -26,8 +27,6 @@ import org.springframework.stereotype.Repository;
 class RoomRepositoryAdapter implements RoomRepository {
 
   private static final String PERSON = "u.id, u.username, u.display_name, u.avatar_url";
-
-  private static final int EXCERPT_LENGTH = 80;
 
   @PersistenceContext private EntityManager em;
 
@@ -163,6 +162,15 @@ class RoomRepositoryAdapter implements RoomRepository {
 
   @Override
   public void pin(Long roomId, Long userId, Instant at) {
+    pinnedAt(roomId, userId, at);
+  }
+
+  @Override
+  public void unpin(Long roomId, Long userId) {
+    pinnedAt(roomId, userId, null);
+  }
+
+  private void pinnedAt(Long roomId, Long userId, Instant at) {
     em.createNativeQuery(
             "UPDATE room_member SET pinned_at = :at WHERE room_id = :room AND user_id = :user")
         .setParameter("at", at)
@@ -187,7 +195,7 @@ class RoomRepositoryAdapter implements RoomRepository {
     return ((Number)
             em.createNativeQuery(
                     "SELECT COUNT(*) FROM room_member m JOIN note n ON n.room_id = m.room_id"
-                        + " AND n.id > m.last_read_note_id AND NOT (n.user_id <=> m.user_id)"
+                        + unreadBy("n")
                         + " WHERE m.room_id = :room AND m.user_id = :user")
                 .setParameter("room", roomId)
                 .setParameter("user", userId)
@@ -234,8 +242,8 @@ class RoomRepositoryAdapter implements RoomRepository {
                     + " m.pinned_at IS NOT NULL AS pinned,"
                     + " (SELECT COUNT(*) FROM room_member c WHERE c.room_id = r.id) AS members,"
                     + " (SELECT COUNT(*) FROM note un WHERE un.room_id = r.id"
-                    + " AND un.id > m.last_read_note_id AND NOT (un.user_id <=> m.user_id))"
-                    + " AS unread,"
+                    + unreadBy("un")
+                    + ") AS unread,"
                     + " COALESCE(ln.created_at, r.created_at) AS active_at,"
                     + " ln.id AS note_id, ln.body AS body, ln.content_warning AS warning,"
                     + " ln.created_at AS note_at, lu.id AS author_id, lu.username AS username,"
@@ -477,7 +485,7 @@ class RoomRepositoryAdapter implements RoomRepository {
   // One statement whatever the count: whoever is gone, already in, removed, already asked or
   // declined, or blocked either way with the inviter is left out without a word.
   @Override
-  public int invite(Long roomId, Long inviterId, Collection<Long> userIds, Instant at) {
+  public int addInvitations(Long roomId, Long inviterId, Collection<Long> userIds, Instant at) {
     return em.createNativeQuery(
             "INSERT IGNORE INTO room_invitation (room_id, user_id, inviter_id, created_at)"
                 + " SELECT :room, u.id, :viewer, :at FROM users u"
@@ -637,12 +645,16 @@ class RoomRepositoryAdapter implements RoomRepository {
     return value instanceof Boolean b ? b : value != null && ((Number) value).intValue() != 0;
   }
 
+  // A note the member has not read: past their watermark and written by someone else.
+  private static String unreadBy(String note) {
+    return " AND "
+        + note
+        + ".id > m.last_read_note_id AND NOT ("
+        + note
+        + ".user_id <=> m.user_id)";
+  }
+
   private static String excerpt(String body, String warning) {
-    String text = warning != null && !warning.isBlank() ? warning : body;
-    String flat = text == null ? "" : text.strip().replaceAll("\\s+", " ");
-    if (flat.codePointCount(0, flat.length()) <= EXCERPT_LENGTH) {
-      return flat;
-    }
-    return flat.substring(0, flat.offsetByCodePoints(0, EXCERPT_LENGTH)) + "…";
+    return Excerpt.of(body, warning);
   }
 }

@@ -3,6 +3,7 @@ package com.example.short_link.note.application.write;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
@@ -150,7 +151,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (!received.notifies()) {
       return stored;
     }
-    String excerpt = NoteEntity.excerptOf(received.body());
+    String excerpt = Excerpt.of(received.body());
     if (parent != null && parent.getUserId() != null) {
       events.publishEvent(
           new NoteInteractionEvent(
@@ -250,8 +251,7 @@ class RemoteNoteRecorder implements RemoteNotes {
       media.deleteAllByNoteId(noteId);
       media.saveAll(attached);
     }
-    events.publishEvent(
-        new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(body)));
+    events.publishEvent(new NoteRevisedEvent(noteId, null, remoteActorId, Excerpt.of(body)));
     return true;
   }
 
