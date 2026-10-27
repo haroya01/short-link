@@ -184,7 +184,7 @@ src/main/java/com/example/short_link/federation/application/RemoteActorResolver.
 src/main/java/com/example/short_link/federation/application/RemoteDomainSuggestions.java=2
 src/main/java/com/example/short_link/federation/application/RemoteFollowing.java=7
 src/main/java/com/example/short_link/federation/application/RemoteNoteIntake.java=10
-src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java=24
+src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java=18
 src/main/java/com/example/short_link/federation/application/RemoteParents.java=2
 src/main/java/com/example/short_link/federation/application/RemoteReports.java=2
 src/main/java/com/example/short_link/federation/application/ServerBlockImport.java=3

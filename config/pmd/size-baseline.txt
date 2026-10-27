@@ -1,4 +1,3 @@
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|html#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/read/NoteSnapshotProvider.java|find#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/write/NoteInteractions.java|setLike#1=1
