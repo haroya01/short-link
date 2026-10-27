@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;

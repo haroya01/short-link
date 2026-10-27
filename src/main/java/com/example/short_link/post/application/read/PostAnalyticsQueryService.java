@@ -1,5 +1,8 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.OffsetPeriod;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
@@ -14,6 +17,7 @@ import com.example.short_link.post.exception.PostException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -22,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +47,7 @@ public class PostAnalyticsQueryService {
   private final PostFollowReader followReader;
   private final SeriesRepository seriesRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
+  private final UserAccessLookup users;
   private final Clock clock;
 
   public PostAnalyticsQueryService(
@@ -51,6 +57,7 @@ public class PostAnalyticsQueryService {
       PostFollowReader followReader,
       SeriesRepository seriesRepository,
       SeriesSubscriptionRepository subscriptionRepository,
+      UserAccessLookup users,
       Clock clock) {
     this.postRepository = postRepository;
     this.viewEventRepository = viewEventRepository;
@@ -58,6 +65,7 @@ public class PostAnalyticsQueryService {
     this.followReader = followReader;
     this.seriesRepository = seriesRepository;
     this.subscriptionRepository = subscriptionRepository;
+    this.users = users;
     this.clock = clock;
   }
 
@@ -69,9 +77,18 @@ public class PostAnalyticsQueryService {
     if (!post.isOwnedBy(userId)) {
       throw new PostException(PostErrorCode.PERMISSION_DENIED).with("postId", postId);
     }
-    LocalDate today = LocalDate.now(clock);
-    Instant since = fetchSince(days, today);
-    List<DailyViewCount> sparse = viewEventRepository.countDailyByPostIdSince(postId, since);
+    ZoneId zone = authorZone(userId);
+    Instant now = clock.instant();
+    LocalDate today = LocalDate.ofInstant(now, zone);
+    Instant since = fetchSince(days, today, zone);
+    List<DailyViewCount> sparse =
+        dailyViews(
+            zone,
+            days > 0 ? since : post.getCreatedAt(),
+            now,
+            p ->
+                viewEventRepository.countDailyByPostIdBetween(
+                    postId, p.from(), p.until(), p.offset()));
     Window w = resolveWindow(days, sparse, today);
     List<DailyPoint> daily = fillDaily(sparse, w.from(), today);
     long windowViews = daily.stream().mapToLong(DailyPoint::views).sum();
@@ -94,9 +111,20 @@ public class PostAnalyticsQueryService {
 
   public AuthorAnalyticsOverview overview(Long userId, int days) {
     List<PostEntity> posts = postRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
-    LocalDate today = LocalDate.now(clock);
-    Instant since = fetchSince(days, today);
-    List<DailyViewCount> sparse = viewEventRepository.countDailyByUserIdSince(userId, since);
+    ZoneId zone = authorZone(userId);
+    Instant now = clock.instant();
+    LocalDate today = LocalDate.ofInstant(now, zone);
+    Instant since = fetchSince(days, today, zone);
+    Instant firstPost =
+        posts.stream().map(PostEntity::getCreatedAt).min(Comparator.naturalOrder()).orElse(now);
+    List<DailyViewCount> sparse =
+        dailyViews(
+            zone,
+            days > 0 ? since : firstPost,
+            now,
+            p ->
+                viewEventRepository.countDailyByUserIdBetween(
+                    userId, p.from(), p.until(), p.offset()));
     Window w = resolveWindow(days, sparse, today);
     List<DailyPoint> daily = fillDaily(sparse, w.from(), today);
     long windowViews = daily.stream().mapToLong(DailyPoint::views).sum();
@@ -186,7 +214,7 @@ public class PostAnalyticsQueryService {
       throw new PostException(PostErrorCode.SERIES_PERMISSION_DENIED);
     }
     LocalDate today = LocalDate.now(clock);
-    Instant since = fetchSince(days, today);
+    Instant since = fetchSince(days, today, ZoneOffset.UTC);
     List<DailyViewCount> sparse = subscriptionRepository.countDailyBySeriesIdSince(seriesId, since);
     Window w = resolveWindow(days, sparse, today);
     List<DailyPoint> cumulative = new ArrayList<>();
@@ -264,8 +292,28 @@ public class PostAnalyticsQueryService {
 
   private record Window(LocalDate from, int windowDays) {}
 
-  private Instant fetchSince(int days, LocalDate today) {
-    return days <= 0 ? Instant.EPOCH : startOfDay(today.minusDays(clampWindow(days) - 1L));
+  private Instant fetchSince(int days, LocalDate today, ZoneId zone) {
+    return days <= 0
+        ? Instant.EPOCH
+        : today.minusDays(clampWindow(days) - 1L).atStartOfDay(zone).toInstant();
+  }
+
+  private ZoneId authorZone(Long userId) {
+    return ReportZones.zoneOf(users.timezone(userId).orElse(null));
+  }
+
+  private static List<DailyViewCount> dailyViews(
+      ZoneId zone, Instant from, Instant now, Function<OffsetPeriod, List<DailyViewCount>> query) {
+    Instant until = now.truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
+    Map<LocalDate, Long> byDate = new HashMap<>();
+    for (OffsetPeriod period : OffsetPeriod.between(zone, from, until)) {
+      for (DailyViewCount c : query.apply(period)) {
+        byDate.merge(c.date(), c.views(), Long::sum);
+      }
+    }
+    return byDate.entrySet().stream()
+        .map(e -> new DailyViewCount(e.getKey(), e.getValue()))
+        .toList();
   }
 
   private Window resolveWindow(int days, List<DailyViewCount> sparse, LocalDate today) {
@@ -276,10 +324,6 @@ public class PostAnalyticsQueryService {
     LocalDate from =
         sparse.stream().map(DailyViewCount::date).min(Comparator.naturalOrder()).orElse(today);
     return new Window(from, (int) (ChronoUnit.DAYS.between(from, today) + 1));
-  }
-
-  private static Instant startOfDay(LocalDate date) {
-    return date.atStartOfDay(ZoneOffset.UTC).toInstant();
   }
 
   static List<DailyPoint> fillDaily(List<DailyViewCount> sparse, LocalDate from, LocalDate to) {

@@ -92,6 +92,19 @@ class RemoteAccountFinderTest {
   }
 
   @Test
+  void knownReadsOnlyTheStoredAccountAndAsksNoServer() {
+    RemoteActorEntity stored = alice();
+    when(actors.findByAcct("alice", "mastodon.example"))
+        .thenReturn(Optional.of(stored), Optional.empty());
+
+    assertThat(finder().known("@alice@mastodon.example")).contains(stored);
+    assertThat(finder().known("alice@mastodon.example")).isEmpty();
+    assertThat(finder().known("yuki@kurl.me")).isEmpty();
+    verify(actors, times(2)).findByAcct("alice", "mastodon.example");
+    verifyNoInteractions(resolver, documents);
+  }
+
+  @Test
   void aKnownAccountIsRefreshedThroughTheResolverWithoutWebFinger() {
     RemoteActorEntity cached = alice();
     when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.of(cached));

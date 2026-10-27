@@ -8,6 +8,7 @@ import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -49,6 +50,18 @@ public class NoteImages {
         key,
         publicUrls.forKey(key),
         policy.maxBytes());
+  }
+
+  // Storage is asked over the network, so callers verify before a transaction opens: a slow
+  // storage must not hold a pooled connection.
+  List<StoredImage> verifyAll(Long userId, List<NoteDraft.Image> attached) {
+    if (attached == null) {
+      return List.of();
+    }
+    if (attached.size() > NoteMediaEntity.MAX_PER_NOTE) {
+      throw new NoteException(NoteErrorCode.NOTE_TOO_MANY_IMAGES, NoteMediaEntity.MAX_PER_NOTE);
+    }
+    return attached.stream().map(image -> verify(userId, image)).toList();
   }
 
   StoredImage verify(Long userId, NoteDraft.Image image) {

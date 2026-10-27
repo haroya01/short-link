@@ -150,7 +150,7 @@ public class CommentNotifications {
       Set<Long> recipients,
       Consumer<Long> publish) {
     for (String handle : handles) {
-      Long recipient = users.findByUsername(handle).map(UserSummary::id).orElse(null);
+      Long recipient = users.findActiveByUsername(handle).map(UserSummary::id).orElse(null);
       if (recipient != null
           && !recipient.equals(actorId)
           && reads(post, recipient)

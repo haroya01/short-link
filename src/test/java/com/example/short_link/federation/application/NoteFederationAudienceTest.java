@@ -25,6 +25,8 @@ import java.util.function.Consumer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 class NoteFederationAudienceTest {
@@ -123,7 +125,7 @@ class NoteFederationAudienceTest {
         new NoteFederation(
             notes,
             parents,
-            mock(RemoteAccountFinder.class),
+            new NoteAddressing(parents, mock(RemoteAccountFinder.class)),
             localActors,
             settings,
             actors,
@@ -133,7 +135,8 @@ class NoteFederationAudienceTest {
                     new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
             deliveries,
             JSON,
-            Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC)));
+            Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC),
+            new TransactionTemplate(mock(PlatformTransactionManager.class))));
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<String>> inboxes = ArgumentCaptor.forClass(List.class);

@@ -185,7 +185,7 @@ public class PublicPostQueryService {
       UserSummary author, PostEntity post, PublicPostListItem item) {
     List<PostBlockEntity> entities =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
-    Map<Long, CtaEntity> ctaMap = hydrateCtas(entities);
+    Map<Long, CtaEntity> ctaMap = hydrateCtas(post.getUserId(), entities);
     List<PublicPostBlockView> blocks = new ArrayList<>(entities.size());
     for (PostBlockEntity entity : entities) {
       blocks.add(buildBlockView(entity, ctaMap));
@@ -238,13 +238,16 @@ public class PublicPostQueryService {
         : new PublicPostSeriesNav.ItemLink(entry.type().name(), null, entry.refId(), entry.title());
   }
 
-  private Map<Long, CtaEntity> hydrateCtas(List<PostBlockEntity> entities) {
+  private Map<Long, CtaEntity> hydrateCtas(Long authorId, List<PostBlockEntity> entities) {
     Map<Long, CtaEntity> ctaMap = new HashMap<>();
     for (PostBlockEntity entity : entities) {
       if (entity.getType() != PostBlockType.CTA_REF) continue;
       Long ctaId = parseCtaId(entity.getContent());
       if (ctaId == null || ctaMap.containsKey(ctaId)) continue;
-      ctaRepository.findById(ctaId).ifPresent(c -> ctaMap.put(ctaId, c));
+      ctaRepository
+          .findById(ctaId)
+          .filter(c -> c.isOwnedBy(authorId))
+          .ifPresent(c -> ctaMap.put(ctaId, c));
     }
     return ctaMap;
   }
