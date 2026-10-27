@@ -11,9 +11,8 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Mastodon's data export, file for file, so another server's import reads them as they are: the
-// accounts a member follows, blocks and mutes, the servers they blocked, their bookmarks and their
-// lists. Accounts here are written as name@this-server.
+// Mastodon's data export, file for file, so another server's import reads them as they are.
+// Accounts here are written as name@this-server.
 @Service
 public class AccountExportService {
 

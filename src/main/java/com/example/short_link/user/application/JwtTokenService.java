@@ -115,8 +115,8 @@ public class JwtTokenService {
         Long.valueOf(claims.getSubject()), claims.getId(), claims.get(CLAIM_SESSION, String.class));
   }
 
-  // Issued after primary authentication for 2FA users. Its distinct type claim prevents use as an
-  // access token; successful second-factor verification exchanges it for a session.
+  // Its own type claim keeps it from passing as an access token; only second-factor verification
+  // exchanges it for a session.
   public String createTwoFactorChallengeToken(Long userId) {
     Instant now = Instant.now();
     return Jwts.builder()

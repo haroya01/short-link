@@ -15,6 +15,6 @@ public interface FollowRequestRepository {
 
   List<PendingFollowRequest> pending(Long followingId, int offset, int limit);
 
-  // Every waiting request becomes a follow — what unlocking an account does.
+  // Turns every waiting request into a follow, as unlocking the account does.
   int approveAll(Long followingId);
 }
