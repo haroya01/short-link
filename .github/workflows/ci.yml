@@ -92,6 +92,14 @@ jobs:
 
       - run: ./gradlew build -x test -x spotlessCheck
 
+      - name: Scan runtime dependencies for known vulnerabilities
+        run: |
+          ./gradlew --init-script config/osv/lockfile.gradle dependencies --configuration runtimeClasspath --write-locks --quiet > /dev/null
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
+          echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  osv-scanner" | sha256sum -c -
+          chmod +x osv-scanner
+          ./osv-scanner scan --config=config/osv/osv-scanner.toml --lockfile=build/osv/gradle.lockfile
+
       - name: Stop backing services
         if: always()
         run: docker compose -f resources/docker-compose.yml down -v
