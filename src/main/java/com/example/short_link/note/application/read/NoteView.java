@@ -45,10 +45,6 @@ public record NoteView(
 
   public record Media(
       String url, String altText, String contentType, Integer width, Integer height) {
-    public Media(String url, String altText, String contentType) {
-      this(url, altText, contentType, null, null);
-    }
-
     public static Media of(NoteMediaEntity image) {
       return new Media(
           image.getUrl(),

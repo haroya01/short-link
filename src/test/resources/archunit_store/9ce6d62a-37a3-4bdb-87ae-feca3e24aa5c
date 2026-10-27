@@ -3,15 +3,6 @@ com.example.short_link.admin.infrastructure.persistence.JpaAdminAnalyticsReposit
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBlogMetricsRepository reaches com.example.short_link.post.domain.PostEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBrowseRepository reaches com.example.short_link.user.domain.UserEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminMetricsRepository reaches com.example.short_link.link.stats.domain.ClickEventEntity
-com.example.short_link.notification.infrastructure.ApnsPushSender reaches com.example.short_link.user.domain.repository.DeviceTokenRepository
-com.example.short_link.notification.infrastructure.WebPushSender reaches com.example.short_link.user.domain.WebPushSubscriptionEntity
-com.example.short_link.notification.infrastructure.WebPushSender reaches com.example.short_link.user.domain.repository.WebPushSubscriptionRepository
-com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.notification.scheduler.LinkExpiryNotificationJob reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.notification.scheduler.LinkExpiryNotificationJob reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.post.application.read.PublicPostQueryService reaches com.example.short_link.cta.domain.CtaEntity
 com.example.short_link.post.application.read.PublicPostQueryService reaches com.example.short_link.cta.domain.repository.CtaRepository
 com.example.short_link.profile.application.MyProfileMapper reaches com.example.short_link.user.domain.UserEntity

@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -29,18 +28,7 @@ public class FederationLeaving {
   private final JsonMapper json;
   private final Clock clock;
 
-  @Autowired
   public FederationLeaving(
-      FederationActorRepository actors,
-      FederationFollowerRepository followers,
-      RemoteFollowing following,
-      DeliveryQueue deliveries,
-      FederationUrls urls,
-      JsonMapper json) {
-    this(actors, followers, following, deliveries, urls, json, Clock.systemUTC());
-  }
-
-  FederationLeaving(
       FederationActorRepository actors,
       FederationFollowerRepository followers,
       RemoteFollowing following,

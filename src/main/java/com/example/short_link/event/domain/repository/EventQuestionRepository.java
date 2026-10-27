@@ -5,7 +5,7 @@ import java.util.List;
 
 public interface EventQuestionRepository {
 
-  List<EventQuestionEntity> saveAll(List<EventQuestionEntity> questions);
+  <S extends EventQuestionEntity> List<S> saveAll(Iterable<S> questions);
 
   List<EventQuestionEntity> findAllByEventIdOrderByPosition(Long eventId);
 

@@ -26,28 +26,28 @@ public class NotificationTargetCodec {
       case SERIES_SUBSCRIBE -> jsonMapper.readValue(payload, NotificationSeriesRef.class);
       case CONNECTED, PATH_GREW -> jsonMapper.readValue(payload, NotificationCollectionRef.class);
       case LIKE,
-              COMMENT,
-              FOLLOW,
-              REPLY,
-              NEW_POST,
-              MENTION,
-              REMOTE_FOLLOW,
-              FOLLOW_REQUEST,
-              NOTE_EMBED,
-              COMMENT_LIKE,
-              HIGHLIGHT,
-              POST_FIRST_READER,
-              POST_READ_MILESTONE ->
+          COMMENT,
+          FOLLOW,
+          REPLY,
+          NEW_POST,
+          MENTION,
+          REMOTE_FOLLOW,
+          FOLLOW_REQUEST,
+          NOTE_EMBED,
+          COMMENT_LIKE,
+          HIGHLIGHT,
+          POST_FIRST_READER,
+          POST_READ_MILESTONE ->
           jsonMapper.readValue(payload, NotificationPostRef.class);
       case POST_QUOTE,
-              NOTE_LIKE,
-              NOTE_REPOST,
-              NOTE_REPLY,
-              NOTE_QUOTE,
-              NOTE_MENTION,
-              NOTE_POLL,
-              NOTE_POST,
-              NOTE_EDIT ->
+          NOTE_LIKE,
+          NOTE_REPOST,
+          NOTE_REPLY,
+          NOTE_QUOTE,
+          NOTE_MENTION,
+          NOTE_POLL,
+          NOTE_POST,
+          NOTE_EDIT ->
           jsonMapper.readValue(payload, NotificationNoteRef.class);
     };
   }

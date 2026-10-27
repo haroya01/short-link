@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.Locale;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -21,12 +20,7 @@ public class DeliveryQueue {
   private final FederationDeliveryRepository deliveries;
   private final Clock clock;
 
-  @Autowired
-  public DeliveryQueue(FederationDeliveryRepository deliveries) {
-    this(deliveries, Clock.systemUTC());
-  }
-
-  DeliveryQueue(FederationDeliveryRepository deliveries, Clock clock) {
+  public DeliveryQueue(FederationDeliveryRepository deliveries, Clock clock) {
     this.deliveries = deliveries;
     this.clock = clock;
   }
