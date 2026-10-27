@@ -59,6 +59,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -119,6 +120,7 @@ class NoteCommandServiceTest {
         connections,
         seriesItems,
         events,
+        FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -236,10 +238,12 @@ class NoteCommandServiceTest {
     saving();
     QuotedPost quoted = new QuotedPost(5L, "Essay", "essay", "writer", 3L);
     when(quotedPosts.publishedByIds(Set.of(5L))).thenReturn(Map.of(5L, quoted));
-    when(images.verify(7L, new NoteDraft.Image("k1", "first")))
-        .thenReturn(new NoteImages.StoredImage("k1", "https://cdn/k1", "image/png", "first"));
-    when(images.verify(7L, new NoteDraft.Image("k2", null)))
-        .thenReturn(new NoteImages.StoredImage("k2", "https://cdn/k2", "image/jpeg", null));
+    when(images.verifyAll(
+            7L, List.of(new NoteDraft.Image("k1", "first"), new NoteDraft.Image("k2", null))))
+        .thenReturn(
+            List.of(
+                new NoteImages.StoredImage("k1", "https://cdn/k1", "image/png", "first"),
+                new NoteImages.StoredImage("k2", "https://cdn/k2", "image/jpeg", null)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
     NoteView view =
@@ -289,8 +293,8 @@ class NoteCommandServiceTest {
   @Test
   void anImageAloneIsEnoughButNothingAtAllIsNot() {
     saving();
-    when(images.verify(any(), any()))
-        .thenReturn(new NoteImages.StoredImage("k", "u", "image/png", null));
+    when(images.verifyAll(any(), any()))
+        .thenReturn(List.of(new NoteImages.StoredImage("k", "u", "image/png", null)));
     service().create(7L, new NoteDraft(null, List.of(new NoteDraft.Image("k", null)), null, null));
 
     assertThatThrownBy(() -> service().create(7L, new NoteDraft("   ", null, null, null)))
@@ -313,20 +317,41 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void atMostFourImages() {
-    List<NoteDraft.Image> five =
-        List.of(
-            new NoteDraft.Image("a", null),
-            new NoteDraft.Image("b", null),
-            new NoteDraft.Image("c", null),
-            new NoteDraft.Image("d", null),
-            new NoteDraft.Image("e", null));
+  void storageIsAskedAboutImagesBeforeTheTransactionOpensAndTheNoteIsWrittenInsideIt() {
+    List<String> seen = new ArrayList<>();
+    AtomicLong ids = new AtomicLong(100L);
+    Map<Long, NoteEntity> saved = new HashMap<>();
+    when(images.verifyAll(any(), any()))
+        .thenAnswer(
+            inv -> {
+              seen.add("storage " + FakeTransactions.where());
+              return List.of(new NoteImages.StoredImage("k", "u", "image/png", null));
+            });
+    when(notes.save(any()))
+        .thenAnswer(
+            inv -> {
+              seen.add("save " + FakeTransactions.where());
+              NoteEntity note = inv.getArgument(0);
+              long id = ids.getAndIncrement();
+              ReflectionTestUtils.setField(note, "id", id);
+              saved.put(id, note);
+              return note;
+            });
+    when(notes.findById(anyLong()))
+        .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
+    NoteDraft photo = new NoteDraft("사진", List.of(new NoteDraft.Image("k", null)), null, null);
 
-    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", five, null, null)))
-        .isInstanceOfSatisfying(
-            NoteException.class,
-            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_TOO_MANY_IMAGES));
-    verify(notes, never()).save(any());
+    service().create(7L, photo);
+    service().createThread(7L, List.of(photo, photo));
+
+    assertThat(seen)
+        .containsExactly(
+            "storage outside",
+            "save inside",
+            "storage outside",
+            "storage outside",
+            "save inside",
+            "save inside");
   }
 
   @Test
@@ -603,8 +628,8 @@ class NoteCommandServiceTest {
     service().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));
     verify(events).publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/a"));
 
-    when(images.verify(any(), any()))
-        .thenReturn(new NoteImages.StoredImage("k", "u", "image/png", null));
+    when(images.verifyAll(any(), any()))
+        .thenReturn(List.of(new NoteImages.StoredImage("k", "u", "image/png", null)));
     service()
         .create(
             7L,

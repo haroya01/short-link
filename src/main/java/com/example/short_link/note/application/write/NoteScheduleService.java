@@ -30,6 +30,7 @@ public class NoteScheduleService {
 
   private final NoteScheduleRepository schedules;
   private final NoteCommandService command;
+  private final NoteImages images;
   private final JsonMapper json;
   private final TransactionTemplate transaction;
   private final Clock clock;
@@ -47,20 +48,26 @@ public class NoteScheduleService {
       Long quotedPostId,
       String failure) {}
 
-  @Transactional
   public View schedule(Long userId, NoteDraft draft, Instant at) {
     Instant when = ahead(at);
-    Instant day = when.truncatedTo(ChronoUnit.DAYS);
-    NoteScheduleRepository.Load load = schedules.load(userId, day, day.plus(1, ChronoUnit.DAYS));
-    if (load.pending() >= NoteScheduleEntity.MAX_PENDING) {
-      throw new NoteException(NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PENDING);
-    }
-    if (load.onDay() >= NoteScheduleEntity.MAX_PER_DAY) {
-      throw new NoteException(NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PER_DAY);
-    }
-    command.validate(userId, draft);
-    return view(
-        schedules.save(new NoteScheduleEntity(userId, when, json.writeValueAsString(draft))));
+    List<NoteImages.StoredImage> stored = images.verifyAll(userId, draft.images());
+    return transaction.execute(
+        status -> {
+          Instant day = when.truncatedTo(ChronoUnit.DAYS);
+          NoteScheduleRepository.Load load =
+              schedules.load(userId, day, day.plus(1, ChronoUnit.DAYS));
+          if (load.pending() >= NoteScheduleEntity.MAX_PENDING) {
+            throw new NoteException(
+                NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PENDING);
+          }
+          if (load.onDay() >= NoteScheduleEntity.MAX_PER_DAY) {
+            throw new NoteException(
+                NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PER_DAY);
+          }
+          command.validate(userId, draft, stored);
+          return view(
+              schedules.save(new NoteScheduleEntity(userId, when, json.writeValueAsString(draft))));
+        });
   }
 
   @Transactional(readOnly = true)
@@ -89,7 +96,7 @@ public class NoteScheduleService {
     int published = 0;
     for (Long id : schedules.due(clock.instant(), BATCH)) {
       try {
-        if (Boolean.TRUE.equals(transaction.execute(status -> publish(id)))) {
+        if (publish(id)) {
           published++;
         }
       } catch (RuntimeException e) {
@@ -109,13 +116,28 @@ public class NoteScheduleService {
   }
 
   private boolean publish(Long id) {
-    Optional<NoteScheduleEntity> row = schedules.findById(id);
-    if (row.isEmpty() || row.get().getFailure() != null) {
+    Optional<NoteScheduleEntity> due = pending(id);
+    if (due.isEmpty()) {
       return false;
     }
-    command.create(row.get().getUserId(), json.readValue(row.get().getDraft(), NoteDraft.class));
-    schedules.delete(row.get());
-    return true;
+    Long userId = due.get().getUserId();
+    NoteDraft draft = json.readValue(due.get().getDraft(), NoteDraft.class);
+    List<NoteImages.StoredImage> stored = images.verifyAll(userId, draft.images());
+    return Boolean.TRUE.equals(
+        transaction.execute(
+            status -> {
+              Optional<NoteScheduleEntity> row = pending(id);
+              if (row.isEmpty()) {
+                return false;
+              }
+              command.write(userId, draft, stored);
+              schedules.delete(row.get());
+              return true;
+            }));
+  }
+
+  private Optional<NoteScheduleEntity> pending(Long id) {
+    return schedules.findById(id).filter(row -> row.getFailure() == null);
   }
 
   private Instant ahead(Instant at) {
