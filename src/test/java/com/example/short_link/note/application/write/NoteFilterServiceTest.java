@@ -47,7 +47,7 @@ class NoteFilterServiceTest {
 
   @Test
   void aFilterKeepsItsTrimmedPhraseContextsAndActionAndWarnsByDefault() {
-    when(filters.count(7L)).thenReturn(0L);
+    when(filters.countByUserId(7L)).thenReturn(0L);
     when(filters.save(any()))
         .thenAnswer(
             inv -> {
@@ -89,7 +89,7 @@ class NoteFilterServiceTest {
 
   @Test
   void anOwnerHasAtMostAHundredFilters() {
-    when(filters.count(7L)).thenReturn(100L);
+    when(filters.countByUserId(7L)).thenReturn(100L);
 
     assertThatThrownBy(
             () -> service().create(7L, new Draft("x", null, List.of("home"), null, null)))
@@ -103,8 +103,8 @@ class NoteFilterServiceTest {
     NoteFilterEntity filter =
         new NoteFilterEntity(7L, "옛 말", false, EnumSet.of(Context.HOME), Action.WARN, null);
     ReflectionTestUtils.setField(filter, "id", 3L);
-    when(filters.owned(3L, 7L)).thenReturn(Optional.of(filter));
-    when(filters.owned(3L, 8L)).thenReturn(Optional.empty());
+    when(filters.findByIdAndUserId(3L, 7L)).thenReturn(Optional.of(filter));
+    when(filters.findByIdAndUserId(3L, 8L)).thenReturn(Optional.empty());
 
     FilterView changed =
         service()
