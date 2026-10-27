@@ -4,6 +4,8 @@ import com.example.short_link.room.application.write.RoomInviteService.JoinResul
 import com.example.short_link.room.application.write.RoomInviteService.Joined;
 import com.example.short_link.room.domain.RoomEntity;
 import com.example.short_link.room.domain.RoomInvitee;
+import com.example.short_link.room.domain.repository.RoomInvitationRepository;
+import com.example.short_link.room.domain.repository.RoomInviteRepository;
 import com.example.short_link.room.domain.repository.RoomRepository;
 import com.example.short_link.room.exception.RoomErrorCode;
 import com.example.short_link.room.exception.RoomException;
@@ -24,6 +26,8 @@ public class RoomInvitationService {
   static final int MAX_AT_ONCE = 20;
 
   private final RoomRepository rooms;
+  private final RoomInviteRepository invites;
+  private final RoomInvitationRepository invitations;
   private final RoomWriteGuard guard;
   private final Clock clock;
 
@@ -37,11 +41,11 @@ public class RoomInvitationService {
     }
     guard.locked(roomId);
     guard.requireMember(userId, roomId);
-    if (rooms.countInvitees(roomId) + ids.size() > RoomEntity.MAX_MEMBERS) {
+    if (invitations.countInvitees(roomId) + ids.size() > RoomEntity.MAX_MEMBERS) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATIONS_PILED, RoomEntity.MAX_MEMBERS);
     }
-    rooms.addInvitations(roomId, userId, ids, now());
-    return rooms.invitees(roomId);
+    invitations.addInvitations(roomId, userId, ids, now());
+    return invitations.invitees(roomId);
   }
 
   @Transactional
@@ -49,14 +53,14 @@ public class RoomInvitationService {
     RoomEntity room = guard.locked(roomId);
     guard.requireMember(userId, roomId);
     boolean mayCancel =
-        rooms
+        invitations
             .inviterOf(roomId, inviteeId)
             .filter(inviter -> inviter.equals(userId) || room.isOwnedBy(userId))
             .isPresent();
     if (!mayCancel) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
     }
-    rooms.dropInvitation(roomId, inviteeId);
+    invitations.dropInvitation(roomId, inviteeId);
   }
 
   // An invitation whose sender is no longer a member is dropped, and stays dropped though the
@@ -68,31 +72,31 @@ public class RoomInvitationService {
             .lock(roomId)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId));
     Long inviter =
-        rooms
+        invitations
             .inviterOf(roomId, userId)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId));
     if (!rooms.isMember(roomId, inviter)) {
-      rooms.dropInvitation(roomId, userId);
+      invitations.dropInvitation(roomId, userId);
       throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
     }
     if (rooms.isMember(roomId, userId)) {
-      rooms.dropInvitation(roomId, userId);
+      invitations.dropInvitation(roomId, userId);
       return new JoinResult(Joined.ALREADY_MEMBER, roomId);
     }
     if (rooms.isRemoved(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REMOVED);
     }
-    if (rooms.hasRequested(roomId, userId)) {
-      rooms.dropInvitation(roomId, userId);
+    if (invites.hasRequested(roomId, userId)) {
+      invitations.dropInvitation(roomId, userId);
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     if (rooms.countMembers(roomId) >= RoomEntity.MAX_MEMBERS) {
       throw new RoomException(RoomErrorCode.ROOM_FULL, RoomEntity.MAX_MEMBERS);
     }
-    rooms.dropInvitation(roomId, userId);
+    invitations.dropInvitation(roomId, userId);
     Instant now = now();
     if (room.isApprovalRequired() && !room.isOwnedBy(inviter)) {
-      rooms.request(roomId, userId, null, now);
+      invites.request(roomId, userId, null, now);
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     rooms.addMember(roomId, userId, now);
@@ -102,7 +106,7 @@ public class RoomInvitationService {
   // A declined invitation stays on record so the same room cannot ask again.
   @Transactional
   public void decline(Long userId, Long roomId) {
-    if (!rooms.declineInvitation(roomId, userId, now())) {
+    if (!invitations.declineInvitation(roomId, userId, now())) {
       throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
     }
   }

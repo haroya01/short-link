@@ -623,6 +623,9 @@ src/main/java/com/example/short_link/profile/presentation/visit/PublicProfileSta
 src/main/java/com/example/short_link/room/application/read/RoomQueryService.java=1
 src/main/java/com/example/short_link/room/application/write/RoomInvitationService.java=4
 src/main/java/com/example/short_link/room/application/write/RoomInviteService.java=2
+src/main/java/com/example/short_link/room/domain/repository/RoomInvitationRepository.java=4
+src/main/java/com/example/short_link/room/domain/repository/RoomRepository.java=4
+src/main/java/com/example/short_link/room/domain/repository/RoomSuggestionRepository.java=2
 src/main/java/com/example/short_link/room/infrastructure/persistence/RoomUserDataEraser.java=1
 src/main/java/com/example/short_link/user/application/JwtTokenService.java=2
 src/main/java/com/example/short_link/user/application/dto/AppleIdentity.java=2

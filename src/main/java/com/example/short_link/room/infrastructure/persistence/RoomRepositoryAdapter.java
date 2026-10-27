@@ -1,12 +1,12 @@
 package com.example.short_link.room.infrastructure.persistence;
 
+import static com.example.short_link.room.infrastructure.persistence.RoomPeopleRows.PERSON;
+import static com.example.short_link.room.infrastructure.persistence.RoomPeopleRows.people;
+import static com.example.short_link.room.infrastructure.persistence.RoomPeopleRows.person;
+import static com.example.short_link.room.infrastructure.persistence.RoomPeopleRows.truth;
+
 import com.example.short_link.common.note.Excerpt;
-import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.room.domain.RoomEntity;
-import com.example.short_link.room.domain.RoomInvitation;
-import com.example.short_link.room.domain.RoomInviteEntity;
-import com.example.short_link.room.domain.RoomInvitee;
-import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.domain.RoomPerson;
 import com.example.short_link.room.domain.RoomSummary;
 import com.example.short_link.room.domain.repository.RoomRepository;
@@ -25,8 +25,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 class RoomRepositoryAdapter implements RoomRepository {
-
-  private static final String PERSON = "u.id, u.username, u.display_name, u.avatar_url";
 
   @PersistenceContext private EntityManager em;
 
@@ -123,7 +121,7 @@ class RoomRepositoryAdapter implements RoomRepository {
         .setParameter("user", userId)
         .getResultList()
         .stream()
-        .anyMatch(RoomRepositoryAdapter::truth);
+        .anyMatch(RoomPeopleRows::truth);
   }
 
   @Override
@@ -297,114 +295,6 @@ class RoomRepositoryAdapter implements RoomRepository {
   }
 
   @Override
-  public RoomInviteEntity save(RoomInviteEntity invite) {
-    em.persist(invite);
-    return invite;
-  }
-
-  @Override
-  public Optional<RoomInviteEntity> inviteByCode(String code) {
-    return em.createQuery(
-            "select i from RoomInviteEntity i where i.code = :code", RoomInviteEntity.class)
-        .setParameter("code", code)
-        .getResultStream()
-        .findFirst();
-  }
-
-  @Override
-  public Optional<RoomInviteEntity> lockInvite(String code) {
-    return em.createQuery(
-            "select i from RoomInviteEntity i where i.code = :code", RoomInviteEntity.class)
-        .setParameter("code", code)
-        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-        .getResultStream()
-        .findFirst();
-  }
-
-  @Override
-  public Optional<RoomInviteEntity> invite(Long roomId, Long inviteId) {
-    return Optional.ofNullable(em.find(RoomInviteEntity.class, inviteId))
-        .filter(invite -> invite.getRoomId().equals(roomId));
-  }
-
-  @Override
-  public List<RoomInviteEntity> invites(Long roomId) {
-    return em.createQuery(
-            "select i from RoomInviteEntity i where i.roomId = :room order by i.id desc",
-            RoomInviteEntity.class)
-        .setParameter("room", roomId)
-        .getResultList();
-  }
-
-  @Override
-  public void disableInvitesBy(Long roomId, Long creatorId, Instant at) {
-    em.createNativeQuery(
-            "UPDATE room_invite SET disabled_at = :at"
-                + " WHERE room_id = :room AND creator_id = :creator AND disabled_at IS NULL")
-        .setParameter("at", at)
-        .setParameter("room", roomId)
-        .setParameter("creator", creatorId)
-        .executeUpdate();
-  }
-
-  @Override
-  public boolean request(Long roomId, Long userId, Long inviteId, Instant at) {
-    return em.createNativeQuery(
-                "INSERT IGNORE INTO room_join_request (room_id, user_id, invite_id, created_at)"
-                    + " VALUES (:room, :user, :invite, :at)")
-            .setParameter("room", roomId)
-            .setParameter("user", userId)
-            .setParameter("invite", inviteId)
-            .setParameter("at", at)
-            .executeUpdate()
-        > 0;
-  }
-
-  @Override
-  public boolean hasRequested(Long roomId, Long userId) {
-    return !em.createNativeQuery(
-            "SELECT 1 FROM room_join_request WHERE room_id = :room AND user_id = :user")
-        .setParameter("room", roomId)
-        .setParameter("user", userId)
-        .getResultList()
-        .isEmpty();
-  }
-
-  @Override
-  public boolean withdrawRequest(Long roomId, Long userId) {
-    return em.createNativeQuery(
-                "DELETE FROM room_join_request WHERE room_id = :room AND user_id = :user")
-            .setParameter("room", roomId)
-            .setParameter("user", userId)
-            .executeUpdate()
-        > 0;
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public List<RoomJoinRequest> requests(Long roomId) {
-    List<Object[]> rows =
-        em.createNativeQuery(
-                "SELECT u.id AS id, u.username AS username, u.display_name AS display_name,"
-                    + " u.avatar_url AS avatar_url, q.created_at AS requested_at"
-                    + " FROM room_join_request q JOIN users u ON u.id = q.user_id"
-                    + " WHERE q.room_id = :room AND u.deleted_at IS NULL ORDER BY q.created_at")
-            .setParameter("room", roomId)
-            .unwrap(NativeQuery.class)
-            .addScalar("id", Long.class)
-            .addScalar("username", String.class)
-            .addScalar("display_name", String.class)
-            .addScalar("avatar_url", String.class)
-            .addScalar("requested_at", Instant.class)
-            .getResultList();
-    List<RoomJoinRequest> requests = new ArrayList<>(rows.size());
-    for (Object[] c : rows) {
-      requests.add(new RoomJoinRequest(person(c), (Instant) c[4]));
-    }
-    return requests;
-  }
-
-  @Override
   public void markRemoved(Long roomId, Long userId, Instant at) {
     em.createNativeQuery(
             "INSERT IGNORE INTO room_removal (room_id, user_id, created_at)"
@@ -423,215 +313,6 @@ class RoomRepositoryAdapter implements RoomRepository {
         .setParameter("user", userId)
         .getResultList()
         .isEmpty();
-  }
-
-  @Override
-  public Optional<RoomPerson> person(Long userId) {
-    return people(
-            em.createNativeQuery(
-                    "SELECT "
-                        + PERSON
-                        + " FROM users u WHERE u.id = :user AND u.deleted_at IS NULL")
-                .setParameter("user", userId)
-                .getResultList())
-        .stream()
-        .findFirst();
-  }
-
-  @Override
-  public List<RoomPerson> friendsWithoutARoom(Long userId, int limit) {
-    return people(
-        em.createNativeQuery(
-                "SELECT "
-                    + PERSON
-                    + " FROM user_follow a"
-                    + " JOIN user_follow b ON b.follower_id = a.following_id"
-                    + " AND b.following_id = a.follower_id"
-                    + " JOIN users u ON u.id = a.following_id"
-                    + " AND u.deleted_at IS NULL AND u.username IS NOT NULL"
-                    + " WHERE a.follower_id = :viewer"
-                    + " AND NOT EXISTS (SELECT 1 FROM room_suggestion_dismissal d"
-                    + " WHERE d.user_id = :viewer AND d.friend_id = u.id)"
-                    + " AND NOT EXISTS (SELECT 1 FROM room_member mine"
-                    + " JOIN room_member theirs ON theirs.room_id = mine.room_id"
-                    + " WHERE mine.user_id = :viewer AND theirs.user_id = u.id)"
-                    + HeardSql.unblocked("u.id")
-                    + " ORDER BY GREATEST(a.created_at, b.created_at) DESC, u.id DESC")
-            .setParameter("viewer", userId)
-            .setMaxResults(limit)
-            .getResultList());
-  }
-
-  @Override
-  public void dismissSuggestions(Long userId, Collection<Long> friendIds, Instant at) {
-    for (Long friendId : friendIds) {
-      em.createNativeQuery(
-              "INSERT IGNORE INTO room_suggestion_dismissal (user_id, friend_id, created_at)"
-                  + " VALUES (:user, :friend, :at)")
-          .setParameter("user", userId)
-          .setParameter("friend", friendId)
-          .setParameter("at", at)
-          .executeUpdate();
-    }
-  }
-
-  @Override
-  public int addInvitations(Long roomId, Long inviterId, Collection<Long> userIds, Instant at) {
-    return em.createNativeQuery(
-            "INSERT IGNORE INTO room_invitation (room_id, user_id, inviter_id, created_at)"
-                + " SELECT :room, u.id, :viewer, :at FROM users u"
-                + " WHERE u.id IN (:ids) AND u.id <> :viewer"
-                + " AND u.deleted_at IS NULL AND u.username IS NOT NULL"
-                + " AND NOT EXISTS (SELECT 1 FROM room_member m"
-                + " WHERE m.room_id = :room AND m.user_id = u.id)"
-                + " AND NOT EXISTS (SELECT 1 FROM room_removal r"
-                + " WHERE r.room_id = :room AND r.user_id = u.id)"
-                + HeardSql.unblocked("u.id"))
-        .setParameter("room", roomId)
-        .setParameter("viewer", inviterId)
-        .setParameter("ids", userIds)
-        .setParameter("at", at)
-        .executeUpdate();
-  }
-
-  @Override
-  public long countInvitees(Long roomId) {
-    return ((Number)
-            em.createNativeQuery(
-                    "SELECT COUNT(*) FROM room_invitation"
-                        + " WHERE room_id = :room AND declined_at IS NULL")
-                .setParameter("room", roomId)
-                .getSingleResult())
-        .longValue();
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public List<RoomInvitee> invitees(Long roomId) {
-    List<Object[]> rows =
-        em.createNativeQuery(
-                "SELECT u.id AS id, u.username AS username, u.display_name AS display_name,"
-                    + " u.avatar_url AS avatar_url, i.inviter_id AS inviter_id,"
-                    + " i.created_at AS invited_at"
-                    + " FROM room_invitation i JOIN users u ON u.id = i.user_id"
-                    + " WHERE i.room_id = :room AND i.declined_at IS NULL"
-                    + " AND u.deleted_at IS NULL ORDER BY i.created_at DESC, u.id DESC")
-            .setParameter("room", roomId)
-            .unwrap(NativeQuery.class)
-            .addScalar("id", Long.class)
-            .addScalar("username", String.class)
-            .addScalar("display_name", String.class)
-            .addScalar("avatar_url", String.class)
-            .addScalar("inviter_id", Long.class)
-            .addScalar("invited_at", Instant.class)
-            .getResultList();
-    List<RoomInvitee> invitees = new ArrayList<>(rows.size());
-    for (Object[] c : rows) {
-      invitees.add(new RoomInvitee(person(c), (Long) c[4], (Instant) c[5]));
-    }
-    return invitees;
-  }
-
-  @Override
-  public Optional<Long> inviterOf(Long roomId, Long userId) {
-    return em
-        .createNativeQuery(
-            "SELECT inviter_id FROM room_invitation"
-                + " WHERE room_id = :room AND user_id = :user AND declined_at IS NULL")
-        .setParameter("room", roomId)
-        .setParameter("user", userId)
-        .getResultList()
-        .stream()
-        .findFirst()
-        .map(id -> ((Number) id).longValue());
-  }
-
-  @Override
-  public boolean dropInvitation(Long roomId, Long userId) {
-    return em.createNativeQuery(
-                "DELETE FROM room_invitation"
-                    + " WHERE room_id = :room AND user_id = :user AND declined_at IS NULL")
-            .setParameter("room", roomId)
-            .setParameter("user", userId)
-            .executeUpdate()
-        > 0;
-  }
-
-  @Override
-  public int dropInvitationsBy(Long roomId, Long inviterId) {
-    return em.createNativeQuery(
-            "DELETE FROM room_invitation"
-                + " WHERE room_id = :room AND inviter_id = :inviter AND declined_at IS NULL")
-        .setParameter("room", roomId)
-        .setParameter("inviter", inviterId)
-        .executeUpdate();
-  }
-
-  @Override
-  public boolean declineInvitation(Long roomId, Long userId, Instant at) {
-    return em.createNativeQuery(
-                "UPDATE room_invitation SET declined_at = :at"
-                    + " WHERE room_id = :room AND user_id = :user AND declined_at IS NULL")
-            .setParameter("room", roomId)
-            .setParameter("user", userId)
-            .setParameter("at", at)
-            .executeUpdate()
-        > 0;
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public List<RoomInvitation> invitationsFor(Long userId, int limit) {
-    List<Object[]> rows =
-        em.createNativeQuery(
-                "SELECT u.id AS id, u.username AS username, u.display_name AS display_name,"
-                    + " u.avatar_url AS avatar_url, r.id AS room_id, r.name AS room_name,"
-                    + " (SELECT COUNT(*) FROM room_member c WHERE c.room_id = r.id) AS members,"
-                    + " (r.approval_required AND r.owner_id <> i.inviter_id) AS approval,"
-                    + " i.created_at AS invited_at"
-                    + " FROM room_invitation i JOIN room r ON r.id = i.room_id"
-                    + " JOIN users u ON u.id = i.inviter_id AND u.deleted_at IS NULL"
-                    + " WHERE i.user_id = :viewer AND i.declined_at IS NULL"
-                    + " AND NOT EXISTS (SELECT 1 FROM room_member m"
-                    + " WHERE m.room_id = i.room_id AND m.user_id = :viewer)"
-                    + HeardSql.unblocked("i.inviter_id")
-                    + " ORDER BY i.created_at DESC, i.room_id DESC")
-            .setParameter("viewer", userId)
-            .setMaxResults(limit)
-            .unwrap(NativeQuery.class)
-            .addScalar("id", Long.class)
-            .addScalar("username", String.class)
-            .addScalar("display_name", String.class)
-            .addScalar("avatar_url", String.class)
-            .addScalar("room_id", Long.class)
-            .addScalar("room_name", String.class)
-            .addScalar("members", Long.class)
-            .addScalar("approval", Long.class)
-            .addScalar("invited_at", Instant.class)
-            .getResultList();
-    List<RoomInvitation> invitations = new ArrayList<>(rows.size());
-    for (Object[] c : rows) {
-      invitations.add(
-          new RoomInvitation(
-              (Long) c[4], (String) c[5], (Long) c[6], person(c), truth(c[7]), (Instant) c[8]));
-    }
-    return invitations;
-  }
-
-  private static List<RoomPerson> people(List<?> rows) {
-    List<RoomPerson> people = new ArrayList<>(rows.size());
-    for (Object raw : rows) {
-      people.add(person((Object[]) raw));
-    }
-    return people;
-  }
-
-  private static RoomPerson person(Object[] c) {
-    return new RoomPerson(((Number) c[0]).longValue(), (String) c[1], (String) c[2], (String) c[3]);
-  }
-
-  private static boolean truth(Object value) {
-    return value instanceof Boolean b ? b : value != null && ((Number) value).intValue() != 0;
   }
 
   private static String unreadBy(String note) {

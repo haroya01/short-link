@@ -7,6 +7,7 @@ import com.example.short_link.room.application.read.RoomInviteView;
 import com.example.short_link.room.domain.RoomEntity;
 import com.example.short_link.room.domain.RoomInviteEntity;
 import com.example.short_link.room.domain.RoomInviteUnusable;
+import com.example.short_link.room.domain.repository.RoomInviteRepository;
 import com.example.short_link.room.domain.repository.RoomRepository;
 import com.example.short_link.room.exception.RoomErrorCode;
 import com.example.short_link.room.exception.RoomException;
@@ -43,6 +44,7 @@ public class RoomInviteService {
   public record JoinResult(Joined status, Long roomId) {}
 
   private final RoomRepository rooms;
+  private final RoomInviteRepository invites;
   private final RoomWriteGuard guard;
   private final RoomInviteUrls urls;
   private final CreateLinkUseCase links;
@@ -61,7 +63,7 @@ public class RoomInviteService {
     }
     Instant now = now();
     RoomInviteEntity invite =
-        rooms.save(
+        invites.save(
             new RoomInviteEntity(
                 roomId,
                 userId,
@@ -78,7 +80,7 @@ public class RoomInviteService {
     } catch (RuntimeException e) {
       log.warn("room invite link skipped for room {}: {}", roomId, e.getMessage());
     }
-    return RoomInviteView.of(invite, urls, rooms.person(userId).orElse(null));
+    return RoomInviteView.of(invite, urls, invites.person(userId).orElse(null));
   }
 
   @Transactional
@@ -89,19 +91,19 @@ public class RoomInviteService {
             .filter(found -> rooms.isMember(roomId, userId))
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId));
     RoomInviteEntity invite =
-        rooms
+        invites
             .invite(roomId, inviteId)
             .filter(found -> room.isOwnedBy(userId) || found.getCreatorId().equals(userId))
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITE_NOT_FOUND));
     invite.disable(now());
-    return RoomInviteView.of(invite, urls, rooms.person(invite.getCreatorId()).orElse(null));
+    return RoomInviteView.of(invite, urls, invites.person(invite.getCreatorId()).orElse(null));
   }
 
   // The invite and then the room are locked, so two joins cannot both take the last use or seat.
   @Transactional
   public JoinResult join(Long userId, String code) {
     RoomInviteEntity invite =
-        rooms
+        invites
             .lockInvite(code)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITE_NOT_FOUND));
     Long roomId = invite.getRoomId();
@@ -115,7 +117,7 @@ public class RoomInviteService {
     if (rooms.isRemoved(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REMOVED);
     }
-    if (rooms.hasRequested(roomId, userId)) {
+    if (invites.hasRequested(roomId, userId)) {
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     Instant now = now();
@@ -132,7 +134,7 @@ public class RoomInviteService {
     }
     invite.use();
     if (invite.isApproval() || room.isApprovalRequired()) {
-      rooms.request(roomId, userId, invite.getId(), now);
+      invites.request(roomId, userId, invite.getId(), now);
       return new JoinResult(Joined.REQUESTED, roomId);
     }
     rooms.addMember(roomId, userId, now);
@@ -142,7 +144,7 @@ public class RoomInviteService {
   @Transactional
   public void approve(Long ownerId, Long roomId, Long userId) {
     RoomEntity room = guard.owned(ownerId, roomId);
-    if (!rooms.withdrawRequest(roomId, userId)) {
+    if (!invites.withdrawRequest(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REQUEST_NOT_FOUND, userId);
     }
     if (rooms.countMembers(roomId) >= RoomEntity.MAX_MEMBERS) {
@@ -154,7 +156,7 @@ public class RoomInviteService {
   @Transactional
   public void reject(Long ownerId, Long roomId, Long userId) {
     guard.owned(ownerId, roomId);
-    if (!rooms.withdrawRequest(roomId, userId)) {
+    if (!invites.withdrawRequest(roomId, userId)) {
       throw new RoomException(RoomErrorCode.ROOM_REQUEST_NOT_FOUND, userId);
     }
   }

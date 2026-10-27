@@ -5,7 +5,10 @@ import com.example.short_link.common.room.RoomPostRemover;
 import com.example.short_link.room.application.read.RoomQueryService;
 import com.example.short_link.room.application.read.RoomView;
 import com.example.short_link.room.domain.RoomEntity;
+import com.example.short_link.room.domain.repository.RoomInvitationRepository;
+import com.example.short_link.room.domain.repository.RoomInviteRepository;
 import com.example.short_link.room.domain.repository.RoomRepository;
+import com.example.short_link.room.domain.repository.RoomSuggestionRepository;
 import com.example.short_link.room.exception.RoomErrorCode;
 import com.example.short_link.room.exception.RoomException;
 import java.time.Clock;
@@ -25,6 +28,9 @@ public class RoomCommandService {
   static final int MAX_PINNED = 5;
 
   private final RoomRepository rooms;
+  private final RoomInviteRepository invites;
+  private final RoomInvitationRepository invitations;
+  private final RoomSuggestionRepository suggestions;
   private final RoomWriteGuard guard;
   private final RoomQueryService query;
   private final RoomNoteRemover notes;
@@ -55,8 +61,8 @@ public class RoomCommandService {
     RoomEntity room = guard.locked(roomId);
     guard.requireMember(userId, roomId);
     rooms.removeMember(roomId, userId);
-    rooms.disableInvitesBy(roomId, userId, now());
-    rooms.dropInvitationsBy(roomId, userId);
+    invites.disableInvitesBy(roomId, userId, now());
+    invitations.dropInvitationsBy(roomId, userId);
     if (room.isOwnedBy(userId)) {
       rooms.longestStayingMemberBesides(roomId, userId).ifPresent(room::handTo);
     }
@@ -75,8 +81,8 @@ public class RoomCommandService {
     guard.requireMember(memberId, roomId);
     Instant now = now();
     rooms.removeMember(roomId, memberId);
-    rooms.disableInvitesBy(roomId, memberId, now);
-    rooms.dropInvitationsBy(roomId, memberId);
+    invites.disableInvitesBy(roomId, memberId, now);
+    invitations.dropInvitationsBy(roomId, memberId);
     rooms.markRemoved(roomId, memberId, now);
   }
 
@@ -116,7 +122,7 @@ public class RoomCommandService {
     if (friends.isEmpty() || friends.size() > MAX_DISMISSED_AT_ONCE) {
       throw new RoomException(RoomErrorCode.ROOM_SUGGESTION_INVALID, MAX_DISMISSED_AT_ONCE);
     }
-    rooms.dismissSuggestions(userId, friends, now());
+    suggestions.dismissSuggestions(userId, friends, now());
   }
 
   private static String name(String raw) {
