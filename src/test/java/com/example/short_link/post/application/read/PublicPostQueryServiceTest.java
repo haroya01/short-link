@@ -394,7 +394,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void findHydratesCtaBlocks() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -428,7 +428,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void servesTrackedShortLinkUrlWhenCtaHasTracking() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -457,7 +457,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void findHandlesDeletedCta() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -476,6 +476,35 @@ class PublicPostQueryServiceTest {
 
     assertThat(detail.blocks().get(0).cta()).isNotNull();
     assertThat(detail.blocks().get(0).cta().deleted()).isTrue();
+  }
+
+  @Test
+  void anotherAuthorsCtaComesBackAsAnEmptyReference() {
+    UserEntity author = john();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    CtaEntity someoneElses =
+        new CtaEntity(8L, "Theirs", "https://their.site", CtaStyle.PRIMARY, CtaPurpose.CUSTOM);
+    someoneElses.trackVia("th31rs");
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(someoneElses));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+
+    assertThat(detail.blocks())
+        .singleElement()
+        .satisfies(
+            block -> {
+              assertThat(block.type()).isEqualTo("CTA_REF");
+              assertThat(block.content()).isEqualTo("{\"ctaId\":42}");
+              assertThat(block.cta()).isNull();
+            });
   }
 
   @Test
