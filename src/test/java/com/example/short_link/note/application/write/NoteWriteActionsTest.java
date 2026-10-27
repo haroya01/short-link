@@ -26,6 +26,7 @@ import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -395,13 +396,13 @@ class NoteWriteActionsTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re", 50L));
 
-    when(blocks.isBlocked(8L, 7L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
     assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_BLOCKED));
-    when(blocks.isBlocked(8L, 7L)).thenReturn(false);
-    when(blocks.isBlocked(7L, 8L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(false);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
     assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
         .isInstanceOf(NoteException.class);
 
@@ -523,7 +524,7 @@ class NoteWriteActionsTest {
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
 
-    when(blocks.isBlocked(8L, 7L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
     assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 50L)))
         .isInstanceOfSatisfying(
             NoteException.class,
@@ -559,7 +560,7 @@ class NoteWriteActionsTest {
   @Test
   void aBlockEitherWayStopsARepost() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
-    when(blocks.isBlocked(7L, 8L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
 
     assertThatThrownBy(() -> interactions().setRepost(8L, 1L, true))
         .isInstanceOfSatisfying(
@@ -594,7 +595,7 @@ class NoteWriteActionsTest {
     verify(events).publishEvent(new NoteRepostedEvent(77L, 1L, 8L, true));
     verify(events).publishEvent(new NoteUnrepostedEvent(77L, 1L, 8L, true));
     verify(events).publishEvent(new NotePublishedEvent(100L, 8L, true));
-    verify(blocks, never()).isBlocked(any(), any());
+    verify(blocks, never()).isBlocked(any());
   }
 
   @Test
@@ -614,7 +615,7 @@ class NoteWriteActionsTest {
     assertThat(quoting.quotedNote().author()).isEqualTo(alice);
     verify(events).publishEvent(new NotePublishedEvent(100L, 8L, true));
     verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
-    verify(blocks, never()).isBlocked(any(), any());
+    verify(blocks, never()).isBlocked(any());
   }
 
   @Test

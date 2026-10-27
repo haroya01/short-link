@@ -12,8 +12,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +37,7 @@ public class CurationGraphQueryService {
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
   private final NoteBodyReader noteBodies;
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
 
   public List<RelatedBlockView> relatedTo(ConnectionBlockType blockType, Long refId, int limit) {
     List<CooccurrenceRow> rows =
@@ -63,7 +63,7 @@ public class CurationGraphQueryService {
 
     Set<Long> userIds =
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());
-    Map<Long, UserEntity> users = bulk(userRepository.findAllByIdIn(userIds), UserEntity::getId);
+    Map<Long, UserSummary> users = bulk(userSummaries.findAll(userIds), UserSummary::id);
 
     List<RelatedBlockView> out = new ArrayList<>();
     for (CooccurrenceRow row : rows) {
@@ -74,22 +74,21 @@ public class CurationGraphQueryService {
   }
 
   public List<KindredCuratorView> kindredCurators(String username, Long viewerId, int limit) {
-    Optional<UserEntity> me = userRepository.findByUsername(username);
+    Optional<UserSummary> me = userSummaries.findByUsername(username);
     if (me.isEmpty()) return List.of();
     List<CuratorOverlapRow> rows =
-        connectionRepository.findOverlappingCurators(me.get().getId(), viewerId, clamp(limit));
+        connectionRepository.findOverlappingCurators(me.get().id(), viewerId, clamp(limit));
     if (rows.isEmpty()) return List.of();
 
-    Map<Long, UserEntity> users =
+    Map<Long, UserSummary> users =
         bulk(
-            userRepository.findAllByIdIn(
-                rows.stream().map(CuratorOverlapRow::getCuratorId).toList()),
-            UserEntity::getId);
+            userSummaries.findAll(rows.stream().map(CuratorOverlapRow::getCuratorId).toList()),
+            UserSummary::id);
 
     List<KindredCuratorView> out = new ArrayList<>();
     for (CuratorOverlapRow row : rows) {
-      UserEntity curator = users.get(row.getCuratorId());
-      if (curator == null || curator.getUsername() == null) continue;
+      UserSummary curator = users.get(row.getCuratorId());
+      if (curator == null || curator.username() == null) continue;
       int shared = row.getSharedItems() == null ? 0 : row.getSharedItems().intValue();
       out.add(new KindredCuratorView(PublicAuthorView.from(curator), shared));
     }
@@ -101,21 +100,21 @@ public class CurationGraphQueryService {
       Map<Long, PostEntity> posts,
       Map<Long, PostHighlightEntity> highlights,
       Map<Long, NoteBlock> notes,
-      Map<Long, UserEntity> users) {
+      Map<Long, UserSummary> users) {
     int shared = row.getSharedCount() == null ? 0 : row.getSharedCount().intValue();
     Long refId = row.getRefId();
     return switch (ConnectionBlockType.valueOf(row.getBlockType())) {
       case POST -> {
         PostEntity post = posts.get(refId);
         if (post == null) yield null;
-        UserEntity author = users.get(post.getUserId());
+        UserSummary author = users.get(post.getUserId());
         yield new RelatedBlockView(
             "POST",
             refId,
             post.getTitle(),
             post.getExcerpt(),
             post.getSlug(),
-            author == null ? null : author.getUsername(),
+            author == null ? null : author.username(),
             null,
             null,
             shared);
@@ -124,14 +123,14 @@ public class CurationGraphQueryService {
         PostHighlightEntity hl = highlights.get(refId);
         PostEntity post = hl == null ? null : posts.get(hl.getPostId());
         if (post == null) yield null;
-        UserEntity author = users.get(post.getUserId());
+        UserSummary author = users.get(post.getUserId());
         yield new RelatedBlockView(
             "HIGHLIGHT",
             refId,
             post.getTitle(),
             null,
             post.getSlug(),
-            author == null ? null : author.getUsername(),
+            author == null ? null : author.username(),
             hl.getQuote(),
             null,
             shared);

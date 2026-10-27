@@ -39,13 +39,13 @@ public class FollowEntity extends BaseCreatedEntity {
   @Column(name = "notify_notes", nullable = false)
   private boolean notifyNotes;
 
-  public FollowEntity(Long followerId, Long followingId) {
-    this(followerId, followingId, null);
+  public FollowEntity(FollowEdge edge) {
+    this(edge, null);
   }
 
-  public FollowEntity(Long followerId, Long followingId, Long sourcePostId) {
-    this.followerId = followerId;
-    this.followingId = followingId;
+  public FollowEntity(FollowEdge edge, Long sourcePostId) {
+    this.followerId = edge.follower();
+    this.followingId = edge.following();
     this.sourcePostId = sourcePostId;
     this.notifyNotes = true;
   }

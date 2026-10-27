@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface BehaviorEventRepository {
 
-  void saveAll(List<BehaviorEventEntity> events);
+  <S extends BehaviorEventEntity> List<S> saveAll(Iterable<S> events);
 
   int deleteByOccurredAtBefore(Instant cutoff);
 }

@@ -28,7 +28,9 @@ import com.example.short_link.federation.domain.repository.RemoteAccountStanding
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,7 +71,8 @@ class FederationFollowersTest {
         deliveries,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         JSON,
-        events);
+        events,
+        Clock.fixed(Instant.parse("2026-10-08T00:00:00Z"), ZoneOffset.UTC));
   }
 
   private static RemoteActorEntity alice() {

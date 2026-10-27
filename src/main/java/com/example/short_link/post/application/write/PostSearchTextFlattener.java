@@ -57,9 +57,9 @@ public final class PostSearchTextFlattener {
     }
     return switch (type) {
       case PARAGRAPH, H1, H2, H3, QUOTE -> content;
-        // TABLE의 파이프·대시는 ngram 토큰화가 처리하므로 마크다운 원문을 사용한다.
+      // TABLE의 파이프·대시는 ngram 토큰화가 처리하므로 마크다운 원문을 사용한다.
       case TABLE -> content;
-        // LIST는 마크다운과 구형 JSON 문자열 배열을 모두 지원한다.
+      // LIST는 마크다운과 구형 JSON 문자열 배열을 모두 지원한다.
       case LIST_BULLET, LIST_NUMBERED -> listText(content);
       case IMAGE -> imageText(content);
       case CODE -> codeText(content);

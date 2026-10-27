@@ -39,7 +39,7 @@ class RedirectControllerDisabledLinkTest {
   @Test
   void aDisabledLinkShowsTheSwitchedOffPageInsteadOfRedirecting() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://phish.example/login", "off1234"));
-    moderation.disable(link.getId(), LinkDisableReason.ABUSE_REPORT, null);
+    moderation.disable(null, link.getId(), LinkDisableReason.ABUSE_REPORT);
 
     mvc.perform(get("/off1234").header("Accept-Language", "ko-KR"))
         .andExpect(status().isGone())
@@ -50,7 +50,7 @@ class RedirectControllerDisabledLinkTest {
   @Test
   void crawlersGetTheSameSwitchedOffPageAndNoPreview() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://phish.example/login", "off2345"));
-    moderation.disable(link.getId(), LinkDisableReason.SAFE_BROWSING, null);
+    moderation.disable(null, link.getId(), LinkDisableReason.SAFE_BROWSING);
 
     mvc.perform(
             get("/off2345")

@@ -12,9 +12,9 @@ import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.FollowRepository;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,8 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublicFeedQueryService {
 
   private final PostRepository postRepository;
-  private final UserRepository userRepository;
-  private final FollowRepository followRepository;
+  private final UserSummaryReader userSummaries;
+  private final FollowingReader following;
   private final SeriesSubscriptionRepository seriesSubscriptionRepository;
   private final TagPrefQueryService tagPrefQueryService;
   private final PostFeedItemAssembler feedItemAssembler;
@@ -97,12 +97,11 @@ public class PublicFeedQueryService {
   // Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
   public List<SuggestedAuthorView> suggestedAuthors(Long viewerId, int limit) {
     List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(viewerId, limit * 2);
-    Map<Long, UserEntity> authors =
-        userRepository
-            .findAllByIdIn(ranked.stream().map(AuthorPostStats::authorId).toList())
+    Map<Long, UserSummary> authors =
+        userSummaries
+            .findAllActive(ranked.stream().map(AuthorPostStats::authorId).toList())
             .stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     return ranked.stream()
         .filter(s -> authors.containsKey(s.authorId()))
         .limit(limit)
@@ -114,7 +113,7 @@ public class PublicFeedQueryService {
   }
 
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
-    List<Long> followingIds = followRepository.findFollowingIds(userId);
+    List<Long> followingIds = following.followingIds(userId);
     List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
     // Match the query's lower() comparison for user-entered tags.
     List<String> followedTags =
@@ -244,7 +243,7 @@ public class PublicFeedQueryService {
   }
 
   public PostSlice followingAt(Long userId, int offset, int limit) {
-    List<Long> followingIds = followRepository.findFollowingIds(userId);
+    List<Long> followingIds = following.followingIds(userId);
     List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
     List<String> followedTags =
         tagPrefQueryService.get(userId).followed().stream()
