@@ -224,7 +224,7 @@ public class RedirectController {
   private ResponseEntity<?> render(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
       case RedirectOutcome.Redirect r -> handoff.redirect(r, userAgent, locale);
-      case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
+      case RedirectOutcome.CountryBlocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());

@@ -122,7 +122,7 @@ public class CampaignBatchService {
       CampaignEntity campaign, Long ownerId, CampaignBatchCreateCommand row, String destination) {
     // 배치별 추적 코드와 Batch:Link 1:1 관계를 유지하려고 URL 중복 제거를 끈다.
     LinkCreated created =
-        linkCreationService.execute(new CreateLinkCommand(destination, ownerId, null, null, false));
+        linkCreationService.execute(CreateLinkCommand.perBatch(destination, ownerId));
     LinkEntity link =
         linkRepository
             .findByShortCode(created.shortCode())

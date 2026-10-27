@@ -28,7 +28,7 @@ class VisitHandoffTest {
 
   private static RedirectOutcome.Redirect to(String url, boolean openInBrowser) {
     return new RedirectOutcome.Redirect(
-        new CachedLink.Picked(url, null), new CachedLink.VisitOptions(openInBrowser));
+        new CachedLink.Picked(url, null), new CachedLink.VisitOptions(openInBrowser, null, null));
   }
 
   @Test
@@ -68,7 +68,8 @@ class VisitHandoffTest {
   private static RedirectOutcome.Redirect withSplash(String url, boolean openInBrowser) {
     return new RedirectOutcome.Redirect(
         new CachedLink.Picked(url, null),
-        new CachedLink.VisitOptions(openInBrowser, new CachedLink.Splash("안내", 2, null, null)));
+        new CachedLink.VisitOptions(
+            openInBrowser, new CachedLink.Splash("안내", 2, null, null), null));
   }
 
   @Test

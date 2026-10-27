@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.dto;
 
+import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
@@ -30,168 +31,6 @@ public record CachedLink(
     visitOptions = visitOptions == null ? VisitOptions.NONE : visitOptions;
   }
 
-  public CachedLink(
-      LinkId linkId,
-      ShortCode shortCode,
-      Long userId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      String blockedCountries,
-      boolean passwordRequired,
-      Integer maxViews,
-      String expiredMessage,
-      List<Variant> variants,
-      VisitOptions visitOptions) {
-    this(
-        linkId,
-        shortCode,
-        userId,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        blockedCountries,
-        passwordRequired,
-        maxViews,
-        expiredMessage,
-        variants,
-        visitOptions,
-        false);
-  }
-
-  public CachedLink(
-      LinkId linkId,
-      ShortCode shortCode,
-      Long userId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      String blockedCountries,
-      boolean passwordRequired,
-      Integer maxViews,
-      String expiredMessage,
-      List<Variant> variants) {
-    this(
-        linkId,
-        shortCode,
-        userId,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        blockedCountries,
-        passwordRequired,
-        maxViews,
-        expiredMessage,
-        variants,
-        VisitOptions.NONE);
-  }
-
-  public CachedLink(
-      LinkId linkId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage) {
-    this(
-        linkId,
-        null,
-        null,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        null,
-        false,
-        null,
-        null,
-        List.of());
-  }
-
-  public CachedLink(
-      LinkId linkId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      List<Variant> variants) {
-    this(
-        linkId,
-        null,
-        null,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        null,
-        false,
-        null,
-        null,
-        variants);
-  }
-
-  public CachedLink(
-      LinkId linkId,
-      Long userId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      List<Variant> variants) {
-    this(
-        linkId,
-        null,
-        userId,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        null,
-        false,
-        null,
-        null,
-        variants);
-  }
-
-  public CachedLink(
-      LinkId linkId,
-      Long userId,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      String blockedCountries,
-      List<Variant> variants) {
-    this(
-        linkId,
-        null,
-        userId,
-        originalUrl,
-        expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
-        blockedCountries,
-        false,
-        null,
-        null,
-        variants);
-  }
-
   public boolean isExpired(Instant now) {
     return expiresAt != null && !now.isBefore(expiresAt);
   }
@@ -201,12 +40,7 @@ public record CachedLink(
   }
 
   public boolean isBlockedFor(String clientCountry) {
-    if (blockedCountries == null || clientCountry == null) return false;
-    String upper = clientCountry.toUpperCase(Locale.ROOT);
-    for (String code : blockedCountries.split(",")) {
-      if (upper.equals(code.trim())) return true;
-    }
-    return false;
+    return CountryBlocklist.fromCsv(blockedCountries).contains(clientCountry);
   }
 
   public Picked pick() {
@@ -287,24 +121,12 @@ public record CachedLink(
       }
       return score;
     }
-
-    public Variant(Long id, String url, int weight, boolean enabled, String countryCode) {
-      this(id, url, weight, enabled, countryCode, null, null);
-    }
   }
 
   public record Picked(String url, Long destinationId) {}
 
   public record VisitOptions(boolean openInBrowser, Splash splash, Instant opensAt) {
     public static final VisitOptions NONE = new VisitOptions(false, null, null);
-
-    public VisitOptions(boolean openInBrowser) {
-      this(openInBrowser, null, null);
-    }
-
-    public VisitOptions(boolean openInBrowser, Splash splash) {
-      this(openInBrowser, splash, null);
-    }
 
     public boolean opensLaterThan(Instant now) {
       return opensAt != null && now.isBefore(opensAt);
