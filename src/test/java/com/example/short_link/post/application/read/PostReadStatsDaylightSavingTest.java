@@ -1,7 +1,6 @@
 package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.common.analytics.VisitStats;
@@ -16,13 +15,14 @@ import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -40,14 +40,17 @@ class PostReadStatsDaylightSavingTest {
   @Autowired private PostViewEventRepository views;
   @Autowired private PostReadStatsService stats;
   @PersistenceContext private EntityManager em;
-  @MockitoBean private Clock clock;
+  @TestBean private Clock clock;
 
   private UserEntity author;
   private PostEntity post;
 
+  static Clock clock() {
+    return Clock.fixed(NOW, ZoneOffset.UTC);
+  }
+
   @BeforeEach
   void aPostReadOnBothSidesOfNewYorksFallBack() {
-    when(clock.instant()).thenReturn(NOW);
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     author = users.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix));
     post = posts.save(new PostEntity(author.getId(), "p-" + suffix, "P", "ko"));
