@@ -143,6 +143,36 @@ class RemoteNoteParserTest {
   }
 
   @Test
+  void aNoteAddressesUsExactlyWhenItNamesSomeoneHere() {
+    String us = "https://kurl.me/ap/actors/pid";
+    List<String[]> cases =
+        List.of(
+            new String[] {"{\"to\":[\"" + us + "\"]}", "{}"},
+            new String[] {"{\"cc\":\"" + us + "\"}", "{}"},
+            new String[] {"{}", "{\"to\":[\"" + us + "\"]}"},
+            new String[] {"{\"to\":[\"" + PUBLIC + "\"]}", "{\"to\":[\"" + us + "\"]}"},
+            new String[] {"{\"to\":[{\"id\":\"" + us + "\"}]}", "{}"},
+            new String[] {"{\"tag\":[{\"type\":\"Mention\",\"href\":\"" + us + "\"}]}", "{}"},
+            new String[] {"{\"tag\":[{\"type\":\"Hashtag\",\"href\":\"" + us + "\"}]}", "{}"},
+            new String[] {"{\"tag\":{\"type\":\"Mention\",\"href\":\"" + us + "\"}}", "{}"},
+            new String[] {
+              "{\"to\":[\"https://kurl.me/ap/actors/pid/followers\"],"
+                  + "\"tag\":[{\"type\":\"Mention\",\"href\":\"https://elsewhere.example/u/a\"}]}",
+              "{}"
+            },
+            new String[] {"{\"cc\":[\"" + PUBLIC + "\"]}", "{\"cc\":[\"" + us + "\"]}"});
+    for (String[] pair : cases) {
+      JsonNode object = json(pair[0]);
+      JsonNode activity = json(pair[1]);
+      assertThat(parser.addressesUs(object, activity))
+          .as("%s in %s", pair[0], pair[1])
+          .isEqualTo(!parser.parse(object, activity).addressedPublicIds().isEmpty());
+    }
+    assertThat(cases.stream().filter(pair -> parser.addressesUs(json(pair[0]), json(pair[1]))))
+        .hasSize(5);
+  }
+
+  @Test
   void theKindsKeptAreNotesQuestionsArticlesPagesAndVideos() {
     assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Note\"}"))).contains(Kind.NOTE);
     assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Question\"}"))).contains(Kind.QUESTION);

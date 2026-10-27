@@ -42,6 +42,16 @@ class NotificationPolicyTest {
   }
 
   @Test
+  void someoneTheMemberFollowsIsStillKeptAsideWhenTheyDoNotFollowBack() {
+    NotificationPolicy policy = new NotificationPolicy(ACCEPT, FILTER, ACCEPT, ACCEPT);
+
+    assertThat(NotificationPolicy.verdict(sender(policy, true, false, false, false)))
+        .isEqualTo(FILTER);
+    assertThat(NotificationPolicy.verdict(sender(policy, true, true, false, false)))
+        .isEqualTo(ACCEPT);
+  }
+
+  @Test
   void anAcceptedSenderAlwaysGetsThroughButATurnedOffTypeNever() {
     NotificationPolicy strict = new NotificationPolicy(DROP, DROP, DROP, DROP);
 
