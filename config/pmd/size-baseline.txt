@@ -261,7 +261,6 @@ NPathComplexity|src/main/java/com/example/short_link/link/redirect/presentation/
 NPathComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert()#1=320
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/domain/WebhookFilter.java|update(Boolean, Integer, Boolean, Integer, String, String)#1=216
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=309
-NPathComplexity|src/main/java/com/example/short_link/note/application/read/NoteViews.java|assemble(NoteEntity, NoteBatch, Long)#1=256
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|check(Long, NoteDraft, List<StoredImage>)#1=12516
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|edit(Long, Long, String, String, Boolean)#1=13832
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|write(Long, NoteDraft, List<StoredImage>)#1=8640

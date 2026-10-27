@@ -68,9 +68,7 @@ com.example.short_link.link.webhook.presentation.LinkWebhookController.updateCon
 com.example.short_link.note.application.read.NoteBatch.<clinit> calls the constructor of com.example.short_link.note.application.read.NoteBatch
 com.example.short_link.note.application.read.NoteBatch.justWritten calls the constructor of com.example.short_link.note.application.read.NoteBatch
 com.example.short_link.note.application.read.NoteSnapshotProvider.find calls the constructor of com.example.short_link.common.note.NoteSnapshotReader$NoteSnapshot
-com.example.short_link.note.application.read.NoteView.withRepostedBy calls the constructor of com.example.short_link.note.application.read.NoteView
-com.example.short_link.note.application.read.NoteView.withThread calls the constructor of com.example.short_link.note.application.read.NoteView
-com.example.short_link.note.application.read.NoteViews.assemble calls the constructor of com.example.short_link.note.application.read.NoteView
+com.example.short_link.note.application.read.NoteView.compose calls the constructor of com.example.short_link.note.application.read.NoteView
 com.example.short_link.note.application.read.NoteViews.load calls the constructor of com.example.short_link.note.application.read.NoteBatch
 com.example.short_link.note.application.write.NoteComposer.check calls the constructor of com.example.short_link.note.application.write.NoteComposer$Checked
 com.example.short_link.note.application.write.NoteDraft.<init> calls the constructor of com.example.short_link.note.application.write.NoteDraft

@@ -147,45 +147,63 @@ public class NoteViews {
   }
 
   public static NoteView assemble(NoteEntity note, NoteBatch batch, Long viewerId) {
-    NoteStats counts = batch.stats().getOrDefault(note.getId(), NoteStats.NONE);
-    NoteViewerMarks marks = batch.marks();
-    return new NoteView(
-        note.getId(),
+    return NoteView.compose(
+        origin(note, batch),
+        text(note, batch),
+        reach(note, batch),
+        new NoteView.Standing(note.getInReplyToId(), note.isPinned(), note.isReplyHidden()),
+        attached(note, batch),
+        counts(batch.stats().getOrDefault(note.getId(), NoteStats.NONE)),
+        viewerId == null ? NoteView.Mine.ANONYMOUS : mine(note, batch),
+        NoteView.InFeed.ALONE);
+  }
+
+  private static NoteView.Origin origin(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Origin(
+        note.getId(), batch.authorOf(note), note.getCreatedAt(), note.getEditedAt(), remote(note));
+  }
+
+  private static NoteView.Text text(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Text(
         note.getBody(),
-        note.getCreatedAt(),
-        note.getEditedAt(),
-        counts.likes(),
-        viewerId == null ? null : marks.liked().contains(note.getId()),
-        batch.authorOf(note),
+        Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
+        note.getContentWarning(),
+        note.isSensitive(),
+        note.getLanguage());
+  }
+
+  private static NoteView.Reach reach(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Reach(
+        note.getVisibility().apiName(),
+        note.getReplyPolicy().apiName(),
+        note.getRoomId() == null
+            ? null
+            : new NoteView.Room(note.getRoomId(), batch.roomNames().get(note.getRoomId())));
+  }
+
+  private static NoteView.Attached attached(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Attached(
         batch.images().getOrDefault(note.getId(), List.of()),
         note.getQuotedPostId() == null ? null : batch.quotedPosts().get(note.getQuotedPostId()),
-        note.getInReplyToId(),
-        counts.replies(),
-        counts.reposts(),
-        viewerId == null ? null : marks.reposted().contains(note.getId()),
         note.getQuotedNoteId() == null
             ? null
             : quotedNote(batch.quotedNotes().get(note.getQuotedNoteId()), batch),
         batch.cards().get(note.getId()),
-        null,
-        counts.quotes(),
-        viewerId == null ? null : marks.bookmarked().contains(note.getId()),
-        Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
-        note.getContentWarning(),
-        note.isSensitive(),
-        note.isPinned(),
-        note.getVisibility().apiName(),
-        batch.polls().get(note.getId()),
-        viewerId == null ? null : marks.muted().contains(note.getId()),
-        note.getLanguage(),
-        null,
-        note.getReplyPolicy().apiName(),
-        viewerId == null ? null : !batch.closedThreads().contains(note.conversation()),
-        note.isReplyHidden(),
-        remote(note),
-        note.getRoomId() == null
-            ? null
-            : new NoteView.Room(note.getRoomId(), batch.roomNames().get(note.getRoomId())));
+        batch.polls().get(note.getId()));
+  }
+
+  private static NoteView.Counts counts(NoteStats stats) {
+    return new NoteView.Counts(stats.likes(), stats.replies(), stats.reposts(), stats.quotes());
+  }
+
+  private static NoteView.Mine mine(NoteEntity note, NoteBatch batch) {
+    NoteViewerMarks marks = batch.marks();
+    return new NoteView.Mine(
+        marks.liked().contains(note.getId()),
+        marks.reposted().contains(note.getId()),
+        marks.bookmarked().contains(note.getId()),
+        marks.muted().contains(note.getId()),
+        !batch.closedThreads().contains(note.conversation()));
   }
 
   private static NoteView.Remote remote(NoteEntity note) {
