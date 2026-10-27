@@ -80,7 +80,6 @@ public class CreateHighlightUseCase {
     if (!highlight.getUserId().equals(userId)) {
       throw new PostException(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     }
-    // DB의 FK cascade 지원에 의존하지 않고 답글도 명시적으로 삭제한다.
     replyRepository.deleteAllByHighlightId(highlight.getId());
     // 컬렉션 연결에는 FK가 없으므로 직접 제거해야 한다.
     connectionCleaner.purgeForHighlights(List.of(highlight.getId()));

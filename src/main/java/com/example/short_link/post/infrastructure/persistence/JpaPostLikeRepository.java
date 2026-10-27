@@ -15,8 +15,7 @@ public interface JpaPostLikeRepository extends JpaRepository<PostLikeEntity, Lon
 
   long countByPostId(Long postId);
 
-  // INSERT IGNORE avoids duplicate exceptions. Native inserts bypass @CreationTimestamp,
-  // so created_at is set explicitly.
+  // Native inserts bypass @CreationTimestamp, so created_at is set here.
   @Modifying
   @Query(
       value =

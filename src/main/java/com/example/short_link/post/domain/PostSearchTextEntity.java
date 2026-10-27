@@ -9,8 +9,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 검색 평문은 피드·상세의 PostEntity 조회에 큰 본문이 딸려오지 않도록 별도 테이블에 저장한다. 검색 쿼리만 JOIN하여 FULLTEXT(ngram) 인덱스를
-// 사용한다.
 @Entity
 @Table(name = "post_search_text")
 @Getter

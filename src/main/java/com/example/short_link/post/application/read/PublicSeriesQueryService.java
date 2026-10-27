@@ -71,7 +71,6 @@ public class PublicSeriesQueryService {
         .toList();
   }
 
-  // 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다.
   public List<PublicSeriesCard> discoverSeries(Long viewerId, int limit) {
     int safeLimit = Math.max(limit, 1);
     List<SeriesActivity> ranked = seriesItemReader.activeSeries(viewerId, MIN_ITEMS, safeLimit * 2);
@@ -84,7 +83,6 @@ public class PublicSeriesQueryService {
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
     Map<Long, UserSummary> authors = liveAuthorsOf(series.values());
 
-    // 제외될 시리즈의 항목을 읽지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
     List<SeriesEntity> chosen =
         ranked.stream()
             .map(a -> series.get(a.seriesId()))

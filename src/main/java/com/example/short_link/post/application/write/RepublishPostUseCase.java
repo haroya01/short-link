@@ -28,7 +28,6 @@ public class RepublishPostUseCase {
     accessSettings.requireStillInRoom(post);
     post.republish();
     PostEntity saved = postRepository.save(post);
-    // 비공개 중 수정한 내용도 재발행 시점의 리비전으로 남긴다.
     postRevisionCapture.capture(saved);
     cacheEviction.evictByUserId(saved.getUserId());
     return writeViews.fromSaved(saved);

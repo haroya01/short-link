@@ -76,7 +76,6 @@ public class CollectionCommandService {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
     requireTargetExists(cmd.userId(), cmd.blockType(), cmd.refId());
 
-    // 삽입 전 연결 목록을 순서 계산과 기존 기여자 알림에 함께 사용한다.
     List<CollectionConnectionEntity> existing =
         connectionRepository.findAllByCollectionIdOrderByPositionAsc(collection.getId());
 
@@ -104,8 +103,7 @@ public class CollectionCommandService {
     return saved;
   }
 
-  // 새 연결에만 이벤트를 발행한다. 노트 작성자는 큐레이터이므로 수신자에서 제외하며, PATH_GREW는 연결한 작가·큐레이터를 제외한 기존 기여자에게 작가별 한 번만
-  // 보낸다. 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.
+  // 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.
   private void publishConnected(
       CollectionEntity collection,
       ConnectBlockCommand cmd,

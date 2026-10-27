@@ -4,8 +4,7 @@ import com.example.short_link.post.domain.repository.RoomPostErasureRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-// Each tick takes the oldest requests and one chunk of each, every chunk in its own transaction, as
-// RoomNoteErasures does for notes.
+// Each tick takes the oldest requests and one chunk of each, every chunk in its own transaction.
 @Service
 @RequiredArgsConstructor
 public class RoomPostErasures {

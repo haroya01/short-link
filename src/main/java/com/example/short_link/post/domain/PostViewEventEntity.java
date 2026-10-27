@@ -14,9 +14,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// Anonymous views are not deduplicated. The log supports rolling-window ranking while
-// posts.view_count holds the lifetime total. Dimensions may be null on legacy rows or when
-// enrichment fails, so view recording can continue.
+// Anonymous views are not deduplicated. Dimensions may be null on legacy rows or when enrichment
+// fails.
 @Entity
 @Table(name = "post_view_event")
 @Getter

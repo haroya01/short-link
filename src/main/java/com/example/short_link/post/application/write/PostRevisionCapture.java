@@ -25,7 +25,6 @@ public class PostRevisionCapture {
     capture(post, postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()));
   }
 
-  // 마지막 리비전과 내용이 같으면 새 버전을 만들지 않는다.
   public void capture(PostEntity post, List<PostBlockEntity> blocks) {
     PostSnapshot snapshot =
         new PostSnapshot(

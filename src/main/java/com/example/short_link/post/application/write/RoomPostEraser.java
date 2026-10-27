@@ -9,10 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// A member's room posts and what they said on room posts in one room, each through its usual delete
-// so a comment with replies leaves its place as when deleted by hand. One chunk per kind at a time;
-// the request is done once every kind comes back short, and running it again after a crash only
-// finds what is left.
+// Each kind goes through its usual delete, so a comment with replies leaves its place as when
+// deleted by hand. The request is done once every kind comes back short, and running it again after
+// a crash only finds what is left.
 @Service
 @RequiredArgsConstructor
 public class RoomPostEraser implements RoomPostRemover {

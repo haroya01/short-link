@@ -11,8 +11,7 @@ public interface JpaCommentLikeRepository extends JpaRepository<CommentLikeEntit
 
   long countByCommentId(Long commentId);
 
-  // INSERT IGNORE keeps duplicates from failing the transaction; native inserts set created_at
-  // explicitly.
+  // Native inserts bypass @CreationTimestamp, so created_at is set here.
   @Modifying
   @Query(
       value =

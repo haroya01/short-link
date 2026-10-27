@@ -77,7 +77,6 @@ public class DiscoverFeedQueryService {
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    // 원문이 미발행이거나 발견 품질 하한선 아래면 글과 그 하이라이트 인용을 모두 제외한다. 소유자에게도 같은 규칙이다.
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(PostAccessPolicy::isOpen)
