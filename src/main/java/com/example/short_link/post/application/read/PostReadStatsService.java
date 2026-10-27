@@ -2,10 +2,12 @@ package com.example.short_link.post.application.read;
 
 import static com.example.short_link.common.analytics.VisitStatsAssembler.DAILY_WINDOW;
 import static com.example.short_link.common.analytics.VisitStatsAssembler.TOP_SIZE;
+import static com.example.short_link.common.analytics.VisitStatsAssembler.overPeriods;
 
 import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.common.analytics.VisitStatsAssembler;
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.post.application.write.SeriesOwnership;
 import com.example.short_link.post.domain.PostEntity;
@@ -16,6 +18,7 @@ import com.example.short_link.post.exception.PostException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +64,7 @@ public class PostReadStatsService {
       return VisitStats.empty(zone.getId());
     }
     Instant now = clock.instant();
-    String tz = ReportZones.sqlOffset(zone, now);
+    Instant until = now.truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
 
     VisitStatsAssembler.Totals totals =
         new VisitStatsAssembler.Totals(
@@ -71,11 +74,13 @@ public class PostReadStatsService {
             reader.countUnique(postIds),
             reader.firstViewedAt(postIds),
             reader.lastViewedAt(postIds));
+    List<OffsetPeriod> recent = OffsetPeriod.between(zone, now.minus(DAILY_WINDOW), until);
+    List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, totals.firstVisitOr(now), until);
     VisitStatsAssembler.Rows rows =
         new VisitStatsAssembler.Rows(
-            reader.daily(postIds, now.minus(DAILY_WINDOW), tz),
-            reader.hourly(postIds, tz),
-            reader.heatmap(postIds, tz),
+            overPeriods(recent, p -> reader.daily(postIds, p.from(), p.until(), p.offset())),
+            overPeriods(lifetime, p -> reader.hourly(postIds, p.from(), p.until(), p.offset())),
+            overPeriods(lifetime, p -> reader.heatmap(postIds, p.from(), p.until(), p.offset())),
             reader.topCountries(postIds, TOP_SIZE),
             reader.topDevices(postIds, TOP_SIZE),
             reader.topBrowsers(postIds, TOP_SIZE),

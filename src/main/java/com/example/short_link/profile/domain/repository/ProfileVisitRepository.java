@@ -23,11 +23,14 @@ public interface ProfileVisitRepository {
 
   Instant findLastVisitAt(Long uid);
 
-  List<VisitProjections.DailyVisitRow> findDailyVisits(Long uid, Instant from, String tz);
+  List<VisitProjections.DailyVisitRow> findDailyVisits(
+      Long uid, Instant from, Instant until, String tz);
 
-  List<VisitProjections.HourVisitRow> findHourlyVisits(Long uid, String tz);
+  List<VisitProjections.HourVisitRow> findHourlyVisits(
+      Long uid, Instant from, Instant until, String tz);
 
-  List<VisitProjections.HeatmapVisitRow> findHeatmap(Long uid, String tz);
+  List<VisitProjections.HeatmapVisitRow> findHeatmap(
+      Long uid, Instant from, Instant until, String tz);
 
   List<VisitProjections.CountryVisitRow> topCountries(Long uid, int limit);
 

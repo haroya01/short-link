@@ -12,6 +12,7 @@ import com.example.short_link.common.analytics.VisitProjections.ReferrerHostVisi
 import com.example.short_link.common.analytics.VisitProjections.SourceChannelVisitRow;
 import com.example.short_link.common.analytics.VisitProjections.UtmCampaignVisitRow;
 import com.example.short_link.common.analytics.VisitProjections.UtmSourceVisitRow;
+import com.example.short_link.common.time.OffsetPeriod;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -107,6 +108,57 @@ class VisitStatsAssemblerTest {
   }
 
   @Test
+  void rowsFromSeveralOffsetPeriodsAddUpPerDayHourAndCellInOrder() {
+    VisitStatsAssembler.Rows rows =
+        new VisitStatsAssembler.Rows(
+            List.of(
+                new Daily(LocalDate.of(2026, 11, 1), 1L),
+                new Daily(LocalDate.of(2026, 10, 31), 4L),
+                new Daily(LocalDate.of(2026, 11, 1), 2L)),
+            List.of(new Hour(9, 2L), new Hour(1, 1L), new Hour(9, 1L)),
+            List.of(new Heat(7, 0, 1L), new Heat(5, 9, 1L), new Heat(7, 0, 1L)),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of());
+
+    VisitStats stats = VisitStatsAssembler.assemble(TOKYO, TOTALS, rows);
+
+    assertThat(stats.dailyVisits())
+        .containsExactly(
+            new VisitStats.DailyVisit(LocalDate.of(2026, 10, 31), 4L),
+            new VisitStats.DailyVisit(LocalDate.of(2026, 11, 1), 3L));
+    assertThat(stats.hourVisits())
+        .containsExactly(new VisitStats.HourVisit(1, 1L), new VisitStats.HourVisit(9, 3L));
+    assertThat(stats.heatmap())
+        .containsExactly(new HeatmapCell("THURSDAY", 9, 1L), new HeatmapCell("SATURDAY", 0, 2L));
+    assertThat(stats.peakHour()).isEqualTo(9);
+  }
+
+  @Test
+  void overPeriodsAsksEachPeriodInTurn() {
+    OffsetPeriod summer = new OffsetPeriod(FIRST, LAST, "-04:00");
+    OffsetPeriod winter = new OffsetPeriod(LAST, LAST.plusSeconds(60), "-05:00");
+
+    assertThat(
+            VisitStatsAssembler.overPeriods(
+                List.of(summer, winter), p -> List.of(p.offset(), p.offset() + "!")))
+        .containsExactly("-04:00", "-04:00!", "-05:00", "-05:00!");
+  }
+
+  @Test
+  void withoutAHumanVisitTheLifetimeStartsNow() {
+    Instant now = Instant.parse("2026-11-10T15:00:00Z");
+
+    assertThat(TOTALS.firstVisitOr(now)).isEqualTo(FIRST);
+    assertThat(new VisitStatsAssembler.Totals(0, 0, 0, 0, null, null).firstVisitOr(now))
+        .isEqualTo(now);
+  }
+
+  @Test
   void thePeakHourIsTheBusiestAndTheEarliestOnATie() {
     VisitStatsAssembler.Rows rows =
         new VisitStatsAssembler.Rows(
@@ -131,14 +183,14 @@ class VisitStatsAssemblerTest {
             List.of(),
             List.of(),
             List.of(
+                new Heat(0, 0, 1L),
                 new Heat(1, 0, 1L),
                 new Heat(2, 0, 1L),
                 new Heat(3, 0, 1L),
                 new Heat(4, 0, 1L),
                 new Heat(5, 0, 1L),
                 new Heat(6, 0, 1L),
-                new Heat(7, 0, 1L),
-                new Heat(0, 0, 1L)),
+                new Heat(7, 0, 1L)),
             List.of(),
             List.of(),
             List.of(),
@@ -150,14 +202,14 @@ class VisitStatsAssemblerTest {
     assertThat(VisitStatsAssembler.assemble(TOKYO, TOTALS, rows).heatmap())
         .extracting(HeatmapCell::dayOfWeek)
         .containsExactly(
+            "UNKNOWN",
             "SUNDAY",
             "MONDAY",
             "TUESDAY",
             "WEDNESDAY",
             "THURSDAY",
             "FRIDAY",
-            "SATURDAY",
-            "UNKNOWN");
+            "SATURDAY");
   }
 
   @Test

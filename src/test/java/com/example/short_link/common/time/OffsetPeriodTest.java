@@ -1,4 +1,4 @@
-package com.example.short_link.link.stats.application.read;
+package com.example.short_link.common.time;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
