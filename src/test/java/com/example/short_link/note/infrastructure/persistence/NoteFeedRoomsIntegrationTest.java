@@ -3,7 +3,7 @@ package com.example.short_link.note.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteFeedRoomsIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteFeedReader feeds;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -86,7 +86,7 @@ class NoteFeedRoomsIntegrationTest {
   void walkingTheLatestFeedByAnyPageSizeNeitherRepeatsNorSkips() {
     for (int size = 1; size <= annLatest.size(); size++) {
       assertThat(
-              walk(size, (viewer, offset, limit) -> notes.topLevel(viewer, offset, limit, null))
+              walk(size, (viewer, offset, limit) -> feeds.topLevel(viewer, offset, limit, null))
                   .subList(0, annLatest.size()))
           .as("page size %d", size)
           .containsExactlyElementsOf(annLatest);
@@ -103,18 +103,18 @@ class NoteFeedRoomsIntegrationTest {
         ann);
 
     assertThat(newest(ann, annLatest.size())).containsExactlyElementsOf(annLatest);
-    assertThat(notes.topLevel(ann, 0, 50, null).stream().map(NoteEntity::getId))
+    assertThat(feeds.topLevel(ann, 0, 50, null).stream().map(NoteEntity::getId))
         .doesNotContain(japanesePublic, japaneseRoom);
   }
 
   @Test
   void everyRoomOfTheMemberWalksInIdOrderByAnyPageSize() {
     for (int size = 1; size <= annRooms.size(); size++) {
-      assertThat(walk(size, notes::inRoomsOf))
+      assertThat(walk(size, feeds::inRoomsOf))
           .as("page size %d", size)
           .containsExactlyElementsOf(annRooms);
     }
-    assertThat(notes.inRoomsOf(out, 0, 20)).isEmpty();
+    assertThat(feeds.inRoomsOf(out, 0, 20)).isEmpty();
   }
 
   interface Page {
@@ -122,7 +122,7 @@ class NoteFeedRoomsIntegrationTest {
   }
 
   private List<Long> newest(Long viewerId, int count) {
-    return notes.topLevel(viewerId, 0, count, null).stream().map(NoteEntity::getId).toList();
+    return feeds.topLevel(viewerId, 0, count, null).stream().map(NoteEntity::getId).toList();
   }
 
   private List<Long> walk(int size, Page page) {

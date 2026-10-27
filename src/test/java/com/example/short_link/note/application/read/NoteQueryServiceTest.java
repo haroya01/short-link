@@ -14,14 +14,21 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteSeries;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
+import com.example.short_link.note.domain.repository.NoteTrendsReader;
 import com.example.short_link.note.exception.NoteException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,8 +45,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 class NoteQueryServiceTest {
 
   private static final NoteAuthor ME = new NoteAuthor(7L, "me", null);
+  private static final Instant NOW = Instant.parse("2026-10-27T03:00:00Z");
 
   @Mock private NoteRepository notes;
+  @Mock private NoteFeedReader feeds;
+  @Mock private NotePageReader pages;
+  @Mock private NoteTrendsReader trends;
+  @Mock private NoteAccessReader lookups;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
   @Mock private NoteBookmarkRepository bookmarks;
@@ -54,14 +66,18 @@ class NoteQueryServiceTest {
     service =
         new NoteQueryService(
             notes,
+            feeds,
+            pages,
+            trends,
             likes,
             reposts,
             bookmarks,
             people,
             views,
-            new NoteAccess(notes),
+            new NoteAccess(lookups),
             rooms,
-            noteSeries);
+            noteSeries,
+            Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static NoteEntity note(Long id, Long inReplyTo) {
@@ -77,11 +93,11 @@ class NoteQueryServiceTest {
   @Test
   void pagesFetchOneExtraRowToKnowIfMoreFollow() {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
-    when(notes.topLevel(7L, 2, 3, null)).thenReturn(three);
+    when(feeds.topLevel(7L, 2, 3, null)).thenReturn(three);
     when(views.ofFeed(three.subList(0, 2), 7L))
         .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
-    NoteFeedView feed = service.everyone(1, 2, 7L);
+    NoteFeedView feed = service.everyone(7L, new PageAsk(1, 2));
 
     assertThat(feed.hasNext()).isTrue();
     assertThat(feed.page()).isEqualTo(1);
@@ -91,10 +107,10 @@ class NoteQueryServiceTest {
   @Test
   void trendingPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(5, 9).mapToObj(id -> note(id, null)).toList();
-    when(notes.trending(null, 0, 21)).thenReturn(two);
+    when(trends.trending(null, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
 
-    NoteFeedView feed = service.trending(0, 20, null);
+    NoteFeedView feed = service.trending(null, new PageAsk(0, 20));
 
     assertThat(feed.hasNext()).isFalse();
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 9L);
@@ -104,10 +120,10 @@ class NoteQueryServiceTest {
   @Test
   void theFeedOfOtherServersPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
-    when(notes.federated(3L, 0, 21)).thenReturn(two);
+    when(feeds.federated(3L, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
-    NoteFeedView feed = service.federated(3L, 0, 20);
+    NoteFeedView feed = service.federated(3L, new PageAsk(0, 20));
 
     assertThat(feed.hasNext()).isFalse();
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(7L, 8L);
@@ -115,11 +131,7 @@ class NoteQueryServiceTest {
 
   @Test
   void trendingHashtagsAreAWeekOfTagsTwoAccountsUsed() {
-    when(notes.trendingTags(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(7),
-            org.mockito.ArgumentMatchers.eq(2),
-            org.mockito.ArgumentMatchers.eq(10)))
+    when(trends.trendingTags(NOW, 7, 2, 10))
         .thenReturn(
             List.of(
                 new com.example.short_link.note.domain.TrendingTag(
@@ -131,11 +143,7 @@ class NoteQueryServiceTest {
 
   @Test
   void trendingLinksAreAWeekOfCardsTwoAccountsShared() {
-    when(notes.trendingLinks(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(7),
-            org.mockito.ArgumentMatchers.eq(2),
-            org.mockito.ArgumentMatchers.eq(10)))
+    when(trends.trendingLinks(NOW, 7, 2, 10))
         .thenReturn(
             List.of(
                 new com.example.short_link.note.domain.TrendingLink(
@@ -149,21 +157,21 @@ class NoteQueryServiceTest {
   @Test
   void theNotesOfALinkPageLikeAnyFeedAndABlankLinkHasNone() {
     List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
-    when(notes.linked("https://e.com", 3L, 0, 21)).thenReturn(two);
+    when(feeds.linked("https://e.com", 3L, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
-    assertThat(service.linked("https://e.com", 0, 20, 3L).items())
+    assertThat(service.linked("https://e.com", 3L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(7L, 8L);
-    assertThat(service.linked(" ", 0, 20, 3L).items()).isEmpty();
+    assertThat(service.linked(" ", 3L, new PageAsk(0, 20)).items()).isEmpty();
   }
 
   @Test
   void pageAndSizeAreClamped() {
-    when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1, null)).thenReturn(List.of());
+    when(feeds.topLevel(null, 0, PageAsk.MAX_SIZE + 1, null)).thenReturn(List.of());
     when(views.ofFeed(List.of(), null)).thenReturn(List.of());
 
-    NoteFeedView feed = service.everyone(-3, 10_000, null);
+    NoteFeedView feed = service.everyone(null, new PageAsk(-3, 10_000));
 
     assertThat(feed.page()).isZero();
     assertThat(feed.hasNext()).isFalse();
@@ -173,20 +181,20 @@ class NoteQueryServiceTest {
   void aProfileOfNoOneIs404() {
     when(people.activeByUsername("ghost")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.byAuthor("ghost", 0, 20, null))
+    assertThatThrownBy(() -> service.byAuthor("ghost", null, new PageAsk(0, 20)))
         .isInstanceOf(NoteException.class);
   }
 
   @Test
   void profileAndFollowingReadTheRightAuthors() {
     when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
-    when(notes.topLevelByAuthor(7L, 9L, 0, 21)).thenReturn(List.of());
+    when(feeds.topLevelByAuthor(7L, 9L, 0, 21)).thenReturn(List.of());
     when(views.ofFeed(anyList(), eq(9L))).thenReturn(List.of());
-    service.byAuthor("me", 0, 20, 9L);
+    service.byAuthor("me", 9L, new PageAsk(0, 20));
 
     when(people.followingIds(9L)).thenReturn(List.of(7L, 8L));
-    when(notes.following(List.of(7L, 8L, 9L), 9L, 0, 21)).thenReturn(List.of());
-    assertThat(service.following(9L, 0, 20).items()).isEmpty();
+    when(feeds.following(List.of(7L, 8L, 9L), 9L, 0, 21)).thenReturn(List.of());
+    assertThat(service.following(9L, new PageAsk(0, 20)).items()).isEmpty();
   }
 
   @Test
@@ -195,7 +203,7 @@ class NoteQueryServiceTest {
     NoteEntity reposted = note(2L, null);
     NoteEntity orphaned = note(3L, null);
     when(people.followingIds(9L)).thenReturn(List.of(8L));
-    when(notes.following(List.of(8L, 9L), 9L, 0, 21))
+    when(feeds.following(List.of(8L, 9L), 9L, 0, 21))
         .thenReturn(
             List.of(
                 new NoteFeedRow(reposted, 8L),
@@ -205,7 +213,7 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(reposted, orphaned, own), 9L))
         .thenReturn(List.of(view(2L, null, null), view(3L, null, null), view(1L, null, null)));
 
-    List<NoteView> items = service.following(9L, 0, 20).items();
+    List<NoteView> items = service.following(9L, new PageAsk(0, 20)).items();
 
     assertThat(items).extracting(NoteView::id).containsExactly(2L, 1L);
     assertThat(items.get(0).repostedBy()).isEqualTo(ME);
@@ -222,13 +230,13 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, null), view(2L, null, null)));
 
-    NoteFeedView feed = service.reposts("me", 0, 20, 9L);
+    NoteFeedView feed = service.reposts("me", 9L, new PageAsk(0, 20));
 
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 2L);
     assertThat(feed.hasNext()).isFalse();
 
     when(people.activeByUsername("ghost")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.reposts("ghost", 0, 20, null))
+    assertThatThrownBy(() -> service.reposts("ghost", null, new PageAsk(0, 20)))
         .isInstanceOf(NoteException.class);
   }
 
@@ -239,7 +247,7 @@ class NoteQueryServiceTest {
     NoteEntity reply = note(3L, 2L);
     when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(main));
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(parent));
-    when(notes.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(feeds.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
 
@@ -252,7 +260,7 @@ class NoteQueryServiceTest {
 
   private NoteEntity threadOf(NoteEntity main) {
     when(notes.findUnblocked(main.getId(), 9L)).thenReturn(Optional.of(main));
-    when(notes.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(feeds.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
     when(views.of(List.of(main), 9L)).thenReturn(List.of(view(main.getId(), null, null)));
     return main;
   }
@@ -311,7 +319,7 @@ class NoteQueryServiceTest {
     when(notes.findUnblocked(
             org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(Optional.empty());
-    when(notes.replies(
+    when(feeds.replies(
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.eq(NoteQueryService.MAX_REPLIES)))
@@ -331,7 +339,7 @@ class NoteQueryServiceTest {
     NoteEntity root = note(1L, null);
     NoteEntity hidden = note(2L, 1L);
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(root));
-    when(notes.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(hidden));
+    when(feeds.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(hidden));
     when(views.of(List.of(root, hidden), 9L))
         .thenReturn(List.of(view(1L, null, 0L), view(2L, 1L, 0L)));
 
@@ -341,7 +349,7 @@ class NoteQueryServiceTest {
     assertThatThrownBy(() -> service.hiddenReplies(3L, 9L)).isInstanceOf(NoteException.class);
     NoteEntity unreadable = note(4L, null);
     when(notes.findUnblocked(4L, 9L)).thenReturn(Optional.of(unreadable));
-    when(notes.hiddenReplies(4L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(feeds.hiddenReplies(4L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
     when(views.of(List.of(unreadable), 9L)).thenReturn(List.of());
     assertThatThrownBy(() -> service.hiddenReplies(4L, 9L)).isInstanceOf(NoteException.class);
   }
@@ -353,8 +361,8 @@ class NoteQueryServiceTest {
     NoteEntity hidden = note(3L, 1L);
     NoteEntity unreadable = note(4L, 1L);
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(root));
-    when(notes.replies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
-    when(notes.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES))
+    when(feeds.replies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(feeds.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES))
         .thenReturn(List.of(hidden, unreadable));
     when(views.of(List.of(root, reply, hidden, unreadable), 9L))
         .thenReturn(List.of(view(1L, null, null), view(2L, 1L, null), view(3L, 1L, null)));
@@ -423,7 +431,7 @@ class NoteQueryServiceTest {
     forFollowers.showTo(NoteVisibility.PRIVATE);
     when(notes.findUnblocked(3L, 9L)).thenReturn(Optional.of(forFollowers));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, ME));
-    when(notes.visibleTo(9L, Set.of(3L))).thenReturn(Set.of(), Set.of(3L));
+    when(lookups.visibleTo(9L, Set.of(3L))).thenReturn(Set.of(), Set.of(3L));
     assertThatThrownBy(() -> service.history(3L, 9L)).isInstanceOf(NoteException.class);
     when(notes.versions(3L)).thenReturn(List.of());
     assertThat(service.history(3L, 9L).versions()).hasSize(1);
@@ -445,13 +453,13 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, 0L), view(2L, null, 0L)));
 
-    assertThat(service.bookmarks(9L, 0, 20).items())
+    assertThat(service.bookmarks(9L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(5L, 2L);
 
-    when(notes.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
+    when(feeds.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
     when(views.ofFeed(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
-    assertThat(service.quotes(7L, 0, 20, null).items())
+    assertThat(service.quotes(7L, null, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(2L);
   }
@@ -459,11 +467,11 @@ class NoteQueryServiceTest {
   @Test
   void aPostsQuotingNotesComeWithHowManyThereAre() {
     NoteEntity quoting = note(3L, null);
-    when(notes.quotesOfPost(40L, 9L, 0, 21)).thenReturn(List.of(quoting));
-    when(notes.countQuotesOfPost(40L, 9L)).thenReturn(1L);
+    when(feeds.quotesOfPost(40L, 9L, 0, 21)).thenReturn(List.of(quoting));
+    when(feeds.countQuotesOfPost(40L, 9L)).thenReturn(1L);
     when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
 
-    PostQuotesView quotes = service.postQuotes(40L, 0, 20, 9L);
+    PostQuotesView quotes = service.postQuotes(40L, 9L, new PageAsk(0, 20));
 
     assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
     assertThat(quotes.total()).isEqualTo(1L);
@@ -472,19 +480,19 @@ class NoteQueryServiceTest {
 
   @Test
   void aSearchWithNothingToLookForAsksNothingAndOtherwisePagesTheMatches() {
-    assertThat(service.search("  ", 0, 20, null).items()).isEmpty();
-    assertThat(service.search("가".repeat(101), 0, 20, null).items()).isEmpty();
-    org.mockito.Mockito.verifyNoInteractions(notes);
+    assertThat(service.search("  ", null, new PageAsk(0, 20)).items()).isEmpty();
+    assertThat(service.search("가".repeat(101), null, new PageAsk(0, 20)).items()).isEmpty();
+    org.mockito.Mockito.verifyNoInteractions(notes, feeds);
 
     NoteEntity hit = note(4L, null);
-    when(notes.search("+(헥사고날)", null, 7L, 0, 21)).thenReturn(List.of(hit));
+    when(feeds.search("+(헥사고날)", null, 7L, 0, 21)).thenReturn(List.of(hit));
     when(views.ofFeed(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
-    assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
+    assertThat(service.search(" 헥사고날 ", 7L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(4L);
 
-    when(notes.search(null, "%밥%", null, 0, 21)).thenReturn(List.of());
+    when(feeds.search(null, "%밥%", null, 0, 21)).thenReturn(List.of());
     when(views.ofFeed(List.of(), null)).thenReturn(List.of());
-    assertThat(service.search("밥", 0, 20, null).items()).isEmpty();
+    assertThat(service.search("밥", null, new PageAsk(0, 20)).items()).isEmpty();
   }
 }

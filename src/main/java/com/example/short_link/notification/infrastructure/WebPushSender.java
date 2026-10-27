@@ -3,8 +3,8 @@ package com.example.short_link.notification.infrastructure;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
-import com.example.short_link.user.domain.WebPushSubscriptionEntity;
-import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
+import com.example.short_link.user.application.push.WebPushTarget;
+import com.example.short_link.user.application.push.WebPushTargets;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.net.URI;
 import java.security.GeneralSecurityException;
@@ -27,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 public class WebPushSender implements PushSender {
 
-  private final WebPushSubscriptionRepository subscriptions;
+  private final WebPushTargets subscriptions;
   private final JsonMapper jsonMapper;
   private final ExecutorService executor;
   private final PushService pushService;
@@ -35,7 +35,7 @@ public class WebPushSender implements PushSender {
 
   public WebPushSender(
       VapidProperties props,
-      WebPushSubscriptionRepository subscriptions,
+      WebPushTargets subscriptions,
       JsonMapper jsonMapper,
       @Value("${short-link.blog-base-url}") String blogBaseUrl) {
     this.subscriptions = subscriptions;
@@ -62,7 +62,7 @@ public class WebPushSender implements PushSender {
     if (pushService == null || message.app() != PushApp.BLOG) {
       return;
     }
-    dispatch(subscriptions.findAllByUserId(recipientUserId), message);
+    dispatch(subscriptions.forUser(recipientUserId), message);
   }
 
   @Override
@@ -70,29 +70,29 @@ public class WebPushSender implements PushSender {
     if (pushService == null || message.app() != PushApp.BLOG || recipientUserIds.isEmpty()) {
       return;
     }
-    dispatch(subscriptions.findAllByUserIdIn(recipientUserIds), message);
+    dispatch(subscriptions.forUsers(recipientUserIds), message);
   }
 
-  private void dispatch(List<WebPushSubscriptionEntity> targets, PushMessage message) {
+  private void dispatch(List<WebPushTarget> targets, PushMessage message) {
     if (targets.isEmpty()) {
       log.info("push web type={} outcome=no_subscription", message.type());
       return;
     }
     byte[] payload = payload(message);
-    for (WebPushSubscriptionEntity sub : targets) {
+    for (WebPushTarget sub : targets) {
       executor.submit(() -> deliver(sub, payload, message));
     }
   }
 
-  private void deliver(WebPushSubscriptionEntity sub, byte[] payload, PushMessage message) {
+  private void deliver(WebPushTarget sub, byte[] payload, PushMessage message) {
     try {
       Notification notification =
-          new Notification(sub.getEndpoint(), sub.getP256dh(), sub.getAuth(), payload);
+          new Notification(sub.endpoint(), sub.p256dh(), sub.auth(), payload);
       HttpResponse response = pushService.send(notification);
       int status = response.getStatusLine().getStatusCode();
       String outcome = status < 300 ? "sent" : "rejected";
       if (status == 404 || status == 410) {
-        subscriptions.deleteByEndpoint(sub.getEndpoint());
+        subscriptions.forget(sub.endpoint());
         outcome = "gone";
       }
       log.info(
@@ -100,13 +100,13 @@ public class WebPushSender implements PushSender {
           message.type(),
           outcome,
           status,
-          host(sub.getEndpoint()));
+          host(sub.endpoint()));
     } catch (Exception e) {
       // Push is best-effort; delivery failure must not invalidate the in-app notification.
       log.warn(
           "push web type={} outcome=error host={}: {}",
           message.type(),
-          host(sub.getEndpoint()),
+          host(sub.endpoint()),
           e.toString());
     }
   }

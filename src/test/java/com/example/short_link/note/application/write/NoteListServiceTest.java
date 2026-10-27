@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteViews;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteListEntity;
@@ -143,13 +144,13 @@ class NoteListServiceTest {
     when(lists.feed(4L, 7L, 0, 2)).thenReturn(List.of(first, second));
     when(views.ofFeed(List.of(first), 7L)).thenReturn(List.of());
 
-    NoteFeedView page = service().feed(7L, 4L, -1, 1);
+    NoteFeedView page = service().feed(7L, 4L, new PageAsk(-1, 1));
 
     assertThat(page.page()).isZero();
     assertThat(page.hasNext()).isTrue();
     verify(views).ofFeed(List.of(first), 7L);
 
     when(lists.feed(4L, 7L, 50, 51)).thenReturn(List.of(first));
-    assertThat(service().feed(7L, 4L, 1, 500).hasNext()).isFalse();
+    assertThat(service().feed(7L, 4L, new PageAsk(1, 500)).hasNext()).isFalse();
   }
 }

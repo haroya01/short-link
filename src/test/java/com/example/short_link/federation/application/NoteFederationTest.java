@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteVisibility;
@@ -35,7 +36,7 @@ class NoteFederationTest {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final NoteSnapshot NOTE =
-      new NoteSnapshot(
+      NoteSnapshotFixtures.note(
           42L,
           7L,
           "yuki",
@@ -192,7 +193,7 @@ class NoteFederationTest {
       new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB");
 
   private static NoteSnapshot reply(NoteVisibility visibility) {
-    return new NoteSnapshot(
+    return NoteSnapshotFixtures.note(
         43L,
         7L,
         "yuki",
@@ -296,7 +297,7 @@ class NoteFederationTest {
   }
 
   private static NoteSnapshot quotingAlice() {
-    return new NoteSnapshot(
+    return NoteSnapshotFixtures.note(
         44L,
         7L,
         "yuki",
@@ -352,7 +353,7 @@ class NoteFederationTest {
   @Test
   void aDirectNoteQuotingANoteElsewhereNeverLeavesForThatServer() {
     NoteSnapshot directQuote =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             44L,
             7L,
             "yuki",
@@ -381,7 +382,7 @@ class NoteFederationTest {
   @Test
   void aDirectReplyElsewhereThatAlsoQuotesAnotherServerReachesOnlyThePersonItAnswers() {
     NoteSnapshot directReplyQuoting =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             43L,
             7L,
             "yuki",
@@ -423,7 +424,7 @@ class NoteFederationTest {
   void aQuoteOfAMembersNoteTakesTheUsualPathAndNamesNoServer() {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     NoteSnapshot quotingMio =
-        new NoteSnapshot(
+        NoteSnapshotFixtures.note(
             44L,
             7L,
             "yuki",
@@ -599,7 +600,7 @@ class NoteFederationTest {
   }
 
   private static NoteSnapshot naming(NoteVisibility visibility) {
-    return new NoteSnapshot(
+    return NoteSnapshotFixtures.note(
         44L,
         7L,
         "yuki",

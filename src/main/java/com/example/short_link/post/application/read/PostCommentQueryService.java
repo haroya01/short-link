@@ -8,8 +8,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,7 @@ public class PostCommentQueryService {
 
   private final CommentRepository commentRepository;
   private final CommentLikeRepository commentLikeRepository;
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final PostRepository postRepository;
   private final CommentMentions mentions;
   private final PostAccessPolicy access;
@@ -38,10 +38,10 @@ public class PostCommentQueryService {
       return new PostScoped<>(List.of(), false);
     }
     return new PostScoped<>(
-        comments(postId, reader.viewerId(), tombstones), !PostAccessPolicy.isOpen(post));
+        comments(reader.viewerId(), postId, tombstones), !PostAccessPolicy.isOpen(post));
   }
 
-  private List<CommentView> comments(Long postId, Long viewerId, boolean tombstones) {
+  private List<CommentView> comments(Long viewerId, Long postId, boolean tombstones) {
     List<CommentEntity> comments =
         tombstones
             ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)
@@ -50,9 +50,9 @@ public class PostCommentQueryService {
     List<Long> authorIds = live.stream().map(CommentEntity::getUserId).distinct().toList();
     Map<Long, Long> likeCounts =
         commentLikeRepository.countByCommentIds(live.stream().map(CommentEntity::getId).toList());
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> authors =
+        userSummaries.findAll(authorIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     Function<String, List<String>> mentioned =
         mentions.in(live.stream().map(CommentEntity::getBody).toList());
 
@@ -86,9 +86,9 @@ public class PostCommentQueryService {
             .filter(lists::keeps)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserSummary> authors =
+        userSummaries.findAll(authorIds).stream()
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     Map<Long, Long> likeCounts =
         commentLikeRepository.countByCommentIds(
             comments.stream().map(CommentEntity::getId).toList());
@@ -99,7 +99,7 @@ public class PostCommentQueryService {
         .map(
             c -> {
               PostEntity post = posts.get(c.getPostId());
-              UserEntity author = authors.get(post.getUserId());
+              UserSummary author = authors.get(post.getUserId());
               return new MyCommentView(
                   c.getId(),
                   c.getBody(),
@@ -108,7 +108,7 @@ public class PostCommentQueryService {
                   c.getCreatedAt(),
                   post.getSlug(),
                   post.getTitle(),
-                  author == null ? null : author.getUsername());
+                  author == null ? null : author.username());
             })
         .toList();
   }
@@ -121,7 +121,7 @@ public class PostCommentQueryService {
     return commentLikeRepository.findLikedCommentIds(userId, ids);
   }
 
-  private PublicAuthorView authorView(UserEntity user) {
+  private PublicAuthorView authorView(UserSummary user) {
     return user == null ? null : PublicAuthorView.from(user);
   }
 }

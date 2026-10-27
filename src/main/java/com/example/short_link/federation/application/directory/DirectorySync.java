@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -67,33 +66,7 @@ public class DirectorySync {
     }
   }
 
-  @Autowired
   public DirectorySync(
-      FederationDirectorySourceRepository sources,
-      RemoteActorRepository actors,
-      RemoteActorResolver resolver,
-      FederationDomainBlockRepository serverBlocks,
-      FederationHttp http,
-      SigningKeys signingKeys,
-      JsonMapper json,
-      DirectoryProperties props,
-      DirectoryPacer pacer,
-      MeterRegistry meters) {
-    this(
-        sources,
-        actors,
-        resolver,
-        serverBlocks,
-        http,
-        signingKeys,
-        json,
-        props,
-        pacer,
-        meters,
-        Clock.systemUTC());
-  }
-
-  DirectorySync(
       FederationDirectorySourceRepository sources,
       RemoteActorRepository actors,
       RemoteActorResolver resolver,
