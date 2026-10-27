@@ -22,7 +22,6 @@ import jakarta.persistence.Entity;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,7 @@ class ArchUnitRatchetRulesTest {
           "theSystemClockIsReadInConfigAlone", 0,
           "transactionsDoNotReachOutboundClients", 26,
           "springDataRepositoriesStayBehindPorts", 2,
-          "constructorCallsPassFewerThanTenArguments", 147);
+          "constructorCallsPassFewerThanTenArguments", 139);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");
@@ -261,17 +260,14 @@ class ArchUnitRatchetRulesTest {
             .filter(call -> call.getTarget().getRawParameterTypes().size() >= LONG_PARAMETER_LIST)
             .map(
                 call ->
-                    SimpleConditionEvent.violated(
-                        call,
-                        call.getOriginOwner().getName()
-                            + "."
-                            + call.getOrigin().getName()
-                            + " calls the constructor of "
-                            + call.getTargetOwner().getName()
-                            + " in "
-                            + call.getSourceCodeLocation()))
-            .sorted(Comparator.comparing(event -> event.getDescriptionLines().getFirst()))
-            .forEach(events::add);
+                    call.getOriginOwner().getName()
+                        + "."
+                        + call.getOrigin().getName()
+                        + " calls the constructor of "
+                        + call.getTargetOwner().getName())
+            .distinct()
+            .sorted()
+            .forEach(line -> events.add(SimpleConditionEvent.violated(from, line)));
       }
     };
   }
