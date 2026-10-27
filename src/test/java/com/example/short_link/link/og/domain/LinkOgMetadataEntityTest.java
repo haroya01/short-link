@@ -2,6 +2,7 @@ package com.example.short_link.link.og.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -54,10 +55,12 @@ class LinkOgMetadataEntityTest {
   }
 
   @Test
-  void changeOverrideTrimsAndNormalizesBlankToNull() {
+  void mirrorsTheOverridesTrimmedAndBlankAsNullAsTheLinkKeepsThem() {
     LinkOgMetadataEntity entity = new LinkOgMetadataEntity(new LinkId(1L));
+    LinkEntity link = new LinkEntity("https://target", "abc1234", 7L, null);
+    link.changeOgOverride("  Title  ", "  ", null);
 
-    entity.changeOverride("  Title  ", "  ", null);
+    entity.mirrorOverride(link);
 
     assertThat(entity.getOgTitleOverride()).isEqualTo("Title");
     assertThat(entity.getOgDescriptionOverride()).isNull();
@@ -82,7 +85,9 @@ class LinkOgMetadataEntityTest {
   void effectiveValuesPreferOverridesWhenPresent() {
     LinkOgMetadataEntity entity = new LinkOgMetadataEntity(new LinkId(1L));
     entity.applyFetched("BaseT", "BaseD", "base.png", Instant.now());
-    entity.changeOverride("OverT", "OverD", "over.png");
+    LinkEntity link = new LinkEntity("https://target", "abc1234", 7L, null);
+    link.changeOgOverride("OverT", "OverD", "over.png");
+    entity.mirrorOverride(link);
 
     assertThat(entity.effectiveTitle()).isEqualTo("OverT");
     assertThat(entity.effectiveDescription()).isEqualTo("OverD");

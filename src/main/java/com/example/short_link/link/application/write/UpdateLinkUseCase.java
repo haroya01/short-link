@@ -6,11 +6,7 @@ import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.read.MyLinkReader;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
-import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,8 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class UpdateLinkUseCase {
 
   private final LinkOwnership ownership;
-  private final LinkOgMetadataRepository ogMetadataRepository;
-  private final LinkExpirationPolicyRepository expirationPolicyRepository;
+  private final LinkSidecars sidecars;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
@@ -52,20 +47,10 @@ public class UpdateLinkUseCase {
     if (command.note() != null) link.updateNote(command.note());
     if (command.expiredMessage() != null) {
       link.updateExpiredMessage(command.expiredMessage());
-      LinkExpirationPolicyEntity policy =
-          expirationPolicyRepository
-              .findById(link.getId())
-              .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
-      policy.changeExpiredMessage(link.getExpiredMessage());
-      expirationPolicyRepository.save(policy);
+      sidecars.mirrorExpiredMessage(link);
     }
     if (urlChanged) {
-      LinkOgMetadataEntity ogMeta =
-          ogMetadataRepository
-              .findById(link.getId())
-              .orElseGet(() -> new LinkOgMetadataEntity(link.linkId()));
-      ogMeta.resetForNewUrl();
-      ogMetadataRepository.save(ogMeta);
+      sidecars.resetOgForNewUrl(link);
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
     auditLogService.record(

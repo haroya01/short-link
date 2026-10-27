@@ -6,11 +6,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
+import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -24,7 +27,14 @@ class CampaignLinksTest {
   private final LinkExpirationPolicyRepository policies =
       mock(LinkExpirationPolicyRepository.class);
   private final LinkCacheEviction cache = mock(LinkCacheEviction.class);
-  private final CampaignLinks campaignLinks = new CampaignLinks(links, policies, cache);
+  private final CampaignLinks campaignLinks =
+      new CampaignLinks(
+          links,
+          new LinkSidecars(
+              mock(LinkAccessControlRepository.class),
+              policies,
+              mock(LinkOgMetadataRepository.class)),
+          cache);
 
   @Test
   void endingACampaignExpiresTheLinkAndMirrorsItsPolicyOntoTheSidecar() {

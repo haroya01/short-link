@@ -2,6 +2,7 @@ package com.example.short_link.link.access.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import org.junit.jupiter.api.Test;
 
@@ -36,13 +37,22 @@ class LinkAccessControlEntityTest {
   }
 
   @Test
-  void changeMaxViewsAcceptsAnyInteger() {
+  void mirrorsThePasswordHashAndViewLimitTheLinkKeeps() {
     LinkAccessControlEntity entity = new LinkAccessControlEntity(new LinkId(1L));
+    LinkEntity link = new LinkEntity("https://target", "abc1234", 7L, null);
 
-    entity.changeMaxViews(50);
+    link.setPasswordHash("$2a$10$xx");
+    link.setMaxViews(50);
+    entity.mirrorPasswordHash(link);
+    entity.mirrorMaxViews(link);
+    assertThat(entity.getPasswordHash()).isEqualTo("$2a$10$xx");
     assertThat(entity.getMaxViews()).isEqualTo(50);
 
-    entity.changeMaxViews(null);
+    link.setPasswordHash("");
+    link.setMaxViews(null);
+    entity.mirrorPasswordHash(link);
+    entity.mirrorMaxViews(link);
+    assertThat(entity.hasPassword()).isFalse();
     assertThat(entity.getMaxViews()).isNull();
   }
 }
