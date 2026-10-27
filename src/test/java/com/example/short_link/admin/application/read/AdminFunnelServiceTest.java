@@ -1,9 +1,9 @@
-package com.example.short_link.common.observability;
+package com.example.short_link.admin.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.common.observability.AdminFunnelService.Funnel;
-import com.example.short_link.common.observability.AdminFunnelService.Window;
+import com.example.short_link.admin.application.read.AdminFunnelService.Funnel;
+import com.example.short_link.admin.application.read.AdminFunnelService.Window;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
