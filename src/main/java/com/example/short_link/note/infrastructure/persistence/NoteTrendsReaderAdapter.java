@@ -40,12 +40,6 @@ class NoteTrendsReaderAdapter implements NoteTrendsReader {
 
   @PersistenceContext private EntityManager em;
 
-  // Top-level notes written in the window, by reactions from people other than the author: likes,
-  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. Each
-  // author places perAuthor notes per round, and within a round members' notes and notes from
-  // elsewhere take turns. A note
-  // received from elsewhere joins once a member liked, reposted or answered it — Mastodon trends
-  // such notes too, with a member's touch standing in for its moderator review.
   @Override
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
     List<Long> ranked = ranking.ids();
@@ -99,9 +93,6 @@ class NoteTrendsReaderAdapter implements NoteTrendsReader {
         .getResultList();
   }
 
-  // Trending hashtags in one statement: public notes of the window, from members or — as with
-  // trending notes — from elsewhere once a member touched them, never from a limited or suspended
-  // server. Ranked by how many accounts used the tag; each day's count rides along.
   @Override
   public List<TrendingTag> trendingTags(Instant now, int days, int minAccounts, int limit) {
     var query =
@@ -131,8 +122,6 @@ class NoteTrendsReaderAdapter implements NoteTrendsReader {
     return tags;
   }
 
-  // Mastodon's trending links: the link cards of public notes in the window, by how many accounts
-  // shared them. A card's title and image are the latest fetched.
   @Override
   public List<TrendingLink> trendingLinks(Instant now, int days, int minAccounts, int limit) {
     var query =
@@ -166,8 +155,6 @@ class NoteTrendsReaderAdapter implements NoteTrendsReader {
     return links;
   }
 
-  // A member's public note trends; one received from elsewhere once a member liked, reposted or
-  // answered it, and never from a server moderators blocked.
   private static String trendable(String alias) {
     return " AND ("
         + alias

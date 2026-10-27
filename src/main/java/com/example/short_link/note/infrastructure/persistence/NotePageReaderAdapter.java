@@ -129,9 +129,6 @@ class NotePageReaderAdapter implements NotePageReader {
     return replies;
   }
 
-  // Replies, likes, reposts and quotes of a page in one statement; likes and boosts from other
-  // servers add to likes and reposts, and published posts that carry a note as a card add to its
-  // quotes.
   @Override
   public Map<Long, NoteStats> stats(Collection<Long> noteIds) {
     Map<Long, NoteStats> stats = new HashMap<>();

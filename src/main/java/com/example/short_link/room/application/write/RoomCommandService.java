@@ -50,9 +50,6 @@ public class RoomCommandService {
     return query.detail(userId, roomId);
   }
 
-  // Leaving keeps the member's notes and room posts unless they ask otherwise; their invites and
-  // unanswered invitations stop working, and an owner hands the room to whoever has been in it
-  // longest.
   @Transactional
   public void leave(Long userId, Long roomId, boolean deleteMyNotes) {
     RoomEntity room = guard.locked(roomId);
@@ -69,7 +66,6 @@ public class RoomCommandService {
     }
   }
 
-  // The removed member's notes stay; no invite lets them back in, and no one gets in by theirs.
   @Transactional
   public void remove(Long ownerId, Long roomId, Long memberId) {
     guard.owned(ownerId, roomId);

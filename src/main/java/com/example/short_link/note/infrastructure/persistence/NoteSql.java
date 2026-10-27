@@ -15,8 +15,6 @@ final class NoteSql {
     return HeardSql.heard(alias + ".user_id");
   }
 
-  // As heard, for a note row: one from an account on a server the viewer blocked, or that this
-  // server suspended, stays out too.
   static String heardNote(String alias) {
     return heard(alias)
         + HeardSql.heardRemote(alias + ".remote_actor_id")
@@ -29,14 +27,10 @@ final class NoteSql {
         + ServerBlockSql.suspended(alias + ".remote_actor_id");
   }
 
-  // What members discover (trending, tags) leaves out a limited server's notes, unless the viewer
-  // follows the account.
   static String unlimited(String alias) {
     return " AND NOT " + ServerBlockSql.limitedFor(alias + ".remote_actor_id", ":viewer");
   }
 
-  // Mastodon's filter languages: a viewer who chose languages sees notes in them, and notes whose
-  // language nobody stated.
   static String inLanguages(String alias) {
     return " AND ("
         + alias

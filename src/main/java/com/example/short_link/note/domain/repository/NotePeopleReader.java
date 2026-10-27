@@ -7,8 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-// Reads the user slice's tables natively; soft-deleted accounts never resolve, so their notes drop
-// out of every listing at once.
+// Soft-deleted accounts never resolve.
 public interface NotePeopleReader {
 
   Map<Long, NoteAuthor> activeAuthors(Collection<Long> userIds);
@@ -21,9 +20,7 @@ public interface NotePeopleReader {
 
   List<Long> followingIds(Long userId);
 
-  // Of the candidates, those who follow the user.
   Set<Long> followersOf(Long userId, Collection<Long> candidates);
 
-  // Whether the member follows the account elsewhere and it accepted.
   boolean followsRemote(Long userId, Long remoteActorId);
 }

@@ -27,8 +27,7 @@ public class RoomInvitationService {
   private final RoomWriteGuard guard;
   private final Clock clock;
 
-  // Any member asks people in by name. The room is locked so two members cannot both pass the
-  // waiting cap.
+  // The room is locked so two members cannot both pass the waiting cap.
   @Transactional
   public List<RoomInvitee> invite(Long userId, Long roomId, Collection<Long> userIds) {
     List<Long> ids =
@@ -45,7 +44,6 @@ public class RoomInvitationService {
     return rooms.invitees(roomId);
   }
 
-  // The inviter or the owner takes an invitation back before it is answered.
   @Transactional
   public void cancel(Long userId, Long roomId, Long inviteeId) {
     RoomEntity room = guard.locked(roomId);
@@ -61,9 +59,8 @@ public class RoomInvitationService {
     rooms.dropInvitation(roomId, inviteeId);
   }
 
-  // Accepting is joining: the same seat and removal checks as an invite link. A room that asks for
-  // approval still asks unless its owner sent the invitation. An invitation whose sender is no
-  // longer a member is gone, and stays gone though the answer is an error; a full room keeps it.
+  // An invitation whose sender is no longer a member is dropped, and stays dropped though the
+  // answer is an error.
   @Transactional(noRollbackFor = RoomException.class)
   public JoinResult accept(Long userId, Long roomId) {
     RoomEntity room =

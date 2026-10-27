@@ -48,8 +48,7 @@ public class RoomInviteService {
   private final CreateLinkUseCase links;
   private final Clock clock;
 
-  // Any member shares one. The kurl link is a convenience: if issuing it fails the code still
-  // works.
+  // Issuing the kurl link may fail; the code works without it.
   @Transactional
   public RoomInviteView create(
       Long userId, Long roomId, Integer maxUses, Long expiresInSeconds, Boolean approval) {
@@ -82,7 +81,6 @@ public class RoomInviteService {
     return RoomInviteView.of(invite, urls, rooms.person(userId).orElse(null));
   }
 
-  // The owner stops any invite, a member their own.
   @Transactional
   public RoomInviteView disable(Long userId, Long roomId, Long inviteId) {
     RoomEntity room =

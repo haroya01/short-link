@@ -4,8 +4,6 @@ import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-// The cursors a client hands back as it got them, one shape for each kind of list. Each list reads
-// only its own shape.
 sealed interface HomeCursor {
 
   // "<notes>.<posts>", the next position in each source of following, latest, trending and the
@@ -14,7 +12,6 @@ sealed interface HomeCursor {
 
     static final Positions START = new Positions(null, 0, 0);
 
-    // A cursor from a scroll that left out the seen keeps doing so; one from before it never does.
     static Positions read(String raw, boolean hideSeen, Instant now) {
       if (raw == null) {
         return new Positions(hideSeen ? now : null, 0, 0);
@@ -67,7 +64,7 @@ sealed interface HomeCursor {
   }
 
   // "r<asOf ms>.<offset>", a place in the for-you ranking made at asOf; "rh…" one that leaves out
-  // the seen. A cursor goes on hiding the seen, or not, as its first page did.
+  // the seen.
   record Ranked(Instant asOf, int offset, boolean hide) implements HomeCursor {
 
     static Ranked parse(String raw) {

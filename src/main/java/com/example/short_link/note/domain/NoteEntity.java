@@ -167,7 +167,6 @@ public class NoteEntity extends BaseCreatedEntity {
     return remoteActorId != null;
   }
 
-  // A top-level note is its own conversation; a reply carries its thread's root.
   public Long conversation() {
     return conversationId != null ? conversationId : id;
   }
@@ -209,7 +208,6 @@ public class NoteEntity extends BaseCreatedEntity {
     replyHiddenAt = null;
   }
 
-  // A reply from elsewhere that the thread's writer removed: it stays a reply, under nothing.
   public void detach() {
     this.inReplyToId = null;
     this.conversationId = null;
@@ -219,7 +217,6 @@ public class NoteEntity extends BaseCreatedEntity {
     return Excerpt.of(body);
   }
 
-  // As on Mastodon, a warning hides the photos too, so a note with one is always sensitive.
   public void markContent(String warning, boolean sensitive) {
     this.contentWarning = warning;
     this.sensitive = sensitive || warning != null;
@@ -266,8 +263,8 @@ public class NoteEntity extends BaseCreatedEntity {
     return pollExpiresAt != null && !pollExpiresAt.isAfter(now);
   }
 
-  // A poll from elsewhere is counted and closed by its own server. It is closed here from the
-  // start, so the close job, which tells voters and federates the result, never takes it.
+  // Closed here from the start, so the close job, which tells voters and federates the result,
+  // never takes a poll from elsewhere.
   public void pollElsewhere(
       List<String> options,
       Instant expiresAt,

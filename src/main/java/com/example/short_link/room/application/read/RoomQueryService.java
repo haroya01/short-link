@@ -58,7 +58,6 @@ public class RoomQueryService {
             .toList());
   }
 
-  // The owner sees every invite of the room, a member only their own.
   @Transactional(readOnly = true)
   public List<RoomInviteView> invites(Long userId, Long roomId) {
     RoomEntity room = joined(userId, roomId);
@@ -89,7 +88,7 @@ public class RoomQueryService {
     return rooms.requests(roomId);
   }
 
-  // What anyone holding the code may see before joining: the room's name and faces, never a note.
+  // What anyone holding the code may see before joining: never a note.
   @Transactional(readOnly = true)
   public RoomInviteLanding landing(String code) {
     RoomInviteEntity invite =

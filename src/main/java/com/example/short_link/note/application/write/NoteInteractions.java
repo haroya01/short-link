@@ -84,7 +84,6 @@ public class NoteInteractions {
     return new RepostStatus(on, statsOf(noteId).reposts());
   }
 
-  // Mastodon's "mute conversation": the reader hears nothing more from the thread this note is in.
   @Transactional
   public ConversationMuteStatus setConversationMuted(Long userId, Long noteId, boolean on) {
     NoteEntity note = guard.readable(userId, noteId);
@@ -96,7 +95,6 @@ public class NoteInteractions {
     return new ConversationMuteStatus(on);
   }
 
-  // A bookmark is the reader's own: it notifies no one and does not federate.
   @Transactional
   public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
     guard.readable(userId, noteId);

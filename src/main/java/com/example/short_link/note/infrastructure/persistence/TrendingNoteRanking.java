@@ -15,18 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-// The trending order is the same for everyone up to what a reader may not see, so one ranking
-// serves every reader for cacheFor or longer and each request only filters it. It holds ids alone:
-// what a
-// note says and who may see it are read again on every request.
+// The ranking holds ids alone: what a note says and who may see it are read on every request.
 @Component
 class TrendingNoteRanking {
 
   static final int SIZE = 200;
 
-  // Ranking scores every top-level note of the window, so it waits this many of its own durations
-  // before the next one: however large the window grows, it keeps the database busy no more than a
-  // thirtieth of the time.
   static final int REST_PER_WORK = 30;
 
   private final TrendingSpread spread;

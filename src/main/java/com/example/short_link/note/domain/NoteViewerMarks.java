@@ -2,7 +2,6 @@ package com.example.short_link.note.domain;
 
 import java.util.Set;
 
-// What the reader did to a page of notes: liked, reposted, bookmarked, muted the conversation of.
 public record NoteViewerMarks(
     Set<Long> liked, Set<Long> reposted, Set<Long> bookmarked, Set<Long> muted) {
 

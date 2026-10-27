@@ -3,9 +3,6 @@ package com.example.short_link.note.domain;
 import java.util.Locale;
 import java.util.Optional;
 
-// Who may answer a thread, set on its first note as on Threads and X. Following means the people
-// the writer follows; mentioned means the accounts the first note names, who may answer under
-// following too. The writer may always answer in their own thread.
 public enum NoteReplyPolicy {
   EVERYONE,
   FOLLOWING,

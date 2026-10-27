@@ -5,9 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-// Membership, requests and removals go with the account by cascade. A room it owned passes to
-// whoever
-// has been in it longest, and its invites stop letting anyone in.
+// Membership, requests and removals go with the account by cascade.
 @Repository
 class RoomUserDataEraser implements UserDataEraser {
 

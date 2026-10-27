@@ -31,17 +31,11 @@ public interface NoteFeedReader {
 
   List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
 
-  // The notes a relay brought or a pull kept, newest first, as the federated feed filters them; a
-  // note kept because it trended elsewhere is not among them.
   List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
 
-  // The same notes kept between since and until, newest first, without a warning or a sensitive
-  // mark, and not by an account the viewer follows unless followed ones are asked for.
   List<RemotePoolRow> remotePool(
       Long viewerId, Instant since, Instant until, int limit, boolean withFollowed);
 
-  // Members' public top-level notes written between since and until, newest first, heard and in
-  // the viewer's languages as the home's latest has them, without room notes.
   List<LocalPoolRow> localPool(Long viewerId, Instant since, Instant until, int limit);
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);

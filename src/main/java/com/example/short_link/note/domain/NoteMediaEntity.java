@@ -57,7 +57,6 @@ public class NoteMediaEntity extends BaseCreatedEntity {
     this(noteId, position, storageKey, url, contentType, altText, null, null);
   }
 
-  // A size is kept only as a pair of sane values: one side alone cannot give a ratio.
   public NoteMediaEntity(
       Long noteId,
       int position,

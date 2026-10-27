@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.stereotype.Repository;
 
-// Rooms live in the room module; a note reads its room's name and membership straight from the
-// tables.
 @Repository
 class NoteRoomReaderAdapter implements NoteRoomReader {
 

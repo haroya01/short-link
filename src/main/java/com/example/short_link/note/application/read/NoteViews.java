@@ -38,10 +38,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Batches every lookup for a page of notes: one query per kind of data, never per note. Notes by
-// soft-deleted authors are dropped, and so are followers-only and direct notes this viewer may not
-// read (one lookup, and only when the page has such notes by someone else). Mentioned members ride
-// along in the authors query, so a mention links only when that member exists.
+// One query per kind of data for a page, never one per note.
 @Component
 @RequiredArgsConstructor
 public class NoteViews {
@@ -208,8 +205,6 @@ public class NoteViews {
     return lower.startsWith("https://") || lower.startsWith("http://");
   }
 
-  // The first notes of the page's threads that limit replies, read only when the viewer is signed
-  // in and the page holds such a thread; a first note already on the page is not read again.
   private Map<Long, NoteEntity> limitedRoots(List<NoteEntity> page, Long viewerId) {
     if (viewerId == null) {
       return Map.of();
@@ -235,8 +230,6 @@ public class NoteViews {
     return roots;
   }
 
-  // Of those threads, the ones ReplyGate closes to this viewer. Whether their writers follow the
-  // viewer is one lookup for every writer of a thread still closed without it.
   private Set<Long> closedTo(
       Long viewerId, Map<Long, NoteEntity> roots, Map<Long, NoteAuthor> members) {
     if (roots.isEmpty()) {
@@ -320,9 +313,6 @@ public class NoteViews {
     return items;
   }
 
-  // A feed page: each top-level note that the author went on in their own replies carries the next
-  // part, so the feed can show the first two parts joined. One query walks every chain on the page,
-  // and the next parts are viewed in the same batch as the page.
   public List<NoteView> ofFeed(List<NoteEntity> page, Long viewerId) {
     List<Long> roots = page.stream().filter(NoteEntity::isTopLevel).map(NoteEntity::getId).toList();
     Map<Long, List<Long>> chains =
@@ -352,8 +342,6 @@ public class NoteViews {
     return views;
   }
 
-  // Each root's parts in order. When the author answered the same part twice, the earlier answer
-  // carries the thread on, as on Threads and X.
   static Map<Long, List<Long>> chains(List<SelfReply> replies) {
     Map<Long, Map<Long, Long>> firstAnswer = new HashMap<>();
     for (SelfReply reply : replies) {
@@ -375,8 +363,6 @@ public class NoteViews {
     return chains;
   }
 
-  // Like link cards, a page without a poll of its own costs no query: a poll from elsewhere carries
-  // its server's counts.
   private Map<Long, NoteView.Poll> polls(List<NoteEntity> visible, Long viewerId) {
     List<NoteEntity> polled = visible.stream().filter(NoteEntity::hasPoll).toList();
     Map<Long, NoteView.Poll> views = new HashMap<>();
@@ -398,7 +384,6 @@ public class NoteViews {
     return views;
   }
 
-  // Only notes whose body has an address can carry a card, so a page without one costs no query.
   private Map<Long, NoteView.LinkPreview> linkCards(List<NoteEntity> visible) {
     List<Long> linked =
         visible.stream()
