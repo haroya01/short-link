@@ -165,8 +165,7 @@ class InboxClassifier {
     return ignored("unsupported");
   }
 
-  // The same rule that serves the note document: it exists and its author federates. A personal
-  // inbox already resolved its owner, who is usually the author.
+  // The same rule that serves the note document: it exists and its author federates.
   private Optional<NoteSnapshot> federated(Long noteId, Optional<LocalActor> owner) {
     return notes
         .find(noteId)

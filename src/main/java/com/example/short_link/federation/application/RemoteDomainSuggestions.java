@@ -6,8 +6,6 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-// What completes the server part of a handle as it is typed: "@gargron@m", "gargron@m" and "m" all
-// ask for servers starting with "m"; nothing typed yet asks for the best known ones.
 @Service
 @RequiredArgsConstructor
 public class RemoteDomainSuggestions {

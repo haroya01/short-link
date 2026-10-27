@@ -20,10 +20,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// A pulled post is kept as a relayed one is, under its author, and marked with the server it was
-// pulled from. The day's cap is its own, so pulls never use up what the relays may keep; a post
-// kept because a server listed it as trending has a cap of its own again. Each kept post's counts
-// are tracked so they can be asked again.
+// Pulled posts and posts kept because a server listed them as trending each have a day's cap of
+// their own, so they never use up what the relays may keep.
 @Component
 @RequiredArgsConstructor
 class LatestStore {

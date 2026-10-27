@@ -19,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-// Sends a note's Create, Update or Delete to the shared inbox of every follower's server, once per
-// server. Cheapest checks first: most authors have no actor or no remote followers, and then the
-// note itself is never read.
 @Service
 @RequiredArgsConstructor
 public class NoteFederation {
@@ -83,11 +80,8 @@ public class NoteFederation {
     deliver(authorId, deletion(noteId));
   }
 
-  // A note that answers a note from another server, or names someone there, reaches those servers
-  // too, even when the writer has no followers on them; a direct note goes only to them. Handles
-  // that resolve to no one are left as text, and a note that reaches no one elsewhere takes the
-  // usual path. The people it names are looked up between two transactions: those lookups wait on
-  // other servers.
+  // The people it names are looked up between two transactions: those lookups wait on other
+  // servers.
   public void createdElsewhere(Long noteId, Long authorId) {
     transaction
         .execute(status -> stored(noteId, authorId))

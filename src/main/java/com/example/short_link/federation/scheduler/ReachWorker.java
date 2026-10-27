@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
-// One low-priority thread of its own asks kept notes' counts every interval. It does not run where
-// scheduling, pulling or reach is off.
 @Slf4j
 @Component
 public class ReachWorker implements SmartLifecycle {

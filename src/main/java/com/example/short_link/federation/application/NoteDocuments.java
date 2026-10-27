@@ -27,7 +27,6 @@ public class NoteDocuments {
 
   private final FederationUrls urls;
 
-  // Someone on another server the note addresses: the author it answers, or a person it names.
   public record Addressee(String actorUri, String handle, String profileUrl) {}
 
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId, Addressing addressing) {

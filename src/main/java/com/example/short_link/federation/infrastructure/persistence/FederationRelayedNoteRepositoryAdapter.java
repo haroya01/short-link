@@ -16,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRepository {
 
-  // A member's touch keeps the note: a like, repost, bookmark or poll vote, a reply or quote of
-  // their own, a post quoting it, or a follow of its author.
   private static String unmarked(String note, String author) {
     return " AND NOT EXISTS (SELECT 1 FROM note_like l WHERE l.note_id = "
         + note

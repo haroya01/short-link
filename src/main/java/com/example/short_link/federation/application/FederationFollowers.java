@@ -128,7 +128,6 @@ public class FederationFollowers {
     answerAs(userId, "Reject", row.getFollowActivityId(), remoteActorId);
   }
 
-  // Unlocking the account lets everyone from elsewhere who was waiting in.
   @Transactional
   public void acceptAll(Long userId) {
     List<FollowOnDomain<FederationFollowerEntity>> rows = followers.pending(userId);

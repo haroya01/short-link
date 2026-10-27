@@ -10,7 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// No row means the defaults: federation on (10-06 decision) and the first-note notice not yet seen.
+// No row means the defaults: federation on and the first-note notice not yet seen.
 @Entity
 @Table(name = "federation_preference")
 @Getter

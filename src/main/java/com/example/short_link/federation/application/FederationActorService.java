@@ -13,8 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-// Actors are created on first lookup and hidden while the user has federation turned off. Two
-// concurrent first lookups race on the user_id key; the loser re-reads the winner's row.
+// Two concurrent first lookups race on the user_id key; the loser re-reads the winner's row.
 @Service
 @RequiredArgsConstructor
 public class FederationActorService {

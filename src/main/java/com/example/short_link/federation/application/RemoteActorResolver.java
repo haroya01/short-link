@@ -22,8 +22,6 @@ import tools.jackson.databind.json.JsonMapper;
 // Key ids differ by server (Mastodon "<actor>#main-key", GoToSocial "<actor>/main-key"), so a key
 // is resolved by fetching it and following its owner to the full actor document. Cached actors are
 // refetched after a day, or at once when a signature fails (the remote may have rotated its key).
-// A day-old copy its server did not give again is kept as is for an hour; that hour is held in
-// process memory only, so a restart asks again at once.
 @Slf4j
 @Service
 public class RemoteActorResolver {
@@ -114,7 +112,6 @@ public class RemoteActorResolver {
     return parsed.map(this::store);
   }
 
-  // A suspended server is never asked for anything.
   private Optional<JsonNode> fetch(URI uri) {
     if (serverBlocks.suspends(uri.getHost())) {
       return Optional.empty();

@@ -7,9 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
-// One low-priority thread of its own refreshes the trending posts at start and then every
-// interval, so a slow server never holds up the shared scheduler. It does not run where scheduling
-// or trends are off.
 @Slf4j
 @Component
 public class TrendsWorker implements SmartLifecycle {
