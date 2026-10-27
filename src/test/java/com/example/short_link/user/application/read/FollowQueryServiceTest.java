@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowListReader;
@@ -54,9 +55,10 @@ class FollowQueryServiceTest {
   @Test
   void statusReflectsFollowingForAuthenticatedViewer() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    FollowEntity follow = new FollowEntity(9L, 2L);
+    FollowEntity follow = new FollowEntity(FollowEdge.follower(9L).following(2L));
     follow.notifyOfNotes(true);
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(follow));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(follow));
     when(followLists.counts(2L)).thenReturn(new Counts(5, 3, 4, 2));
 
     FollowStatus status = service.status(9L, "bob");
@@ -110,8 +112,8 @@ class FollowQueryServiceTest {
     UserEntity bob = user(2L, "bob");
     bob.updateHideFollowerCount(true);
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
-        .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(new FollowEntity(FollowEdge.follower(9L).following(2L))));
 
     FollowStatus status = service.status(9L, "bob");
 
@@ -126,8 +128,8 @@ class FollowQueryServiceTest {
     UserEntity bob = user(2L, "bob");
     bob.updateLocked(true);
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRequests.exists(9L, 2L)).thenReturn(true);
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
+    when(followRequests.exists(FollowEdge.follower(9L).following(2L))).thenReturn(true);
 
     FollowStatus status = service.status(9L, "bob");
 
@@ -139,7 +141,7 @@ class FollowQueryServiceTest {
   @Test
   void anOpenAccountNeverLooksForRequests() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
 
     FollowStatus status = service.status(9L, "bob");
 

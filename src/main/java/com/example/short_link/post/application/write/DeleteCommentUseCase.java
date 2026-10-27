@@ -24,7 +24,7 @@ public class DeleteCommentUseCase {
             .findById(cmd.commentId())
             .orElseThrow(() -> new PostException(PostErrorCode.COMMENT_NOT_FOUND, cmd.commentId()));
 
-    if (!comment.isOwnedBy(cmd.userId()) && !isPostOwner(comment.getPostId(), cmd.userId())) {
+    if (!comment.isOwnedBy(cmd.userId()) && !isPostOwner(cmd.userId(), comment.getPostId())) {
       throw new PostException(PostErrorCode.COMMENT_PERMISSION_DENIED)
           .with("commentId", cmd.commentId());
     }
@@ -41,7 +41,7 @@ public class DeleteCommentUseCase {
     commentRepository.delete(comment);
   }
 
-  private boolean isPostOwner(Long postId, Long userId) {
+  private boolean isPostOwner(Long userId, Long postId) {
     return postRepository.findById(postId).map(p -> p.isOwnedBy(userId)).orElse(false);
   }
 }

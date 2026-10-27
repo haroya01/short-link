@@ -14,6 +14,7 @@ import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.application.read.FollowStatus;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -63,7 +64,7 @@ class FollowUseCaseTest {
   @Test
   void followCreatesEdgeWhenNew() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
     when(followLists.counts(2L)).thenReturn(new Counts(1, 0, 0, 0));
 
     FollowStatus status = useCase.follow(9L, "bob", 42L);
@@ -89,8 +90,8 @@ class FollowUseCaseTest {
   @Test
   void followIsIdempotent() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
-        .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(new FollowEntity(FollowEdge.follower(9L).following(2L))));
     when(followLists.counts(2L)).thenReturn(new Counts(1, 0, 0, 0));
 
     FollowStatus status = useCase.follow(9L, "bob", null);
@@ -103,9 +104,10 @@ class FollowUseCaseTest {
   @Test
   void followingAgainAnswersWithTheBellAsTheFollowerLeftIt() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    FollowEntity quiet = new FollowEntity(9L, 2L);
+    FollowEntity quiet = new FollowEntity(FollowEdge.follower(9L).following(2L));
     quiet.notifyOfNotes(false);
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(quiet));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(quiet));
 
     FollowStatus status = useCase.follow(9L, "bob", null);
 
@@ -161,7 +163,7 @@ class FollowUseCaseTest {
   void followAndUnfollowAnswerWithTheBlocksBetweenThem() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(userBlocks.between(9L, 2L)).thenReturn(new BlockRelation(true, false));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
 
     FollowStatus followed = useCase.follow(9L, "bob", null);
     FollowStatus unfollowed = useCase.unfollow(9L, "bob");
@@ -175,8 +177,8 @@ class FollowUseCaseTest {
   @Test
   void unfollowDeletesExistingEdge() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
-        .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(new FollowEntity(FollowEdge.follower(9L).following(2L))));
 
     FollowStatus status = useCase.unfollow(9L, "bob");
 
@@ -189,7 +191,7 @@ class FollowUseCaseTest {
     UserEntity bob = user(2L, "bob");
     bob.updateHideFollowerCount(true);
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
 
     FollowStatus status = useCase.follow(9L, "bob", null);
 
@@ -202,15 +204,16 @@ class FollowUseCaseTest {
   @Test
   void onlyAFollowerCanAskToHearOfEveryNewNote() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    FollowEntity follow = new FollowEntity(9L, 2L);
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(follow));
+    FollowEntity follow = new FollowEntity(FollowEdge.follower(9L).following(2L));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(follow));
 
     assertThat(useCase.setNoteNotifications(9L, "bob", true).notifyNotes()).isTrue();
     assertThat(follow.isNotifyNotes()).isTrue();
     assertThat(useCase.setNoteNotifications(9L, "bob", false).notifyNotes()).isFalse();
     assertThat(follow.isNotifyNotes()).isFalse();
 
-    when(followRepository.findByFollowerIdAndFollowingId(8L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(8L).following(2L))).thenReturn(Optional.empty());
     assertThatThrownBy(() -> useCase.setNoteNotifications(8L, "bob", true))
         .isInstanceOfSatisfying(
             UserException.class,
@@ -226,8 +229,8 @@ class FollowUseCaseTest {
   @Test
   void followingALockedAccountLeavesARequestInstead() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRequests.exists(9L, 2L)).thenReturn(false);
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
+    when(followRequests.exists(FollowEdge.follower(9L).following(2L))).thenReturn(false);
 
     FollowStatus status = useCase.follow(9L, "bob", null);
 
@@ -242,8 +245,8 @@ class FollowUseCaseTest {
   @Test
   void askingALockedAccountAgainLeavesOneRequest() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRequests.exists(9L, 2L)).thenReturn(true);
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
+    when(followRequests.exists(FollowEdge.follower(9L).following(2L))).thenReturn(true);
 
     assertThat(useCase.follow(9L, "bob", null).requested()).isTrue();
     verify(followRequests, never()).save(any());
@@ -253,8 +256,8 @@ class FollowUseCaseTest {
   @Test
   void aFollowerOfALockedAccountStaysAFollower() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
-        .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
+    when(followRepository.find(FollowEdge.follower(9L).following(2L)))
+        .thenReturn(Optional.of(new FollowEntity(FollowEdge.follower(9L).following(2L))));
 
     FollowStatus status = useCase.follow(9L, "bob", null);
 
@@ -266,8 +269,8 @@ class FollowUseCaseTest {
   @Test
   void unfollowingALockedAccountWithdrawsTheRequest() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRequests.delete(9L, 2L)).thenReturn(1);
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(1);
 
     FollowStatus status = useCase.unfollow(9L, "bob");
 
@@ -278,8 +281,8 @@ class FollowUseCaseTest {
   @Test
   void withdrawingARequestThatIsNotThereSaysNothing() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
-    when(followRequests.delete(9L, 2L)).thenReturn(0);
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(0);
 
     useCase.unfollow(9L, "bob");
 
@@ -289,7 +292,7 @@ class FollowUseCaseTest {
   @Test
   void unfollowingAnOpenAccountNeverTouchesRequests() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRepository.find(FollowEdge.follower(9L).following(2L))).thenReturn(Optional.empty());
 
     useCase.unfollow(9L, "bob");
 

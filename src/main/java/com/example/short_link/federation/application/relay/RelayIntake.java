@@ -1,5 +1,7 @@
 package com.example.short_link.federation.application.relay;
 
+import static com.example.short_link.federation.application.ActivityStreams.MAX_URI;
+
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.domain.RelayMode;
@@ -15,8 +17,6 @@ import org.springframework.stereotype.Component;
 // more are taken once a day's worth has been.
 @Component
 public class RelayIntake {
-
-  static final int MAX_URI = 512;
 
   private final RelaySubscriptions subscriptions;
   private final RelayBreaker breaker;

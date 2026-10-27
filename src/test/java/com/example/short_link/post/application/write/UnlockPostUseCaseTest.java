@@ -25,6 +25,7 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -65,7 +66,8 @@ class UnlockPostUseCaseTest {
   private UnlockPostUseCase useCase(String readerCountry) {
     PostAccessPolicy policy =
         PostAccessFixtures.policy(mock(FollowRepository.class), readerCountry);
-    return new UnlockPostUseCase(users, posts, policy, passwords, attempts, grants);
+    return new UnlockPostUseCase(
+        new UserSummaryReader(users), posts, policy, passwords, attempts, grants);
   }
 
   @Test

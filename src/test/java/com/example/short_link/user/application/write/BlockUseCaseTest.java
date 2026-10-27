@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.FollowRequestSettledEvent;
+import com.example.short_link.common.user.BlockEdge;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
@@ -50,7 +52,7 @@ class BlockUseCaseTest {
   @Test
   void blockCreatesEdgeWhenNew() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(blockRepository.existsByBlockerIdAndBlockedId(9L, 2L)).thenReturn(false);
+    when(blockRepository.exists(BlockEdge.blocker(9L).blocked(2L))).thenReturn(false);
 
     useCase.block(9L, "bob");
 
@@ -60,7 +62,7 @@ class BlockUseCaseTest {
   @Test
   void blockIsIdempotent() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(blockRepository.existsByBlockerIdAndBlockedId(9L, 2L)).thenReturn(true);
+    when(blockRepository.exists(BlockEdge.blocker(9L).blocked(2L))).thenReturn(true);
 
     useCase.block(9L, "bob");
 
@@ -70,8 +72,8 @@ class BlockUseCaseTest {
   @Test
   void blockEndsTheFollowAndAnyRequestEitherWay() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRequests.delete(9L, 2L)).thenReturn(0);
-    when(followRequests.delete(2L, 9L)).thenReturn(1);
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(0);
+    when(followRequests.delete(FollowEdge.follower(2L).following(9L))).thenReturn(1);
 
     useCase.block(9L, "bob");
 
@@ -98,8 +100,8 @@ class BlockUseCaseTest {
   @Test
   void unblockDeletesExistingEdge() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(blockRepository.findByBlockerIdAndBlockedId(9L, 2L))
-        .thenReturn(Optional.of(new UserBlockEntity(9L, 2L)));
+    when(blockRepository.find(BlockEdge.blocker(9L).blocked(2L)))
+        .thenReturn(Optional.of(new UserBlockEntity(BlockEdge.blocker(9L).blocked(2L))));
 
     useCase.unblock(9L, "bob");
 
@@ -109,7 +111,7 @@ class BlockUseCaseTest {
   @Test
   void unblockWhenNotBlockedIsNoOp() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(blockRepository.findByBlockerIdAndBlockedId(9L, 2L)).thenReturn(Optional.empty());
+    when(blockRepository.find(BlockEdge.blocker(9L).blocked(2L))).thenReturn(Optional.empty());
 
     useCase.unblock(9L, "bob");
 
