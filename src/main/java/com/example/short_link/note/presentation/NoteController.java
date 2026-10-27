@@ -12,9 +12,12 @@ import com.example.short_link.note.application.read.ProfileMediaView;
 import com.example.short_link.note.application.read.ProfileRepliesView;
 import com.example.short_link.note.application.read.TrendingLinkView;
 import com.example.short_link.note.application.read.TrendingTagView;
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
+import com.example.short_link.note.application.write.NoteInteractions;
+import com.example.short_link.note.application.write.NoteThreadControls;
+import com.example.short_link.note.application.write.RoomNoteErasures;
 import com.example.short_link.note.presentation.request.CreateNoteRequest;
 import com.example.short_link.note.presentation.request.CreateNoteThreadRequest;
 import com.example.short_link.note.presentation.request.EditNoteRequest;
@@ -43,7 +46,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class NoteController {
 
   private final NoteQueryService query;
-  private final NoteCommandService command;
+  private final NoteComposer composer;
+  private final NoteInteractions interactions;
+  private final NoteThreadControls threads;
+  private final RoomNoteErasures erasures;
   private final NoteImages images;
   private final NoteFeedSettingsService feedSettings;
   private final RemoteHistory remoteHistory;
@@ -141,7 +147,7 @@ public class NoteController {
   @DeleteMapping("/api/v1/rooms/my-notes")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public void deleteMyRoomNotes(@AuthenticationPrincipal Long viewerId, @RequestParam Long roomId) {
-    command.requestRoomNoteErasure(viewerId, roomId);
+    erasures.request(viewerId, roomId);
   }
 
   @GetMapping("/api/v1/notes/direct")
@@ -219,14 +225,14 @@ public class NoteController {
   @ResponseStatus(HttpStatus.CREATED)
   public NoteView create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreateNoteRequest request) {
-    return command.create(userId, request.toDraft());
+    return composer.create(userId, request.toDraft());
   }
 
   @PostMapping("/api/v1/notes/threads")
   @ResponseStatus(HttpStatus.CREATED)
   public List<NoteView> createThread(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreateNoteThreadRequest request) {
-    return command.createThread(userId, request.toDrafts());
+    return composer.createThread(userId, request.toDrafts());
   }
 
   @PatchMapping("/api/v1/notes/{id}")
@@ -234,61 +240,61 @@ public class NoteController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @RequestBody EditNoteRequest request) {
-    return command.edit(userId, id, request.body(), request.contentWarning(), request.sensitive());
+    return composer.edit(userId, id, request.body(), request.contentWarning(), request.sensitive());
   }
 
   @DeleteMapping("/api/v1/notes/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    command.delete(userId, id);
+    threads.delete(userId, id);
   }
 
   @PutMapping("/api/v1/notes/{id}/like")
-  public NoteCommandService.LikeStatus like(
+  public NoteInteractions.LikeStatus like(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setLike(userId, id, true);
+    return interactions.setLike(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/like")
-  public NoteCommandService.LikeStatus unlike(
+  public NoteInteractions.LikeStatus unlike(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setLike(userId, id, false);
+    return interactions.setLike(userId, id, false);
   }
 
   @PutMapping("/api/v1/notes/{id}/conversation-mute")
-  public NoteCommandService.ConversationMuteStatus muteConversation(
+  public NoteInteractions.ConversationMuteStatus muteConversation(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setConversationMuted(userId, id, true);
+    return interactions.setConversationMuted(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/conversation-mute")
-  public NoteCommandService.ConversationMuteStatus unmuteConversation(
+  public NoteInteractions.ConversationMuteStatus unmuteConversation(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setConversationMuted(userId, id, false);
+    return interactions.setConversationMuted(userId, id, false);
   }
 
   @PutMapping("/api/v1/notes/{id}/repost")
-  public NoteCommandService.RepostStatus repost(
+  public NoteInteractions.RepostStatus repost(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setRepost(userId, id, true);
+    return interactions.setRepost(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/repost")
-  public NoteCommandService.RepostStatus unrepost(
+  public NoteInteractions.RepostStatus unrepost(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setRepost(userId, id, false);
+    return interactions.setRepost(userId, id, false);
   }
 
   @PutMapping("/api/v1/notes/{id}/bookmark")
-  public NoteCommandService.BookmarkStatus bookmark(
+  public NoteInteractions.BookmarkStatus bookmark(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setBookmark(userId, id, true);
+    return interactions.setBookmark(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/bookmark")
-  public NoteCommandService.BookmarkStatus unbookmark(
+  public NoteInteractions.BookmarkStatus unbookmark(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setBookmark(userId, id, false);
+    return interactions.setBookmark(userId, id, false);
   }
 
   @GetMapping("/api/v1/notes/bookmarks")
@@ -318,35 +324,35 @@ public class NoteController {
   }
 
   @PutMapping("/api/v1/notes/{id}/pin")
-  public NoteCommandService.PinStatus pin(
+  public NoteThreadControls.PinStatus pin(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setPin(userId, id, true);
+    return threads.setPin(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/pin")
-  public NoteCommandService.PinStatus unpin(
+  public NoteThreadControls.PinStatus unpin(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setPin(userId, id, false);
+    return threads.setPin(userId, id, false);
   }
 
   @PutMapping("/api/v1/notes/{id}/hidden")
-  public NoteCommandService.ReplyHiddenStatus hideReply(
+  public NoteThreadControls.ReplyHiddenStatus hideReply(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setReplyHidden(userId, id, true);
+    return threads.setReplyHidden(userId, id, true);
   }
 
   @DeleteMapping("/api/v1/notes/{id}/hidden")
-  public NoteCommandService.ReplyHiddenStatus showReply(
+  public NoteThreadControls.ReplyHiddenStatus showReply(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return command.setReplyHidden(userId, id, false);
+    return threads.setReplyHidden(userId, id, false);
   }
 
   @PutMapping("/api/v1/notes/{id}/reply-policy")
-  public NoteCommandService.ReplyPolicyStatus setReplyPolicy(
+  public NoteThreadControls.ReplyPolicyStatus setReplyPolicy(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @RequestBody ReplyPolicyRequest request) {
-    return command.setReplyPolicy(userId, id, request.replyPolicy());
+    return threads.setReplyPolicy(userId, id, request.replyPolicy());
   }
 
   @GetMapping("/api/v1/notes/feed-preferences")

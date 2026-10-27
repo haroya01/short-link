@@ -53,7 +53,7 @@ final class NotePublication {
                 || !Mentions.remote(note.getBody()).isEmpty()));
     if (parent != null && (readers == null || readers.contains(parent.getUserId()))) {
       told.add(
-          NoteCommandService.interaction(NoteInteractionEvent.Type.REPLY, parent, writerId, note));
+          NoteInteractions.interaction(NoteInteractionEvent.Type.REPLY, parent, writerId, note));
     }
     if (note.getVisibility().followersRead()
         && (parent == null || writerId.equals(parent.getUserId()))) {
@@ -61,7 +61,7 @@ final class NotePublication {
     }
     if (posted.quoteSeen()) {
       told.add(
-          NoteCommandService.interaction(
+          NoteInteractions.interaction(
               NoteInteractionEvent.Type.QUOTE, quotedNote, writerId, note));
     }
     boolean quotesPostPublicly = quotedPost != null && note.getVisibility().shareable();

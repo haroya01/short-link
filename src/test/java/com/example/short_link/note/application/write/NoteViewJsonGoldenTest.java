@@ -115,14 +115,9 @@ class NoteViewJsonGoldenTest {
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
-  private NoteCommandService command() {
-    return new NoteCommandService(
+  private NoteComposer composer() {
+    return new NoteComposer(
         notes,
-        pages,
-        erasures,
-        likes,
-        reposts,
-        bookmarks,
         media,
         quotedPosts,
         people,
@@ -131,9 +126,7 @@ class NoteViewJsonGoldenTest {
         new NoteAccess(lookups),
         rooms,
         moderation,
-        blocks,
-        connections,
-        seriesItems,
+        new NoteWriteGuard(notes, new NoteAccess(lookups), blocks),
         events,
         FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
@@ -290,7 +283,7 @@ class NoteViewJsonGoldenTest {
                             600)));
     when(rooms.isMember(30L, 7L)).thenReturn(true);
     when(rooms.names(any())).thenReturn(Map.of(30L, "책 모임"));
-    NoteCommandService command = command();
+    NoteComposer command = composer();
 
     List<NoteView> posted =
         List.of(

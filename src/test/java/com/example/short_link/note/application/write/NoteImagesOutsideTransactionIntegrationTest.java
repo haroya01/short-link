@@ -33,7 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
 class NoteImagesOutsideTransactionIntegrationTest {
 
   @MockitoBean private ObjectStorage storage;
-  @Autowired private NoteCommandService notes;
+  @Autowired private NoteComposer composer;
   @Autowired private NoteScheduleService schedules;
   @Autowired private NoteScheduleRepository scheduled;
   @Autowired private UserRepository users;
@@ -93,7 +93,7 @@ class NoteImagesOutsideTransactionIntegrationTest {
 
   @Test
   void aNoteAsksStorageAboutItsImagesBeforeItsTransactionOpens() {
-    notes.create(
+    composer.create(
         writer,
         new NoteDraft(
             "두 장",
@@ -109,7 +109,7 @@ class NoteImagesOutsideTransactionIntegrationTest {
 
   @Test
   void aThreadAsksStorageAboutEveryPartsImagesBeforeItsTransactionOpens() {
-    notes.createThread(writer, List.of(withImage("하나", "a"), withImage("둘", "b")));
+    composer.createThread(writer, List.of(withImage("하나", "a"), withImage("둘", "b")));
 
     assertThat(calls)
         .containsExactly("size outside", "cache outside", "size outside", "cache outside");

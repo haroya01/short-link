@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class RoomNotesByWriter implements RoomNoteRemover {
 
-  private final NoteCommandService command;
+  private final RoomNoteErasures erasures;
 
   @Override
   public void eraseNotesBy(Long userId, Long roomId) {
-    command.requestRoomNoteErasure(userId, roomId);
+    erasures.request(userId, roomId);
   }
 }

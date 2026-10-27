@@ -1,19 +1,11 @@
 package com.example.short_link.note.application.write;
 
-import com.example.short_link.common.collection.CollectionConnectionCleaner;
-import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
-import com.example.short_link.common.event.NoteInteractionEvent;
-import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
-import com.example.short_link.common.event.NoteUnrepostedEvent;
-import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.NoteVisibility.Reader;
-import com.example.short_link.common.post.SeriesItemCleaner;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteBatch;
@@ -26,20 +18,14 @@ import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
-import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.ReplyGate;
-import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
-import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
-import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
-import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
-import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -63,16 +49,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
-public class NoteCommandService {
+public class NoteComposer {
 
   private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
 
   private final NoteRepository notes;
-  private final NotePageReader pages;
-  private final RoomNoteErasureRepository erasures;
-  private final NoteLikeRepository likes;
-  private final NoteRepostRepository reposts;
-  private final NoteBookmarkRepository bookmarks;
   private final NoteMediaRepository media;
   private final QuotedPostReader quotedPosts;
   private final NotePeopleReader people;
@@ -81,9 +62,7 @@ public class NoteCommandService {
   private final NoteAccess access;
   private final NoteRoomReader rooms;
   private final UserModerationGuard moderation;
-  private final UserBlockChecker blocks;
-  private final CollectionConnectionCleaner connections;
-  private final SeriesItemCleaner seriesItems;
+  private final NoteWriteGuard guard;
   private final ApplicationEventPublisher events;
   private final TransactionTemplate transaction;
   private final Clock clock;
@@ -126,9 +105,9 @@ public class NoteCommandService {
                             NoteErrorCode.NOTE_VISIBILITY_INVALID, draft.visibility()));
     NoteEntity parent = null;
     if (draft.inReplyToId() != null) {
-      parent = find(draft.inReplyToId());
-      requireReadable(userId, parent);
-      requireNoBlockBetween(userId, parent, NoteErrorCode.NOTE_REPLY_BLOCKED);
+      parent = guard.find(draft.inReplyToId());
+      guard.requireReadable(userId, parent);
+      guard.requireNoBlockBetween(userId, parent, NoteErrorCode.NOTE_REPLY_BLOCKED);
     }
     if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
@@ -142,11 +121,11 @@ public class NoteCommandService {
                   () ->
                       new NoteException(
                           NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
-      requireReadable(userId, quotedNote);
+      guard.requireReadable(userId, quotedNote);
       if (!quotedNote.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
-      requireNoBlockBetween(userId, quotedNote, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
+      guard.requireNoBlockBetween(userId, quotedNote, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     }
     QuotedPost quoted = null;
     if (draft.quotedPostId() != null) {
@@ -432,7 +411,7 @@ public class NoteCommandService {
   public NoteView edit(
       Long userId, Long noteId, String rawBody, String rawWarning, Boolean sensitive) {
     moderation.requireCanWrite(userId);
-    NoteEntity note = owned(userId, noteId);
+    NoteEntity note = guard.owned(userId, noteId);
     String body = normalize(rawBody);
     boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();
     requireContent(body, hasMedia);
@@ -487,263 +466,6 @@ public class NoteCommandService {
     return views.of(List.of(note), userId).getFirst();
   }
 
-  // As on Mastodon: only the author pins, only their own top-level notes, at most five; the
-  // newest pin shows first.
-  @Transactional
-  public PinStatus setPin(Long userId, Long noteId, boolean on) {
-    NoteEntity note = owned(userId, noteId);
-    if (!on) {
-      note.unpin();
-      return new PinStatus(false);
-    }
-    if (note.isPinned()) {
-      return new PinStatus(true);
-    }
-    if (!note.isTopLevel()) {
-      throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
-    }
-    if (note.getVisibility().direct()) {
-      throw new NoteException(NoteErrorCode.NOTE_PIN_DIRECT);
-    }
-    if (notes.countPinned(userId) >= NoteEntity.MAX_PINS) {
-      throw new NoteException(NoteErrorCode.NOTE_PIN_LIMIT, NoteEntity.MAX_PINS);
-    }
-    note.pin(clock.instant().truncatedTo(ChronoUnit.MICROS));
-    return new PinStatus(true);
-  }
-
-  // The writer deletes their own note. The writer of a thread also removes someone else's reply in
-  // it, as a post's owner removes comments: a member's reply is deleted, one from elsewhere is only
-  // unhooked here, since its server keeps it.
-  @Transactional
-  public void delete(Long userId, Long noteId) {
-    NoteEntity note = find(noteId);
-    if (note.isOwnedBy(userId)) {
-      remove(note);
-      return;
-    }
-    if (note.getInReplyToId() == null || !writesThreadOf(userId, note)) {
-      throw new NoteException(NoteErrorCode.NOTE_PERMISSION_DENIED);
-    }
-    if (note.isRemote()) {
-      note.detach();
-    } else {
-      remove(note);
-    }
-  }
-
-  // As Threads' hidden replies: the thread's writer moves a reply out of the thread, where anyone
-  // who can read the thread still finds it under its hidden replies. The replier is not told.
-  @Transactional
-  public ReplyHiddenStatus setReplyHidden(Long userId, Long noteId, boolean on) {
-    NoteEntity reply = find(noteId);
-    if (reply.getInReplyToId() == null) {
-      throw new NoteException(NoteErrorCode.NOTE_NOT_A_REPLY);
-    }
-    if (!writesThreadOf(userId, reply)) {
-      throw new NoteException(NoteErrorCode.NOTE_PERMISSION_DENIED);
-    }
-    if (on) {
-      reply.hideReply(clock.instant().truncatedTo(ChronoUnit.MICROS));
-    } else {
-      reply.showReply();
-    }
-    return new ReplyHiddenStatus(on);
-  }
-
-  @Transactional
-  public ReplyPolicyStatus setReplyPolicy(Long userId, Long noteId, String raw) {
-    NoteReplyPolicy policy =
-        NoteReplyPolicy.parse(raw)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_INVALID, raw));
-    NoteEntity note = owned(userId, noteId);
-    if (!note.isTopLevel()) {
-      throw new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_ON_REPLY);
-    }
-    if (note.getReplyPolicy() != policy) {
-      notes.applyReplyPolicy(noteId, policy);
-    }
-    return new ReplyPolicyStatus(policy.apiName());
-  }
-
-  private boolean writesThreadOf(Long userId, NoteEntity reply) {
-    return reply.threadWrittenBy(userId, notes::findById);
-  }
-
-  // An admin takes a reported note down as if its author deleted it: a member's note also leaves
-  // their followers' servers; a note from elsewhere only leaves this one.
-  @Transactional
-  public void takeDown(Long noteId) {
-    notes.findById(noteId).ifPresent(this::remove);
-  }
-
-  private void remove(NoteEntity note) {
-    Long noteId = note.getId();
-    List<String> keys =
-        media.findByNoteIds(List.of(noteId)).stream()
-            .map(NoteMediaEntity::getStorageKey)
-            .filter(key -> !key.isEmpty())
-            .toList();
-    likes.deleteAllByNoteId(noteId);
-    connections.purgeForNote(noteId);
-    seriesItems.purgeForNote(noteId);
-    notes.delete(note);
-    if (!note.isRemote()) {
-      events.publishEvent(
-          new NoteDeletedEvent(
-              noteId,
-              note.getUserId(),
-              keys,
-              note.getInReplyToId(),
-              Mentions.remote(note.getBody()),
-              note.getQuotedNoteId(),
-              note.getVisibility().federates()));
-    }
-  }
-
-  @Transactional
-  public void requestRoomNoteErasure(Long userId, Long roomId) {
-    erasures.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
-  }
-
-  // One chunk of a requested erasure, each note through the usual delete; the request is done once
-  // a chunk comes back short. Running it again after a crash only finds what is left.
-  @Transactional
-  public int eraseRoomNotes(Long userId, Long roomId, int chunk) {
-    List<Long> ids = erasures.roomNoteIdsBy(userId, roomId, chunk);
-    notes.findAllByIdIn(ids).forEach(this::remove);
-    if (ids.size() < chunk) {
-      erasures.finishRoomErasure(userId, roomId);
-    }
-    return ids.size();
-  }
-
-  @Transactional
-  public LikeStatus setLike(Long userId, Long noteId, boolean on) {
-    NoteEntity note = readable(userId, noteId);
-    if (on) {
-      if (likes.addIfAbsent(noteId, userId)) {
-        events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
-        if (note.isRemote()) {
-          events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, true));
-        }
-      }
-    } else {
-      likes.delete(noteId, userId);
-      if (note.isRemote()) {
-        events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, false));
-      }
-    }
-    return new LikeStatus(on, statsOf(noteId).likes());
-  }
-
-  @Transactional
-  public RepostStatus setRepost(Long userId, Long noteId, boolean on) {
-    NoteEntity note = readable(userId, noteId);
-    if (on) {
-      if (!note.getVisibility().shareable()) {
-        throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
-      }
-      moderation.requireCanWrite(userId);
-      requireNoBlockBetween(userId, note, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
-      reposts
-          .addIfAbsent(noteId, userId)
-          .ifPresent(
-              repost -> {
-                events.publishEvent(
-                    new NoteRepostedEvent(repost.getId(), noteId, userId, note.isRemote()));
-                events.publishEvent(
-                    interaction(NoteInteractionEvent.Type.REPOST, note, userId, null));
-              });
-    } else {
-      reposts
-          .delete(noteId, userId)
-          .ifPresent(
-              repost ->
-                  events.publishEvent(
-                      new NoteUnrepostedEvent(repost.getId(), noteId, userId, note.isRemote())));
-    }
-    return new RepostStatus(on, statsOf(noteId).reposts());
-  }
-
-  // Mastodon's "mute conversation": the reader hears nothing more from the thread this note is in.
-  @Transactional
-  public ConversationMuteStatus setConversationMuted(Long userId, Long noteId, boolean on) {
-    NoteEntity note = readable(userId, noteId);
-    if (on) {
-      notes.muteConversation(userId, note.conversation(), clock.instant());
-    } else {
-      notes.unmuteConversation(userId, note.conversation());
-    }
-    return new ConversationMuteStatus(on);
-  }
-
-  // A bookmark is the reader's own: it notifies no one and does not federate.
-  @Transactional
-  public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
-    readable(userId, noteId);
-    if (on) {
-      bookmarks.addIfAbsent(noteId, userId);
-    } else {
-      bookmarks.delete(noteId, userId);
-    }
-    return new BookmarkStatus(on);
-  }
-
-  private NoteStats statsOf(Long noteId) {
-    return pages.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
-  }
-
-  static NoteInteractionEvent interaction(
-      NoteInteractionEvent.Type type, NoteEntity target, Long actorId, NoteEntity source) {
-    return new NoteInteractionEvent(
-        type,
-        target.getUserId(),
-        actorId,
-        null,
-        target.getId(),
-        target.excerpt(),
-        source == null ? null : source.getId(),
-        source == null ? null : source.excerpt(),
-        target.conversation());
-  }
-
-  private void requireNoBlockBetween(Long userId, NoteEntity note, NoteErrorCode code) {
-    if (note.isRemote()) {
-      return;
-    }
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
-      throw new NoteException(code);
-    }
-  }
-
-  // A followers-only or direct note someone may not read is, to them, a note that does not exist.
-  private NoteEntity readable(Long userId, Long noteId) {
-    NoteEntity note = find(noteId);
-    requireReadable(userId, note);
-    return note;
-  }
-
-  private void requireReadable(Long userId, NoteEntity note) {
-    if (!access.readable(note, userId)) {
-      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
-    }
-  }
-
-  private NoteEntity owned(Long userId, Long noteId) {
-    NoteEntity note = find(noteId);
-    if (!note.isOwnedBy(userId)) {
-      throw new NoteException(NoteErrorCode.NOTE_PERMISSION_DENIED);
-    }
-    return note;
-  }
-
-  private NoteEntity find(Long noteId) {
-    return notes
-        .findById(noteId)
-        .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-  }
-
   private static String normalize(String body) {
     return body == null ? "" : body.strip();
   }
@@ -767,18 +489,4 @@ public class NoteCommandService {
       throw new NoteException(NoteErrorCode.NOTE_BODY_TOO_LONG, NoteEntity.MAX_BODY_LENGTH);
     }
   }
-
-  public record LikeStatus(boolean liked, long likeCount) {}
-
-  public record RepostStatus(boolean reposted, long repostCount) {}
-
-  public record BookmarkStatus(boolean bookmarked) {}
-
-  public record PinStatus(boolean pinned) {}
-
-  public record ReplyHiddenStatus(boolean hidden) {}
-
-  public record ReplyPolicyStatus(String replyPolicy) {}
-
-  public record ConversationMuteStatus(boolean muted) {}
 }
