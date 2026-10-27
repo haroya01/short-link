@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.note.application.access.NoteAccess;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.write.PostAccessSettings;
 import com.example.short_link.post.application.write.PublishScheduledPostUseCase;
@@ -56,7 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 class ArchUnitSemanticRulesTest {
 
   // Existing direct wall-clock reads in domain/application; the number may only go down.
-  private static final int WALL_CLOCK_BASELINE = 66;
+  private static final int WALL_CLOCK_BASELINE = 62;
 
   // Existing public setters on JPA entities; the number may only go down.
   private static final int ENTITY_SETTER_BASELINE = 9;
@@ -136,7 +136,7 @@ class ArchUnitSemanticRulesTest {
           .that()
           .doNotBelongToAnyOf(NoteAccess.class)
           .should()
-          .callMethod(NoteRepository.class, "visibleTo", Long.class, Collection.class);
+          .callMethod(NoteAccessReader.class, "visibleTo", Long.class, Collection.class);
 
   @ArchTest
   static final ArchRule postAudienceIsAskedOfItsQuestions =

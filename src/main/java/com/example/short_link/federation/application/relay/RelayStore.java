@@ -16,7 +16,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -41,31 +40,7 @@ public class RelayStore {
   private final TransactionTemplate transaction;
   private final Clock clock;
 
-  @Autowired
   public RelayStore(
-      RemoteActorResolver resolver,
-      RemoteNoteIntake intake,
-      FederationRelayedNoteRepository relayed,
-      RelaySubscriptions subscriptions,
-      RelayTally tally,
-      RelayProperties props,
-      RemoteNoteReachRepository reach,
-      RemoteNotes remoteNotes,
-      TransactionTemplate transaction) {
-    this(
-        resolver,
-        intake,
-        relayed,
-        subscriptions,
-        tally,
-        props,
-        reach,
-        remoteNotes,
-        transaction,
-        Clock.systemUTC());
-  }
-
-  RelayStore(
       RemoteActorResolver resolver,
       RemoteNoteIntake intake,
       FederationRelayedNoteRepository relayed,

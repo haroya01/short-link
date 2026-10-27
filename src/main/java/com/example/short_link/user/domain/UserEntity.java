@@ -188,16 +188,16 @@ public class UserEntity extends BaseCreatedEntity {
     String v = theme.trim().toLowerCase(Locale.ROOT);
     switch (v) {
       case "light",
-              "dark",
-              "accent",
-              "sunset",
-              "ocean",
-              "forest",
-              "mono",
-              "neon",
-              "aurora",
-              "wave",
-              "ember" ->
+          "dark",
+          "accent",
+          "sunset",
+          "ocean",
+          "forest",
+          "mono",
+          "neon",
+          "aurora",
+          "wave",
+          "ember" ->
           this.profileTheme = v;
       default ->
           throw new IllegalArgumentException(
