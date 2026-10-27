@@ -3,7 +3,7 @@ package com.example.short_link.note.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteSearchElsewhereIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteFeedReader feeds;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -92,7 +92,7 @@ class NoteSearchElsewhereIntegrationTest {
   }
 
   private List<Long> found(Long viewerId) {
-    return notes.search(null, "%" + tag + "%", viewerId, 0, 50).stream()
+    return feeds.search(null, "%" + tag + "%", viewerId, 0, 50).stream()
         .map(NoteEntity::getId)
         .toList();
   }

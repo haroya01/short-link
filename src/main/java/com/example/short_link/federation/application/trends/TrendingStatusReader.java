@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application.trends;
 
+import static com.example.short_link.federation.application.ActivityStreams.MAX_URI;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
 import com.example.short_link.common.note.RemoteNotes;
@@ -26,7 +27,6 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor
 class TrendingStatusReader {
 
-  private static final int MAX_URI = 512;
   private static final int MAX_NAME = 100;
   private static final int MAX_CARD_TITLE = 300;
   private static final int MAX_CARD_DESCRIPTION = 500;
