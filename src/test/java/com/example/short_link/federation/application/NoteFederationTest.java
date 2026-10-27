@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -370,7 +371,9 @@ class NoteFederationTest {
             NoteVisibility.DIRECT);
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     when(notes.find(44L)).thenReturn(Optional.of(directQuote));
-    federating();
+    lenient()
+        .when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
     service().edited(44L, 7L, true);
@@ -671,7 +674,8 @@ class NoteFederationTest {
     when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
     when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find(any())).thenReturn(Optional.empty());
-    federating();
+    when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
 
@@ -692,7 +696,8 @@ class NoteFederationTest {
     when(notes.find(44L)).thenReturn(Optional.of(naming(NoteVisibility.PUBLIC)));
     when(finder.find("bob@b.example")).thenReturn(Optional.of(suspended));
     when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
-    federating();
+    when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://b.example/inbox"));
 
     service().createdElsewhere(44L, 7L);
 
