@@ -143,6 +143,12 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
+  void aBlankImageTitleLeavesNoCaption() {
+    assertThat(toBlocks("![p](https://cdn/x.png \"  \")").get(0).content())
+        .isEqualTo("{\"url\":\"https://cdn/x.png\",\"alt\":\"p\"}");
+  }
+
+  @Test
   void plainImageHasNoCaption() {
     List<BlockInput> blocks = toBlocks("![alt](https://cdn/x.png)");
     assertThat(blocks.get(0).content()).doesNotContain("caption");
