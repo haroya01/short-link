@@ -5,7 +5,6 @@ import com.example.short_link.link.application.write.LinkDefaultsWriter;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,7 +23,6 @@ public class LinkSidecarPersister implements LinkDefaultsWriter {
     LinkAccessControlEntity access = new LinkAccessControlEntity(linkId);
     access.changePasswordHash(passwordHash);
     entityManager.persist(access);
-    entityManager.persist(new LinkProfileBindingEntity(linkId));
     entityManager.persist(new LinkExpirationPolicyEntity(linkId));
   }
 }

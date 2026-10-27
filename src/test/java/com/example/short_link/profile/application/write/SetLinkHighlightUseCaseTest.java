@@ -9,7 +9,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
@@ -36,8 +35,7 @@ class SetLinkHighlightUseCaseTest {
     useCase =
         new SetLinkHighlightUseCase(
             linkRepository,
-            new ProfileFeaturedSlot(
-                linkRepository, mock(LinkProfileBindingRepository.class), profileBlockRepository),
+            new ProfileFeaturedSlot(linkRepository, profileBlockRepository),
             mock(ProfileCacheEviction.class));
   }
 

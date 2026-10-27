@@ -118,13 +118,10 @@ com.example.short_link.profile.application.visit.ProfileVisitBreakdownReader rea
 com.example.short_link.profile.application.visit.ProfileVisitBreakdownReader reaches com.example.short_link.link.stats.domain.repository.projection.ClickProjections$UtmSourceClickRow
 com.example.short_link.profile.application.visit.ProfileVisitRecorder reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.profile.application.write.ProfileFeaturedSlot reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.profile.application.write.ProfileFeaturedSlot reaches com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository
 com.example.short_link.profile.application.write.ProfileOrdering reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.profile.application.write.ReorderProfileUseCase reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.profile.application.write.ReorderProfileUseCase reaches com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository
 com.example.short_link.profile.application.write.SetLinkHighlightUseCase reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.profile.application.write.ToggleLinkOnProfileUseCase reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.profile.application.write.ToggleLinkOnProfileUseCase reaches com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository
 com.example.short_link.profile.application.write.UpdateProfileUseCase reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.profile.application.write.UpdateStatsVisibilityUseCase reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.profile.domain.visit.ProfileVisitRepository reaches com.example.short_link.link.stats.domain.repository.projection.ClickProjections$DailyClickRow
