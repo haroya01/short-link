@@ -169,6 +169,25 @@ class CreateHighlightReplyUseCaseTest {
   }
 
   @Test
+  void aDeletedAccountIsNotNotifiedOfAMention() {
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
+    when(replyRepository.save(any(PostHighlightReplyEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
+    UserEntity bob = userWithId(5L, "bob");
+    bob.softDelete();
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"), PostReader.of(9L));
+
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(1)).publishEvent(evt.capture());
+    assertThat(evt.getValue()).isInstanceOf(HighlightReplyEvent.class);
+  }
+
+  @Test
   void mentioningTheHighlightAuthorCollapsesIntoTheReplyNotice() {
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))

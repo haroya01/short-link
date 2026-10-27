@@ -150,7 +150,12 @@ public class CommentNotifications {
       Set<Long> recipients,
       Consumer<Long> publish) {
     for (String handle : handles) {
-      Long recipient = userRepository.findByUsername(handle).map(UserEntity::getId).orElse(null);
+      Long recipient =
+          userRepository
+              .findByUsername(handle)
+              .filter(u -> !u.isDeleted())
+              .map(UserEntity::getId)
+              .orElse(null);
       if (recipient != null
           && !recipient.equals(actorId)
           && reads(post, recipient)

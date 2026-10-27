@@ -321,6 +321,26 @@ class CreateCommentUseCaseTest {
   }
 
   @Test
+  void aDeletedAccountIsNotNotifiedOfAMention() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+    UserEntity bob = userWithId(5L, "bob");
+    bob.softDelete();
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+
+    CommentView created =
+        useCase.execute(
+            new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"), PostReader.of(9L));
+
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(1)).publishEvent(evt.capture());
+    assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
+    assertThat(created.mentions()).isEmpty();
+  }
+
+  @Test
   void unknownMentionHandleIsSkipped() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
