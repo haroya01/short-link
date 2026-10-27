@@ -38,7 +38,8 @@ public class PostRevisionCapture {
             blocks.stream()
                 .map(b -> new PostSnapshot.BlockSnapshot(b.getType().name(), b.getContent()))
                 .toList());
-    Optional<PostRevisionEntity> latest = postRevisionRepository.findLatestByPostId(post.getId());
+    Optional<PostRevisionEntity> latest =
+        postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(post.getId());
     if (latest.isPresent() && snapshot.sameContentAs(readJson(latest.get().getContentJson()))) {
       return;
     }

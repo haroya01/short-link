@@ -15,6 +15,8 @@ public class BlogWebhookQueryService {
   private final BlogWebhookRepository repository;
 
   public List<BlogWebhookSummary> listForUser(Long userId) {
-    return repository.findAllByUserId(userId).stream().map(BlogWebhookSummary::from).toList();
+    return repository.findAllByUserIdOrderByIdDesc(userId).stream()
+        .map(BlogWebhookSummary::from)
+        .toList();
   }
 }

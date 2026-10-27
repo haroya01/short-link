@@ -2,21 +2,17 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.FolderBookmarkCount;
 import com.example.short_link.post.domain.PostBookmarkEntity;
+import com.example.short_link.post.domain.repository.PostBookmarkRepository;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface JpaPostBookmarkRepository extends JpaRepository<PostBookmarkEntity, Long> {
+public interface JpaPostBookmarkRepository
+    extends JpaRepository<PostBookmarkEntity, Long>, PostBookmarkRepository {
 
-  boolean existsByPostIdAndUserId(Long postId, Long userId);
-
-  Optional<PostBookmarkEntity> findByPostIdAndUserId(Long postId, Long userId);
-
-  List<PostBookmarkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
-
+  @Override
   @Query(
       "select new com.example.short_link.post.domain.FolderBookmarkCount(b.folderId, count(b)) "
           + "from PostBookmarkEntity b "
@@ -26,6 +22,7 @@ public interface JpaPostBookmarkRepository extends JpaRepository<PostBookmarkEnt
 
   // INSERT IGNORE avoids duplicate exceptions. Set created_at here because native inserts bypass
   // the @CreationTimestamp callback; folder_id defaults to NULL (unfiled).
+  @Override
   @Modifying
   @Query(
       value =
@@ -34,6 +31,7 @@ public interface JpaPostBookmarkRepository extends JpaRepository<PostBookmarkEnt
       nativeQuery = true)
   int insertIgnore(@Param("postId") Long postId, @Param("userId") Long userId);
 
+  @Override
   @Modifying
   @Query("delete from PostBookmarkEntity b where b.postId = :postId")
   int deleteAllByPostId(@Param("postId") Long postId);

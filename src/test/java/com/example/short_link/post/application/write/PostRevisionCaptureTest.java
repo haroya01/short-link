@@ -49,7 +49,8 @@ class PostRevisionCaptureTest {
   @Test
   void capturesFirstRevisionWhenNoneExist() {
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(POST_ID)).thenReturn(List.of());
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.empty());
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.empty());
     when(postRevisionRepository.save(any(PostRevisionEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -68,7 +69,8 @@ class PostRevisionCaptureTest {
     when(previous.getVersionNumber()).thenReturn(3);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(POST_ID))
         .thenReturn(List.of(block));
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.of(previous));
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.of(previous));
     when(postRevisionRepository.save(any(PostRevisionEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -101,7 +103,8 @@ class PostRevisionCaptureTest {
             "{\"title\":\"My Title\",\"excerpt\":\"excerpt\",\"ogImageUrl\":null,"
                 + "\"ogImageKey\":null,\"coverChosen\":false,\"languageTag\":\"ko\","
                 + "\"blocks\":[{\"type\":\"PARAGRAPH\",\"content\":\"hello\"}]}");
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.of(previous));
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.of(previous));
 
     capture.capture(post());
 
@@ -117,7 +120,8 @@ class PostRevisionCaptureTest {
             "{\"title\":\"My Title\",\"excerpt\":\"excerpt\",\"ogImageUrl\":null,"
                 + "\"ogImageKey\":null,\"languageTag\":\"ko\","
                 + "\"blocks\":[{\"type\":\"PARAGRAPH\",\"content\":\"hello\"}]}");
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.of(previous));
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.of(previous));
 
     capture.capture(post());
 
@@ -133,7 +137,8 @@ class PostRevisionCaptureTest {
             "{\"title\":\"My Title\",\"excerpt\":\"excerpt\",\"ogImageUrl\":null,"
                 + "\"ogImageKey\":null,\"coverChosen\":true,\"languageTag\":\"ko\","
                 + "\"blocks\":[{\"type\":\"PARAGRAPH\",\"content\":\"hello\"}]}");
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.of(previous));
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.of(previous));
     when(postRevisionRepository.save(any(PostRevisionEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -147,7 +152,8 @@ class PostRevisionCaptureTest {
 
   @Test
   void usesTheBlocksItIsGivenInsteadOfReadingThemAgain() {
-    when(postRevisionRepository.findLatestByPostId(POST_ID)).thenReturn(Optional.empty());
+    when(postRevisionRepository.findFirstByPostIdOrderByVersionNumberDesc(POST_ID))
+        .thenReturn(Optional.empty());
 
     capture.capture(
         post(), List.of(new PostBlockEntity(POST_ID, PostBlockType.PARAGRAPH, "given", 0)));
