@@ -2,7 +2,6 @@ package com.example.short_link.profile.application.visit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -143,10 +142,35 @@ class ProfileVisitRecorderTest {
   }
 
   @Test
-  void swallowsExceptionAndDoesNotThrow() {
-    when(uaClassifier.classify(any())).thenThrow(new RuntimeException("boom"));
-    recorder.record(7L, null, "ua", null, null, null, null, null, null, null, null, false);
-    verify(repository, never()).save(any());
+  void aClassifierFailureStillKeepsTheVisitWithoutEnrichment() {
+    when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
+    when(geoResolver.resolve("1.2.3.4")).thenThrow(new RuntimeException("boom"));
+
+    recorder.record(
+        7L,
+        "https://t.co/x",
+        "ua",
+        "1.2.3.4",
+        "ko-KR",
+        "x",
+        "twitter",
+        null,
+        null,
+        null,
+        null,
+        false);
+
+    ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
+    verify(repository).save(cap.capture());
+    ProfileVisitEntity e = cap.getValue();
+    assertThat(e.getProfileUserId()).isEqualTo(7L);
+    assertThat(e.isBot()).isFalse();
+    assertThat(e.getDeviceClass()).isNull();
+    assertThat(e.getCountryCode()).isNull();
+    assertThat(e.getAsn()).isNull();
+    assertThat(e.getVisitorHash()).isNull();
+    assertThat(e.getReferrerHost()).isNull();
+    assertThat(e.getUtmSource()).isNull();
   }
 
   @Test
