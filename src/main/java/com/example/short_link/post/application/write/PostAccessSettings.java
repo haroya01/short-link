@@ -49,7 +49,6 @@ public class PostAccessSettings {
     }
   }
 
-  // A room post goes only to a room its author is in, and stays in that room.
   private void requireRoom(PostEntity post, PostAudience audience, Long roomId) {
     if (audience.inRoom() != (roomId != null)) {
       throw new PostException(

@@ -99,7 +99,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + " ORDER BY p.series_order ASC")
   List<PostEntity> findOpenBySeriesId(@Param("seriesId") Long seriesId);
 
-  // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count는 순위에 사용하지 않는다.
   // MySQL에서는 기본키로 GROUP BY하면 p.*를 선택할 수 있다.
   String RECENT_HUMAN_VIEWS =
       "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
@@ -215,7 +214,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("viewer") long viewer,
       @Param("now") Instant now);
 
-  // 태그가 없는 작가·시리즈 글도 포함하려고 LEFT JOIN한다. DISTINCT는 여러 태그의 중복을 제거한다.
   // 빈 IN 인수는 어댑터가 매칭되지 않는 값으로 변환한다.
   String FOLLOWED_PREDICATE =
       "LEFT JOIN post_tag t ON t.post_id = p.id "
@@ -270,7 +268,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("viewer") long viewer,
       @Param("now") Instant now);
 
-  // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
+  // 빈 NOT IN 인수는 어댑터가 변환한다.
   String FOR_YOU_PREDICATE =
       "JOIN post_tag t ON t.post_id = p.id "
           + "WHERE "
@@ -354,7 +352,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("now") Instant now,
       Pageable pageable);
 
-  // 핸들·제목·요약 폴백으로만 매칭된 글은 관련성 점수가 0이어도 결과에 포함한다.
   @Query(
       nativeQuery = true,
       value =

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record UpdatePostRequest(
-    // Blank titles are allowed for drafts; publishing requires a title.
+    // Blank titles are allowed for drafts; publishing or scheduling requires a title.
     @Size(max = 200) String title,
     @Size(min = 1, max = 200) String slug,
     @Size(max = 500) String excerpt,

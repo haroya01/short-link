@@ -10,8 +10,7 @@ import org.springframework.data.repository.query.Param;
 public interface JpaPostLikeRepository
     extends JpaRepository<PostLikeEntity, Long>, PostLikeRepository {
 
-  // INSERT IGNORE avoids duplicate exceptions. Native inserts bypass @CreationTimestamp,
-  // so created_at is set explicitly.
+  // Native inserts bypass @CreationTimestamp, so created_at is set here.
   @Override
   @Modifying
   @Query(

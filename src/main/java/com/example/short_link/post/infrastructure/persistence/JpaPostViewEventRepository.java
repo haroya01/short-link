@@ -23,7 +23,6 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
     String getVisitorHash();
   }
 
-  // Bots and hashless rows cannot contribute to the series reader-overlap funnel.
   @Query(
       nativeQuery = true,
       value =
@@ -78,7 +77,6 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
     long getViews();
   }
 
-  // 사람 조회만 집계하고 direct 유입은 제외한다. 동률은 host로 정렬해 순서를 고정한다.
   @Query(
       nativeQuery = true,
       value =

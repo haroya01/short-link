@@ -23,8 +23,7 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Who may read a post, for one post in Java; PostAccessSql says the same for lists in SQL. Each
-// answer is one of PostAudience's questions, asked of the reader in hand.
+// PostAccessSql says the same for lists in SQL; the two must agree.
 @Component
 @RequiredArgsConstructor
 public class PostAccessPolicy {
@@ -85,14 +84,12 @@ public class PostAccessPolicy {
     return readers;
   }
 
-  // A comment or highlight made while its post was in a room stays with that room's members, its
-  // writer too only while in the room; PostAccessSql.said asks the same for lists.
+  // PostAccessSql.said answers the same for lists; the two must agree.
   public boolean hears(Long viewerId, Long saidInRoom) {
     return saidInRoom == null || rooms.isMember(saidInRoom, viewerId);
   }
 
-  // What may stand on its own outside the post (a collection, a shared feed): never something said
-  // in a room. PostAccessSql.saidOpenly asks the same for lists.
+  // PostAccessSql.saidOpenly answers the same for lists; the two must agree.
   public static boolean saidOpenly(PostHighlightEntity highlight) {
     return highlight.getRoomId() == null;
   }
@@ -188,14 +185,10 @@ public class PostAccessPolicy {
           () -> memberOf().contains(post.getRoomId()));
     }
 
-    // What a list of the reader's own (likes, bookmarks, reading history) shows for a post: its
-    // card, and a room post only while the reader is in the room.
     public PostAccess card(PostEntity post) {
       return post.isInRoom() ? of(post) : PostAccessPolicy.card(post);
     }
 
-    // Whether the reader's own comments and highlights on a post still name it: always, but for a
-    // room post only while the reader is in the room.
     public boolean keeps(PostEntity post) {
       return !post.isInRoom() || !of(post).hidden();
     }

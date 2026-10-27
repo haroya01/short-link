@@ -612,7 +612,6 @@ class PostRepositoryAdapter implements PostRepository {
     return !(isAsciiAlnum(lower.charAt(0)) && isAsciiAlnum(lower.charAt(1)));
   }
 
-  // 색인에 남는 항이 하나도 없는 질의만 제목·요약 LIKE 폴백을 사용한다.
   static String titleLikeFallback(String query) {
     String scrubbed = scrub(query);
     if (scrubbed.isEmpty()) {
@@ -623,7 +622,6 @@ class PostRepositoryAdapter implements PostRepository {
         return null;
       }
     }
-    // C++ 같은 원문을 그대로 찾도록 연산자 제거 전 검색어를 이스케이프한다.
     return likePattern(query);
   }
 

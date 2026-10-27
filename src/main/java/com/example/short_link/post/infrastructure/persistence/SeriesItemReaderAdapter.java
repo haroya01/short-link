@@ -24,7 +24,6 @@ import java.util.Map;
 import org.hibernate.query.NativeQuery;
 import org.springframework.stereotype.Repository;
 
-// Notes live in the note module; a series reads only the columns it lists, straight from the table.
 // Typed scalars let Hibernate read the times the way it writes an entity's Instant.
 @Repository
 class SeriesItemReaderAdapter implements SeriesItemReader {

@@ -4,9 +4,9 @@ import com.example.short_link.post.domain.FollowingFeedRef;
 import java.util.Collection;
 import java.util.List;
 
-// The subscription feed as one stream, newest first: published posts by followed authors, in
-// subscribed series or under followed topics, and the public or unlisted notes of subscribed
-// series.
+// The subscription feed as one stream, newest first: public published posts by followed authors,
+// in subscribed series or under followed topics, and the public or unlisted notes of subscribed
+// series. Writers the viewer cannot hear stay out.
 public interface FollowingFeedReader {
 
   List<FollowingFeedRef> page(

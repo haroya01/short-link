@@ -147,8 +147,7 @@ public class PublicPostQueryService {
     return OwnerAudience.of(post, unlistedUrls.of(post, author.username()));
   }
 
-  // 토큰이 곧 접근 권한이라 로그인은 보지 않는다. 발행 글은 공개 읽기가 보여 줄 때만, 초안·예약 글은 내려지지 않았고 작성자가 쓸 수 있을 때만 본문을 주고, 나머지는
-  // 모두 404다. 비공개 글은 시리즈 탐색에 포함하지 않는다.
+  // 토큰이 곧 접근 권한이라 로그인은 보지 않는다.
   public PostScoped<PublicPostDetail> findPreviewPost(String token, PostReader reader) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
@@ -254,7 +253,7 @@ public class PublicPostQueryService {
     }
     CtaCard cta = ctaMap.get(ctaId);
     if (cta == null) {
-      // 삭제됐거나 다른 작성자의 CTA는 빈 참조로 반환한다.
+      // 없거나 다른 작성자의 CTA는 빈 참조로 반환한다. 지운 내 CTA는 deleted로 채운다.
       return PublicPostBlockView.from(entity);
     }
     return PublicPostBlockView.fromWithCta(

@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-// 외부 이미지는 서명 URL 만료로 본문이 깨지지 않도록 서버에서 받아 재호스팅한다.
 @Slf4j
 @Service
 @RequiredArgsConstructor

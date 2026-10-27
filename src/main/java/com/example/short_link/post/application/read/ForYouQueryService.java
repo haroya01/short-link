@@ -28,7 +28,6 @@ public class ForYouQueryService {
 
   private static final int MAX_INTEREST_TAGS = 12;
 
-  // An explicit tag follow outweighs an incidental read.
   private static final int FOLLOWED_WEIGHT = 3;
 
   private final PostRepository postRepository;
@@ -54,7 +53,6 @@ public class ForYouQueryService {
 
     List<String> interest = deriveInterestTags(prefs.followed(), recentReadIds, likedIds, hidden);
     if (interest.isEmpty()) {
-      // No interest signal yet; use trending for the cold start.
       List<PostEntity> trending = postRepository.findPublishedTrending(userId, null, page, size);
       boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(userId, null);
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);

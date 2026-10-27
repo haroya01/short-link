@@ -42,8 +42,8 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  // An author's published posts a profile list may carry for this viewer, newest first: all but
-  // UNLISTED ones, which only the author sees.
+  // An author's published posts a profile list may carry for this viewer, newest first: public,
+  // followers-only and password posts, unlisted ones too for the author, and never room posts.
   List<PostEntity> findProfilePosts(Long userId, Long viewerId);
 
   List<PostEntity> findUserAnalyticsPosts(
@@ -88,7 +88,7 @@ public interface PostRepository {
       List<String> tags) {}
 
   // What the home's latest lists outside rooms, published between since and until, newest first.
-  // Quotes are the public notes quoting the post.
+  // Quotes count the public or unlisted notes quoting the post.
   List<PoolRow> findHomePool(Long viewerId, Instant since, Instant until, int limit);
 
   // What the home's latest lists outside rooms, newest published first, the later id first among

@@ -20,8 +20,8 @@ public interface JpaPostBookmarkRepository
           + "group by b.folderId")
   List<FolderBookmarkCount> countByFolder(@Param("userId") Long userId);
 
-  // INSERT IGNORE avoids duplicate exceptions. Set created_at here because native inserts bypass
-  // the @CreationTimestamp callback; folder_id defaults to NULL (unfiled).
+  // Native inserts bypass @CreationTimestamp, so created_at is set here; folder_id defaults to NULL
+  // (unfiled).
   @Override
   @Modifying
   @Query(
