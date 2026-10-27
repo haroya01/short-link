@@ -61,7 +61,7 @@ class NoteFederationTest {
     return new NoteFederation(
         notes,
         remoteParents,
-        finder,
+        new NoteAddressing(remoteParents, finder),
         localActors,
         settings,
         actors,

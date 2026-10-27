@@ -5,16 +5,13 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
-import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,7 +28,7 @@ public class NoteFederation {
 
   private final NoteSnapshotReader notes;
   private final RemoteParents remoteParents;
-  private final RemoteAccountFinder finder;
+  private final NoteAddressing addressing;
   private final FederationActorService localActors;
   private final FederationSettings settings;
   private final FederationActorRepository actors;
@@ -98,7 +95,8 @@ public class NoteFederation {
             stored -> {
               NoteSnapshot note = stored.note();
               String publicId = stored.actor().publicId();
-              Reach reach = stored.reach().naming(named(Mentions.remote(note.body())));
+              Addressing reach =
+                  stored.addressing().naming(addressing.lookedUp(Mentions.remote(note.body())));
               transaction.executeWithoutResult(
                   status -> {
                     List<String> followerInboxes =
@@ -132,7 +130,8 @@ public class NoteFederation {
         .ifPresent(
             stored -> {
               NoteSnapshot note = stored.note();
-              Reach reach = stored.reach().naming(named(Mentions.remote(note.body())));
+              Addressing reach =
+                  stored.addressing().naming(addressing.lookedUp(Mentions.remote(note.body())));
               transaction.executeWithoutResult(
                   status -> {
                     List<String> inboxes =
@@ -167,7 +166,8 @@ public class NoteFederation {
     if (actor.isEmpty()) {
       return;
     }
-    Reach reach = reach(inReplyToId, handles, quotedNoteId);
+    Addressing reach =
+        addressing.remoteNotes(inReplyToId, quotedNoteId).naming(addressing.lookedUp(handles));
     transaction.executeWithoutResult(
         status -> {
           List<String> inboxes = reach.inboxes(followers.deliveryInboxes(authorId));
@@ -178,44 +178,7 @@ public class NoteFederation {
         });
   }
 
-  private record Reach(
-      RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
-
-    Reach naming(List<RemoteActorEntity> people) {
-      return new Reach(parent, people, quoted);
-    }
-
-    boolean isEmpty() {
-      return parent == null && named.isEmpty() && quoted == null;
-    }
-
-    List<NoteDocuments.Addressee> addressees() {
-      return named.stream()
-          .map(
-              person ->
-                  new NoteDocuments.Addressee(
-                      person.getActorUri(),
-                      "@" + person.getUsername() + "@" + person.getDomain(),
-                      person.getProfileUrl() == null
-                          ? person.getActorUri()
-                          : person.getProfileUrl()))
-          .toList();
-    }
-
-    List<String> inboxes(List<String> followerInboxes) {
-      Set<String> inboxes = new LinkedHashSet<>(followerInboxes);
-      if (parent != null) {
-        inboxes.add(parent.inbox());
-      }
-      if (quoted != null) {
-        inboxes.add(quoted.inbox());
-      }
-      named.forEach(person -> inboxes.add(person.deliveryInbox()));
-      return List.copyOf(inboxes);
-    }
-  }
-
-  private record Stored(LocalActor actor, NoteSnapshot note, Reach reach) {}
+  private record Stored(LocalActor actor, NoteSnapshot note, Addressing addressing) {}
 
   private Optional<Stored> stored(Long noteId, Long authorId) {
     Optional<LocalActor> actor = localActors.byUserId(authorId);
@@ -224,34 +187,7 @@ public class NoteFederation {
       return Optional.empty();
     }
     NoteSnapshot note = found.get();
-    return Optional.of(
-        new Stored(actor.get(), note, storedReach(note.inReplyToId(), quotedElsewhere(note))));
-  }
-
-  private Reach reach(Long inReplyToId, List<String> handles, Long quotedNoteId) {
-    return storedReach(inReplyToId, quotedNoteId).naming(named(handles));
-  }
-
-  private Reach storedReach(Long inReplyToId, Long quotedNoteId) {
-    return new Reach(remoteParent(inReplyToId), List.of(), remoteParent(quotedNoteId));
-  }
-
-  private RemoteParents.Parent remoteParent(Long noteId) {
-    return noteId == null ? null : remoteParents.of(noteId).orElse(null);
-  }
-
-  private List<RemoteActorEntity> named(List<String> handles) {
-    List<RemoteActorEntity> named = new ArrayList<>();
-    for (String handle : handles) {
-      finder.find(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
-    }
-    return named;
-  }
-
-  private static Long quotedElsewhere(NoteSnapshot note) {
-    return note.quotedNote() != null && note.quotedNote().remote() && !note.visibility().direct()
-        ? note.quotedNote().id()
-        : null;
+    return Optional.of(new Stored(actor.get(), note, addressing.remoteNotes(note)));
   }
 
   @Transactional
