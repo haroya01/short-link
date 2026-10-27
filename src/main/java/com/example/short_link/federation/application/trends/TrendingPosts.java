@@ -157,6 +157,7 @@ public class TrendingPosts {
       backoffs.remove(server);
       answers.add(answer.get().stream().filter(read -> !blocked.contains(read.domain())).toList());
     }
+    // A refresh replaces the whole list, so a post deleted on its server is gone by the next one.
     trending = known(blend(answers));
     reach.trended(trending, keepable);
   }

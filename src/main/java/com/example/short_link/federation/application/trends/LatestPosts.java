@@ -133,6 +133,7 @@ public class LatestPosts {
     return shown(viewerId);
   }
 
+  // Other servers are asked only while someone reads.
   private void fresh() {
     if (askedAt == null) {
       refresh();

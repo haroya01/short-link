@@ -19,6 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
+// A Mastodon REST status is rewritten as the ActivityPub object its server would publish and read
+// by RemoteNoteParser, so its text, warning, media and poll come out as a kept note's do.
 @Component
 @RequiredArgsConstructor
 class TrendingStatusReader {

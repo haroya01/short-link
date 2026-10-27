@@ -205,7 +205,7 @@ src/main/java/com/example/short_link/federation/application/relay/RelayStore.jav
 src/main/java/com/example/short_link/federation/application/relay/RelaySubscriptions.java=4
 src/main/java/com/example/short_link/federation/application/relay/RelayTally.java=2
 src/main/java/com/example/short_link/federation/application/signature/HttpSignatures.java=2
-src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java=4
+src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java=5
 src/main/java/com/example/short_link/federation/application/trends/LatestStore.java=4
 src/main/java/com/example/short_link/federation/application/trends/ReachProperties.java=1
 src/main/java/com/example/short_link/federation/application/trends/RemoteForYou.java=4
@@ -213,8 +213,8 @@ src/main/java/com/example/short_link/federation/application/trends/RemoteReach.j
 src/main/java/com/example/short_link/federation/application/trends/RemoteSeen.java=2
 src/main/java/com/example/short_link/federation/application/trends/RemoteTrendingFeed.java=8
 src/main/java/com/example/short_link/federation/application/trends/TrendingNote.java=7
-src/main/java/com/example/short_link/federation/application/trends/TrendingPosts.java=1
-src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java=2
+src/main/java/com/example/short_link/federation/application/trends/TrendingPosts.java=2
+src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java=4
 src/main/java/com/example/short_link/federation/application/trends/TrendsProperties.java=1
 src/main/java/com/example/short_link/federation/domain/FederationActorEntity.java=2
 src/main/java/com/example/short_link/federation/domain/FederationDeliveryEntity.java=2
