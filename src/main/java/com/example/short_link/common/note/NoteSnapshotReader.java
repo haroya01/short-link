@@ -29,127 +29,7 @@ public interface NoteSnapshotReader {
       boolean sensitive,
       NoteVisibility visibility,
       Poll poll,
-      String language) {
-
-    public NoteSnapshot(
-        Long id,
-        Long authorId,
-        String authorUsername,
-        String body,
-        Instant createdAt,
-        Instant editedAt,
-        Long inReplyToId,
-        Quote quote,
-        List<Image> images,
-        QuotedNote quotedNote,
-        String contentWarning,
-        boolean sensitive,
-        NoteVisibility visibility,
-        Poll poll) {
-      this(
-          id,
-          authorId,
-          authorUsername,
-          body,
-          createdAt,
-          editedAt,
-          inReplyToId,
-          quote,
-          images,
-          quotedNote,
-          contentWarning,
-          sensitive,
-          visibility,
-          poll,
-          null);
-    }
-
-    public NoteSnapshot(
-        Long id,
-        Long authorId,
-        String authorUsername,
-        String body,
-        Instant createdAt,
-        Instant editedAt,
-        Long inReplyToId,
-        Quote quote,
-        List<Image> images,
-        QuotedNote quotedNote,
-        String contentWarning,
-        boolean sensitive,
-        NoteVisibility visibility) {
-      this(
-          id,
-          authorId,
-          authorUsername,
-          body,
-          createdAt,
-          editedAt,
-          inReplyToId,
-          quote,
-          images,
-          quotedNote,
-          contentWarning,
-          sensitive,
-          visibility,
-          null);
-    }
-
-    public NoteSnapshot(
-        Long id,
-        Long authorId,
-        String authorUsername,
-        String body,
-        Instant createdAt,
-        Instant editedAt,
-        Long inReplyToId,
-        Quote quote,
-        List<Image> images) {
-      this(
-          id,
-          authorId,
-          authorUsername,
-          body,
-          createdAt,
-          editedAt,
-          inReplyToId,
-          quote,
-          images,
-          null,
-          null,
-          false,
-          NoteVisibility.DEFAULT);
-    }
-
-    public NoteSnapshot(
-        Long id,
-        Long authorId,
-        String authorUsername,
-        String body,
-        Instant createdAt,
-        Instant editedAt,
-        Long inReplyToId,
-        Quote quote,
-        List<Image> images,
-        QuotedNote quotedNote,
-        String contentWarning,
-        boolean sensitive) {
-      this(
-          id,
-          authorId,
-          authorUsername,
-          body,
-          createdAt,
-          editedAt,
-          inReplyToId,
-          quote,
-          images,
-          quotedNote,
-          contentWarning,
-          sensitive,
-          NoteVisibility.DEFAULT);
-    }
-  }
+      String language) {}
 
   record Quote(String title, String slug, String authorUsername) {}
 
@@ -164,11 +44,7 @@ public interface NoteSnapshotReader {
     }
   }
 
-  record Image(String url, String contentType, String altText, Integer width, Integer height) {
-    public Image(String url, String contentType, String altText) {
-      this(url, contentType, altText, null, null);
-    }
-  }
+  record Image(String url, String contentType, String altText, Integer width, Integer height) {}
 
   record Poll(
       List<PollOption> options, Instant endTime, boolean multiple, long voters, boolean closed) {}

@@ -10,6 +10,7 @@ import com.example.short_link.event.application.helper.EventQuestions.QuestionSp
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.EventQuestionEntity;
+import com.example.short_link.event.domain.RegistrationStatus;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -128,7 +129,8 @@ class UpdateEventUseCaseTest {
   void questionChange_isLockedOnceRegistrationsExist() {
     EventEntity event = event();
     when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
-    when(registrationRepository.countConfirmedByEventId(10L)).thenReturn(1L);
+    when(registrationRepository.countByEventIdAndStatus(10L, RegistrationStatus.CONFIRMED))
+        .thenReturn(1L);
 
     assertThatThrownBy(
             () ->
@@ -146,7 +148,8 @@ class UpdateEventUseCaseTest {
   @Test
   void emptyQuestionList_wipesWithoutReinsert() {
     when(eventRepository.findById(10L)).thenReturn(Optional.of(event()));
-    when(registrationRepository.countConfirmedByEventId(10L)).thenReturn(0L);
+    when(registrationRepository.countByEventIdAndStatus(10L, RegistrationStatus.CONFIRMED))
+        .thenReturn(0L);
 
     useCase.execute(command(1L, List.of()));
 
@@ -157,7 +160,8 @@ class UpdateEventUseCaseTest {
   @Test
   void questionSpecs_areReplacedInOrder() {
     when(eventRepository.findById(10L)).thenReturn(Optional.of(event()));
-    when(registrationRepository.countConfirmedByEventId(10L)).thenReturn(0L);
+    when(registrationRepository.countByEventIdAndStatus(10L, RegistrationStatus.CONFIRMED))
+        .thenReturn(0L);
 
     useCase.execute(
         command(

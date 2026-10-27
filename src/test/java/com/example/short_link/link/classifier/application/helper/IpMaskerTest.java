@@ -17,6 +17,11 @@ class IpMaskerTest {
   }
 
   @Test
+  void masksIpv6ThatStartsWithAColon() {
+    assertThat(IpMasker.mask("::1")).isEqualTo("::*:*:*:*:*:*");
+  }
+
+  @Test
   void returnsNullForNullOrBlank() {
     assertThat(IpMasker.mask(null)).isNull();
     assertThat(IpMasker.mask("")).isNull();

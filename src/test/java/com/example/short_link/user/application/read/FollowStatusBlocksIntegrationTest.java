@@ -3,6 +3,7 @@ package com.example.short_link.user.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.user.application.write.FollowUseCase;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -35,8 +36,8 @@ class FollowStatusBlocksIntegrationTest {
     long blocked = user("fsb-blocked");
     long blocker = user("fsb-blocker");
     user("fsb-neutral");
-    blockRepository.save(new UserBlockEntity(viewer, blocked));
-    blockRepository.save(new UserBlockEntity(blocker, viewer));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(blocked)));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(blocker).blocked(viewer)));
   }
 
   @Test

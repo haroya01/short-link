@@ -7,8 +7,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
-import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
@@ -84,7 +84,7 @@ class NoteFederationAudienceTest {
         .when(notes.find(42L))
         .thenReturn(
             Optional.of(
-                new NoteSnapshot(
+                NoteSnapshotFixtures.note(
                     42L,
                     7L,
                     "yuki",

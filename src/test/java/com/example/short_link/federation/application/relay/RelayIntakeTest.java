@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.federation.application.ActivityStreams;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.domain.RelayMode;
@@ -60,7 +61,8 @@ class RelayIntakeTest {
     assertThat(intake.offer(null, RELAY)).isEqualTo("malformed");
     assertThat(intake.offer("http://mastodon.example/statuses/2", RELAY)).isEqualTo("malformed");
     assertThat(intake.offer("not an address", RELAY)).isEqualTo("malformed");
-    assertThat(intake.offer("https://mastodon.example/" + "x".repeat(RelayIntake.MAX_URI), RELAY))
+    assertThat(
+            intake.offer("https://mastodon.example/" + "x".repeat(ActivityStreams.MAX_URI), RELAY))
         .isEqualTo("malformed");
     assertThat(intake.offer("https://kurl.me/ap/notes/1", RELAY)).isEqualTo("own-server");
     assertThat(intake.offer("https://blog.kurl.me/@yuki/notes/1", RELAY)).isEqualTo("own-server");

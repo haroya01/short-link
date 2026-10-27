@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -33,7 +34,10 @@ class ReadingHistoryQueryServiceTest {
   void setUp() {
     service =
         new ReadingHistoryQueryService(
-            postReadRepository, postRepository, userRepository, PostAccessFixtures.policy());
+            postReadRepository,
+            postRepository,
+            new UserSummaryReader(userRepository),
+            PostAccessFixtures.policy());
   }
 
   private PostEntity publishedPost(long id, long authorId) {

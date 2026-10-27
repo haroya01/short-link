@@ -17,8 +17,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.time.Clock;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RecordPostViewUseCase {
 
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
   private final PostRepository postRepository;
   private final PostViewEventRepository postViewEventRepository;
   private final UserAgentClassifier userAgentClassifier;
@@ -42,7 +42,7 @@ public class RecordPostViewUseCase {
   private final Clock clock;
 
   public RecordPostViewUseCase(
-      UserRepository userRepository,
+      UserSummaryReader users,
       PostRepository postRepository,
       PostViewEventRepository postViewEventRepository,
       UserAgentClassifier userAgentClassifier,
@@ -52,7 +52,7 @@ public class RecordPostViewUseCase {
       PostAccessPolicy access,
       PostReaders readers,
       Clock clock) {
-    this.userRepository = userRepository;
+    this.users = users;
     this.postRepository = postRepository;
     this.postViewEventRepository = postViewEventRepository;
     this.userAgentClassifier = userAgentClassifier;
@@ -67,11 +67,10 @@ public class RecordPostViewUseCase {
   @Transactional
   public void execute(RecordPostViewCommand cmd, ViewContext ctx, PostReader reader) {
     String normalized = cmd.username().trim().toLowerCase(Locale.ROOT);
-    UserEntity author =
-        userRepository.findByUsername(normalized).filter(u -> !u.isDeleted()).orElse(null);
+    UserSummary author = users.findActiveByUsername(normalized).orElse(null);
     if (author == null) return;
     PostEntity post =
-        postRepository.findByUserIdAndSlugForUpdate(author.getId(), cmd.slug()).orElse(null);
+        postRepository.findByUserIdAndSlugForUpdate(author.id(), cmd.slug()).orElse(null);
     if (post == null || !access.decide(post, reader).full()) return;
     PostViewEventEntity event = buildEvent(post.getId(), ctx);
     readers.countView(post, event.getVisitorHash(), event.isBot(), cmd.viewerId());
