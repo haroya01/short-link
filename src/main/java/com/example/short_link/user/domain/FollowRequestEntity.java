@@ -27,8 +27,8 @@ public class FollowRequestEntity extends BaseCreatedEntity {
   @Column(name = "following_id", nullable = false)
   private Long followingId;
 
-  public FollowRequestEntity(Long followerId, Long followingId) {
-    this.followerId = followerId;
-    this.followingId = followingId;
+  public FollowRequestEntity(FollowEdge edge) {
+    this.followerId = edge.follower();
+    this.followingId = edge.following();
   }
 }

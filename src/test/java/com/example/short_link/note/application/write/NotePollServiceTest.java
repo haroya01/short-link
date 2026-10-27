@@ -13,11 +13,13 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NotePollTally;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
@@ -42,13 +44,14 @@ class NotePollServiceTest {
   private static final Instant NOW = Instant.parse("2026-10-07T12:00:00Z");
 
   @Mock private NoteRepository notes;
+  @Mock private NoteAccessReader lookups;
   @Mock private NotePollRepository polls;
   @Mock private UserBlockChecker blocks;
   @Mock private ApplicationEventPublisher events;
 
   private NotePollService service() {
     return new NotePollService(
-        notes, new NoteAccess(notes), polls, blocks, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        notes, new NoteAccess(lookups), polls, blocks, events, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static NoteEntity poll(Long id, boolean multiple, Instant ends) {
@@ -147,7 +150,7 @@ class NotePollServiceTest {
     when(notes.findById(3L)).thenReturn(Optional.of(plain));
     fails(() -> service().vote(8L, 3L, List.of(0)), NoteErrorCode.NOTE_POLL_NOT_FOUND);
 
-    when(blocks.isBlocked(7L, 8L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
     fails(() -> service().vote(8L, 1L, List.of(0)), NoteErrorCode.NOTE_POLL_BLOCKED);
 
     when(notes.findById(4L)).thenReturn(Optional.empty());
@@ -160,11 +163,11 @@ class NotePollServiceTest {
     NoteEntity note = poll(1L, false, NOW.plusSeconds(60));
     note.showTo(NoteVisibility.PRIVATE);
     when(notes.findById(1L)).thenReturn(Optional.of(note));
-    when(notes.visibleTo(8L, Set.of(1L))).thenReturn(Set.of());
+    when(lookups.visibleTo(8L, Set.of(1L))).thenReturn(Set.of());
 
     fails(() -> service().vote(8L, 1L, List.of(0)), NoteErrorCode.NOTE_NOT_FOUND);
 
-    when(notes.visibleTo(9L, Set.of(1L))).thenReturn(Set.of(1L));
+    when(lookups.visibleTo(9L, Set.of(1L))).thenReturn(Set.of(1L));
     when(polls.vote(1L, 9L, 1)).thenReturn(true);
     when(polls.tallies(List.of(1L), 9L))
         .thenReturn(Map.of(1L, new NotePollTally(1, List.of(1L, 0L, 0L, 0L), 1)));

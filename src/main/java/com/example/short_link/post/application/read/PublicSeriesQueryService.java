@@ -17,8 +17,8 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,7 +42,7 @@ public class PublicSeriesQueryService {
 
   private static final int PREVIEW_POSTS = 4;
 
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
@@ -56,7 +56,7 @@ public class PublicSeriesQueryService {
     Map<Long, SeriesEntity> series =
         seriesRepository.findAllByIdIn(ids).stream()
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors = liveAuthorsOf(series.values());
+    Map<Long, UserSummary> authors = liveAuthorsOf(series.values());
     Map<Long, List<SeriesEntry>> entries = seriesItemReader.readableEntries(ids);
 
     return ids.stream()
@@ -82,7 +82,7 @@ public class PublicSeriesQueryService {
             .findAllByIdIn(ranked.stream().map(SeriesActivity::seriesId).toList())
             .stream()
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors = liveAuthorsOf(series.values());
+    Map<Long, UserSummary> authors = liveAuthorsOf(series.values());
 
     // 제외될 시리즈의 항목을 읽지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
     List<SeriesEntity> chosen =
@@ -100,16 +100,15 @@ public class PublicSeriesQueryService {
         .toList();
   }
 
-  private Map<Long, UserEntity> liveAuthorsOf(Collection<SeriesEntity> series) {
-    return userRepository
-        .findAllByIdIn(series.stream().map(SeriesEntity::getUserId).distinct().toList())
+  private Map<Long, UserSummary> liveAuthorsOf(Collection<SeriesEntity> series) {
+    return userSummaries
+        .findAllActive(series.stream().map(SeriesEntity::getUserId).distinct().toList())
         .stream()
-        .filter(u -> !u.isDeleted())
-        .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+        .collect(Collectors.toMap(UserSummary::id, Function.identity()));
   }
 
   private static PublicSeriesCard card(
-      SeriesEntity series, UserEntity author, List<SeriesEntry> entries) {
+      SeriesEntity series, UserSummary author, List<SeriesEntry> entries) {
     List<SeriesEntry> posts =
         entries.stream().filter(e -> e.type() == SeriesItemType.POST).toList();
     Instant last =
@@ -134,8 +133,8 @@ public class PublicSeriesQueryService {
   }
 
   public PublicSeriesListView listPublicSeries(String username) {
-    UserEntity author = resolveAuthor(username);
-    List<SeriesEntity> all = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId());
+    UserSummary author = resolveAuthor(username);
+    List<SeriesEntity> all = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.id());
     List<Long> ids = all.stream().map(SeriesEntity::getId).toList();
     Map<Long, List<PostEntity>> publishedBySeries =
         postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(ids).stream()
@@ -171,10 +170,10 @@ public class PublicSeriesQueryService {
   }
 
   public PublicSeriesDetail findPublicSeries(String username, String slug) {
-    UserEntity author = resolveAuthor(username);
+    UserSummary author = resolveAuthor(username);
     SeriesEntity series =
         seriesRepository
-            .findByUserIdAndSlug(author.getId(), slug)
+            .findByUserIdAndSlug(author.id(), slug)
             .orElseThrow(() -> new PostException(PostErrorCode.SERIES_NOT_FOUND, slug));
     List<PostEntity> members =
         postRepository.findOpenBySeriesIdOrderBySeriesOrderAsc(series.getId());
@@ -212,11 +211,10 @@ public class PublicSeriesQueryService {
         .toList();
   }
 
-  private UserEntity resolveAuthor(String username) {
+  private UserSummary resolveAuthor(String username) {
     String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-    return userRepository
-        .findByUsername(normalized)
-        .filter(u -> !u.isDeleted())
+    return userSummaries
+        .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
   }
 }

@@ -1,6 +1,7 @@
 package com.example.short_link.user.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.common.user.BlockEdge;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,8 +34,8 @@ public class UserBlockEntity extends BaseCreatedEntity {
   @Column(name = "blocked_id", nullable = false)
   private Long blockedId;
 
-  public UserBlockEntity(Long blockerId, Long blockedId) {
-    this.blockerId = blockerId;
-    this.blockedId = blockedId;
+  public UserBlockEntity(BlockEdge edge) {
+    this.blockerId = edge.blocker();
+    this.blockedId = edge.blocked();
   }
 }

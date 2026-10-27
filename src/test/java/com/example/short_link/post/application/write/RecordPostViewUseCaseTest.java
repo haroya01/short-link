@@ -21,6 +21,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
@@ -57,7 +58,7 @@ class RecordPostViewUseCaseTest {
   void setUp() {
     useCase =
         new RecordPostViewUseCase(
-            userRepository,
+            new UserSummaryReader(userRepository),
             postRepository,
             postViewEventRepository,
             userAgentClassifier,

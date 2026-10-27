@@ -65,7 +65,7 @@ class LatestStoreTest {
   @Mock private PlatformTransactionManager transactions;
 
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-  private final RelayTally tally = new RelayTally(new SimpleMeterRegistry());
+  private final RelayTally tally = new RelayTally(new SimpleMeterRegistry(), clock);
   private final RemoteNoteParser parser = new RemoteNoteParser(URLS);
 
   private LatestStore store(int perDay) {
