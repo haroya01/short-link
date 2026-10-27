@@ -48,8 +48,6 @@ com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.
 com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.stats.domain.repository.projection.ClickProjections$LinkClickCount
 com.example.short_link.notification.scheduler.LinkExpiryNotificationJob reaches com.example.short_link.link.domain.LinkEntity
 com.example.short_link.notification.scheduler.LinkExpiryNotificationJob reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.post.application.read.PublicPostQueryService reaches com.example.short_link.cta.domain.CtaEntity
-com.example.short_link.post.application.read.PublicPostQueryService reaches com.example.short_link.cta.domain.repository.CtaRepository
 com.example.short_link.profile.application.MyProfileMapper reaches com.example.short_link.user.domain.UserEntity
 com.example.short_link.profile.application.ProfileCacheEviction reaches com.example.short_link.user.domain.UserEntity
 com.example.short_link.profile.application.ProfileCacheEviction reaches com.example.short_link.user.domain.repository.UserRepository
