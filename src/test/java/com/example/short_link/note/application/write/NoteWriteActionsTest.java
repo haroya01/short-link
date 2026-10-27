@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
@@ -394,7 +395,14 @@ class NoteWriteActionsTest {
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re", 50L));
+                NoteInteractionEvent.Type.REPLY,
+                8L,
+                Actor.member(7L),
+                50L,
+                "parent",
+                100L,
+                "re",
+                50L));
 
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
     assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
@@ -491,8 +499,7 @@ class NoteWriteActionsTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.QUOTE,
                 8L,
-                7L,
-                null,
+                Actor.member(7L),
                 50L,
                 "original",
                 100L,
@@ -732,8 +739,7 @@ class NoteWriteActionsTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 11L,
-                7L,
-                null,
+                Actor.member(7L),
                 100L,
                 "@mina @Yuki @writer @ghost 안녕",
                 null,
@@ -765,8 +771,7 @@ class NoteWriteActionsTest {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 11L,
-                7L,
-                null,
+                Actor.member(7L),
                 1L,
                 "@mina and @yuki hi",
                 null,
@@ -1079,7 +1084,7 @@ class NoteWriteActionsTest {
     assertThat(mine.getBody()).isEqualTo("new");
     assertThat(mine.getEditedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
     verify(events).publishEvent(new NoteEditedEvent(1L, 7L));
-    verify(events).publishEvent(new NoteRevisedEvent(1L, 7L, null, "new"));
+    verify(events).publishEvent(new NoteRevisedEvent(1L, Actor.member(7L), "new"));
 
     assertThatThrownBy(() -> composer().edit(8L, 1L, "theirs", null, null))
         .isInstanceOfSatisfying(
@@ -1150,7 +1155,7 @@ class NoteWriteActionsTest {
     verify(events, times(1))
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null, 1L));
+                NoteInteractionEvent.Type.LIKE, 7L, Actor.member(8L), 1L, "x", null, null, 1L));
   }
 
   @Test

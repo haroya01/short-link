@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
@@ -100,8 +101,7 @@ final class NotePublication {
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.MENTION,
                 member.id(),
-                actorId,
-                null,
+                Actor.member(actorId),
                 note.getId(),
                 note.excerpt(),
                 null,
