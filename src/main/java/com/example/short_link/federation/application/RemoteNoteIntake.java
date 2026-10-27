@@ -1,7 +1,9 @@
 package com.example.short_link.federation.application;
 
+import static com.example.short_link.federation.application.ActivityStreams.MAX_URI;
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
 import static com.example.short_link.federation.application.ActivityStreams.idsOf;
+import static com.example.short_link.federation.application.ActivityStreams.sameHost;
 
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
@@ -23,8 +25,6 @@ import tools.jackson.databind.JsonNode;
 @Component
 @RequiredArgsConstructor
 public class RemoteNoteIntake {
-
-  private static final int MAX_URI = 512;
 
   private final RemoteNoteParser parser;
   private final RemoteNotes remoteNotes;
@@ -129,13 +129,11 @@ public class RemoteNoteIntake {
   // naming the quoting post and the quoted one.
   private boolean authorized(String quoting, RemoteNoteParser.Quote quote) {
     JsonNode authorization = document(quote.authorization());
-    String host = RemoteActorParser.host(quote.uri());
     return authorization != null
-        && host != null
         && "QuoteAuthorization".equals(ActivityStreams.text(authorization.get("type")))
         && quote.authorization().equals(idOf(authorization))
-        && host.equals(RemoteActorParser.host(quote.authorization()))
-        && host.equals(RemoteActorParser.host(idOf(authorization.get("attributedTo"))))
+        && sameHost(quote.uri(), quote.authorization())
+        && sameHost(quote.uri(), idOf(authorization.get("attributedTo")))
         && quote.uri().equals(idOf(authorization.get("interactionTarget")))
         && quoting != null
         && quoting.equals(idOf(authorization.get("interactingObject")));
@@ -188,8 +186,7 @@ public class RemoteNoteIntake {
     if (uri == null || uri.length() > MAX_URI) {
       return Optional.empty();
     }
-    String host = RemoteActorParser.host(uri);
-    if (host == null || !host.equals(RemoteActorParser.host(from.toString()))) {
+    if (!sameHost(uri, from.toString())) {
       return Optional.empty();
     }
     Optional<Long> kept = remoteNotes.kept(uri);
@@ -197,9 +194,10 @@ public class RemoteNoteIntake {
       return kept;
     }
     String attributedTo = idsOf(object.get("attributedTo")).stream().findFirst().orElse(null);
-    if (attributedTo == null || !host.equals(RemoteActorParser.host(attributedTo))) {
+    if (attributedTo == null || !sameHost(uri, attributedTo)) {
       return Optional.empty();
     }
+    String host = RemoteActorParser.host(uri);
     Optional<RemoteActorEntity> author =
         resolver
             .byActorUri(attributedTo)
