@@ -41,12 +41,6 @@ public interface LinkRepository {
 
   List<LinkEntity> findMyLinksCandidates(MyLinksSearchCriteria criteria);
 
-  long countByCreatedAtAfter(Instant since);
-
-  long countByUserIdIsNull();
-
-  long countByExpiresAtBefore(Instant when);
-
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
   List<Long> findDistinctUserIds();

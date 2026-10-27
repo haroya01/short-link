@@ -12,6 +12,8 @@ import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserProfileReader;
+import com.example.short_link.user.application.write.UserProfileEditor;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -40,7 +42,8 @@ class UpdateProfileUseCaseTest {
     meterRegistry = new SimpleMeterRegistry();
     useCase =
         new UpdateProfileUseCase(
-            userRepository,
+            new UserProfileReader(userRepository),
+            new UserProfileEditor(userRepository),
             usernameHistoryRepository,
             meterRegistry,
             cacheEviction,

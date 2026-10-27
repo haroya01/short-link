@@ -11,6 +11,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksCommand;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksUseCase;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
@@ -18,6 +19,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.application.write.UserDeletionService;
@@ -60,7 +62,11 @@ class LinkCacheEvictingWritesTest {
     when(links.findById(3L)).thenReturn(Optional.of(batchLink));
     CampaignBatchService service =
         new CampaignBatchService(
-            batches, links, mock(CreateLinkUseCase.class), mock(CampaignQueryService.class), cache);
+            batches,
+            mock(CreateLinkUseCase.class),
+            mock(CampaignQueryService.class),
+            new LinkRefReader(links),
+            new CampaignLinks(links, mock(LinkExpirationPolicyRepository.class), cache));
 
     service.delete(5L, 4L, 9L);
 
@@ -77,8 +83,7 @@ class LinkCacheEvictingWritesTest {
     UserDeletionService deletion =
         new UserDeletionService(
             users,
-            links,
-            mock(ClickEventRepository.class),
+            new LinkAccountData(links, mock(ClickEventRepository.class), cache),
             mock(FollowRepository.class),
             mock(BlockRepository.class),
             mock(MuteRepository.class),
@@ -89,7 +94,6 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            cache,
             mock(ProfileCacheInvalidator.class));
 
     deletion.hardDelete(9L);
@@ -108,8 +112,7 @@ class LinkCacheEvictingWritesTest {
     UserDeletionService deletion =
         new UserDeletionService(
             users,
-            links,
-            mock(ClickEventRepository.class),
+            new LinkAccountData(links, mock(ClickEventRepository.class), cache),
             mock(FollowRepository.class),
             mock(BlockRepository.class),
             mock(MuteRepository.class),
@@ -120,7 +123,6 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            cache,
             profiles);
 
     deletion.deleteAccount(9L);

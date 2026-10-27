@@ -1,12 +1,12 @@
-package com.example.short_link.link.stats.domain.repository;
+package com.example.short_link.link.stats.application.read;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
 import java.time.Instant;
 import java.util.List;
 
-public interface ClickRangeReadRepository {
+public interface ClickRangeReader {
 
   long countHumanByUserIdAndRange(Long userId, Instant from, Instant to);
 

@@ -1,7 +1,7 @@
 package com.example.short_link.user.application.dto;
 
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.application.LinkAccountData.ExportedClick;
+import com.example.short_link.link.application.LinkAccountData.ExportedLink;
 import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.List;
@@ -25,58 +25,6 @@ public record UserDataExport(
           u.getRole().name(),
           u.getTimezone(),
           u.getCreatedAt());
-    }
-  }
-
-  public record ExportedLink(
-      String shortCode,
-      String originalUrl,
-      Instant createdAt,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage) {
-
-    public static ExportedLink from(LinkEntity l) {
-      return new ExportedLink(
-          l.getShortCode().value(),
-          l.getOriginalUrl(),
-          l.getCreatedAt(),
-          l.getExpiresAt(),
-          l.getOgTitle(),
-          l.getOgDescription(),
-          l.getOgImage());
-    }
-  }
-
-  public record ExportedClick(
-      String shortCode,
-      Instant clickedAt,
-      String referrerHost,
-      String deviceClass,
-      String osName,
-      String browserName,
-      String countryCode,
-      String regionName,
-      String cityName,
-      String language,
-      boolean bot,
-      String botName) {
-
-    public static ExportedClick from(ClickEventEntity c, String shortCode) {
-      return new ExportedClick(
-          shortCode,
-          c.getClickedAt(),
-          c.getReferrerHost(),
-          c.getDeviceClass(),
-          c.getOsName(),
-          c.getBrowserName(),
-          c.getCountryCode(),
-          c.getRegionName(),
-          c.getCityName(),
-          c.getLanguage(),
-          c.isBot(),
-          c.getBotName());
     }
   }
 }

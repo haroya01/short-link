@@ -3,7 +3,6 @@ package com.example.short_link.link.stats.application.read;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +15,7 @@ class LinkStatsTotalsReader {
   private static final Duration BASELINE_WINDOW = Duration.ofHours(24);
 
   private final ClickEventRepository clickRepository;
-  private final ClickTotalsReadRepository clickTotals;
+  private final ClickTotalsReader clickTotals;
 
   Totals totals(LinkId linkId, Instant linkCreatedAt) {
     long total = clickRepository.countByLinkId(linkId.value());

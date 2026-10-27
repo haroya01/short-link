@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
-import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
@@ -96,7 +96,7 @@ class PasswordUnlockUseCaseTest {
     LinkEntity entity = mock(LinkEntity.class);
     when(entity.hasPassword()).thenReturn(true);
     when(lookup.findActiveLink(code))
-        .thenReturn(new CachedLink(new LinkId(7L), "https://destination", null, null, null, null));
+        .thenReturn(CachedLinkFixture.link(new LinkId(7L), "https://destination").build());
     when(lookup.findEntity(code)).thenReturn(Optional.of(entity));
     return entity;
   }

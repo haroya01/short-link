@@ -3,8 +3,8 @@ package com.example.short_link.link.webhook.scheduler;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.link.webhook.application.helper.ThresholdSpikePayload;
 import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
@@ -30,7 +30,7 @@ public class ThresholdSpikeDetector {
 
   private final LinkWebhookRepository hooks;
   private final LinkRepository links;
-  private final ClickTotalsReadRepository clickTotals;
+  private final ClickTotalsReader clickTotals;
   private final ClickAlertReadRepository clickAlerts;
   private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
@@ -38,7 +38,7 @@ public class ThresholdSpikeDetector {
   public ThresholdSpikeDetector(
       LinkWebhookRepository hooks,
       LinkRepository links,
-      ClickTotalsReadRepository clickTotals,
+      ClickTotalsReader clickTotals,
       ClickAlertReadRepository clickAlerts,
       WebhookHttpDeliveryClient deliveryClient,
       Clock clock) {

@@ -1,10 +1,8 @@
 package com.example.short_link.link.webhook.application.write;
 
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkErrorCode;
-import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.link.webhook.exception.WebhookErrorCode;
@@ -16,15 +14,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class WebhookOwnership {
 
-  private final LinkRepository linkRepository;
+  private final LinkOwnership ownership;
   private final LinkWebhookRepository repository;
 
   LinkEntity ownedLink(Long userId, ShortCode shortCode) {
-    LinkEntity link =
-        linkRepository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-    if (!link.isOwnedBy(userId)) throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
+    LinkEntity link = ownership.requireOwned(userId, shortCode);
     return link;
   }
 

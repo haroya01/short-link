@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -22,7 +23,7 @@ class WebhookOwnershipTest {
 
   private final LinkRepository links = mock(LinkRepository.class);
   private final LinkWebhookRepository hooks = mock(LinkWebhookRepository.class);
-  private final WebhookOwnership ownership = new WebhookOwnership(links, hooks);
+  private final WebhookOwnership ownership = new WebhookOwnership(new LinkOwnership(links), hooks);
 
   private LinkEntity link(Long id, Long ownerId) {
     LinkEntity l = new LinkEntity("https://target", "abc", ownerId, null);

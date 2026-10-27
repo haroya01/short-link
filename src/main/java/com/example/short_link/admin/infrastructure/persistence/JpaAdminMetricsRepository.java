@@ -28,6 +28,24 @@ public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntit
 
   String ROLLED_UNTIL_JPQL = "(SELECT s.rolledUntil FROM ClickRollupStateEntity s)";
 
+  @Query("SELECT COUNT(u) FROM UserEntity u")
+  long totalUsers();
+
+  @Query("SELECT COUNT(l) FROM LinkEntity l")
+  long totalLinks();
+
+  @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.createdAt > :since")
+  long usersCreatedAfter(@Param("since") Instant since);
+
+  @Query("SELECT COUNT(l) FROM LinkEntity l WHERE l.createdAt > :since")
+  long linksCreatedAfter(@Param("since") Instant since);
+
+  @Query("SELECT COUNT(l) FROM LinkEntity l WHERE l.userId IS NULL")
+  long anonymousLinks();
+
+  @Query("SELECT COUNT(l) FROM LinkEntity l WHERE l.expiresAt < :when")
+  long linksExpiredBefore(@Param("when") Instant when);
+
   @Query(
       value =
           "SELECT (SELECT COUNT(*) FROM click_event WHERE clicked_at >= "

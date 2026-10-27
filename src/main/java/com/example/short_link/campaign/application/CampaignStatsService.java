@@ -10,9 +10,9 @@ import com.example.short_link.campaign.application.dto.CampaignStatsView.Heatmap
 import com.example.short_link.campaign.application.dto.CampaignStatsView.HourBucket;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTimeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -32,8 +32,8 @@ public class CampaignStatsService {
 
   private final CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
-  private final ClickTotalsReadRepository clickTotals;
-  private final ClickTimeReadRepository clickTime;
+  private final ClickTotalsReader clickTotals;
+  private final ClickTimeReader clickTime;
 
   @Transactional(readOnly = true)
   public CampaignStatsView statsFor(Long campaignId, Long ownerId) {
@@ -45,7 +45,7 @@ public class CampaignStatsService {
           0L, 0L, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
-    List<Long> linkIds = batches.stream().map(b -> b.link().getId()).toList();
+    List<Long> linkIds = batches.stream().map(b -> b.link().linkId().value()).toList();
 
     Map<Long, Long> clicksByLink =
         toMap(clickTotals.countsByLinkIdsSince(linkIds, campaign.getStartsAt()));
@@ -55,7 +55,7 @@ public class CampaignStatsService {
     List<BatchStats> byBatch = new ArrayList<>(batches.size());
     long totalClicks = 0;
     for (BatchWithLink bwl : batches) {
-      long clicks = clicksByLink.getOrDefault(bwl.link().getId(), 0L);
+      long clicks = clicksByLink.getOrDefault(bwl.link().linkId().value(), 0L);
       totalClicks += clicks;
       byBatch.add(
           new BatchStats(
@@ -64,7 +64,7 @@ public class CampaignStatsService {
               bwl.batch().getDistributorName(),
               bwl.batch().getAreaLabel(),
               bwl.batch().getQuantity(),
-              bwl.link().getShortCode(),
+              bwl.link().shortCode(),
               clicks));
     }
 

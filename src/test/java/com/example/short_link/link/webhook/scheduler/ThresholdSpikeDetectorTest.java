@@ -15,8 +15,8 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
@@ -33,7 +33,7 @@ class ThresholdSpikeDetectorTest {
 
   private final LinkWebhookRepository hooks = mock(LinkWebhookRepository.class);
   private final LinkRepository links = mock(LinkRepository.class);
-  private final ClickTotalsReadRepository clickTotals = mock(ClickTotalsReadRepository.class);
+  private final ClickTotalsReader clickTotals = mock(ClickTotalsReader.class);
   private final ClickAlertReadRepository clickAlerts = mock(ClickAlertReadRepository.class);
   private final WebhookHttpDeliveryClient deliveryClient = mock(WebhookHttpDeliveryClient.class);
 

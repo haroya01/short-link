@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
@@ -9,7 +10,6 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import java.time.ZoneId;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,26 +60,7 @@ public class LinkStatsQueryService {
   }
 
   private ZoneId ownerZone(Long userId) {
-    if (userId == null) return LinkStatsDateSupport.DEFAULT_ZONE;
-    return users
-        .timezone(userId)
-        .map(LinkStatsDateSupport::safeZone)
-        .orElse(LinkStatsDateSupport.DEFAULT_ZONE);
-  }
-
-  public static ZoneId safeZone(String tz) {
-    return LinkStatsDateSupport.safeZone(tz);
-  }
-
-  public static String currentOffset(ZoneId zone) {
-    return LinkStatsDateSupport.currentOffset(zone);
-  }
-
-  static String mapDayOfWeek(int mysqlDow) {
-    return LinkStatsTimeBucketsReader.mapDayOfWeek(mysqlDow);
-  }
-
-  static Integer halfLife(List<LinkStats.DayClick> days) {
-    return LinkStatsLifecycleReader.halfLife(days);
+    if (userId == null) return ReportZones.DEFAULT_ZONE;
+    return users.timezone(userId).map(ReportZones::zoneOf).orElse(ReportZones.DEFAULT_ZONE);
   }
 }

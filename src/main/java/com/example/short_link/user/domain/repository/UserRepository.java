@@ -16,8 +16,6 @@ public interface UserRepository {
 
   UserEntity save(UserEntity user);
 
-  long count();
-
   boolean existsById(Long id);
 
   void deleteById(Long id);
@@ -30,9 +28,9 @@ public interface UserRepository {
 
   List<UserEntity> findActiveByUsernameIn(Collection<String> usernames);
 
-  long countByCreatedAtAfter(Instant since);
-
   long countByUsernameIsNotNullAndDeletedAtIsNull();
+
+  List<String> findPublicHandles(int page, int size);
 
   List<UserEntity> findTop200ByDeletedAtBefore(Instant cutoff);
 }

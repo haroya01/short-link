@@ -11,7 +11,8 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.application.read.LinkRefReader;
+import com.example.short_link.link.domain.LinkId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class EventQueryService {
   private final EventQuestionRepository questionRepository;
   private final EventRegistrationRepository registrationRepository;
   private final EventLinkRepository eventLinkRepository;
-  private final LinkRepository linkRepository;
+  private final LinkRefReader links;
   private final ObjectStoragePublicUrls coverImageUrls;
 
   @Transactional(readOnly = true)
@@ -110,9 +111,9 @@ public class EventQueryService {
             link ->
                 new EventLinkView(
                     link.getLinkId(),
-                    linkRepository
-                        .findById(link.getLinkId())
-                        .map(entity -> entity.getShortCode().value())
+                    links
+                        .find(new LinkId(link.getLinkId()))
+                        .map(ref -> ref.shortCode().value())
                         .orElse(null),
                     link.getLabel()))
         .toList();

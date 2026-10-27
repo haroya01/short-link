@@ -1,17 +1,20 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.application.VisitorSketch;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-class ClickTotalsReadRepositoryAdapter implements ClickTotalsReadRepository {
+class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
 
   private final JpaClickTotalsReadRepository jpa;
 
@@ -107,5 +110,17 @@ class ClickTotalsReadRepositoryAdapter implements ClickTotalsReadRepository {
   private static BigDecimal decimal(Instant instant) {
     return BigDecimal.valueOf(instant.getEpochSecond())
         .add(BigDecimal.valueOf(instant.getNano(), 9));
+  }
+
+  @Override
+  public Map<Long, Map<String, Long>> humanClientAppCountsByLinkIds(Collection<Long> linkIds) {
+    Map<Long, Map<String, Long>> counts = new LinkedHashMap<>();
+    if (linkIds.isEmpty()) return counts;
+    for (Object[] row : jpa.humanClientAppCountsByLinkIds(linkIds)) {
+      counts
+          .computeIfAbsent(((Number) row[0]).longValue(), id -> new LinkedHashMap<>())
+          .put((String) row[1], ((Number) row[2]).longValue());
+    }
+    return counts;
   }
 }

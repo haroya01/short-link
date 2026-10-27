@@ -46,15 +46,7 @@ public class UpdatePostMetadataUseCase {
       changeAccess(post, cmd.access());
     }
 
-    if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
-      if (ProfilePathSlugs.isReserved(cmd.slug())) {
-        throw new PostException(PostErrorCode.SLUG_RESERVED, cmd.slug()).with("slug", cmd.slug());
-      }
-      if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
-        throw new PostException(PostErrorCode.SLUG_CONFLICT, cmd.slug());
-      }
-      post.updateSlug(cmd.slug());
-    }
+    applySlug(post, cmd);
     String titleBefore = post.getTitle();
     String excerptBefore = post.getExcerpt();
     List<String> tagsBefore = cmd.tags() == null ? null : List.copyOf(post.getTags());
@@ -64,18 +56,7 @@ public class UpdatePostMetadataUseCase {
     if (cmd.excerpt() != null) {
       post.updateExcerpt(cmd.excerpt().isBlank() ? null : cmd.excerpt());
     }
-    if (cmd.ogImageUrl() != null) {
-      if (cmd.ogImageUrl().isBlank()) {
-        post.clearOgImage();
-      } else {
-        boolean newCover = !cmd.ogImageUrl().equals(post.getOgImageUrl());
-        post.updateOgImage(cmd.ogImageUrl(), cmd.ogImageKey(), coverChosen(post, cmd));
-        List<String> cover = ImageVariantKeys.keysIn(cmd.ogImageUrl());
-        if (newCover && !cover.isEmpty()) {
-          events.publishEvent(new ImageVariantsRequested(cover));
-        }
-      }
-    }
+    applyCover(post, cmd);
     if (cmd.languageTag() != null && !cmd.languageTag().isBlank()) {
       post.updateLanguageTag(cmd.languageTag());
     }
@@ -88,16 +69,49 @@ public class UpdatePostMetadataUseCase {
         !Objects.equals(titleBefore, post.getTitle())
             || !Objects.equals(excerptBefore, post.getExcerpt())
             || (tagsBefore != null && !tagsBefore.equals(post.getTags()));
-    List<PostBlockEntity> body =
-        searchFieldChanged && post.isPublished() ? searchTextUpdater.refresh(post) : null;
-    if (post.isPublished()) {
-      if (body == null) {
-        revisions.capture(post);
-      } else {
-        revisions.capture(post, body);
-      }
-    }
+    refreshSearchAndRevision(post, searchFieldChanged);
     return writeViews.fromSaved(postRepository.save(post));
+  }
+
+  private void applySlug(PostEntity post, UpdatePostMetadataCommand cmd) {
+    if (cmd.slug() == null || cmd.slug().equals(post.getSlug())) {
+      return;
+    }
+    if (ProfilePathSlugs.isReserved(cmd.slug())) {
+      throw new PostException(PostErrorCode.SLUG_RESERVED, cmd.slug()).with("slug", cmd.slug());
+    }
+    if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
+      throw new PostException(PostErrorCode.SLUG_CONFLICT, cmd.slug());
+    }
+    post.updateSlug(cmd.slug());
+  }
+
+  private void applyCover(PostEntity post, UpdatePostMetadataCommand cmd) {
+    if (cmd.ogImageUrl() == null) {
+      return;
+    }
+    if (cmd.ogImageUrl().isBlank()) {
+      post.clearOgImage();
+      return;
+    }
+    boolean newCover = !cmd.ogImageUrl().equals(post.getOgImageUrl());
+    post.updateOgImage(cmd.ogImageUrl(), cmd.ogImageKey(), coverChosen(post, cmd));
+    List<String> cover = ImageVariantKeys.keysIn(cmd.ogImageUrl());
+    if (newCover && !cover.isEmpty()) {
+      events.publishEvent(new ImageVariantsRequested(cover));
+    }
+  }
+
+  private void refreshSearchAndRevision(PostEntity post, boolean searchFieldChanged) {
+    if (!post.isPublished()) {
+      return;
+    }
+    List<PostBlockEntity> body = searchFieldChanged ? searchTextUpdater.refresh(post) : null;
+    if (body == null) {
+      revisions.capture(post);
+    } else {
+      revisions.capture(post, body);
+    }
   }
 
   private void changeAccess(PostEntity post, PostAccessChange change) {

@@ -19,21 +19,6 @@ public record CreateLinkCommand(
     }
   }
 
-  public CreateLinkCommand(
-      String url,
-      Long userId,
-      String customCode,
-      Instant expiresAt,
-      boolean deduplicate,
-      boolean allowSelfHost) {
-    this(url, userId, customCode, expiresAt, deduplicate, allowSelfHost, null);
-  }
-
-  public CreateLinkCommand(
-      String url, Long userId, String customCode, Instant expiresAt, boolean deduplicate) {
-    this(url, userId, customCode, expiresAt, deduplicate, false, null);
-  }
-
   public static CreateLinkCommand of(
       String url, Long userId, String customCode, Instant expiresAt) {
     return of(url, userId, customCode, expiresAt, null);
@@ -42,5 +27,13 @@ public record CreateLinkCommand(
   public static CreateLinkCommand of(
       String url, Long userId, String customCode, Instant expiresAt, String password) {
     return new CreateLinkCommand(url, userId, customCode, expiresAt, true, false, password);
+  }
+
+  public static CreateLinkCommand forOwnPage(String url, Long userId) {
+    return new CreateLinkCommand(url, userId, null, null, false, true, null);
+  }
+
+  public static CreateLinkCommand perBatch(String url, Long ownerId) {
+    return new CreateLinkCommand(url, ownerId, null, null, false, false, null);
   }
 }

@@ -261,7 +261,7 @@ class LinkCreationServiceTest {
                 user.getId(),
                 new CampaignBatchCreateCommand("Station", null, null, 10, null, null))
             .link()
-            .getShortCode();
+            .shortCode();
 
     LinkCreated created =
         service.execute(

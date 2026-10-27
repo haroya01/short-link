@@ -10,7 +10,7 @@ import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PooledNote;
 import com.example.short_link.post.application.read.PooledPost;
 import com.example.short_link.post.application.read.PostCard;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -40,7 +40,7 @@ class HomeForYouIntegrationTest {
 
   @Autowired private HomeFeedQueryService home;
   @Autowired private NoteQueryService notes;
-  @Autowired private PublicFeedQueryService posts;
+  @Autowired private PostHomeSlices posts;
   @Autowired private ForYouSignalReader signals;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;

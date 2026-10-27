@@ -13,6 +13,7 @@ import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
 import com.example.short_link.profile.application.PublicProfileSnapshot.LinkWindow;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -36,7 +37,6 @@ class ProfileQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private LinkRepository linkRepository;
   @Mock private PublicProfileLoader publicProfiles;
-  @Mock private PublicHandleReader publicHandles;
 
   private ProfileQueryService service;
 
@@ -44,10 +44,9 @@ class ProfileQueryServiceTest {
   void setUp() {
     service =
         new ProfileQueryService(
-            userRepository,
+            new UserProfileReader(userRepository),
             linkRepository,
             publicProfiles,
-            publicHandles,
             Clock.fixed(NOW, ZoneOffset.UTC),
             "https://kurl.app/u/");
   }

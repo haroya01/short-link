@@ -21,6 +21,7 @@ import com.example.short_link.common.analytics.VisitProjections.UtmSourceVisitRo
 import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -52,7 +53,9 @@ class ProfileStatsServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ProfileStatsService(userRepository, visits, Clock.fixed(NOW, ZoneOffset.UTC));
+    service =
+        new ProfileStatsService(
+            new UserProfileReader(userRepository), visits, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private UserEntity user(long id, String tz, boolean publicStats) {
@@ -240,7 +243,8 @@ class ProfileStatsServiceTest {
     Instant until = Instant.parse("2026-11-10T15:00:01Z");
     Instant firstVisit = Instant.parse("2026-10-20T00:00:00Z");
     ProfileStatsService inNovember =
-        new ProfileStatsService(userRepository, visits, Clock.fixed(now, ZoneOffset.UTC));
+        new ProfileStatsService(
+            new UserProfileReader(userRepository), visits, Clock.fixed(now, ZoneOffset.UTC));
     UserEntity u = user(1L, "America/New_York", false);
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
     List<HourVisitRow> summerHours = List.of(hourRow(9, 2L));

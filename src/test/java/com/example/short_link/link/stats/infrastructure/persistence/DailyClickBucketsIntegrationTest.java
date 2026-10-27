@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTimeReader;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -34,7 +34,7 @@ class DailyClickBucketsIntegrationTest {
   @Autowired private UserRepository users;
   @Autowired private LinkRepository links;
   @Autowired private ClickEventRepository clicks;
-  @Autowired private ClickTimeReadRepository clickTime;
+  @Autowired private ClickTimeReader clickTime;
   @PersistenceContext private EntityManager em;
 
   @Test

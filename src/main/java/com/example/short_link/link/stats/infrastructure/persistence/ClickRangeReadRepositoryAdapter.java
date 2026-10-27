@@ -1,9 +1,9 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-class ClickRangeReadRepositoryAdapter implements ClickRangeReadRepository {
+class ClickRangeReadRepositoryAdapter implements ClickRangeReader {
 
   private final JpaClickRangeReadRepository jpa;
 

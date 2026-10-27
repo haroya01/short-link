@@ -5,8 +5,8 @@ import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
@@ -17,8 +17,8 @@ import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserProfile;
+import com.example.short_link.user.application.read.UserProfileReader;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,9 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PublicProfileLoader {
 
-  private final UserRepository userRepository;
+  private final UserProfileReader users;
   private final LinkRepository linkRepository;
-  private final ClickTotalsReadRepository clickRepository;
+  private final ClickTotalsReader clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final PublishedPostCountReader postCountReader;
@@ -52,30 +52,29 @@ public class PublicProfileLoader {
   @Transactional(readOnly = true)
   public PublicProfileSnapshot load(String username) {
     String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-    UserEntity user =
-        userRepository
-            .findByUsername(normalized)
-            .filter(u -> !u.isDeleted())
+    UserProfile user =
+        users
+            .findActiveByUsername(normalized)
             .or(() -> resolveByHistory(normalized))
             .orElseThrow(
                 () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
-    List<ProfileLinkRow> links = linkRepository.findPublicProfileLinks(user.getId());
+    List<ProfileLinkRow> links = linkRepository.findPublicProfileLinks(user.id());
     List<ProfileBlockEntity> blocks =
-        profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.getId());
+        profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.id());
     Map<Long, Long> counts = clickCounts(links);
     List<PublicProfile.ProfileEntry> entries = entriesInProfileOrder(links, blocks, counts);
-    long publishedPostCount = postCountReader.countPublishedByUserId(user.getId());
+    long publishedPostCount = postCountReader.countPublishedByUserId(user.id());
     PublicProfile profile =
         new PublicProfile(
-            user.getUsername(),
-            user.getBio(),
-            user.getProfileTheme(),
-            user.getAvatarUrl(),
-            user.getBannerUrl(),
-            Socials.toList(user.getSocials()),
+            user.username(),
+            user.bio(),
+            user.profileTheme(),
+            user.avatarUrl(),
+            user.bannerUrl(),
+            Socials.toList(user.socials()),
             entries,
             publishedPostCount,
-            user.isHideFollowerCount());
+            user.hideFollowerCount());
     return new PublicProfileSnapshot(profile, windows(links));
   }
 
@@ -171,10 +170,9 @@ public class PublicProfileLoader {
     };
   }
 
-  private Optional<UserEntity> resolveByHistory(String oldUsername) {
+  private Optional<UserProfile> resolveByHistory(String oldUsername) {
     return usernameHistoryRepository
         .findFirstByOldUsernameAndExpiresAtAfter(oldUsername, clock.instant())
-        .flatMap(history -> userRepository.findById(history.getUserId()))
-        .filter(u -> !u.isDeleted());
+        .flatMap(history -> users.findActive(history.getUserId()));
   }
 }
