@@ -1,5 +1,4 @@
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|html#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
@@ -19,7 +18,6 @@ CognitiveComplexity|src/main/java/com/example/short_link/federation/application/
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/inbox/InboxService.java|execute(InboxIntent, RemoteActorEntity, String)#1=20
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/signature/HttpSignatures.java|parse(String)#1=22
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|ask(String, String, Signer)#1=17
-CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|keep(List<Answer>, boolean)#1=21
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|pull()#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteForYou.java|page(Long, SeenViewer, String, String, int, boolean)#1=24
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteReach.java|ask(String, List<Due>, Signer)#1=26
@@ -27,7 +25,6 @@ CognitiveComplexity|src/main/java/com/example/short_link/federation/application/
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteSeen.java|record(SeenViewer, Collection<String>, Collection<Dwell>, String)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteTrendingFeed.java|unseenFirst(Long, SeenViewer, String, int)#1=23
 CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/TrendingPosts.java|ask(String, Signer, Set<String>)#1=18
-CognitiveComplexity|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object(JsonNode, String)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/federation/domain/foryou/HomeRanking.java|pool(Collection<HomeCandidate>, Instant, Weights)#1=20
 CognitiveComplexity|src/main/java/com/example/short_link/federation/infrastructure/http/SignedFederationHttp.java|send(URI, byte[], Signer, String, boolean, Duration)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/federation/scheduler/RelayWorker.java|outcome(Announced)#1=20
@@ -97,9 +94,8 @@ CyclomaticComplexity|src/main/java/com/example/short_link/federation/application
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/inbox/InboxVerifier.java|verify(InboxMessage, boolean)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/relay/RelayIntake.java|judged(String, String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/signature/HttpSignatures.java|parse(String)#1=17
-CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|LatestPosts#1=90
+CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|LatestPosts#1=83
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|ask(String, String, Signer)#1=16
-CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|keep(List<Answer>, boolean)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|pull()#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/LatestPosts.java|pullFrom(String, Signer)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteForYou.java|held(Long, Instant, boolean)#1=12
@@ -109,7 +105,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/federation/application
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteSeen.java|record(SeenViewer, Collection<String>, Collection<Dwell>, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteTrendingFeed.java|latest(Long, SeenViewer, String, String, int)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteTrendingFeed.java|unseenFirst(Long, SeenViewer, String, int)#1=14
-CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object(JsonNode, String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|read(JsonNode, String)#1=15
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/domain/foryou/HomeRanking.java|pool(Collection<HomeCandidate>, Instant, Weights)#1=17
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/domain/foryou/HomeRanking.java|rank(Collection<HomeCandidate>, Reader, Set<String>, boolean, Instant, Weights)#1=11
@@ -250,7 +245,6 @@ NPathComplexity|src/main/java/com/example/short_link/federation/application/Remo
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|poll(JsonNode)#1=212
 NPathComplexity|src/main/java/com/example/short_link/federation/application/directory/DirectorySync.java|sync(String)#1=247
 NPathComplexity|src/main/java/com/example/short_link/federation/application/trends/RemoteForYou.java|page(Long, SeenViewer, String, String, int, boolean)#1=577
-NPathComplexity|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object(JsonNode, String)#1=800
 NPathComplexity|src/main/java/com/example/short_link/federation/infrastructure/http/SignedFederationHttp.java|send(URI, byte[], Signer, String, boolean, Duration)#1=392
 NPathComplexity|src/main/java/com/example/short_link/home/application/read/HomeFeedQueryService.java|page(HomeAsk)#1=785
 NPathComplexity|src/main/java/com/example/short_link/home/application/read/RoomItemsQueryService.java|page(Long, Positions, int, NoteSlice, PostSlice)#1=512

@@ -25,13 +25,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// What other servers say is trending, asked of each configured server in turn and held only in
-// memory: a refresh replaces the whole list, so a post deleted there is gone from here by the next
-// one. Each server's own order is kept: every server's first post comes before any server's
-// second, and posts at the same place go by how many servers carry them, then by boosts and likes.
-// A server that does not answer is left out and asked again after 1, 2, 4 and at most 8 skipped
-// refreshes. Nothing from a server this one blocked is taken, and a member never sees an account
-// or server they blocked or muted.
 @Slf4j
 @Service
 public class TrendingPosts {
@@ -145,12 +138,12 @@ public class TrendingPosts {
   }
 
   public void refresh() {
-    Map<String, Boolean> blocked = new HashMap<>();
+    BlockedHosts blocked = new BlockedHosts(serverBlocks);
     Signer signer = null;
     List<List<TrendingStatusReader.Read>> answers = new ArrayList<>();
     Set<String> keepable = new HashSet<>();
     for (String server : props.hosts()) {
-      if (waiting(server) || blocked(server, blocked)) {
+      if (waiting(server) || blocked.contains(server)) {
         continue;
       }
       if (signer == null) {
@@ -162,8 +155,9 @@ public class TrendingPosts {
         continue;
       }
       backoffs.remove(server);
-      answers.add(answer.get().stream().filter(read -> !blocked(read.domain(), blocked)).toList());
+      answers.add(answer.get().stream().filter(read -> !blocked.contains(read.domain())).toList());
     }
+    // A refresh replaces the whole list, so a post deleted on its server is gone by the next one.
     trending = known(blend(answers));
     reach.trended(trending, keepable);
   }
@@ -189,7 +183,6 @@ public class TrendingPosts {
         .toList();
   }
 
-  // A server blocked here leaves at once, without waiting for the next refresh.
   public void withdraw(String domain) {
     trending =
         trending.stream()
@@ -266,10 +259,6 @@ public class TrendingPosts {
     int failures =
         Math.min(backoffs.getOrDefault(server, new Backoff(0, 0)).failures() + 1, MAX_FAILURES);
     backoffs.put(server, new Backoff(failures, 1 << (failures - 1)));
-  }
-
-  private boolean blocked(String domain, Map<String, Boolean> blocked) {
-    return blocked.computeIfAbsent(domain, host -> serverBlocks.severityFor(host).isPresent());
   }
 
   static List<TrendingStatusReader.Read> blend(List<List<TrendingStatusReader.Read>> answers) {

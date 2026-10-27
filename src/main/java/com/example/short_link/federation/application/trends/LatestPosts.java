@@ -9,12 +9,10 @@ import com.example.short_link.federation.domain.repository.FederationDomainBlock
 import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import java.net.URI;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,16 +29,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// The newest public posts of a few chosen servers, held only in memory and asked for only while
-// someone reads them: the first read waits for the servers, a read after freshFor answers from
-// memory and asks again behind it, and nobody reading means nothing is asked. Each refresh asks
-// only for what came after the newest post kept from that server; scrolling past the oldest asks
-// for the page before it. Posts marked sensitive or behind a warning, and posts by bots, are left
-// out, as is everything trending leaves out.
-//
-// Where pulling is on, nothing is held: a worker pulls whether or not anyone reads, and the posts
-// are kept as notes. A pulled post that names a member is left to the delivery its server makes
-// to them, which would otherwise find it kept and be dropped as a duplicate.
 @Slf4j
 @Service
 public class LatestPosts {
@@ -58,19 +46,27 @@ public class LatestPosts {
   private final ExecutorService askers = Executors.newVirtualThreadPerTaskExecutor();
   private final AtomicBoolean refreshing = new AtomicBoolean();
   private final Map<String, Edge> edges = new ConcurrentHashMap<>();
-  private final Map<String, Quiet> quiet = new ConcurrentHashMap<>();
+  private final HostRest rests;
 
   private volatile List<Kept> latest = List.of();
   private volatile Instant askedAt;
 
   record Kept(TrendingStatusReader.Read read, String host) {}
 
-  private record Edge(String newest, String oldest, boolean bottom) {}
+  record Edge(String newest, String oldest, boolean bottom) {
 
-  private record Quiet(int times, Instant until) {}
+    static Edge firstAnswer(String first, String last, boolean shortPage) {
+      return first == null ? new Edge("0", "0", true) : new Edge(first, last, shortPage);
+    }
 
-  static final Duration FIRST_QUIET = Duration.ofHours(1);
-  static final Duration LONGEST_QUIET = Duration.ofHours(24);
+    Edge afterNewer(String first) {
+      return first == null ? this : new Edge(first, oldest, bottom);
+    }
+
+    Edge afterOlder(String last, boolean shortPage) {
+      return new Edge(newest, last == null ? oldest : last, shortPage);
+    }
+  }
 
   private record Answer(
       String host,
@@ -103,6 +99,7 @@ public class LatestPosts {
     this.urls = urls;
     this.json = json;
     this.clock = clock;
+    this.rests = new HostRest(clock);
   }
 
   public Page page(Long viewerId, int offset, int limit) {
@@ -136,6 +133,7 @@ public class LatestPosts {
     return shown(viewerId);
   }
 
+  // Other servers are asked only while someone reads.
   private void fresh() {
     if (askedAt == null) {
       refresh();
@@ -188,27 +186,23 @@ public class LatestPosts {
     }
   }
 
-  // Each server is asked for what came after the newest post seen from it; the first time, for its
-  // newest pages back to the newest post kept from it, at most backfillPages. Past the day's cap
-  // the newest posts are the ones kept, and they are kept oldest first, so note ids follow the
-  // order they were written in.
   public int pull() {
     if (!props.pulling() || !refreshing.compareAndSet(false, true)) {
       return 0;
     }
     try {
       Signer signer = signingKeys.forInstance();
-      Map<String, Boolean> blocked = new HashMap<>();
+      BlockedHosts blocked = new BlockedHosts(serverBlocks);
       List<CompletableFuture<List<Kept>>> asks = new ArrayList<>();
       for (String host : props.hosts()) {
-        if (!resting(host) && !blocked(host, blocked)) {
+        if (!rests.resting(host, clock.instant()) && !blocked.contains(host)) {
           asks.add(CompletableFuture.supplyAsync(() -> pullFrom(host, signer), askers));
         }
       }
       Map<String, Kept> byUri = new LinkedHashMap<>();
       for (CompletableFuture<List<Kept>> ask : asks) {
         for (Kept kept : ask.join()) {
-          if (!blocked(kept.read().domain(), blocked)) {
+          if (!blocked.contains(kept.read().domain())) {
             byUri.putIfAbsent(kept.read().note().uri(), kept);
           }
         }
@@ -235,10 +229,7 @@ public class LatestPosts {
     Edge edge = edges.get(host);
     if (edge != null) {
       Optional<Answer> answer = ask(host, "&since_id=" + edge.newest(), signer);
-      answer
-          .filter(newer -> newer.first() != null)
-          .ifPresent(
-              newer -> edges.put(host, new Edge(newer.first(), edge.oldest(), edge.bottom())));
+      answer.ifPresent(newer -> edges.put(host, edge.afterNewer(newer.first())));
       return answer.map(LatestPosts::kept).orElse(List.of());
     }
     Instant reached = store.newest(host).orElse(null);
@@ -254,7 +245,10 @@ public class LatestPosts {
       boolean bottom = older.raw() < props.perHost();
       Edge before = edges.get(host);
       edges.put(
-          host, new Edge(before == null ? older.first() : before.newest(), older.last(), bottom));
+          host,
+          before == null
+              ? Edge.firstAnswer(older.first(), older.last(), bottom)
+              : before.afterOlder(older.last(), bottom));
       if (bottom
           || (reached != null && older.lastAt() != null && !older.lastAt().isAfter(reached))) {
         break;
@@ -292,11 +286,11 @@ public class LatestPosts {
 
   private List<Answer> askAll(Function<Edge, String> window) {
     Signer signer = signingKeys.forInstance();
-    Map<String, Boolean> blocked = new HashMap<>();
+    BlockedHosts blocked = new BlockedHosts(serverBlocks);
     List<CompletableFuture<Optional<Answer>>> asks = new ArrayList<>();
     for (String host : props.hosts()) {
       String query = window.apply(edges.get(host));
-      if (query == null || resting(host) || blocked(host, blocked)) {
+      if (query == null || rests.resting(host, clock.instant()) || blocked.contains(host)) {
         continue;
       }
       asks.add(CompletableFuture.supplyAsync(() -> ask(host, query, signer), askers));
@@ -348,6 +342,8 @@ public class LatestPosts {
       first = first == null ? id : first;
       last = id;
       lastAt = instant(status.path("created_at").asString(null));
+      // A pulled post naming a member is left to its server's delivery to them, which would
+      // otherwise find it kept and drop it as a duplicate.
       if (safe(status) && !(props.pulling() && namesUs(status, urls))) {
         reader.read(status, host).ifPresent(reads::add);
       }
@@ -356,26 +352,14 @@ public class LatestPosts {
       rest(host);
       return Optional.empty();
     }
-    quiet.remove(host);
+    rests.answered(host);
     return Optional.of(new Answer(host, reads, first, last, lastAt, statuses.size()));
   }
 
   // A server that keeps its public timeline from visitors answers 4xx, or 200 with nothing at all
-  // on the first ask; it is asked again after 1, 2, 4 and at most 24 hours.
+  // on the first ask.
   private void rest(String host) {
-    Quiet before = quiet.get(host);
-    int times = before == null ? 0 : before.times() + 1;
-    Duration wait = FIRST_QUIET.multipliedBy(1L << Math.min(times, 5));
-    quiet.put(
-        host,
-        new Quiet(
-            times, clock.instant().plus(wait.compareTo(LONGEST_QUIET) > 0 ? LONGEST_QUIET : wait)));
-    log.info("federation latest no preview host={} wait={}", host, wait);
-  }
-
-  private boolean resting(String host) {
-    Quiet rest = quiet.get(host);
-    return rest != null && rest.until().isAfter(clock.instant());
+    log.info("federation latest no preview host={} wait={}", host, rests.rest(host));
   }
 
   static boolean keepable(JsonNode status, FederationUrls urls) {
@@ -410,7 +394,7 @@ public class LatestPosts {
   }
 
   private void keep(List<Answer> answers, boolean newer) {
-    Map<String, Boolean> blocked = new HashMap<>();
+    BlockedHosts blocked = new BlockedHosts(serverBlocks);
     Map<String, Kept> byUri = new LinkedHashMap<>();
     for (Kept kept : latest) {
       byUri.put(kept.read().note().uri(), kept);
@@ -419,23 +403,14 @@ public class LatestPosts {
       Edge edge = edges.get(answer.host());
       boolean shortPage = answer.raw() < props.perHost();
       if (edge == null) {
-        edges.put(
-            answer.host(),
-            answer.first() == null
-                ? new Edge("0", "0", true)
-                : new Edge(answer.first(), answer.last(), shortPage));
+        edges.put(answer.host(), Edge.firstAnswer(answer.first(), answer.last(), shortPage));
       } else if (newer) {
-        if (answer.first() != null) {
-          edges.put(answer.host(), new Edge(answer.first(), edge.oldest(), edge.bottom()));
-        }
+        edges.put(answer.host(), edge.afterNewer(answer.first()));
       } else {
-        edges.put(
-            answer.host(),
-            new Edge(
-                edge.newest(), answer.last() == null ? edge.oldest() : answer.last(), shortPage));
+        edges.put(answer.host(), edge.afterOlder(answer.last(), shortPage));
       }
       for (TrendingStatusReader.Read read : answer.reads()) {
-        if (!blocked(read.domain(), blocked)) {
+        if (!blocked.contains(read.domain())) {
           byUri.putIfAbsent(read.note().uri(), new Kept(read, answer.host()));
         }
       }
@@ -447,11 +422,6 @@ public class LatestPosts {
             .toList();
   }
 
-  private boolean blocked(String domain, Map<String, Boolean> blocked) {
-    return blocked.computeIfAbsent(domain, host -> serverBlocks.severityFor(host).isPresent());
-  }
-
-  // A server blocked here leaves at once.
   public void withdraw(String domain) {
     latest =
         latest.stream()
