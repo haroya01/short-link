@@ -26,7 +26,6 @@ public class RelayTally {
   public RelayTally(MeterRegistry meters, Clock clock) {
     this.meters = meters;
     this.clock = clock;
-    this.day = LocalDate.now(clock.withZone(SEOUL));
   }
 
   public void count(String outcome) {
