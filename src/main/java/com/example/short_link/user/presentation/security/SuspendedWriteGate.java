@@ -14,8 +14,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-// Notes and posts ask UserModerationGuard in their use cases; the other modules are asked here once
-// per writing request, so a new handler is refused by default rather than by remembering to ask.
+// Notes and posts ask UserModerationGuard in their use cases; the modules in MODULES are asked here
+// once per writing request, so a new handler is refused by default, not by remembering to ask.
 @Component
 @RequiredArgsConstructor
 public class SuspendedWriteGate implements HandlerInterceptor, WebMvcConfigurer {

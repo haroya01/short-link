@@ -12,7 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 로그아웃·탈퇴·APNs BadDeviceToken 응답 시 삭제한다.
+// 로그아웃(그 세션에 묶인 토큰)·탈퇴·APNs 410·BadDeviceToken 응답 시 삭제한다.
 @Entity
 @Table(name = "device_token")
 @Getter

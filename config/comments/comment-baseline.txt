@@ -657,7 +657,7 @@ src/main/java/com/example/short_link/user/application/write/RefreshTokenStore.ja
 src/main/java/com/example/short_link/user/application/write/UserDeletionService.java=2
 src/main/java/com/example/short_link/user/application/write/WebPushSubscriptionCommandService.java=2
 src/main/java/com/example/short_link/user/config/AppleIdentityConfig.java=1
-src/main/java/com/example/short_link/user/config/SecurityConfig.java=23
+src/main/java/com/example/short_link/user/config/SecurityConfig.java=24
 src/main/java/com/example/short_link/user/domain/DeviceTokenEntity.java=2
 src/main/java/com/example/short_link/user/domain/UserEntity.java=2
 src/main/java/com/example/short_link/user/domain/UserTwoFactorEntity.java=1
