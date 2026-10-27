@@ -27,6 +27,36 @@ class AdminMetricsRepositoryAdapter implements AdminMetricsRepository {
   }
 
   @Override
+  public long totalUsers() {
+    return jpa.totalUsers();
+  }
+
+  @Override
+  public long totalLinks() {
+    return jpa.totalLinks();
+  }
+
+  @Override
+  public long usersCreatedAfter(Instant since) {
+    return jpa.usersCreatedAfter(since);
+  }
+
+  @Override
+  public long linksCreatedAfter(Instant since) {
+    return jpa.linksCreatedAfter(since);
+  }
+
+  @Override
+  public long anonymousLinks() {
+    return jpa.anonymousLinks();
+  }
+
+  @Override
+  public long linksExpiredBefore(Instant when) {
+    return jpa.linksExpiredBefore(when);
+  }
+
+  @Override
   public long totalClicks() {
     return jpa.totalClicks(smokeUserId);
   }

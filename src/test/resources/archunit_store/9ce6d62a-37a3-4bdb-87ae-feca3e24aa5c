@@ -1,12 +1,4 @@
 com.example.short_link.admin.application.read.AdminLinkMetricsQueryService reaches com.example.short_link.common.observability.RequestMetricEntity
-com.example.short_link.admin.application.read.AdminOverviewService reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.admin.application.read.AdminOverviewService reaches com.example.short_link.user.domain.repository.UserRepository
-com.example.short_link.admin.application.write.BlockedDomainWarningFanout reaches com.example.short_link.link.domain.LinkEntity
-com.example.short_link.admin.application.write.BlockedDomainWarningFanout reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.admin.application.write.BlockedDomainWarningFanout reaches com.example.short_link.user.domain.UserEntity
-com.example.short_link.admin.application.write.BlockedDomainWarningFanout reaches com.example.short_link.user.domain.repository.UserRepository
-com.example.short_link.admin.application.write.WarnUserUseCase reaches com.example.short_link.user.domain.UserEntity
-com.example.short_link.admin.application.write.WarnUserUseCase reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.admin.infrastructure.persistence.JpaAdminAnalyticsRepository reaches com.example.short_link.link.stats.domain.ClickEventEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBlogMetricsRepository reaches com.example.short_link.post.domain.PostEntity
 com.example.short_link.admin.infrastructure.persistence.JpaAdminBrowseRepository reaches com.example.short_link.user.domain.UserEntity

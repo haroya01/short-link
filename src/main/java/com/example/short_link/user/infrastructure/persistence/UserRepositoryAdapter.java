@@ -36,11 +36,6 @@ class UserRepositoryAdapter implements UserRepository {
   }
 
   @Override
-  public long count() {
-    return jpa.count();
-  }
-
-  @Override
   public boolean existsById(Long id) {
     return jpa.existsById(id);
   }
@@ -68,11 +63,6 @@ class UserRepositoryAdapter implements UserRepository {
   @Override
   public List<UserEntity> findActiveByUsernameIn(Collection<String> usernames) {
     return jpa.findAllByUsernameInAndDeletedAtIsNull(usernames);
-  }
-
-  @Override
-  public long countByCreatedAtAfter(Instant since) {
-    return jpa.countByCreatedAtAfter(since);
   }
 
   @Override

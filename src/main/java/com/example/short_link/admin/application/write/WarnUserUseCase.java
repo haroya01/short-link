@@ -5,8 +5,8 @@ import com.example.short_link.admin.exception.AdminErrorCode;
 import com.example.short_link.admin.exception.AdminException;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.domain.LinkNotificationType;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,19 +15,19 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WarnUserUseCase {
 
-  private final UserRepository users;
+  private final UserSummaryReader users;
   private final LinkNotificationDispatcher dispatcher;
 
   public void execute(long userId, String shortCode, String message) {
-    UserEntity user =
+    UserSummary user =
         users
-            .findById(userId)
+            .find(userId)
             .orElseThrow(() -> new AdminException(AdminErrorCode.USER_NOT_FOUND, userId));
     dispatcher.dispatch(
         userId,
         LinkNotificationType.WARNING,
         shortCode,
-        WarningCopy.subtitle(user.getLocale()),
+        WarningCopy.subtitle(user.locale()),
         message);
   }
 }

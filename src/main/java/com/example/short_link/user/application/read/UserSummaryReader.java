@@ -60,6 +60,7 @@ public class UserSummaryReader {
         user.getUsername(),
         user.getDisplayName(),
         user.getAvatarUrl(),
-        user.getBio());
+        user.getBio(),
+        user.getLocale());
   }
 }
