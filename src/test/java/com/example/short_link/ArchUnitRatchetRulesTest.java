@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.data.repository.Repository;
 import org.springframework.scheduling.annotation.Async;
 
 // Frozen rules keep today's violations in src/test/resources/archunit_store and fail on new ones;
@@ -40,7 +41,8 @@ class ArchUnitRatchetRulesTest {
       Map.of(
           "moduleInternalsStayInTheirModule", 83,
           "theSystemClockIsReadInConfigAlone", 0,
-          "transactionsDoNotReachOutboundClients", 26);
+          "transactionsDoNotReachOutboundClients", 26,
+          "springDataRepositoriesStayBehindPorts", 2);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");
@@ -68,6 +70,13 @@ class ArchUnitRatchetRulesTest {
           .that(ArchUnitSemanticRulesTest.areTransactional())
           .should(notReachAnOutboundClientThroughTheMethodsTheyCall())
           .as("transactionsDoNotReachOutboundClients");
+
+  static final ArchRule springDataRepositoriesStayBehindPorts =
+      classes()
+          .that()
+          .resideInAnyPackage("..application..", "..domain..")
+          .should(reachPersistenceOnlyThroughADomainPort())
+          .as("springDataRepositoriesStayBehindPorts");
 
   @ArchTest
   static void noNewOutboundCallReachedFromATransaction(JavaClasses classes) {
