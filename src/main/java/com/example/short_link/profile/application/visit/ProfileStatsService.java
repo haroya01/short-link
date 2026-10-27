@@ -9,8 +9,8 @@ import com.example.short_link.common.analytics.VisitStatsAssembler;
 import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserProfile;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Clock;
@@ -27,26 +27,24 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProfileStatsService {
 
-  private final UserRepository userRepository;
+  private final UserProfileReader users;
   private final ProfileVisitRepository visits;
   private final Clock clock;
 
   @Transactional(readOnly = true)
   public VisitStats statsForOwner(Long ownerUserId) {
-    UserEntity owner =
-        userRepository
-            .findById(ownerUserId)
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    UserProfile owner =
+        users.find(ownerUserId).orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     return computeStats(owner);
   }
 
   @Transactional(readOnly = true)
   public VisitStats publicStats(String username) {
-    UserEntity user =
-        userRepository
+    UserProfile user =
+        users
             .findByUsername(username)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    if (!user.isStatsPublic()) {
+    if (!user.statsPublic()) {
       throw new UserException(UserErrorCode.USER_NOT_FOUND);
     }
     return computeStats(user);
@@ -54,11 +52,10 @@ public class ProfileStatsService {
 
   @Transactional(readOnly = true)
   public boolean statsPublic(Long ownerUserId) {
-    UserEntity owner =
-        userRepository
-            .findById(ownerUserId)
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    return owner.isStatsPublic();
+    return users
+        .find(ownerUserId)
+        .map(UserProfile::statsPublic)
+        .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
   }
 
   @Transactional(readOnly = true)
@@ -77,9 +74,9 @@ public class ProfileStatsService {
     return new ProfileVisitSummary(today, week, month, allTime);
   }
 
-  private VisitStats computeStats(UserEntity owner) {
-    Long uid = owner.getId();
-    ZoneId zone = ReportZones.zoneOf(owner.getTimezone());
+  private VisitStats computeStats(UserProfile owner) {
+    Long uid = owner.id();
+    ZoneId zone = ReportZones.zoneOf(owner.timezone());
     Instant now = clock.instant();
     Instant until = now.truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
 

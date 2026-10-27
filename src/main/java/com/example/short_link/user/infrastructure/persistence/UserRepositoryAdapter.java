@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -68,6 +69,15 @@ class UserRepositoryAdapter implements UserRepository {
   @Override
   public long countByUsernameIsNotNullAndDeletedAtIsNull() {
     return jpa.countByUsernameIsNotNullAndDeletedAtIsNull();
+  }
+
+  @Override
+  public List<String> findPublicHandles(int page, int size) {
+    return jpa
+        .findAllByUsernameIsNotNullAndDeletedAtIsNullOrderByCreatedAtAsc(PageRequest.of(page, size))
+        .stream()
+        .map(UserEntity::getUsername)
+        .toList();
   }
 
   @Override

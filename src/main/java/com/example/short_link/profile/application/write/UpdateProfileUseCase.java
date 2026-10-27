@@ -10,8 +10,9 @@ import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserProfile;
+import com.example.short_link.user.application.read.UserProfileReader;
+import com.example.short_link.user.application.write.UserProfileEditor;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,7 +32,8 @@ public class UpdateProfileUseCase {
 
   private static final Duration USERNAME_GRACE = Duration.ofDays(30);
 
-  private final UserRepository userRepository;
+  private final UserProfileReader users;
+  private final UserProfileEditor editor;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final MeterRegistry meterRegistry;
   private final ProfileCacheEviction cacheEviction;
@@ -39,14 +41,16 @@ public class UpdateProfileUseCase {
   private final String publicProfileBaseUrl;
 
   public UpdateProfileUseCase(
-      UserRepository userRepository,
+      UserProfileReader users,
+      UserProfileEditor editor,
       UsernameHistoryRepository usernameHistoryRepository,
       MeterRegistry meterRegistry,
       ProfileCacheEviction cacheEviction,
       ApplicationEventPublisher events,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
-    this.userRepository = userRepository;
+    this.users = users;
+    this.editor = editor;
     this.usernameHistoryRepository = usernameHistoryRepository;
     this.meterRegistry = meterRegistry;
     this.cacheEviction = cacheEviction;
@@ -56,34 +60,33 @@ public class UpdateProfileUseCase {
 
   @Transactional
   public MyProfile execute(UpdateProfileCommand cmd) {
-    UserEntity user =
-        userRepository
-            .findById(cmd.userId())
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    String previousUsername = user.getUsername();
+    UserProfile user =
+        users.find(cmd.userId()).orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    String previousUsername = user.username();
     updateUsername(user, cmd.username(), cmd.userId());
-    updateAppearance(user, cmd);
+    updateAppearance(cmd);
     updateLocked(user, cmd.locked());
+    UserProfile updated = users.find(cmd.userId()).orElseThrow();
     cacheEviction.evictByUsername(previousUsername);
-    String currentUsername = user.getUsername();
+    String currentUsername = updated.username();
     if (currentUsername != null && !currentUsername.equals(previousUsername)) {
       cacheEviction.evictByUsername(currentUsername);
     }
     meterRegistry.counter("profile.updated").increment();
-    return MyProfileMapper.from(user, publicProfileBaseUrl);
+    return MyProfileMapper.from(updated, publicProfileBaseUrl);
   }
 
-  private void updateUsername(UserEntity user, String requestedUsername, Long userId) {
+  private void updateUsername(UserProfile user, String requestedUsername, Long userId) {
     if (requestedUsername != null) {
       String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
       validateUsername(normalized);
-      if (!normalized.equals(user.getUsername())) {
+      if (!normalized.equals(user.username())) {
         if (ReservedUsernames.ALL.contains(normalized)) {
           throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "reserved");
         }
-        userRepository
+        users
             .findByUsername(normalized)
-            .filter(other -> !other.getId().equals(userId))
+            .filter(other -> !other.id().equals(userId))
             .ifPresent(
                 other -> {
                   throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
@@ -95,50 +98,51 @@ public class UpdateProfileUseCase {
                 history -> {
                   throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
                 });
-        String previous = user.getUsername();
+        String previous = user.username();
         if (previous != null && !previous.isBlank()) {
           usernameHistoryRepository.save(
               new UsernameHistoryEntity(userId, previous, Instant.now().plus(USERNAME_GRACE)));
         }
-        user.claimUsername(normalized);
+        editor.claimUsername(userId, normalized);
       }
     }
   }
 
-  private static void updateAppearance(UserEntity user, UpdateProfileCommand cmd) {
+  private void updateAppearance(UpdateProfileCommand cmd) {
+    Long userId = cmd.userId();
     if (cmd.bio() != null) {
       String trimmed = cmd.bio().trim();
       if (trimmed.length() > 280) {
         throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bio too long");
       }
-      user.updateBio(trimmed.isEmpty() ? null : trimmed);
+      editor.updateBio(userId, trimmed.isEmpty() ? null : trimmed);
     }
     if (cmd.displayName() != null) {
       String name = cmd.displayName().strip().replaceAll("\\s+", " ");
       if (name.codePointCount(0, name.length()) > 30) {
         throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "display name too long");
       }
-      user.updateDisplayName(name.isEmpty() ? null : name);
+      editor.updateDisplayName(userId, name.isEmpty() ? null : name);
     }
     if (cmd.theme() != null) {
-      user.updateProfileTheme(cmd.theme());
+      editor.updateProfileTheme(userId, cmd.theme());
     }
     if (cmd.socials() != null) {
-      user.updateSocials(Socials.normalize(cmd.socials()));
+      editor.updateSocials(userId, Socials.normalize(cmd.socials()));
     }
     if (cmd.hideFollowerCount() != null) {
-      user.updateHideFollowerCount(cmd.hideFollowerCount());
+      editor.updateHideFollowerCount(userId, cmd.hideFollowerCount());
     }
   }
 
   // Unlocking lets everyone still waiting in, as on Mastodon.
-  private void updateLocked(UserEntity user, Boolean locked) {
-    if (locked == null || locked == user.isLocked()) {
+  private void updateLocked(UserProfile user, Boolean locked) {
+    if (locked == null || locked == user.locked()) {
       return;
     }
-    user.updateLocked(locked);
+    editor.updateLocked(user.id(), locked);
     if (!locked) {
-      events.publishEvent(new AccountUnlockedEvent(user.getId()));
+      events.publishEvent(new AccountUnlockedEvent(user.id()));
     }
   }
 

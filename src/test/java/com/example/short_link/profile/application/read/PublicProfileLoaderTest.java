@@ -23,6 +23,7 @@ import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
@@ -56,7 +57,7 @@ class PublicProfileLoaderTest {
   void setUp() {
     loader =
         new PublicProfileLoader(
-            userRepository,
+            new UserProfileReader(userRepository),
             linkRepository,
             clickRepository,
             usernameHistoryRepository,

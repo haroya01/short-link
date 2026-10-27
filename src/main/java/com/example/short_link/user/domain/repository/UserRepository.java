@@ -30,5 +30,7 @@ public interface UserRepository {
 
   long countByUsernameIsNotNullAndDeletedAtIsNull();
 
+  List<String> findPublicHandles(int page, int size);
+
   List<UserEntity> findTop200ByDeletedAtBefore(Instant cutoff);
 }
