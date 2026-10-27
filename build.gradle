@@ -5,6 +5,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'com.diffplug.spotless' version '8.10.4'
 	id 'net.ltgt.errorprone' version '5.1.1'
+	id 'pmd'
 }
 
 group = 'com.example'
@@ -265,6 +266,79 @@ spotless {
 		trimTrailingWhitespace()
 		endWithNewline()
 	}
+}
+
+pmd {
+	toolVersion = '7.28.0'
+	ignoreFailures = true
+	consoleOutput = false
+	ruleSets = []
+	ruleSetFiles = files('config/pmd/size-rules.xml')
+}
+
+tasks.named('pmdTest') {
+	enabled = false
+}
+
+def pmdSizeBaseline = file('config/pmd/size-baseline.txt')
+
+def pmdSizeFindings = {
+	def report = tasks.named('pmdMain').get().reports.xml.outputLocation.get().asFile
+	def root = projectDir.toPath()
+	def found = [:]
+	new groovy.xml.XmlSlurper().parse(report).file.each { f ->
+		def path = root.relativize(new File(f.@name.toString()).toPath()).toString()
+		f.violation.each { v ->
+			def message = v.text().trim()
+			def quoted = message =~ /'([^']*)'/
+			def scope = quoted.find() ? quoted.group(1) : (v.@method.toString() ?: v.@class.toString())
+			def value = (message.replaceAll(/'[^']*'/, '') =~ /\d+/)[0] as long
+			def key = "${v.@rule}|${path}|${scope}"
+			def n = 1
+			while (found.containsKey("${key}#${n}".toString())) n++
+			found["${key}#${n}".toString()] = value
+		}
+	}
+	found
+}
+
+tasks.register('pmdSizeRatchet') {
+	group = 'verification'
+	description = 'Fail when a PMD size or complexity finding differs from config/pmd/size-baseline.txt.'
+	dependsOn 'pmdMain'
+	inputs.file(pmdSizeBaseline)
+	doLast {
+		def current = pmdSizeFindings()
+		def baseline = [:]
+		pmdSizeBaseline.eachLine { line ->
+			def cut = line.lastIndexOf('=')
+			baseline[line.substring(0, cut)] = line.substring(cut + 1) as long
+		}
+		def added = current.findAll { k, v -> !baseline.containsKey(k) }
+		def grew = current.findAll { k, v -> baseline.containsKey(k) && v > baseline[k] }
+		def shrank = current.findAll { k, v -> baseline.containsKey(k) && v < baseline[k] }
+		def fixed = baseline.keySet() - current.keySet()
+		logger.lifecycle("PMD size ratchet: current=${current.size()} baseline=${baseline.size()} new=${added.size()} grew=${grew.size()} shrank=${shrank.size()} fixed=${fixed.size()}")
+		if (added || grew) {
+			throw new GradleException("New or grown PMD size findings:\n" + (added + grew).collect { k, v -> "  ${k}=${v} (baseline ${baseline[k] ?: 'none'})" }.join('\n'))
+		}
+		if (shrank || fixed) {
+			throw new GradleException("PMD size findings went down; run ./gradlew pmdSizeBaselineWrite and commit config/pmd/size-baseline.txt:\n" + (shrank.collect { k, v -> "  ${k}: ${baseline[k]} -> ${v}" } + fixed.collect { "  ${it}: fixed" }).join('\n'))
+		}
+	}
+}
+
+tasks.register('pmdSizeBaselineWrite') {
+	group = 'verification'
+	description = 'Rewrite config/pmd/size-baseline.txt from the current PMD size and complexity findings.'
+	dependsOn 'pmdMain'
+	doLast {
+		pmdSizeBaseline.text = pmdSizeFindings().collect { k, v -> "${k}=${v}" }.sort().join('\n') + '\n'
+	}
+}
+
+tasks.named('check') {
+	dependsOn 'pmdSizeRatchet'
 }
 
 tasks.register('downloadGeoLite2Asn') {
