@@ -1,7 +1,6 @@
 package com.example.short_link.link.stats.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
@@ -16,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +31,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -56,14 +56,17 @@ class LinkStatsDailyClicksContractTest {
   @Autowired private ClickEventRepository clicks;
   @Autowired private LinkStatsQueryService stats;
   @PersistenceContext private EntityManager em;
-  @MockitoBean private Clock clock;
+  @TestBean private Clock clock;
 
   private UserEntity owner;
   private LinkEntity link;
 
+  static Clock clock() {
+    return Clock.fixed(NOW, ZoneOffset.UTC);
+  }
+
   @BeforeEach
   void aLinkClickedOverTheLastThreeWeeks() {
-    when(clock.instant()).thenReturn(NOW);
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     owner = users.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix));
     link =

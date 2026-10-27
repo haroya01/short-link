@@ -64,18 +64,9 @@ public class OutboxBackfill implements RemoteHistory {
       FederationHttp http,
       SigningKeys signingKeys,
       JsonMapper json,
-      @Qualifier("taskExecutor") Executor executor) {
-    this(
-        actors,
-        standings,
-        remoteNotes,
-        intake,
-        http,
-        signingKeys,
-        json,
-        executor,
-        Clock.systemUTC(),
-        WAIT);
+      @Qualifier("taskExecutor") Executor executor,
+      Clock clock) {
+    this(actors, standings, remoteNotes, intake, http, signingKeys, json, executor, clock, WAIT);
   }
 
   OutboxBackfill(
