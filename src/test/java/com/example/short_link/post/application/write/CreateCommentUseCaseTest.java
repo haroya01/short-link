@@ -27,6 +27,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -64,10 +65,14 @@ class CreateCommentUseCaseTest {
                 blockChecker,
                 PostAccessFixtures.policy()),
             commentRepository,
-            userRepository,
+            new UserSummaryReader(userRepository),
             new CommentNotifications(
-                userRepository, postRepository, events, muteReader, PostAccessFixtures.policy()),
-            new CommentMentions(userRepository));
+                new UserSummaryReader(userRepository),
+                postRepository,
+                events,
+                muteReader,
+                PostAccessFixtures.policy()),
+            new CommentMentions(new UserSummaryReader(userRepository)));
   }
 
   private PostEntity publishedPost() {
