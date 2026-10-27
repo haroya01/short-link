@@ -34,6 +34,7 @@ public class DeviceTokenCommandService {
             .orElseGet(
                 () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform, topic)));
     device.bindTo(sessionId, clock.instant().plus(jwtProperties.refreshTtl()));
+    // iOS 앱은 기기 등록 때 Accept-Language 를 보내야 한다. 서버가 조합하는 푸시가 이 언어로 나간다.
     userRepository
         .findById(userId)
         .ifPresent(u -> u.updateLocale(LocaleContextHolder.getLocale().getLanguage()));
