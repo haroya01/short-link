@@ -14,6 +14,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
+import jakarta.persistence.Entity;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ class ArchUnitRatchetRulesTest {
 
   static final Map<String, Integer> CEILINGS =
       Map.of(
-          "moduleInternalsStayInTheirModule", 79,
+          "moduleInternalsStayInTheirModule", 146,
           "theSystemClockIsReadInConfigAlone", 18);
 
   private static final List<String> MODULE_ROOTS =
@@ -43,7 +44,7 @@ class ArchUnitRatchetRulesTest {
 
   static final ArchRule moduleInternalsStayInTheirModule =
       classes()
-          .should(reachAnotherModuleOnlyThroughItsApplicationOrDomainModel())
+          .should(reachAnotherModuleOnlyThroughItsApplicationOrDomainValues())
           .as("moduleInternalsStayInTheirModule");
 
   static final ArchRule theSystemClockIsReadInConfigAlone =
@@ -75,9 +76,9 @@ class ArchUnitRatchetRulesTest {
   }
 
   private static ArchCondition<JavaClass>
-      reachAnotherModuleOnlyThroughItsApplicationOrDomainModel() {
+      reachAnotherModuleOnlyThroughItsApplicationOrDomainValues() {
     return new ArchCondition<>(
-        "reach another module only through its application or domain model") {
+        "reach another module only through its application or domain values") {
       @Override
       public void check(JavaClass from, ConditionEvents events) {
         String module = module(from.getPackageName());
@@ -87,7 +88,7 @@ class ArchUnitRatchetRulesTest {
         from.getDirectDependenciesFromSelf().stream()
             .map(Dependency::getTargetClass)
             .map(JavaClass::getBaseComponentType)
-            .filter(target -> INTERNAL.matcher(target.getPackageName()).find())
+            .filter(ArchUnitRatchetRulesTest::isInternal)
             .filter(target -> !module.equals(module(target.getPackageName())))
             .filter(target -> module(target.getPackageName()) != null)
             .map(JavaClass::getName)
@@ -100,6 +101,10 @@ class ArchUnitRatchetRulesTest {
                             from, from.getName() + " reaches " + target)));
       }
     };
+  }
+
+  private static boolean isInternal(JavaClass target) {
+    return INTERNAL.matcher(target.getPackageName()).find() || target.isAnnotatedWith(Entity.class);
   }
 
   private static ArchCondition<JavaClass> takeTheClockBeanInsteadOfTheSystemClock() {
