@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
@@ -48,9 +49,9 @@ class AvatarServiceTest {
     service =
         new AvatarService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(
+                UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)),
             objectStorage,
-            new ObjectStoragePublicUrls(storageProperties),
             mock(ProfileCacheInvalidator.class));
   }
 
@@ -61,9 +62,8 @@ class AvatarServiceTest {
     AvatarService svc =
         new AvatarService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBucket)),
             objectStorage,
-            new ObjectStoragePublicUrls(noBucket),
             mock(ProfileCacheInvalidator.class));
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(UserException.class)
@@ -116,7 +116,7 @@ class AvatarServiceTest {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
         .isInstanceOf(UserException.class)
-        .hasMessageContaining("exceeds maxBytes");
+        .hasMessageContaining("avatar exceeds maxBytes");
     verify(objectStorage).delete("avatars/1/x.jpg");
   }
 
@@ -199,9 +199,8 @@ class AvatarServiceTest {
     AvatarService svc =
         new AvatarService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noCdn)),
             objectStorage,
-            new ObjectStoragePublicUrls(noCdn),
             mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
@@ -216,9 +215,8 @@ class AvatarServiceTest {
     AvatarService svc =
         new AvatarService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(slashed)),
             objectStorage,
-            new ObjectStoragePublicUrls(slashed),
             mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/webp"), any(Duration.class)))
         .thenReturn("https://s3/put");

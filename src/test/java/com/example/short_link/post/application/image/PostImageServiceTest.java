@@ -16,6 +16,7 @@ import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
@@ -59,6 +60,11 @@ class PostImageServiceTest {
   void setUp() {
     service =
         new PostImageService(
+            new ImageUploads(
+                uploadPolicy,
+                objectStorage,
+                new com.example.short_link.common.storage.ObjectStoragePublicUrls(
+                    new S3StorageProperties("bucket", "ap-northeast-2", "https://cdn.kurl.me"))),
             uploadPolicy,
             objectStorage,
             postOwnership,
