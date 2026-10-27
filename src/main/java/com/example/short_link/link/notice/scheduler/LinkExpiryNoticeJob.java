@@ -1,11 +1,13 @@
-package com.example.short_link.notification.scheduler;
+package com.example.short_link.link.notice.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
+import com.example.short_link.common.notification.LinkNotice;
+import com.example.short_link.common.notification.LinkNoticeBody;
+import com.example.short_link.common.notification.LinkNoticeKind;
+import com.example.short_link.common.notification.LinkNoticeSender;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
-import com.example.short_link.notification.application.link.LinkNotificationProperties;
-import com.example.short_link.notification.domain.LinkNotificationType;
+import com.example.short_link.link.notice.application.LinkNoticeProperties;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -18,13 +20,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class LinkExpiryNotificationJob {
+public class LinkExpiryNoticeJob {
 
   private static final String LOCK_KEY = "notif:expiry";
 
   private final LinkRepository links;
-  private final LinkNotificationDispatcher dispatcher;
-  private final LinkNotificationProperties props;
+  private final LinkNoticeSender notices;
+  private final LinkNoticeProperties props;
   private final RedisDistributedLock lock;
 
   @Scheduled(cron = "${short-link.link-notification.expiry-cron:0 0 9 * * *}", zone = "Asia/Seoul")
@@ -49,12 +51,13 @@ public class LinkExpiryNotificationJob {
             link.getNote() != null && !link.getNote().isBlank()
                 ? link.getNote()
                 : "/" + link.getShortCode();
-        dispatcher.dispatch(
-            link.getUserId(),
-            LinkNotificationType.EXPIRY_IMMINENT,
-            link.getShortCode().value(),
-            label,
-            "약 " + days + "일 뒤 만료돼요");
+        notices.send(
+            new LinkNotice(
+                link.getUserId(),
+                LinkNoticeKind.EXPIRY_IMMINENT,
+                link.getShortCode().value(),
+                label,
+                new LinkNoticeBody.Written("약 " + days + "일 뒤 만료돼요")));
         sent++;
       }
       log.info("link expiry notice: sent {} notifications", sent);

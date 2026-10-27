@@ -1,16 +1,16 @@
-package com.example.short_link.notification.application.link;
+package com.example.short_link.link.notice.application;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "short-link.link-notification")
-public record LinkNotificationProperties(
+public record LinkNoticeProperties(
     boolean digestEnabled,
     boolean expiryEnabled,
     int expiryThresholdDays,
     int velocityMinClicks,
     double velocityRatio) {
 
-  public LinkNotificationProperties {
+  public LinkNoticeProperties {
     if (expiryThresholdDays <= 0) {
       expiryThresholdDays = 7;
     }
