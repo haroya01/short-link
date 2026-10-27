@@ -11,7 +11,15 @@ public final class ActivityStreams {
   public static final String CONTEXT = "https://www.w3.org/ns/activitystreams";
   public static final String PUBLIC = CONTEXT + "#Public";
 
+  // note.uri, note.remote_url and note_media.url are VARCHAR(512).
+  public static final int MAX_URI = 512;
+
   private ActivityStreams() {}
+
+  public static boolean sameHost(String uri, String other) {
+    String host = RemoteActorParser.host(uri);
+    return host != null && host.equals(RemoteActorParser.host(other));
+  }
 
   // Mastodon's rule since CVE-2024-23832: activity+json, or ld+json naming this profile.
   public static boolean isDocumentType(String contentType) {

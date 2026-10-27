@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.domain.PostEntity;
@@ -17,6 +18,7 @@ import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.domain.repository.UserTagPrefRepository;
 import com.example.short_link.support.DiscoverableBodies;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -74,8 +76,10 @@ class DiscoveryHeardIntegrationTest {
       publish(author, handle, null);
     }
     Instant now = Instant.now();
-    blockRepository.save(new UserBlockEntity(viewer, authors.get("hrd-blocked")));
-    blockRepository.save(new UserBlockEntity(authors.get("hrd-blocker"), viewer));
+    blockRepository.save(
+        new UserBlockEntity(BlockEdge.blocker(viewer).blocked(authors.get("hrd-blocked"))));
+    blockRepository.save(
+        new UserBlockEntity(BlockEdge.blocker(authors.get("hrd-blocker")).blocked(viewer)));
     muteRepository.save(new UserMuteEntity(viewer, authors.get("hrd-muted"), false, null));
     muteRepository.save(
         new UserMuteEntity(
@@ -177,7 +181,12 @@ class DiscoveryHeardIntegrationTest {
 
   @Test
   void theFollowingFeedLeavesOutFollowedAuthorsTheViewerCannotHear() {
-    authors.values().forEach(author -> followRepository.save(new FollowEntity(viewer, author)));
+    authors
+        .values()
+        .forEach(
+            author ->
+                followRepository.save(
+                    new FollowEntity(FollowEdge.follower(viewer).following(author))));
 
     assertThat(slugs(feed.feedFollowing(viewer, 0, 50))).containsExactlyInAnyOrderElementsOf(HEARD);
   }

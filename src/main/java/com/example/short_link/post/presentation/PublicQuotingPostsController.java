@@ -22,6 +22,6 @@ public class PublicQuotingPostsController {
       @AuthenticationPrincipal Long viewerId,
       @PathVariable Long noteId,
       @RequestParam(defaultValue = "0") int page) {
-    return quotingPosts.ofNote(noteId, viewerId, page);
+    return quotingPosts.ofNote(viewerId, noteId, page);
   }
 }

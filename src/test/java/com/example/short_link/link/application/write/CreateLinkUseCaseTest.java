@@ -212,7 +212,7 @@ class LinkCreationServiceTest {
   @Test
   void aDisabledLinkIsNotHandedOutAgain() {
     assertNotReused(
-        "g-d6", (userId, code) -> moderation.disable(code, LinkDisableReason.ADMIN, null), null);
+        "g-d6", (userId, code) -> moderation.disable(null, code, LinkDisableReason.ADMIN), null);
   }
 
   @Test

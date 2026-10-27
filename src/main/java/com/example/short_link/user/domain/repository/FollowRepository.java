@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain.repository;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import java.util.Collection;
 import java.util.List;
@@ -8,9 +9,9 @@ import java.util.Optional;
 
 public interface FollowRepository {
 
-  boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
+  boolean exists(FollowEdge edge);
 
-  Optional<FollowEntity> findByFollowerIdAndFollowingId(Long followerId, Long followingId);
+  Optional<FollowEntity> find(FollowEdge edge);
 
   FollowEntity save(FollowEntity follow);
 

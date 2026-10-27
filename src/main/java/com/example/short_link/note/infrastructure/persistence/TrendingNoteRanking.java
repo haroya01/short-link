@@ -77,10 +77,10 @@ class TrendingNoteRanking {
   @SuppressWarnings("unchecked")
   private List<Long> load() {
     List<Number> rows =
-        em.createNativeQuery(NoteRepositoryAdapter.trendingSql("o.id", ""))
+        em.createNativeQuery(NoteSql.trendingSql("o.id", ""))
             .setParameter("perAuthor", spread.perAuthor())
-            .setParameter("since", Instant.now().minus(NoteRepositoryAdapter.TRENDING_WINDOW))
-            .setParameter("viewer", NoteRepositoryAdapter.viewer(null))
+            .setParameter("since", Instant.now().minus(NoteSql.TRENDING_WINDOW))
+            .setParameter("viewer", NoteSql.viewer(null))
             .setParameter("now", Instant.now())
             .setMaxResults(SIZE)
             .getResultList();

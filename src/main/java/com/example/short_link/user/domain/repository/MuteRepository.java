@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain.repository;
 
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.user.domain.UserMuteEntity;
 import java.time.Instant;
 import java.util.List;
@@ -15,10 +16,7 @@ public interface MuteRepository {
 
   List<UserMuteEntity> active(Long userId, Instant now);
 
-  boolean silences(Long recipientId, Long actorId, Instant now);
-
-  boolean silences(
-      Long recipientId, Long actorId, Long remoteActorId, Long conversationId, Instant now);
+  boolean silences(SilenceCheck check, Instant now);
 
   int deleteAllInvolving(Long userId);
 }

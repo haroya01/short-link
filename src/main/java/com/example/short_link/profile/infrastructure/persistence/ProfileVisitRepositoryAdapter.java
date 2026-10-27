@@ -1,11 +1,12 @@
 package com.example.short_link.profile.infrastructure.persistence;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
+import com.example.short_link.common.analytics.VisitProjections;
+import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
-import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -55,22 +56,52 @@ class ProfileVisitRepositoryAdapter implements ProfileVisitRepository {
   }
 
   @Override
-  public List<ClickProjections.DailyClickRow> findDailyVisits(Long uid, Instant from, String tz) {
+  public List<VisitProjections.DailyVisitRow> findDailyVisits(Long uid, Instant from, String tz) {
     return jpa.findDailyVisits(uid, from, tz);
   }
 
   @Override
-  public List<ClickProjections.HourClickRow> findHourlyVisits(Long uid, String tz) {
+  public List<VisitProjections.HourVisitRow> findHourlyVisits(Long uid, String tz) {
     return jpa.findHourlyVisits(uid, tz);
   }
 
   @Override
-  public List<ClickProjections.HeatmapRow> findHeatmap(Long uid, String tz) {
+  public List<VisitProjections.HeatmapVisitRow> findHeatmap(Long uid, String tz) {
     return jpa.findHeatmap(uid, tz);
   }
 
   @Override
-  public List<ClickProjections.DeviceClickRow> findDeviceVisits(Long uid) {
+  public List<VisitProjections.CountryVisitRow> topCountries(Long uid, int limit) {
+    return jpa.findCountryVisits(uid, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public List<VisitProjections.DeviceVisitRow> findDeviceVisits(Long uid) {
     return jpa.findDeviceVisits(uid);
+  }
+
+  @Override
+  public List<VisitProjections.BrowserVisitRow> topBrowsers(Long uid, int limit) {
+    return jpa.findBrowserVisits(uid, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public List<VisitProjections.ReferrerHostVisitRow> topReferrerHosts(Long uid, int limit) {
+    return jpa.findReferrerHostVisits(uid, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public List<VisitProjections.SourceChannelVisitRow> topSourceChannels(Long uid, int limit) {
+    return jpa.findSourceChannelVisits(uid, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public List<VisitProjections.UtmCampaignVisitRow> topUtmCampaigns(Long uid, int limit) {
+    return jpa.findUtmCampaignVisits(uid, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public List<VisitProjections.UtmSourceVisitRow> topUtmSources(Long uid, int limit) {
+    return jpa.findUtmSourceVisits(uid, PageRequest.ofSize(limit));
   }
 }

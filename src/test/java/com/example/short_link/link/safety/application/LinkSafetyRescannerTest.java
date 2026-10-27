@@ -75,13 +75,13 @@ class LinkSafetyRescannerTest {
         .thenReturn(List.of(badVariant, disabledVariant));
     when(lookup.unsafeAmong(anyList()))
         .thenReturn(Set.of("https://turned-bad.example/", "https://bad-variant.example/"));
-    when(moderation.disable(anyLong(), any(), any())).thenReturn(true);
+    when(moderation.disable(any(), anyLong(), any())).thenReturn(true);
 
     LinkSafetyRescanner.Result result = rescanner.rescan(0L, 10, NOW);
 
-    verify(moderation).disable(2L, LinkDisableReason.SAFE_BROWSING, null);
-    verify(moderation).disable(3L, LinkDisableReason.SAFE_BROWSING, null);
-    verify(moderation, never()).disable(1L, LinkDisableReason.SAFE_BROWSING, null);
+    verify(moderation).disable(null, 2L, LinkDisableReason.SAFE_BROWSING);
+    verify(moderation).disable(null, 3L, LinkDisableReason.SAFE_BROWSING);
+    verify(moderation, never()).disable(null, 1L, LinkDisableReason.SAFE_BROWSING);
     assertThat(result).isEqualTo(new LinkSafetyRescanner.Result(3, 2, 3L, true));
   }
 
@@ -120,6 +120,6 @@ class LinkSafetyRescannerTest {
 
     assertThatThrownBy(() -> rescanner.rescan(0L, 10, NOW))
         .isInstanceOf(UrlThreatLookupException.class);
-    verify(moderation, never()).disable(anyLong(), any(), any());
+    verify(moderation, never()).disable(any(), anyLong(), any());
   }
 }

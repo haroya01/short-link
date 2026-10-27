@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.common.post.CommentModerationPort;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
@@ -149,7 +150,7 @@ class CommentTombstoneIntegrationTest {
   @Test
   void aReplyUnderAnEmptyPlaceStaysUnlessItsOwnWriterIsUnheard() {
     long viewer = user("ct-viewer");
-    blockRepository.save(new UserBlockEntity(viewer, bob));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(bob)));
     muteRepository.save(new UserMuteEntity(viewer, alice, false, null));
     long byBlocked = comment(bob, null, "차단한 사람의 댓글");
     long heardReply = comment(carol, byBlocked, "들리는 답글");
@@ -173,7 +174,7 @@ class CommentTombstoneIntegrationTest {
   @Test
   void withoutAskingForPlacesTheListHasNoDeletedCommentAndKeepsTheRuleForReplies() {
     long viewer = user("ct-viewer");
-    blockRepository.save(new UserBlockEntity(viewer, bob));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(bob)));
     long answered = comment(alice, null, "답글이 달린 댓글");
     long reply = comment(carol, answered, "답글");
     long takenDown = comment(alice, null, "내려진 댓글");

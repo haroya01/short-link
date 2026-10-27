@@ -11,6 +11,7 @@ import com.example.short_link.post.application.access.PostPasswords;
 import com.example.short_link.post.application.access.PostUnlistedUrls;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
@@ -26,7 +27,7 @@ class RotateUnlistedKeyUseCaseTest {
           ownership,
           new PostAccessSettings(new PostPasswords(), PostAccessFixtures.roomReader()),
           posts,
-          new PostUnlistedUrls("https://blog.kurl.me", users));
+          new PostUnlistedUrls("https://blog.kurl.me", new UserSummaryReader(users)));
 
   @Test
   void aNewKeyReplacesTheOldOneInTheShareableLink() {
