@@ -15,10 +15,8 @@ import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -34,16 +32,19 @@ public class CommentNotifications {
 
   public void commentCreated(
       PostEntity post, CommentEntity parent, CommentEntity comment, String body) {
-    Long ownerId = post.getUserId();
     Long actorId = comment.getUserId();
     Long parentAuthorId = parent == null ? null : parent.getUserId();
-    Set<Long> mentionSuppressedRecipients = new HashSet<>();
-    // 소유자에게 직접 답한 경우 REPLY가 우선한다. REPLY를 꺼도 COMMENT로 대체하지 않는다.
-    boolean replyToOwner = ownerId.equals(parentAuthorId);
-    if (!ownerId.equals(actorId) && !replyToOwner) {
+    List<String> handles = MentionParser.parse(body);
+    CommentNotificationPlan plan =
+        CommentNotificationPlan.forComment(
+            post.getUserId(), actorId, parentAuthorId, lookupsFor(post));
+    String ownerUsername =
+        plan.authorHearsReply() || !handles.isEmpty() ? ownerUsername(post) : null;
+    List<Long> mentioned = plan.mentioned(handles);
+    if (plan.ownerHearsComment()) {
       events.publishEvent(
           BlogInteractionEvent.comment(
-                  ownerId,
+                  post.getUserId(),
                   actorId,
                   post.getId(),
                   post.getSlug(),
@@ -51,14 +52,8 @@ public class CommentNotifications {
                   comment.getId(),
                   comment.getCreatedAt())
               .onRoomPost(post.isInRoom()));
-      suppressMentionUnlessMuted(
-          mentionSuppressedRecipients, ownerId, BlogNotificationKind.COMMENT);
     }
-    List<String> handles = MentionParser.parse(body);
-    boolean notifyParent =
-        parentAuthorId != null && !parentAuthorId.equals(actorId) && reads(post, parentAuthorId);
-    String ownerUsername = notifyParent || !handles.isEmpty() ? ownerUsername(post) : null;
-    if (notifyParent) {
+    if (plan.authorHearsReply()) {
       events.publishEvent(
           new CommentReplyEvent(
               parentAuthorId,
@@ -69,25 +64,19 @@ public class CommentNotifications {
               ownerUsername,
               comment.getId(),
               comment.getCreatedAt()));
-      suppressMentionUnlessMuted(
-          mentionSuppressedRecipients, parentAuthorId, BlogNotificationKind.REPLY);
     }
-    publishMentions(
-        post,
-        handles,
-        actorId,
-        mentionSuppressedRecipients,
-        recipient ->
-            events.publishEvent(
-                new CommentMentionEvent(
-                    recipient,
-                    actorId,
-                    post.getId(),
-                    post.getSlug(),
-                    post.getTitle(),
-                    ownerUsername,
-                    comment.getId(),
-                    comment.getCreatedAt())));
+    for (Long recipient : mentioned) {
+      events.publishEvent(
+          new CommentMentionEvent(
+              recipient,
+              actorId,
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              ownerUsername,
+              comment.getId(),
+              comment.getCreatedAt()));
+    }
   }
 
   public void highlightReplyCreated(
@@ -98,10 +87,11 @@ public class CommentNotifications {
     if (highlightAuthorId.equals(actorId) && handles.isEmpty()) return;
     PostEntity post = postRepository.findById(highlight.getPostId()).orElse(null);
     if (post == null) return;
-    boolean notifyAuthor = !highlightAuthorId.equals(actorId) && reads(post, highlightAuthorId);
+    CommentNotificationPlan plan =
+        CommentNotificationPlan.forHighlightReply(highlightAuthorId, actorId, lookupsFor(post));
     String ownerUsername = ownerUsername(post);
-    Set<Long> mentionSuppressedRecipients = new HashSet<>();
-    if (notifyAuthor) {
+    List<Long> mentioned = plan.mentioned(handles);
+    if (plan.authorHearsReply()) {
       events.publishEvent(
           new HighlightReplyEvent(
               highlightAuthorId,
@@ -112,52 +102,42 @@ public class CommentNotifications {
               ownerUsername,
               highlight.getId(),
               reply.getCreatedAt()));
-      suppressMentionUnlessMuted(
-          mentionSuppressedRecipients, highlightAuthorId, BlogNotificationKind.REPLY);
     }
-    publishMentions(
-        post,
-        handles,
-        actorId,
-        mentionSuppressedRecipients,
-        recipient ->
-            events.publishEvent(
-                new HighlightMentionEvent(
-                    recipient,
-                    actorId,
-                    post.getId(),
-                    post.getSlug(),
-                    post.getTitle(),
-                    ownerUsername,
-                    highlight.getId(),
-                    reply.getCreatedAt())));
+    for (Long recipient : mentioned) {
+      events.publishEvent(
+          new HighlightMentionEvent(
+              recipient,
+              actorId,
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              ownerUsername,
+              highlight.getId(),
+              reply.getCreatedAt()));
+    }
+  }
+
+  private CommentNotificationPlan.Lookups lookupsFor(PostEntity post) {
+    return new CommentNotificationPlan.Lookups() {
+      @Override
+      public boolean reads(Long userId) {
+        return CommentNotifications.this.reads(post, userId);
+      }
+
+      @Override
+      public boolean muted(Long userId, BlogNotificationKind kind) {
+        return muteReader.isMuted(userId, kind);
+      }
+
+      @Override
+      public Long activeUserId(String handle) {
+        return users.findActiveByUsername(handle).map(UserSummary::id).orElse(null);
+      }
+    };
   }
 
   private String ownerUsername(PostEntity post) {
     return users.find(post.getUserId()).map(UserSummary::username).orElse(null);
-  }
-
-  private void suppressMentionUnlessMuted(
-      Set<Long> recipients, Long recipient, BlogNotificationKind kind) {
-    // 이벤트 발행은 전달 완료가 아니다. 수신 거부한 COMMENT/REPLY는 명시적 멘션을 억제하지 않는다.
-    if (!muteReader.isMuted(recipient, kind)) recipients.add(recipient);
-  }
-
-  private void publishMentions(
-      PostEntity post,
-      List<String> handles,
-      Long actorId,
-      Set<Long> recipients,
-      Consumer<Long> publish) {
-    for (String handle : handles) {
-      Long recipient = users.findActiveByUsername(handle).map(UserSummary::id).orElse(null);
-      if (recipient != null
-          && !recipient.equals(actorId)
-          && reads(post, recipient)
-          && recipients.add(recipient)) {
-        publish.accept(recipient);
-      }
-    }
   }
 
   public boolean reads(PostEntity post, Long userId) {
