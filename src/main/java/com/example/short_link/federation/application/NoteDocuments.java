@@ -62,8 +62,17 @@ public class NoteDocuments {
     }
     object.put("summary", note.contentWarning());
     object.put("sensitive", note.sensitive());
+    object.put("attachment", attachments(note.images()));
+    object.put("tag", tags(addressed, note.body()));
+    if (note.poll() != null) {
+      poll(object, note.poll());
+    }
+    return object;
+  }
+
+  private static List<Map<String, Object>> attachments(List<NoteSnapshotReader.Image> images) {
     List<Map<String, Object>> attachments = new ArrayList<>();
-    for (var image : note.images()) {
+    for (var image : images) {
       Map<String, Object> attachment = new LinkedHashMap<>();
       attachment.put("type", "Document");
       attachment.put("mediaType", image.contentType());
@@ -75,7 +84,10 @@ public class NoteDocuments {
       }
       attachments.add(attachment);
     }
-    object.put("attachment", attachments);
+    return attachments;
+  }
+
+  private List<Map<String, Object>> tags(List<Addressee> addressed, String body) {
     List<Map<String, Object>> tags = new ArrayList<>();
     for (Addressee person : addressed) {
       Map<String, Object> mention = new LinkedHashMap<>();
@@ -84,18 +96,14 @@ public class NoteDocuments {
       mention.put("name", person.handle());
       tags.add(mention);
     }
-    for (String name : Hashtags.of(note.body())) {
+    for (String name : Hashtags.of(body)) {
       Map<String, Object> tag = new LinkedHashMap<>();
       tag.put("type", "Hashtag");
       tag.put("href", urls.tag(name));
       tag.put("name", "#" + name);
       tags.add(tag);
     }
-    object.put("tag", tags);
-    if (note.poll() != null) {
-      poll(object, note.poll());
-    }
-    return object;
+    return tags;
   }
 
   // Mastodon's Question: each option is a named Note whose replies count is its vote count.
