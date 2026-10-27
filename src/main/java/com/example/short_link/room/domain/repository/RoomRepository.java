@@ -21,6 +21,8 @@ public interface RoomRepository {
 
   long countMembers(Long roomId);
 
+  // The read watermark starts at the room's newest note, so a newcomer does not find the whole
+  // history unread; adding someone already in changes nothing.
   void addMember(Long roomId, Long userId, Instant at);
 
   void removeMember(Long roomId, Long userId);
@@ -45,6 +47,8 @@ public interface RoomRepository {
 
   long unread(Long roomId, Long userId);
 
+  // unread counts other people's notes after the member's watermark, and the newest note shows by
+  // its warning when it has one. Pinned rooms first, then by latest activity.
   List<RoomSummary> summaries(Long userId);
 
   Map<Long, List<RoomPerson>> faces(Collection<Long> roomIds, Long besidesUserId, int perRoom);

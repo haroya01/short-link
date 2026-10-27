@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface RoomInvitationRepository {
 
+  // Returns how many were added; silently leaves out the inviter, anyone gone or nameless, in,
+  // removed, already invited or declined, or blocked either way with the inviter.
   int addInvitations(Long roomId, Long inviterId, Collection<Long> userIds, Instant at);
 
   long countInvitees(Long roomId);
@@ -23,5 +25,7 @@ public interface RoomInvitationRepository {
 
   boolean declineInvitation(Long roomId, Long userId, Instant at);
 
+  // Newest first, without declined ones, ones from a deleted inviter or with a block either way,
+  // and ones into a room the invitee is already in.
   List<RoomInvitation> invitationsFor(Long userId, int limit);
 }
