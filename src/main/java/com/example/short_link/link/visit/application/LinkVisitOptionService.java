@@ -1,9 +1,9 @@
 package com.example.short_link.link.visit.application;
 
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LinkVisitOptionService {
 
-  private final LinkRepository links;
+  private final LinkOwnership ownership;
   private final LinkVisitOptionRepository options;
   private final LinkCacheEviction linkCacheEviction;
   private final SplashCtaCatalog ctaCatalog;
@@ -30,13 +30,7 @@ public class LinkVisitOptionService {
       SplashChange splash,
       Instant opensAt,
       boolean clearOpensAt) {
-    LinkEntity link =
-        links
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
-    }
+    LinkEntity link = ownership.requireOwned(userId, shortCode);
     LinkVisitOptionEntity option =
         options.findById(link.getId()).orElseGet(() -> new LinkVisitOptionEntity(link.linkId()));
     if (openInBrowser != null) {

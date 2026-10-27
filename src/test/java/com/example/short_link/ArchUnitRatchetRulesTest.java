@@ -30,7 +30,7 @@ class ArchUnitRatchetRulesTest {
 
   static final Map<String, Integer> CEILINGS =
       Map.of(
-          "moduleInternalsStayInTheirModule", 90,
+          "moduleInternalsStayInTheirModule", 88,
           "theSystemClockIsReadInConfigAlone", 18);
 
   private static final List<String> MODULE_ROOTS =
