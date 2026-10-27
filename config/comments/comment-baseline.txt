@@ -565,7 +565,8 @@ src/main/java/com/example/short_link/post/infrastructure/persistence/JpaPostRepo
 src/main/java/com/example/short_link/post/infrastructure/persistence/JpaPostViewEventRepository.java=2
 src/main/java/com/example/short_link/post/infrastructure/persistence/JpaSeriesSubscriptionRepository.java=1
 src/main/java/com/example/short_link/post/infrastructure/persistence/PostBlockRepositoryAdapter.java=2
-src/main/java/com/example/short_link/post/infrastructure/persistence/PostRepositoryAdapter.java=7
+src/main/java/com/example/short_link/post/infrastructure/persistence/PostRepositoryAdapter.java=1
+src/main/java/com/example/short_link/post/infrastructure/persistence/PostSearchTerms.java=6
 src/main/java/com/example/short_link/post/infrastructure/persistence/PostSearchTextRepositoryAdapter.java=1
 src/main/java/com/example/short_link/post/infrastructure/persistence/PostUserDataEraser.java=7
 src/main/java/com/example/short_link/post/infrastructure/persistence/SeriesItemReaderAdapter.java=1
@@ -589,7 +590,6 @@ src/main/java/com/example/short_link/profile/application/oembed/EmbedProvider.ja
 src/main/java/com/example/short_link/profile/application/oembed/OembedMetadata.java=1
 src/main/java/com/example/short_link/profile/application/read/ProfileQueryService.java=1
 src/main/java/com/example/short_link/profile/application/read/PublicProfileLoader.java=2
-src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java=1
 src/main/java/com/example/short_link/profile/domain/UsernameHistoryEntity.java=1
 src/main/java/com/example/short_link/profile/domain/contact/Booking.java=3
 src/main/java/com/example/short_link/profile/domain/contact/ContactCard.java=4
