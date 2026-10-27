@@ -291,9 +291,9 @@ class PostAccessPolicyTest {
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
 
     assertThat(policy.hears(null, null)).isTrue();
-    assertThat(policy.hears(ROOM, MEMBER)).isTrue();
-    assertThat(policy.hears(ROOM, STRANGER)).isFalse();
-    assertThat(policy.hears(ROOM, null)).isFalse();
+    assertThat(policy.hears(MEMBER, ROOM)).isTrue();
+    assertThat(policy.hears(STRANGER, ROOM)).isFalse();
+    assertThat(policy.hears(null, ROOM)).isFalse();
   }
 
   private PostEntity post(PostAudience audience, List<String> blocked) {

@@ -38,10 +38,10 @@ public class PostCommentQueryService {
       return new PostScoped<>(List.of(), false);
     }
     return new PostScoped<>(
-        comments(postId, reader.viewerId(), tombstones), !PostAccessPolicy.isOpen(post));
+        comments(reader.viewerId(), postId, tombstones), !PostAccessPolicy.isOpen(post));
   }
 
-  private List<CommentView> comments(Long postId, Long viewerId, boolean tombstones) {
+  private List<CommentView> comments(Long viewerId, Long postId, boolean tombstones) {
     List<CommentEntity> comments =
         tombstones
             ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)

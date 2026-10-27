@@ -78,11 +78,11 @@ public class PostInteractionAccess {
   }
 
   public boolean hears(CommentEntity comment, PostReader reader) {
-    return access.hears(comment.getRoomId(), reader.viewerId());
+    return access.hears(reader.viewerId(), comment.getRoomId());
   }
 
   public boolean hears(PostHighlightEntity highlight, PostReader reader) {
-    return access.hears(highlight.getRoomId(), reader.viewerId());
+    return access.hears(reader.viewerId(), highlight.getRoomId());
   }
 
   public record LikeableComment(CommentEntity comment, PostEntity post) {}

@@ -288,9 +288,9 @@ class HeardRuleIntegrationTest {
       noteQuotes.add(publish(writer(handle), handle + "-quoting"), List.of(quoted));
     }
 
-    assertThat(usernames(quotingPosts.ofNote(quoted, viewer, 0).items(), PublicFeedItem::author))
+    assertThat(usernames(quotingPosts.ofNote(viewer, quoted, 0).items(), PublicFeedItem::author))
         .containsExactlyInAnyOrderElementsOf(HEARD);
-    assertThat(quotingPosts.ofNote(quoted, null, 0).items()).hasSize(6);
+    assertThat(quotingPosts.ofNote(null, quoted, 0).items()).hasSize(6);
   }
 
   @Test

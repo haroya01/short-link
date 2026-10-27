@@ -24,6 +24,7 @@ import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.FollowEdge;
@@ -172,6 +173,27 @@ class PostInteractionAccessTest {
             PostException.class,
             e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND));
     verifyNoInteractions(blocks);
+  }
+
+  @Test
+  void aCommentSaidInARoomIsHeardByTheRoomsMembersAlone() {
+    PostRoomReader rooms = mock(PostRoomReader.class);
+    when(rooms.isMember(50L, 7L)).thenReturn(true);
+    when(rooms.isMember(50L, 8L)).thenReturn(false);
+    PostInteractionAccess inRoom =
+        new PostInteractionAccess(
+            posts,
+            comments,
+            highlights,
+            replies,
+            moderation,
+            blocks,
+            PostAccessFixtures.policy(rooms));
+    CommentEntity comment = new CommentEntity(1L, 9L, null, "said in the room");
+    comment.saidIn(50L);
+
+    assertThat(inRoom.hears(comment, PostReader.of(7L))).isTrue();
+    assertThat(inRoom.hears(comment, PostReader.of(8L))).isFalse();
   }
 
   @Test

@@ -87,7 +87,7 @@ public class PostAccessPolicy {
 
   // A comment or highlight made while its post was in a room stays with that room's members, its
   // writer too only while in the room; PostAccessSql.said asks the same for lists.
-  public boolean hears(Long saidInRoom, Long viewerId) {
+  public boolean hears(Long viewerId, Long saidInRoom) {
     return saidInRoom == null || rooms.isMember(saidInRoom, viewerId);
   }
 
