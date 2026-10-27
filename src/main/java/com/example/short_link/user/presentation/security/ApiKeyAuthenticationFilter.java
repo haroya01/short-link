@@ -33,25 +33,32 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
-    if (SecurityContextHolder.getContext().getAuthentication() == null) {
-      String raw = extract(req);
-      if (raw != null) {
-        Optional<ApiKeyEntity> keyOpt = apiKeyService.resolve(raw);
-        keyOpt.ifPresent(
-            key -> {
-              UserEntity user = userQueryService.findActive(key.getUserId()).orElse(null);
-              if (user == null || user.isBanned()) return;
-              var authorities =
-                  List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-              var auth = new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);
-              SecurityContextHolder.getContext().setAuthentication(auth);
-              MDC.put("userId", String.valueOf(user.getId()));
-              MDC.put("authMethod", "api-key");
-              apiKeyService.recordUsage(key.getId());
-            });
-      }
-    }
+    authenticate(req);
     chain.doFilter(req, res);
+  }
+
+  private void authenticate(HttpServletRequest req) {
+    if (SecurityContextHolder.getContext().getAuthentication() != null) {
+      return;
+    }
+    String raw = extract(req);
+    if (raw == null) {
+      return;
+    }
+    Optional<ApiKeyEntity> key = apiKeyService.resolve(raw);
+    if (key.isEmpty()) {
+      return;
+    }
+    UserEntity user = userQueryService.findActive(key.get().getUserId()).orElse(null);
+    if (user == null || user.isBanned()) {
+      return;
+    }
+    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+    var auth = new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    MDC.put("userId", String.valueOf(user.getId()));
+    MDC.put("authMethod", "api-key");
+    apiKeyService.recordUsage(key.get().getId());
   }
 
   private String extract(HttpServletRequest req) {
