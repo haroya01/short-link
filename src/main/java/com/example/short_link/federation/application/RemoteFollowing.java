@@ -186,8 +186,8 @@ public class RemoteFollowing {
         .toList();
   }
 
-  // Mastodon echoes our Follow inside Accept and Reject; servers that send only its id, or a
-  // Follow with an id of their own, are matched by who followed whom.
+  // Mastodon echoes our Follow inside Accept and Reject. An answer carrying only our Follow's id is
+  // matched by that id; an echoed Follow with an id of its own, by who followed whom.
   @Transactional
   public boolean answered(
       RemoteActorEntity remote, String followId, String localActorUri, boolean accepted) {

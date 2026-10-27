@@ -114,8 +114,8 @@ public class NoteFederation {
             });
   }
 
-  // An edit goes wherever the note went: to the writer's followers, and to the server of the note
-  // it answers and of the people it names.
+  // An edit goes wherever the note went: to the writer's followers, and to the servers of the notes
+  // it answers or quotes and of the people it names.
   public void edited(Long noteId, Long authorId, boolean reachesElsewhere) {
     if (!reachesElsewhere) {
       transaction.executeWithoutResult(status -> deliver(authorId, edit(noteId)));
@@ -146,7 +146,7 @@ public class NoteFederation {
             });
   }
 
-  // The note is already gone, so what it answered and whom it named come with the call.
+  // The note is already gone, so what it answered or quoted and whom it named come with the call.
   public void deleted(
       Long noteId, Long authorId, Long inReplyToId, List<String> handles, Long quotedNoteId) {
     if (inReplyToId == null && handles.isEmpty() && quotedNoteId == null) {

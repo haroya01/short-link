@@ -79,8 +79,9 @@ public class RemoteNoteIntake {
   }
 
   // What a quote shows: the quoted post kept beside it and linked when its author's server
-  // authorized the quote (or it is a member's public note, which anyone may quote here), else the
-  // quoted address at the end of the text. The quoted post's own quote is not followed.
+  // authorized the quote (or it is a member's public or unlisted note, which anyone may quote
+  // here), else the quoted address at the end of the text. The quoted post's own quote is not
+  // followed.
   public RemoteNoteParser.Parsed quoted(RemoteNoteParser.Parsed note) {
     return quoted(note, true);
   }

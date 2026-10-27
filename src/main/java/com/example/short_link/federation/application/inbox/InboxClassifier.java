@@ -165,7 +165,8 @@ class InboxClassifier {
     return ignored("unsupported");
   }
 
-  // The same rule that serves the note document: it exists and its author federates.
+  // Wider than the note document (public and unlisted only): followers-only and direct notes pass
+  // here, and who may act on them is checked once the signature names the account.
   private Optional<NoteSnapshot> federated(Long noteId, Optional<LocalActor> owner) {
     return notes
         .find(noteId)
