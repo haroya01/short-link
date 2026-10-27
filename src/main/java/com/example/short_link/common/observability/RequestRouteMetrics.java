@@ -14,46 +14,44 @@ public final class RequestRouteMetrics {
 
   private RequestRouteMetrics() {}
 
-  public static List<Summary> summarize(List<RequestMetricEntity> rows) {
+  public static List<Summary> summarize(List<RequestMetric> rows) {
     return summarize(rows, false);
   }
 
-  public static List<Summary> summarizeWithOutcomes(List<RequestMetricEntity> rows) {
+  public static List<Summary> summarizeWithOutcomes(List<RequestMetric> rows) {
     return summarize(rows, true);
   }
 
-  private static List<Summary> summarize(List<RequestMetricEntity> rows, boolean includeOutcomes) {
-    Map<String, List<RequestMetricEntity>> byRoute = new HashMap<>();
-    for (RequestMetricEntity row : rows) {
-      byRoute
-          .computeIfAbsent(row.getMethod() + " " + row.getRoute(), key -> new ArrayList<>())
-          .add(row);
+  private static List<Summary> summarize(List<RequestMetric> rows, boolean includeOutcomes) {
+    Map<String, List<RequestMetric>> byRoute = new HashMap<>();
+    for (RequestMetric row : rows) {
+      byRoute.computeIfAbsent(row.method() + " " + row.route(), key -> new ArrayList<>()).add(row);
     }
     List<Summary> summaries = new ArrayList<>(byRoute.size());
-    for (List<RequestMetricEntity> group : byRoute.values()) {
+    for (List<RequestMetric> group : byRoute.values()) {
       summaries.add(summarizeRoute(group, includeOutcomes));
     }
     summaries.sort(Comparator.comparingLong(Summary::count).reversed());
     return summaries;
   }
 
-  private static Summary summarizeRoute(List<RequestMetricEntity> group, boolean includeOutcomes) {
+  private static Summary summarizeRoute(List<RequestMetric> group, boolean includeOutcomes) {
     long errors = 0;
     long[] latencies = new long[group.size()];
     Map<String, Long> statuses = new TreeMap<>();
     Map<String, Long> outcomes = new TreeMap<>();
     for (int i = 0; i < group.size(); i++) {
-      RequestMetricEntity row = group.get(i);
-      latencies[i] = row.getLatencyMs();
-      if (row.getStatus() >= 500) errors++;
-      statuses.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
-      if (includeOutcomes) outcomes.merge(row.getOutcome(), 1L, Long::sum);
+      RequestMetric row = group.get(i);
+      latencies[i] = row.latencyMs();
+      if (row.status() >= 500) errors++;
+      statuses.merge(String.valueOf(row.status()), 1L, Long::sum);
+      if (includeOutcomes) outcomes.merge(row.outcome(), 1L, Long::sum);
     }
     Arrays.sort(latencies);
-    RequestMetricEntity first = group.getFirst();
+    RequestMetric first = group.getFirst();
     return new Summary(
-        first.getMethod(),
-        first.getRoute(),
+        first.method(),
+        first.route(),
         group.size(),
         percentile(latencies, 0.5),
         percentile(latencies, 0.95),

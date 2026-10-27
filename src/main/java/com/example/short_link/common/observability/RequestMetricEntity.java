@@ -59,4 +59,9 @@ public class RequestMetricEntity {
     this.userId = metric.userId();
     this.traceId = metric.traceId();
   }
+
+  public RequestMetric toMetric() {
+    return new RequestMetric(
+        occurredAt, route, method, status, outcome, latencyMs, shortCode, userId, traceId);
+  }
 }
