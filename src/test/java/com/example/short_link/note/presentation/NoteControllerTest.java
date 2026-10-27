@@ -1,7 +1,6 @@
 package com.example.short_link.note.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.common.federation.RemoteHistory;
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteQueryService;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
@@ -41,7 +41,7 @@ class NoteControllerTest {
 
   @Test
   void anAccountElsewhereHasItsHistoryFilledInBeforeItsFirstPageOnly() throws Exception {
-    when(query.byRemoteActor(eq(42L), anyInt(), eq(20), eq(7L)))
+    when(query.byRemoteActor(eq(42L), eq(7L), any()))
         .thenReturn(new NoteFeedView(List.of(), 0, false));
 
     mvc.perform(
@@ -55,7 +55,7 @@ class NoteControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
         .andExpect(status().isOk());
     verify(remoteHistory, times(1)).fillIn(any(), any());
-    verify(query).byRemoteActor(42L, 1, 20, 7L);
+    verify(query).byRemoteActor(42L, 7L, new PageAsk(1, 20));
   }
 
   @Test

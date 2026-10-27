@@ -6,6 +6,7 @@ import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.application.read.FollowStatus;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -47,21 +48,21 @@ public class FollowUseCase {
     if (blocks.blocksViewer()) {
       throw new UserException(UserErrorCode.BLOCKED_TARGET);
     }
-    Optional<FollowEntity> existing =
-        followRepository.findByFollowerIdAndFollowingId(followerId, target.getId());
+    FollowEdge edge = FollowEdge.follower(followerId).following(target.getId());
+    Optional<FollowEntity> existing = followRepository.find(edge);
     if (existing.isPresent()) {
       return statusOf(true, target, blocks).notifyingOfNotes(existing.get().isNotifyNotes());
     }
     // A locked account approves each follower, as on Mastodon: the follow waits as a request.
     if (target.isLocked()) {
-      if (!followRequests.exists(followerId, target.getId())) {
-        followRequests.save(new FollowRequestEntity(followerId, target.getId()));
+      if (!followRequests.exists(edge)) {
+        followRequests.save(new FollowRequestEntity(edge));
         events.publishEvent(new FollowRequestedEvent(target.getId(), followerId, null));
       }
       return statusOf(false, target, blocks).requesting(true, true);
     }
     // Only a new follow records attribution and notifies; repeats preserve the original source.
-    FollowEntity follow = new FollowEntity(followerId, target.getId(), sourcePostId);
+    FollowEntity follow = new FollowEntity(edge, sourcePostId);
     followRepository.save(follow);
     events.publishEvent(BlogInteractionEvent.follow(target.getId(), followerId, Instant.now()));
     return statusOf(true, target, blocks).notifyingOfNotes(follow.isNotifyNotes());
@@ -73,7 +74,7 @@ public class FollowUseCase {
     UserEntity target = requireUser(targetUsername);
     FollowEntity follow =
         followRepository
-            .findByFollowerIdAndFollowingId(followerId, target.getId())
+            .find(FollowEdge.follower(followerId).following(target.getId()))
             .orElseThrow(() -> new UserException(UserErrorCode.NOT_FOLLOWING));
     follow.notifyOfNotes(on);
     followRepository.save(follow);
@@ -85,11 +86,11 @@ public class FollowUseCase {
   @Transactional
   public FollowStatus unfollow(Long followerId, String targetUsername) {
     UserEntity target = requireUser(targetUsername);
-    Optional<FollowEntity> follow =
-        followRepository.findByFollowerIdAndFollowingId(followerId, target.getId());
+    FollowEdge edge = FollowEdge.follower(followerId).following(target.getId());
+    Optional<FollowEntity> follow = followRepository.find(edge);
     if (follow.isPresent()) {
       followRepository.delete(follow.get());
-    } else if (target.isLocked() && followRequests.delete(followerId, target.getId()) > 0) {
+    } else if (target.isLocked() && followRequests.delete(edge) > 0) {
       events.publishEvent(new FollowRequestSettledEvent(target.getId(), followerId, null));
     }
     return statusOf(false, target, userBlocks.between(followerId, target.getId()));

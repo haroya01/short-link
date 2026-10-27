@@ -45,8 +45,9 @@ public class DirectoryWorker {
       DirectorySync sync,
       DirectoryProperties props,
       @Value("${short-link.scheduling.enabled:true}") boolean scheduling,
-      @Value(CRON) String cron) {
-    this(sync, props, scheduling, cron, AFTER_START, Clock.systemUTC());
+      @Value(CRON) String cron,
+      Clock clock) {
+    this(sync, props, scheduling, cron, AFTER_START, clock);
   }
 
   DirectoryWorker(

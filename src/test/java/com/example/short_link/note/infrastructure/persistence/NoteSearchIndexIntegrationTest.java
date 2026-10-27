@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.application.read.NoteSearchTerms;
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ActiveProfiles("test")
 class NoteSearchIndexIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteFeedReader feeds;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private TransactionTemplate transactions;
@@ -77,7 +77,7 @@ class NoteSearchIndexIntegrationTest {
     NoteSearchTerms terms = NoteSearchTerms.of(query);
     return transactions.execute(
         status ->
-            notes.search(terms.match(), terms.like(), viewerId, 0, 500).stream()
+            feeds.search(terms.match(), terms.like(), viewerId, 0, 500).stream()
                 .map(NoteEntity::getId)
                 .filter(written::contains)
                 .toList());

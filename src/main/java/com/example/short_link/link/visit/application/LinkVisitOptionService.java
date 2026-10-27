@@ -44,7 +44,7 @@ public class LinkVisitOptionService {
     }
     if (splash != null) {
       Long ctaId = splash.ctaId();
-      if (ctaId != null && ctaCatalog.findOwned(ctaId, userId).isEmpty()) {
+      if (ctaId != null && ctaCatalog.findOwned(userId, ctaId).isEmpty()) {
         throw new LinkException(LinkErrorCode.SPLASH_CTA_NOT_FOUND, ctaId);
       }
       option.changeSplash(

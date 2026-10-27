@@ -22,6 +22,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -55,13 +57,13 @@ class CommentNotificationsRoomTest {
     GeoIpResolver geo = mock(GeoIpResolver.class, call -> new GeoLocation(null, null, null));
     PostAccessPolicy policy =
         new PostAccessPolicy(
-            mock(FollowRepository.class),
+            new FollowingReader(mock(FollowRepository.class)),
             new PostGrants("", Clock.systemUTC()),
             new ReaderCountryResolver(geo),
             rooms);
     notifications =
         new CommentNotifications(
-            users,
+            new UserSummaryReader(users),
             mock(PostRepository.class),
             events,
             mock(BlogNotificationMuteReader.class),

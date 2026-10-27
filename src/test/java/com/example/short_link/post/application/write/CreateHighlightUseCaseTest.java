@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.PostHighlightedEvent;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
@@ -215,7 +216,7 @@ class CreateHighlightUseCaseTest {
   @Test
   void blockedReaderCannotCreateAHighlightOrPublicNote() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 7L)));
-    when(blocks.isBlocked(7L, 1L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(1L))).thenReturn(true);
 
     assertThatThrownBy(
             () ->
