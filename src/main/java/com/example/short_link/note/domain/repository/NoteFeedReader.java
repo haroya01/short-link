@@ -31,11 +31,14 @@ public interface NoteFeedReader {
 
   List<NoteEntity> federatedBefore(Long viewerId, Long beforeId, int limit);
 
+  // A note kept because it trended elsewhere is not among them.
   List<NoteEntity> latestBefore(Long viewerId, Long beforeId, int limit);
 
+  // No note with a warning or a sensitive mark; followed accounts only with withFollowed.
   List<RemotePoolRow> remotePool(
       Long viewerId, Instant since, Instant until, int limit, boolean withFollowed);
 
+  // Members' public top-level notes, heard and in the viewer's languages, no room notes.
   List<LocalPoolRow> localPool(Long viewerId, Instant since, Instant until, int limit);
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);

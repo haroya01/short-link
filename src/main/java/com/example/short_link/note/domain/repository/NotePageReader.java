@@ -13,6 +13,7 @@ public interface NotePageReader {
 
   List<NoteEntity> heardAmong(Collection<Long> ids, Long viewerId);
 
+  // Oldest first; only replies the viewer may read and hears, none hidden by the note's writer.
   List<ReplyPreview> latestReplies(Collection<Long> noteIds, Long viewerId, int perNote);
 
   Map<Long, List<String>> tagsOf(Collection<Long> noteIds);
