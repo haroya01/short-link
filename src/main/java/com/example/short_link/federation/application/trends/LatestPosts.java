@@ -140,7 +140,15 @@ public class LatestPosts {
     if (askedAt == null) {
       refresh();
     } else if (askedAt.plus(props.freshFor()).isBefore(clock.instant())) {
-      CompletableFuture.runAsync(this::refresh, askers);
+      CompletableFuture.runAsync(this::refreshBehind, askers);
+    }
+  }
+
+  private void refreshBehind() {
+    try {
+      refresh();
+    } catch (RuntimeException failed) {
+      log.warn("federation latest refresh failed reason={}", failed.toString());
     }
   }
 
