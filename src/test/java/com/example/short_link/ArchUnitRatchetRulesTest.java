@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.data.repository.Repository;
 
 // Frozen rules keep today's violations in src/test/resources/archunit_store and fail on new ones;
 // the ceiling pins how many there are, so the count only comes down.
@@ -31,7 +32,8 @@ class ArchUnitRatchetRulesTest {
   static final Map<String, Integer> CEILINGS =
       Map.of(
           "moduleInternalsStayInTheirModule", 89,
-          "theSystemClockIsReadInConfigAlone", 0);
+          "theSystemClockIsReadInConfigAlone", 0,
+          "springDataRepositoriesStayBehindPorts", 2);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");
@@ -54,6 +56,13 @@ class ArchUnitRatchetRulesTest {
           .should(takeTheClockBeanInsteadOfTheSystemClock())
           .as("theSystemClockIsReadInConfigAlone");
 
+  static final ArchRule springDataRepositoriesStayBehindPorts =
+      classes()
+          .that()
+          .resideInAnyPackage("..application..", "..domain..")
+          .should(reachPersistenceOnlyThroughADomainPort())
+          .as("springDataRepositoriesStayBehindPorts");
+
   @ArchTest
   static void noNewReachIntoAnotherModulesInternals(JavaClasses classes) {
     checkAgainstTheStore(moduleInternalsStayInTheirModule, classes);
@@ -62,6 +71,11 @@ class ArchUnitRatchetRulesTest {
   @ArchTest
   static void noNewSystemClockOutsideConfig(JavaClasses classes) {
     checkAgainstTheStore(theSystemClockIsReadInConfigAlone, classes);
+  }
+
+  @ArchTest
+  static void noNewSpringDataRepositoryInApplicationOrDomain(JavaClasses classes) {
+    checkAgainstTheStore(springDataRepositoriesStayBehindPorts, classes);
   }
 
   private static void checkAgainstTheStore(ArchRule rule, JavaClasses classes) {
@@ -105,6 +119,26 @@ class ArchUnitRatchetRulesTest {
 
   private static boolean isInternal(JavaClass target) {
     return INTERNAL.matcher(target.getPackageName()).find() || target.isAnnotatedWith(Entity.class);
+  }
+
+  private static ArchCondition<JavaClass> reachPersistenceOnlyThroughADomainPort() {
+    return new ArchCondition<>("reach persistence only through a domain port") {
+      @Override
+      public void check(JavaClass from, ConditionEvents events) {
+        from.getDirectDependenciesFromSelf().stream()
+            .map(Dependency::getTargetClass)
+            .map(JavaClass::getBaseComponentType)
+            .filter(target -> target.isAssignableTo(Repository.class))
+            .map(JavaClass::getName)
+            .distinct()
+            .sorted()
+            .forEach(
+                target ->
+                    events.add(
+                        SimpleConditionEvent.violated(
+                            from, from.getName() + " reaches " + target)));
+      }
+    };
   }
 
   private static ArchCondition<JavaClass> takeTheClockBeanInsteadOfTheSystemClock() {
