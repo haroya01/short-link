@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.seen.SeenParameters;
 import com.example.short_link.federation.application.ActorKeys;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.signature.SigningKeys;
@@ -96,7 +97,7 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   private static Map<String, String> device() {
-    return Map.of(RemoteTrendsController.DEVICE_HEADER, DEVICE);
+    return Map.of(SeenParameters.DEVICE_HEADER, DEVICE);
   }
 
   @Test

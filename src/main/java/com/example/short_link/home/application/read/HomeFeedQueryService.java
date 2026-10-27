@@ -1,9 +1,9 @@
 package com.example.short_link.home.application.read;
 
+import com.example.short_link.common.seen.SeenItem;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.federation.application.trends.LocalSeen;
-import com.example.short_link.federation.domain.SeenItem;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;

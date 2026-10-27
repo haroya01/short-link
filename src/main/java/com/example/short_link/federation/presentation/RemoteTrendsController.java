@@ -1,10 +1,13 @@
 package com.example.short_link.federation.presentation;
 
+import static com.example.short_link.common.seen.SeenParameters.DEVICE_HEADER;
+import static com.example.short_link.common.seen.SeenParameters.HIDE_SEEN;
+
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import com.example.short_link.federation.presentation.request.SeenRequest;
@@ -25,9 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/federation")
 @RequiredArgsConstructor
 public class RemoteTrendsController {
-
-  public static final String DEVICE_HEADER = "X-Kurl-Device";
-  public static final String HIDE_SEEN = "hide";
 
   private final RemoteTrendingFeed trending;
   private final RemoteSeen seen;

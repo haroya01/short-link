@@ -2,7 +2,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import static com.example.short_link.federation.infrastructure.persistence.UtcColumns.utc;
 
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;
 import java.time.Instant;
 import java.time.LocalDateTime;

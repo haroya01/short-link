@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import com.example.short_link.common.note.NoteViewReader;
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository.Counts;

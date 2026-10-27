@@ -3,7 +3,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.NoteViewReader;
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.foryou.ReachTarget;
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;

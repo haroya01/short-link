@@ -1,6 +1,6 @@
 package com.example.short_link.home.application.read;
 
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 
 public final class HomeAskFixtures {
 

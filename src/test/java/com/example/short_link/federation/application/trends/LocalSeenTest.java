@@ -12,9 +12,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.seen.SeenItem;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.common.seen.Unseen;
-import com.example.short_link.federation.domain.SeenItem;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.repository.LocalSeenRepository;
 import com.example.short_link.federation.domain.repository.LocalSeenRepository.Sighting;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

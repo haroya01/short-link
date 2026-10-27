@@ -1,4 +1,4 @@
-package com.example.short_link.federation.domain;
+package com.example.short_link.common.seen;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;

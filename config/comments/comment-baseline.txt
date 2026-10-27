@@ -210,7 +210,6 @@ src/main/java/com/example/short_link/federation/application/trends/LatestStore.j
 src/main/java/com/example/short_link/federation/application/trends/ReachProperties.java=1
 src/main/java/com/example/short_link/federation/application/trends/RemoteForYou.java=4
 src/main/java/com/example/short_link/federation/application/trends/RemoteReach.java=3
-src/main/java/com/example/short_link/federation/application/trends/RemoteSeen.java=2
 src/main/java/com/example/short_link/federation/application/trends/RemoteTrendingFeed.java=8
 src/main/java/com/example/short_link/federation/application/trends/TrendingNote.java=7
 src/main/java/com/example/short_link/federation/application/trends/TrendingPosts.java=9
