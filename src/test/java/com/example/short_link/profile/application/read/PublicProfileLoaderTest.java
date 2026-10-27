@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.post.PublishedPostCountReader;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.read.ProfileLinks;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -58,12 +59,10 @@ class PublicProfileLoaderTest {
     loader =
         new PublicProfileLoader(
             new UserProfileReader(userRepository),
-            linkRepository,
-            clickRepository,
+            new ProfileLinks(linkRepository, clickRepository, urlBuilder),
             usernameHistoryRepository,
             profileBlockRepository,
             postCountReader,
-            urlBuilder,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 

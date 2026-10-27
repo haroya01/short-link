@@ -182,7 +182,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/em
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/image/ProfileImageService.java|commitUpload(Long, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/oembed/EmbedProvider.java|resolve(String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/read/PublicProfileLoader.java|blockEntry(ProfileBlockEntity)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/write/ReorderProfileUseCase.java|execute(ReorderProfileCommand)#1=11
+CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/write/ReorderProfileUseCase.java|execute(ReorderProfileCommand)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateAppearance(UpdateProfileCommand)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact/Booking.java|normalize(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact/Booking.java|resolve(String)#1=11
