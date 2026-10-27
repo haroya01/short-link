@@ -61,7 +61,7 @@ class ArchUnitSemanticRulesTest {
   // Existing public setters on JPA entities; the number may only go down.
   private static final int ENTITY_SETTER_BASELINE = 9;
 
-  private static final Set<String> OUTBOUND_CLIENTS =
+  static final Set<String> OUTBOUND_CLIENTS =
       Set.of(
           "java.net.http.HttpClient",
           "org.apache.hc.client5.http.impl.classic.CloseableHttpClient",
@@ -308,7 +308,7 @@ class ArchUnitSemanticRulesTest {
         || codeUnit.getOwner().isAnnotatedWith(Transactional.class);
   }
 
-  private static DescribedPredicate<JavaMethod> areTransactional() {
+  static DescribedPredicate<JavaMethod> areTransactional() {
     return DescribedPredicate.describe("are transactional", method -> isTransactional(method));
   }
 

@@ -100,6 +100,17 @@ final class ArchRuleProofs {
                   ModuleFixtures.ReachesAnotherModulesRepository.class),
               List.of(ModuleFixtures.GoesThroughAnotherModulesService.class, AlphaService.class)),
           new Proof(
+              "ArchUnitRatchetRulesTest.transactionsDoNotReachOutboundClients",
+              ArchUnitRatchetRulesTest.transactionsDoNotReachOutboundClients,
+              List.of(
+                  TransactionFixtures.CallsNetworkInsideTransaction.class,
+                  TransactionFixtures.ReachesNetworkThroughAHelperInsideTransaction.class,
+                  TransactionFixtures.ReachesNetworkThroughAPortInsideTransaction.class),
+              List.of(
+                  TransactionFixtures.CallsNetworkOutsideTransaction.class,
+                  TransactionFixtures.ReachesNetworkBeforeTheTransaction.class,
+                  TransactionFixtures.HandsNetworkToAnotherThreadInsideTransaction.class)),
+          new Proof(
               "ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone",
               ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone,
               List.of(ClockFixtures.BuildsTheSystemClock.class),
