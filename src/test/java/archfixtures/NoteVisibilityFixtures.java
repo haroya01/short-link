@@ -3,7 +3,7 @@ package archfixtures;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import java.util.Set;
 
 public final class NoteVisibilityFixtures {
@@ -32,8 +32,8 @@ public final class NoteVisibilityFixtures {
   }
 
   public static class LooksUpReadersItself {
-    Set<Long> readable(NoteRepository notes, Long viewerId, Set<Long> ids) {
-      return notes.visibleTo(viewerId, ids);
+    Set<Long> readable(NoteAccessReader lookups, Long viewerId, Set<Long> ids) {
+      return lookups.visibleTo(viewerId, ids);
     }
   }
 
