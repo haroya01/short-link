@@ -21,7 +21,7 @@ import com.example.short_link.federation.domain.foryou.ForYouReader;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.PooledNote;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,7 +39,7 @@ class HomeForYouTest {
 
   private final RemoteForYou remote = mock(RemoteForYou.class);
   private final NoteQueryService notes = mock(NoteQueryService.class);
-  private final PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
+  private final PostHomeSlices posts = mock(PostHomeSlices.class);
   private final NoteViewReader views = mock(NoteViewReader.class);
   private final LocalSeen localSeen = mock(LocalSeen.class);
   private final RemoteSeen remoteSeen = mock(RemoteSeen.class);

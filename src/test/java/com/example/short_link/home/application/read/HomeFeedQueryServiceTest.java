@@ -20,10 +20,10 @@ import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.post.application.read.BlogSlice;
 import com.example.short_link.post.application.read.PostCard;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PostSlice;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.application.read.PublicFeedItem;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -37,7 +37,7 @@ class HomeFeedQueryServiceTest {
   private static final Instant NOW = Instant.parse("2026-10-23T03:00:00.123456Z");
 
   private final NoteQueryService notes = mock(NoteQueryService.class);
-  private final PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
+  private final PostHomeSlices posts = mock(PostHomeSlices.class);
   private final LocalSeen seen = mock(LocalSeen.class);
   private final HomeForYou forYou = mock(HomeForYou.class);
   private final HomeFeedQueryService home =

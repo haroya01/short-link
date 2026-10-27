@@ -47,19 +47,21 @@ class PublicFeedQueryServiceTest {
 
   @BeforeEach
   void setUp() {
+    PostFeedItemAssembler assembler =
+        new PostFeedItemAssembler(
+            new UserSummaryReader(userRepository), seriesRepository, PostAccessFixtures.rooms());
     service =
         new PublicFeedQueryService(
             postRepository,
             new UserSummaryReader(userRepository),
-            new FollowingReader(followRepository),
-            seriesSubscriptionRepository,
-            tagPrefQueryService,
-            new PostFeedItemAssembler(
-                new UserSummaryReader(userRepository),
-                seriesRepository,
-                PostAccessFixtures.rooms()),
+            assembler,
             followingFeedReader,
-            seriesItemReader);
+            seriesItemReader,
+            new FollowedTopics(
+                new FollowingReader(followRepository),
+                seriesSubscriptionRepository,
+                tagPrefQueryService,
+                assembler));
   }
 
   private UserEntity user(long id, String username) {

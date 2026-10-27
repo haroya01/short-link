@@ -9,8 +9,8 @@ import com.example.short_link.note.application.read.NoteSlice;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.post.application.read.PostCard;
 import com.example.short_link.post.application.read.PostCommentQueryService;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PostSlice;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ public class RoomItemsQueryService {
   static final int REPLIES = 2;
 
   private final NoteQueryService notes;
-  private final PublicFeedQueryService posts;
+  private final PostHomeSlices posts;
   private final PostCommentQueryService comments;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
