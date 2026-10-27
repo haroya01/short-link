@@ -11,6 +11,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksCommand;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksUseCase;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
@@ -64,6 +65,7 @@ class LinkCacheEvictingWritesTest {
             batches,
             mock(CreateLinkUseCase.class),
             mock(CampaignQueryService.class),
+            new LinkRefReader(links),
             new CampaignLinks(links, mock(LinkExpirationPolicyRepository.class), cache));
 
     service.delete(5L, 4L, 9L);

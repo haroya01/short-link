@@ -1,15 +1,12 @@
 package com.example.short_link.link.application;
 
-import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +17,6 @@ public class CampaignLinks {
   private final LinkRepository links;
   private final LinkExpirationPolicyRepository expirationPolicies;
   private final LinkCacheEviction linkCacheEviction;
-
-  public Optional<LinkRef> find(LinkId linkId) {
-    return links.findById(linkId.value()).map(LinkRef::of);
-  }
-
-  public Optional<LinkRef> find(ShortCode shortCode) {
-    return links.findByShortCode(shortCode).map(LinkRef::of);
-  }
 
   public void expire(LinkId linkId, Instant at, String redirectUrl, String message) {
     LinkEntity link = require(linkId);

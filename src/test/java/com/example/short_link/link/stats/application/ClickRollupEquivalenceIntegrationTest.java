@@ -250,7 +250,7 @@ class ClickRollupEquivalenceIntegrationTest {
     s.put(
         "apps",
         rows(
-            clickEvents.humanClientAppCountsByLinkIds(linkIds).entrySet(),
+            totals.humanClientAppCountsByLinkIds(linkIds).entrySet(),
             e ->
                 e.getKey()
                     + "="

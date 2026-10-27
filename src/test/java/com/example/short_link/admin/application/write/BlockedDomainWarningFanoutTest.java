@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.admin.application.helper.WarningCopy;
 import com.example.short_link.link.application.dto.LinkRef;
-import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 
 class BlockedDomainWarningFanoutTest {
 
-  private final LinkLookupQueryService links = mock(LinkLookupQueryService.class);
+  private final LinkRefReader links = mock(LinkRefReader.class);
   private final UserSummaryReader users = mock(UserSummaryReader.class);
   private final LinkNotificationDispatcher dispatcher = mock(LinkNotificationDispatcher.class);
   private final BlockedDomainWarningFanout fanout =

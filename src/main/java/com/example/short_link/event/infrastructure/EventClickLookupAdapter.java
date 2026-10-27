@@ -1,7 +1,6 @@
 package com.example.short_link.event.infrastructure;
 
 import com.example.short_link.event.application.RegistrationClickLookup;
-import com.example.short_link.link.stats.domain.ClickEventEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -24,7 +23,8 @@ class EventClickLookupAdapter implements RegistrationClickLookup {
     if (candidates.isEmpty()) return Optional.empty();
     StringBuilder jpql =
         new StringBuilder(
-            "SELECT c FROM ClickEventEntity c WHERE c.bot = false AND c.clickedAt > :since AND (");
+            "SELECT c.linkId, c.sourceChannel, c.clientApp, c.referrerHost, c.utmSource"
+                + " FROM ClickEventEntity c WHERE c.bot = false AND c.clickedAt > :since AND (");
     for (int i = 0; i < candidates.size(); i++) {
       if (i > 0) jpql.append(" OR ");
       jpql.append("(c.linkId = :link")
@@ -34,8 +34,8 @@ class EventClickLookupAdapter implements RegistrationClickLookup {
           .append(")");
     }
     jpql.append(") ORDER BY c.clickedAt DESC");
-    TypedQuery<ClickEventEntity> query =
-        em.createQuery(jpql.toString(), ClickEventEntity.class)
+    TypedQuery<Object[]> query =
+        em.createQuery(jpql.toString(), Object[].class)
             .setParameter("since", Instant.now().minus(LOOKBACK))
             .setMaxResults(1);
     for (int i = 0; i < candidates.size(); i++) {
@@ -46,12 +46,12 @@ class EventClickLookupAdapter implements RegistrationClickLookup {
         .getResultStream()
         .findFirst()
         .map(
-            c ->
+            row ->
                 new ClickSnapshot(
-                    c.getLinkId(),
-                    c.getSourceChannel(),
-                    c.getClientApp(),
-                    c.getReferrerHost(),
-                    c.getUtmSource()));
+                    (Long) row[0],
+                    (String) row[1],
+                    (String) row[2],
+                    (String) row[3],
+                    (String) row[4]));
   }
 }

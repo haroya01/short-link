@@ -2,7 +2,6 @@ package com.example.short_link.link.application;
 
 import static com.example.short_link.support.TestEntities.withId;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,12 +51,5 @@ class CampaignLinksTest {
 
     verify(links).delete(link);
     verify(cache).evictAfterCommit(link);
-  }
-
-  @Test
-  void aMissingLinkReadsAsEmpty() {
-    when(links.findById(any())).thenReturn(Optional.empty());
-
-    assertThat(campaignLinks.find(new LinkId(9L))).isEmpty();
   }
 }

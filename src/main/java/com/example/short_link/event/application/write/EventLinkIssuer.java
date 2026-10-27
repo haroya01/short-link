@@ -3,11 +3,11 @@ package com.example.short_link.event.application.write;
 import com.example.short_link.event.application.helper.EventPublicUrlBuilder;
 import com.example.short_link.event.domain.EventLinkEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
+import com.example.short_link.link.application.dto.LinkRef;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
-import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class EventLinkIssuer {
 
   private final CreateLinkUseCase createLink;
-  private final LinkRepository linkRepository;
+  private final LinkRefReader links;
   private final EventLinkRepository eventLinkRepository;
   private final EventPublicUrlBuilder urlBuilder;
 
@@ -32,11 +32,11 @@ public class EventLinkIssuer {
           createLink
               .execute(CreateLinkCommand.forOwnPage(urlBuilder.build(slug), userId))
               .shortCode();
-      Optional<LinkEntity> link = linkRepository.findByShortCode(code);
+      Optional<LinkRef> link = links.find(code);
       if (link.isEmpty()) {
         return Optional.empty();
       }
-      Long linkId = link.get().getId();
+      Long linkId = link.get().linkId().value();
       eventLinkRepository.save(new EventLinkEntity(eventId, linkId, label));
       return Optional.of(new IssuedLink(linkId, code.value()));
     } catch (RuntimeException e) {

@@ -10,7 +10,7 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -30,7 +30,7 @@ public class EventAnalyticsQueryService {
   private final EventRepository eventRepository;
   private final EventRegistrationRepository registrationRepository;
   private final EventQueryService eventQueryService;
-  private final ClickEventRepository clickEventRepository;
+  private final ClickTotalsReader clickTotals;
 
   @Transactional(readOnly = true)
   public EventAnalyticsView analyze(Long userId, Long eventId) {
@@ -48,7 +48,7 @@ public class EventAnalyticsQueryService {
     Map<String, Long> clicksByApp = new LinkedHashMap<>();
     if (!channelByLinkId.isEmpty()) {
       for (Map.Entry<Long, Map<String, Long>> link :
-          clickEventRepository.humanClientAppCountsByLinkIds(channelByLinkId.keySet()).entrySet()) {
+          clickTotals.humanClientAppCountsByLinkIds(channelByLinkId.keySet()).entrySet()) {
         String channel = channelByLinkId.getOrDefault(link.getKey(), "?");
         for (Map.Entry<String, Long> app : link.getValue().entrySet()) {
           humanClicks += app.getValue();

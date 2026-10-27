@@ -13,6 +13,7 @@ import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.link.application.CampaignLinks;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.dto.LinkRef;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public class CampaignBatchService {
   private final CampaignBatchRepository batchRepository;
   private final CreateLinkUseCase linkCreationService;
   private final CampaignQueryService campaignQuery;
+  private final LinkRefReader links;
   private final CampaignLinks campaignLinks;
 
   @Transactional
@@ -109,7 +111,7 @@ public class CampaignBatchService {
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
     LinkRef link =
-        campaignLinks
+        links
             .find(batch.linkId())
             .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND));
     return new BatchWithLink(batch, link);
@@ -121,7 +123,7 @@ public class CampaignBatchService {
     LinkCreated created =
         linkCreationService.execute(CreateLinkCommand.perBatch(destination, ownerId));
     LinkRef link =
-        campaignLinks
+        links
             .find(created.shortCode())
             .orElseThrow(() -> new IllegalStateException("link missing right after create"));
     CampaignBatchEntity batch =

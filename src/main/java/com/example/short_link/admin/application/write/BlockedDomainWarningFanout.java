@@ -3,7 +3,7 @@ package com.example.short_link.admin.application.write;
 import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
 import com.example.short_link.admin.application.helper.WarningCopy;
 import com.example.short_link.link.application.dto.LinkRef;
-import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.domain.LinkNotificationType;
 import com.example.short_link.user.application.read.UserSummary;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BlockedDomainWarningFanout {
 
-  private final LinkLookupQueryService links;
+  private final LinkRefReader links;
   private final UserSummaryReader users;
   private final LinkNotificationDispatcher dispatcher;
 

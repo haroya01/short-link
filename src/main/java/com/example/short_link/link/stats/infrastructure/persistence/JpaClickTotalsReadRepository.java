@@ -5,6 +5,7 @@ import com.example.short_link.link.stats.domain.ClickRollup;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -206,4 +207,18 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
     Long getRolledUntil();
   }
+
+  @Query(
+      value =
+          "SELECT link_id, app, CAST(SUM(n) AS SIGNED) FROM ("
+              + "SELECT link_id, client_app AS app, COUNT(*) AS n FROM click_event "
+              + "WHERE link_id IN (:ids) AND is_bot = 0 AND clicked_at >= "
+              + ClickRollup.ROLLED_UNTIL
+              + " GROUP BY link_id, client_app UNION ALL "
+              + "SELECT link_id, value, SUM(clicks) FROM click_daily_dim WHERE link_id IN (:ids) "
+              + "AND dim = "
+              + ClickRollup.CLIENT_APP
+              + " AND is_bot = 0 GROUP BY link_id, value) u GROUP BY link_id, app",
+      nativeQuery = true)
+  List<Object[]> humanClientAppCountsByLinkIds(@Param("ids") Collection<Long> ids);
 }

@@ -4,6 +4,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.link.application.CampaignLinks;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 class BatchPolicyApplier {
 
   private final CampaignBatchRepository batchRepository;
+  private final LinkRefReader links;
   private final CampaignLinks campaignLinks;
 
   void apply(CampaignEntity c, Instant at) {
@@ -24,7 +26,7 @@ class BatchPolicyApplier {
     List<LinkId> applied = new ArrayList<>();
     for (CampaignBatchEntity batch : batches) {
       LinkId linkId = batch.linkId();
-      if (campaignLinks.find(linkId).isEmpty()) continue;
+      if (links.find(linkId).isEmpty()) continue;
       switch (c.getPostEndAction()) {
         case KEEP:
           break;

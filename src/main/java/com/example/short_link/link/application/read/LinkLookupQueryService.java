@@ -1,7 +1,6 @@
 package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -11,7 +10,6 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,11 +27,6 @@ public class LinkLookupQueryService {
   @Transactional(readOnly = true)
   public Optional<LinkEntity> findEntity(ShortCode shortCode) {
     return repository.findByShortCode(shortCode);
-  }
-
-  @Transactional(readOnly = true)
-  public List<LinkRef> findWithUrlContaining(String fragment) {
-    return repository.findByOriginalUrlContaining(fragment).stream().map(LinkRef::of).toList();
   }
 
   @Transactional(readOnly = true)
