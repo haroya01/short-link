@@ -168,7 +168,8 @@ class PostEditConflictIntegrationTest {
 
     assertThat(overwritten.content()).isEqualTo("my body");
     assertThat(storedVersion()).isEqualTo(3L);
-    PostRevisionEntity kept = revisions.findLatestByPostId(postId).orElseThrow();
+    PostRevisionEntity kept =
+        revisions.findFirstByPostIdOrderByVersionNumberDesc(postId).orElseThrow();
     assertThat(kept.getTitleSnapshot()).isEqualTo("Their title");
     assertThat(kept.getContentJson()).contains("their body").doesNotContain("my body");
 

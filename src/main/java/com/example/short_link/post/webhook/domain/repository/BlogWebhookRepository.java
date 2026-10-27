@@ -12,7 +12,7 @@ public interface BlogWebhookRepository {
 
   Optional<BlogWebhookEntity> findByIdAndUserId(Long id, Long userId);
 
-  List<BlogWebhookEntity> findAllByUserId(Long userId);
+  List<BlogWebhookEntity> findAllByUserIdOrderByIdDesc(Long userId);
 
   List<BlogWebhookEntity> findAllByUserIdAndEnabledTrue(Long userId);
 

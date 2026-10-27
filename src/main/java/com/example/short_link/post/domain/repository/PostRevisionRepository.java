@@ -8,7 +8,7 @@ public interface PostRevisionRepository {
 
   PostRevisionEntity save(PostRevisionEntity revision);
 
-  Optional<PostRevisionEntity> findLatestByPostId(Long postId);
+  Optional<PostRevisionEntity> findFirstByPostIdOrderByVersionNumberDesc(Long postId);
 
   Optional<PostRevisionEntity> findByPostIdAndVersionNumber(Long postId, Integer versionNumber);
 
