@@ -12,6 +12,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -38,6 +42,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -196,6 +201,56 @@ class LatestPostsTest {
     assertThat(uris(pageOnceRefreshed(latest, 2)))
         .containsExactly(
             "https://a.example/users/u12/statuses/12", "https://a.example/users/u9/statuses/9");
+  }
+
+  @Test
+  void aRefreshBehindAReadThatThrowsIsAWarningAndTheNextOneStillRuns() {
+    Logger logger = (Logger) LoggerFactory.getLogger(LatestPosts.class);
+    ListAppender<ILoggingEvent> logged = new ListAppender<>();
+    logged.start();
+    logger.addAppender(logged);
+    answers(timeline("a.example", 2, ""), post("a.example", 9, "2026-10-19T23:50:00Z"));
+    when(http.getJson(timeline("a.example", 2, "&since_id=9"), instance, PATIENCE))
+        .thenThrow(new IllegalStateException("boom"))
+        .thenReturn(ok(post("a.example", 12, "2026-10-19T23:59:00Z")));
+    LatestPosts latest = latest(true, 2, 100, "a.example");
+    List<String> warnings;
+    try {
+      latest.page(null, 0, 20);
+      clock.pass(Duration.ofMinutes(6));
+      latest.page(null, 0, 20);
+      warnings = warningsOnceLogged(logged);
+    } finally {
+      logger.detachAppender(logged);
+    }
+
+    assertThat(warnings)
+        .containsExactly(
+            "federation latest refresh failed reason=java.util.concurrent.CompletionException:"
+                + " java.lang.IllegalStateException: boom");
+    clock.pass(Duration.ofMinutes(6));
+    assertThat(uris(pageOnceRefreshed(latest, 2)))
+        .containsExactly(
+            "https://a.example/users/u12/statuses/12", "https://a.example/users/u9/statuses/9");
+  }
+
+  private static List<String> warningsOnceLogged(ListAppender<ILoggingEvent> logged) {
+    long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+    List<String> warnings = warnings(logged);
+    while (warnings.isEmpty() && System.nanoTime() < deadline) {
+      Thread.onSpinWait();
+      warnings = warnings(logged);
+    }
+    return warnings;
+  }
+
+  private static List<String> warnings(ListAppender<ILoggingEvent> logged) {
+    synchronized (logged) {
+      return logged.list.stream()
+          .filter(event -> event.getLevel() == Level.WARN)
+          .map(ILoggingEvent::getFormattedMessage)
+          .toList();
+    }
   }
 
   private static List<TrendingNote> pageOnceRefreshed(LatestPosts latest, int size) {
