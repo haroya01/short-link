@@ -81,7 +81,7 @@ final class StoredNotices {
         }
       };
 
-  final UserBlockChecker blocks =
+  private final UserBlockChecker blocks =
       new UserBlockChecker() {
         @Override
         public boolean isBlocked(Long blockerId, Long blockedId) {
@@ -150,6 +150,7 @@ final class StoredNotices {
             mock(NotificationActorReader.class),
             new AcceptingPolicies(),
             (userIds, now) -> Map.of(),
+            blocks,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 

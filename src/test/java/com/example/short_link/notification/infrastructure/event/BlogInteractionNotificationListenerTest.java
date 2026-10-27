@@ -20,7 +20,7 @@ class BlogInteractionNotificationListenerTest {
   private final StoredNotices stored = new StoredNotices();
 
   private BlogInteractionNotificationListener listener() {
-    return new BlogInteractionNotificationListener(stored.useCase(), stored.blocks);
+    return new BlogInteractionNotificationListener(stored.useCase());
   }
 
   private static String today() {

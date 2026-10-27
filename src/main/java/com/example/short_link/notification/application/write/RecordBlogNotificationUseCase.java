@@ -1,5 +1,6 @@
 package com.example.short_link.notification.application.write;
 
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -55,12 +56,16 @@ public class RecordBlogNotificationUseCase {
   private final NotificationActorReader actorReader;
   private final NotificationPolicyRepository policies;
   private final NotificationKeywordFilterReader keywordFilters;
+  private final UserBlockChecker blocks;
   private final Clock clock;
 
+  // A recipient who silences the actor, their server or the conversation hears nothing of it.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
-    write(recipientUserId, type, actorUserId, null, payload, null);
+    if (!silenced(recipientUserId, actorUserId, null, null)) {
+      write(recipientUserId, type, actorUserId, null, payload, null);
+    }
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -71,7 +76,29 @@ public class RecordBlogNotificationUseCase {
       Long actorRemoteId,
       NotificationTarget payload,
       String groupKey) {
-    write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+    if (!silenced(recipientUserId, actorUserId, actorRemoteId, null)) {
+      write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+    }
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void record(
+      Long recipientUserId,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      NotificationTarget payload,
+      String groupKey,
+      Long conversationId) {
+    if (!silenced(recipientUserId, actorUserId, actorRemoteId, conversationId)) {
+      write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+    }
+  }
+
+  private boolean silenced(
+      Long recipientUserId, Long actorUserId, Long actorRemoteId, Long conversationId) {
+    return !recipientUserId.equals(actorUserId)
+        && blocks.silences(recipientUserId, actorUserId, actorRemoteId, conversationId);
   }
 
   // A grouped notification is written once per actor: liking, unliking and liking again adds no
@@ -178,7 +205,22 @@ public class RecordBlogNotificationUseCase {
         policies.sender(recipientUserId, type, actorUserId, actorRemoteId, mentionNoteId));
   }
 
-  // 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다.
+  public void recordForEachWhoHears(
+      List<Long> candidateUserIds,
+      NotificationType type,
+      Long actorUserId,
+      NotificationTarget payload) {
+    recordForEach(
+        candidateUserIds.stream()
+            .filter(candidate -> !silenced(candidate, actorUserId, null, null))
+            .toList(),
+        type,
+        actorUserId,
+        payload);
+  }
+
+  // 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다. 수신자는 이미 행위자를 침묵하지 않은
+  // 사람들이다(SQL이 고른 팔로워·구독자·공유자).
   public void recordForEach(
       List<Long> recipientUserIds,
       NotificationType type,

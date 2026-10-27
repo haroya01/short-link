@@ -20,7 +20,7 @@ class CollectionNotificationListenerTest {
   private final StoredNotices stored = new StoredNotices();
 
   private CollectionNotificationListener listener() {
-    return new CollectionNotificationListener(stored.useCase(), stored.blocks);
+    return new CollectionNotificationListener(stored.useCase());
   }
 
   @Test

@@ -23,7 +23,7 @@ class FollowNotificationListenerTest {
   private final StoredNotices stored = new StoredNotices();
 
   private FollowNotificationListener listener() {
-    return new FollowNotificationListener(notifications, stored.useCase(), stored.blocks);
+    return new FollowNotificationListener(notifications, stored.useCase());
   }
 
   @Test

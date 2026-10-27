@@ -39,8 +39,7 @@ class PostNotificationListenerTest {
   private final StoredNotices stored = new StoredNotices();
 
   private PostNotificationListener listener() {
-    return new PostNotificationListener(
-        stored.useCase(), followerReader, stored.userReader, stored.blocks);
+    return new PostNotificationListener(stored.useCase(), followerReader, stored.userReader);
   }
 
   private static String today(String type, long subject) {
@@ -264,7 +263,7 @@ class PostNotificationListenerTest {
   }
 
   @Test
-  void aSilencedLikeOnSomeoneElsesPostLooksUpNoOne() {
+  void aSilencedLikeOnSomeoneElsesPostStoresAndPushesNothing() {
     stored.silence(3L, 8L);
 
     listener().onCommentLiked(new CommentLikedEvent(3L, 8L, 10L, "s", "t", 5L, 77L));
@@ -272,7 +271,7 @@ class PostNotificationListenerTest {
         .onHighlightReplyLiked(new HighlightReplyLikedEvent(3L, 8L, 10L, "s", "t", 5L, 42L, 77L));
 
     assertThat(stored.rows()).isEmpty();
-    assertThat(stored.userLookups()).isZero();
+    assertThat(stored.pushes()).isEmpty();
   }
 
   @Test
@@ -375,13 +374,13 @@ class PostNotificationListenerTest {
   }
 
   @Test
-  void aPostQuotingOnlyNotesOfPeopleWhoSilencedItsWriterLooksUpNoOne() {
+  void aPostQuotingOnlyNotesOfPeopleWhoSilencedItsWriterTellsNoOne() {
     stored.silence(6L, 7L);
     when(followerReader.shareableNoteAuthorsOf(Set.of(1L))).thenReturn(List.of(6L));
 
     listener().onNotesEmbedded(new NotesEmbeddedEvent(7L, 10L, "s", "t", Set.of(1L)));
 
     assertThat(stored.rows()).isEmpty();
-    assertThat(stored.userLookups()).isZero();
+    assertThat(stored.pushes()).isEmpty();
   }
 }

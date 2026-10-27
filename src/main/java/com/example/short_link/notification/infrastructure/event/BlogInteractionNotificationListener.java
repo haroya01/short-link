@@ -2,7 +2,6 @@ package com.example.short_link.notification.infrastructure.event;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
@@ -21,14 +20,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class BlogInteractionNotificationListener {
 
   private final RecordBlogNotificationUseCase recordUseCase;
-  private final UserBlockChecker blocks;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onBlogInteraction(BlogInteractionEvent event) {
-    if (event.isSelfAction()
-        || event.recipientUserId() == null
-        || blocks.silences(event.recipientUserId(), event.actorUserId())) {
+    if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
     }
     NotificationType type = mapType(event.type());

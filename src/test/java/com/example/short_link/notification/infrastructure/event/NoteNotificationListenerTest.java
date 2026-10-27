@@ -30,7 +30,7 @@ class NoteNotificationListenerTest {
   private final StoredNotices stored = new StoredNotices();
 
   private NoteNotificationListener listener() {
-    return new NoteNotificationListener(stored.useCase(), stored.blocks, followers);
+    return new NoteNotificationListener(stored.useCase(), followers);
   }
 
   private static String today(NotificationType type, long noteId) {
@@ -143,6 +143,7 @@ class NoteNotificationListenerTest {
         .containsExactly(
             new Push(List.of(7L), "NOTE_POLL", toThePoll),
             new Push(List.of(10L), "NOTE_POLL", toThePoll));
+    assertThat(stored.silenceChecks()).isEqualTo(2);
   }
 
   @Test

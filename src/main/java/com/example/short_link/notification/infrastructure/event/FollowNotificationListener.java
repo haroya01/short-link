@@ -4,7 +4,6 @@ import com.example.short_link.common.event.AccountUnlockedEvent;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
@@ -22,14 +21,10 @@ public class FollowNotificationListener {
 
   private final NotificationRepository notifications;
   private final RecordBlogNotificationUseCase recordUseCase;
-  private final UserBlockChecker blocks;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onRemoteFollowed(RemoteFollowedEvent event) {
-    if (blocks.silences(event.userId(), null, event.remoteActorId(), null)) {
-      return;
-    }
     recordUseCase.record(
         event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
   }
@@ -38,10 +33,6 @@ public class FollowNotificationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onFollowRequested(FollowRequestedEvent event) {
-    if (blocks.silences(
-        event.targetUserId(), event.followerUserId(), event.followerRemoteActorId(), null)) {
-      return;
-    }
     recordUseCase.record(
         event.targetUserId(),
         NotificationType.FOLLOW_REQUEST,

@@ -5,7 +5,6 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
@@ -24,20 +23,12 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NoteNotificationListener {
 
   private final RecordBlogNotificationUseCase recordUseCase;
-  private final UserBlockChecker blocks;
   private final NotificationFollowerReader followers;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onNoteInteraction(NoteInteractionEvent event) {
     if (event.isSelfAction() || event.recipientUserId() == null) {
-      return;
-    }
-    if (blocks.silences(
-        event.recipientUserId(),
-        event.actorUserId(),
-        event.actorRemoteId(),
-        event.conversationId())) {
       return;
     }
     NotificationType type =
@@ -55,15 +46,14 @@ public class NoteNotificationListener {
         event.actorRemoteId(),
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
-        NotificationGroupKey.of(type, event.noteId()));
+        NotificationGroupKey.of(type, event.noteId()),
+        event.conversationId());
   }
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onPostQuoted(PostQuotedEvent event) {
-    if (event.isSelfAction()
-        || event.recipientUserId() == null
-        || blocks.silences(event.recipientUserId(), event.actorUserId())) {
+    if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
     }
     recordUseCase.record(
@@ -113,10 +103,7 @@ public class NoteNotificationListener {
     recordUseCase.record(
         event.authorId(), NotificationType.NOTE_POLL, event.authorId(), null, note, null);
     List<Long> voters =
-        event.voterIds().stream()
-            .filter(voter -> !voter.equals(event.authorId()))
-            .filter(voter -> !blocks.silences(voter, event.authorId()))
-            .toList();
-    recordUseCase.recordForEach(voters, NotificationType.NOTE_POLL, event.authorId(), note);
+        event.voterIds().stream().filter(voter -> !voter.equals(event.authorId())).toList();
+    recordUseCase.recordForEachWhoHears(voters, NotificationType.NOTE_POLL, event.authorId(), note);
   }
 }

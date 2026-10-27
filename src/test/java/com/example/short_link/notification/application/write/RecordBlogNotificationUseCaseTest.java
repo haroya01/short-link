@@ -3,6 +3,7 @@ package com.example.short_link.notification.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -68,6 +69,8 @@ class RecordBlogNotificationUseCaseTest {
   @Mock(strictness = Mock.Strictness.LENIENT)
   private NotificationKeywordFilterReader keywordFilters;
 
+  @Mock private UserBlockChecker blocks;
+
   private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -124,6 +127,7 @@ class RecordBlogNotificationUseCaseTest {
         actorReader,
         policies,
         keywordFilters,
+        blocks,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
