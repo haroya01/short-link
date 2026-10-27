@@ -118,7 +118,7 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(c -> {})
-        // Spring supplies nosniff and frame denial; restrict referrer details across origins too.
+        // Spring already sends nosniff and frame denial.
         .headers(
             h ->
                 h.httpStrictTransportSecurity(
@@ -141,7 +141,6 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/oauth2/**", "/login/oauth2/**")
                     .permitAll()
-                    // Keep the internal API documentation restricted to administrators.
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .hasRole("ADMIN")
                     .requestMatchers(GET, "/")

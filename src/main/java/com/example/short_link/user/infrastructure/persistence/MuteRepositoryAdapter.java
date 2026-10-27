@@ -42,8 +42,6 @@ class MuteRepositoryAdapter implements MuteRepository {
     return jpa.findActive(userId, now);
   }
 
-  // One statement either way. The conversation and server blocks belong to the note and federation
-  // slices and are read here natively so a notice costs one check, not three.
   @Override
   public boolean silences(SilenceCheck check, Instant now) {
     Long recipientId = check.recipientId();

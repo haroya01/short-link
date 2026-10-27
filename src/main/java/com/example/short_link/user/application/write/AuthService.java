@@ -168,12 +168,9 @@ public class AuthService {
       return continueSession(parsed);
     }
     if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
-      // Tolerate shared-cookie races within the grace window by issuing a fresh pair.
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
       return continueSession(parsed);
     }
-    // Reject only the stale or unknown token: a dropped rotation does not invalidate other live
-    // sessions.
     log.warn(
         "refresh token unknown or expired for userId={}, rejecting this token "
             + "(other sessions kept)",

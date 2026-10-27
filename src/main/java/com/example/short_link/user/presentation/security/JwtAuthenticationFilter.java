@@ -22,7 +22,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private static final String BEARER = "Bearer ";
 
-  // The login session the bearer token belongs to, for endpoints that bind state to it (devices).
   public static final String SESSION_ATTRIBUTE = "kurl.sessionId";
 
   private final JwtTokenService jwt;

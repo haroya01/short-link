@@ -34,7 +34,6 @@ public class DeviceTokenCommandService {
             .orElseGet(
                 () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform, topic)));
     device.bindTo(sessionId, clock.instant().plus(jwtProperties.refreshTtl()));
-    // 이 기기의 언어를 사용자 로케일로 — 서버조합 푸시를 그 언어로 낸다(Accept-Language).
     userRepository
         .findById(userId)
         .ifPresent(u -> u.updateLocale(LocaleContextHolder.getLocale().getLanguage()));

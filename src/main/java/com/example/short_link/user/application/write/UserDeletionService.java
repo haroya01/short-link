@@ -55,7 +55,6 @@ public class UserDeletionService {
     user.softDelete();
     profileCache.evictByUsername(user.getUsername());
     refreshTokenStore.deleteAllForUser(userId);
-    // Every session just ended, so no device keeps hearing this account.
     deviceTokens.deleteByUserId(userId);
     events.publishEvent(new AccountDeletedEvent(userId));
 

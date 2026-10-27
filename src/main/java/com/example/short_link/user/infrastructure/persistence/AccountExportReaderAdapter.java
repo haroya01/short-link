@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.function.Function;
 import org.springframework.stereotype.Repository;
 
-// One statement per export. Members who left (deleted, or never claimed a name) are left out, as
-// is a mute that has run out.
+// Members who left (deleted, or never claimed a name) and mutes that have run out are left out.
 @Repository
 class AccountExportReaderAdapter implements AccountExportReader {
 
