@@ -3,7 +3,7 @@ package com.example.short_link.note.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteTrendsReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteTrendingRankingIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteTrendsReader trends;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -96,7 +96,7 @@ class NoteTrendingRankingIntegrationTest {
 
   private Set<Long> trending(Long viewerId) {
     Set<Long> ids = new HashSet<>();
-    notes.trending(viewerId, 0, 500).forEach(note -> ids.add(note.getId()));
+    trends.trending(viewerId, 0, 500).forEach(note -> ids.add(note.getId()));
     return ids;
   }
 
@@ -147,7 +147,7 @@ class NoteTrendingRankingIntegrationTest {
 
     List<Long> seen = new ArrayList<>();
     for (int offset = 0; ; offset += 10) {
-      List<NoteEntity> page = notes.trending(null, offset, 10);
+      List<NoteEntity> page = trends.trending(null, offset, 10);
       page.stream().map(NoteEntity::getId).filter(mine::contains).forEach(seen::add);
       if (page.size() < 10) {
         break;

@@ -3,6 +3,7 @@ package com.example.short_link.customdomain.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mockingDetails;
 
 import com.example.short_link.common.net.TxtResolver;
 import com.example.short_link.customdomain.application.dto.DomainSummary;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -167,6 +169,7 @@ class VerifyCustomDomainTransactionTest {
     CountDownLatch releaseFirst = new CountDownLatch(1);
     AtomicBoolean firstUpdate = new AtomicBoolean(true);
     AtomicReference<Instant> firstVerificationSeenBySecond = new AtomicReference<>();
+    Answer<?> realRepository = mockingDetails(domains).getMockCreationSettings().getDefaultAnswer();
 
     doAnswer(
             invocation -> {
@@ -174,7 +177,7 @@ class VerifyCustomDomainTransactionTest {
               if (!first) secondAttempted.countDown();
               @SuppressWarnings("unchecked")
               Optional<CustomDomainEntity> current =
-                  (Optional<CustomDomainEntity>) invocation.callRealMethod();
+                  (Optional<CustomDomainEntity>) realRepository.answer(invocation);
               if (first) {
                 firstLocked.countDown();
                 assertThat(releaseFirst.await(10, TimeUnit.SECONDS)).isTrue();

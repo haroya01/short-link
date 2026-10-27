@@ -1,55 +1,43 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
-import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.infrastructure.event.StoredNotices.Row;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class BlogInteractionNotificationListenerTest {
 
   private static final Instant AT = Instant.parse("2026-06-07T00:00:00Z");
 
-  @Mock private RecordBlogNotificationUseCase recordUseCase;
-  @Mock private UserBlockChecker blocks;
+  private final StoredNotices stored = new StoredNotices();
 
   private BlogInteractionNotificationListener listener() {
-    return new BlogInteractionNotificationListener(recordUseCase, blocks);
+    return new BlogInteractionNotificationListener(stored.useCase());
+  }
+
+  private static String today() {
+    return LocalDate.now(ZoneOffset.UTC).toString();
   }
 
   @Test
   void likesOfOnePostGroupByDayLikeNoteLikes() {
     listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "my-post", "Hi", AT));
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "my-post", "Hi", AT));
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 3L, 10L, "my-post", "Hi", AT));
 
-    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
-    verify(recordUseCase)
-        .record(
-            eq(9L),
-            eq(NotificationType.LIKE),
-            eq(2L),
-            isNull(),
-            post.capture(),
-            eq("LIKE:10:" + LocalDate.now(ZoneOffset.UTC)));
-    assertThat(post.getValue().slug()).isEqualTo("my-post");
+    NotificationPostRef post = new NotificationPostRef(10L, "my-post", "Hi", null, null, null);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(9L, NotificationType.LIKE, 2L, null, post, "LIKE:10:" + today()),
+            new Row(9L, NotificationType.LIKE, 3L, null, post, "LIKE:10:" + today()));
   }
 
   @Test
@@ -57,42 +45,46 @@ class BlogInteractionNotificationListenerTest {
     listener()
         .onBlogInteraction(BlogInteractionEvent.comment(9L, 2L, 10L, "my-post", "Hi", 55L, AT));
 
-    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
-    verify(recordUseCase)
-        .record(eq(9L), eq(NotificationType.COMMENT), eq(2L), isNull(), post.capture(), isNull());
-    assertThat(post.getValue().commentId()).isEqualTo(55L);
-    assertThat(post.getValue().slug()).isEqualTo("my-post");
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(
+                9L,
+                NotificationType.COMMENT,
+                2L,
+                null,
+                new NotificationPostRef(10L, "my-post", "Hi", null, 55L, null),
+                null));
   }
 
   @Test
   void aFollowIsHeardOncePerPersonAndDayWithoutFoldingPeopleTogether() {
     listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
+    listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
+    listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 3L, AT));
 
-    verify(recordUseCase)
-        .record(
-            eq(9L),
-            eq(NotificationType.FOLLOW),
-            eq(2L),
-            isNull(),
-            isNull(),
-            eq("FOLLOW:2:null:" + LocalDate.now(ZoneOffset.UTC)));
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(9L, NotificationType.FOLLOW, 2L, null, null, "FOLLOW:2:null:" + today()),
+            new Row(9L, NotificationType.FOLLOW, 3L, null, null, "FOLLOW:3:null:" + today()));
   }
 
   @Test
   void selfActionIsSkipped() {
     listener().onBlogInteraction(BlogInteractionEvent.like(9L, 9L, 10L, "s", "t", AT));
 
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.silenceChecks()).isZero();
   }
 
   @Test
   void aMemberMutedWithTheirNoticesIsHeardOnPostsAsLittleAsOnNotes() {
-    when(blocks.silences(9L, 2L)).thenReturn(true);
+    stored.silence(9L, 2L);
 
     listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "s", "t", AT));
     listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
 
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.pushes()).isEmpty();
   }
 
   @Test
@@ -101,17 +93,15 @@ class BlogInteractionNotificationListenerTest {
         .onBlogInteraction(
             BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "my-series", "Series", AT));
 
-    ArgumentCaptor<NotificationSeriesRef> series =
-        ArgumentCaptor.forClass(NotificationSeriesRef.class);
-    verify(recordUseCase)
-        .record(
-            eq(9L),
-            eq(NotificationType.SERIES_SUBSCRIBE),
-            eq(2L),
-            isNull(),
-            series.capture(),
-            eq("SERIES_SUBSCRIBE:2:4:" + LocalDate.now(ZoneOffset.UTC)));
-    assertThat(series.getValue().slug()).isEqualTo("my-series");
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(
+                9L,
+                NotificationType.SERIES_SUBSCRIBE,
+                2L,
+                null,
+                new NotificationSeriesRef(4L, "my-series", "Series"),
+                "SERIES_SUBSCRIBE:2:4:" + today()));
   }
 
   @Test
@@ -122,7 +112,7 @@ class BlogInteractionNotificationListenerTest {
 
     listener().onBlogInteraction(event);
 
-    verifyNoInteractions(recordUseCase);
-    verify(blocks, org.mockito.Mockito.never()).silences(any(), any());
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.silenceChecks()).isZero();
   }
 }

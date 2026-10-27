@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 // What became of each announce, today (Seoul) for the admin view and since start as the
@@ -24,12 +23,7 @@ public class RelayTally {
   private final Map<String, LongAdder> today = new ConcurrentHashMap<>();
   private volatile LocalDate day;
 
-  @Autowired
-  public RelayTally(MeterRegistry meters) {
-    this(meters, Clock.systemUTC());
-  }
-
-  RelayTally(MeterRegistry meters, Clock clock) {
+  public RelayTally(MeterRegistry meters, Clock clock) {
     this.meters = meters;
     this.clock = clock;
     this.day = LocalDate.now(clock.withZone(SEOUL));

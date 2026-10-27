@@ -7,6 +7,7 @@ import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
@@ -33,7 +34,9 @@ class QuotingPostsQueryServiceTest {
         new QuotingPostsQueryService(
             postRepository,
             new PostFeedItemAssembler(
-                userRepository, seriesRepository, PostAccessFixtures.rooms()));
+                new UserSummaryReader(userRepository),
+                seriesRepository,
+                PostAccessFixtures.rooms()));
   }
 
   private static PostEntity published(long id) {
@@ -60,7 +63,7 @@ class QuotingPostsQueryServiceTest {
         .thenReturn(rows);
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(alice()));
 
-    PublicFeedView view = service.ofNote(5L, null, 0);
+    PublicFeedView view = service.ofNote(null, 5L, 0);
 
     assertThat(view.items()).hasSize(QuotingPostsQueryService.SIZE);
     assertThat(view.items().getFirst().author().username()).isEqualTo("alice");
@@ -74,7 +77,7 @@ class QuotingPostsQueryServiceTest {
         .thenReturn(List.of(published(1L)));
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(alice()));
 
-    PublicFeedView view = service.ofNote(5L, null, -3);
+    PublicFeedView view = service.ofNote(null, 5L, -3);
 
     assertThat(view.items()).extracting(PublicFeedItem::id).containsExactly(1L);
     assertThat(view.hasNext()).isFalse();

@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
@@ -40,17 +39,7 @@ public class RemoteActorResolver {
   private final Clock clock;
   private final Map<String, Instant> unanswered = new ConcurrentHashMap<>();
 
-  @Autowired
   public RemoteActorResolver(
-      FederationHttp http,
-      SigningKeys signingKeys,
-      RemoteActorRepository actors,
-      FederationDomainBlockRepository serverBlocks,
-      JsonMapper json) {
-    this(http, signingKeys, actors, serverBlocks, json, Clock.systemUTC());
-  }
-
-  RemoteActorResolver(
       FederationHttp http,
       SigningKeys signingKeys,
       RemoteActorRepository actors,

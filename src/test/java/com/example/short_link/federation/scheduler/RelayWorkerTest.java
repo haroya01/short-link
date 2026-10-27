@@ -28,7 +28,10 @@ import com.example.short_link.federation.domain.repository.FederationDomainBlock
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,7 +63,8 @@ class RelayWorkerTest {
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
-  private final RelayTally tally = new RelayTally(meters);
+  private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T19:20:00Z"), ZoneOffset.UTC);
+  private final RelayTally tally = new RelayTally(meters, clock);
   private RelayBreaker breaker;
   private RelayIntake intake;
   private RelayWorker worker;
@@ -75,7 +79,7 @@ class RelayWorkerTest {
   }
 
   private void build(RelayProperties props) {
-    breaker = new RelayBreaker(props, tally, subscriptions);
+    breaker = new RelayBreaker(props, tally, subscriptions, clock);
     intake = new RelayIntake(subscriptions, breaker, tally, props, URLS, meters);
     worker =
         new RelayWorker(

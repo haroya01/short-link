@@ -9,8 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
-import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.inbox.EarlyDeletes;
@@ -272,7 +272,7 @@ class RemoteNoteIntakeTest {
     when(notes.find(3L))
         .thenReturn(
             Optional.of(
-                new NoteSnapshot(
+                NoteSnapshotFixtures.note(
                     3L,
                     7L,
                     "haroya",

@@ -38,6 +38,7 @@ public class NoteEntity extends BaseCreatedEntity {
   public static final int MAX_STORED_BODY_LENGTH = 5000;
   public static final int MAX_WARNING_LENGTH = 100;
   public static final int MAX_PINS = 5;
+  public static final int MAX_THREAD_NOTES = 10;
   public static final int MIN_POLL_OPTIONS = 2;
   public static final int MAX_POLL_OPTIONS = 4;
   public static final int MAX_POLL_OPTION_LENGTH = 50;

@@ -11,8 +11,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -32,7 +32,7 @@ public class CollectionContentReader {
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
   private final NoteBodyReader noteBodies;
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
 
   public Map<Long, List<String>> previewByCollection(
       List<CollectionEntity> collections, Long viewerId) {
@@ -108,7 +108,7 @@ public class CollectionContentReader {
             PostEntity::getId);
     Set<Long> authorIds =
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());
-    var authors = indexedBy(userRepository.findAllByIdIn(authorIds), UserEntity::getId);
+    var authors = indexedBy(users.findAll(authorIds), UserSummary::id);
     return new CollectionContentSnapshot(posts, highlights, notes, authors);
   }
 
