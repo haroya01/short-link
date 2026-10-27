@@ -244,6 +244,7 @@ src/main/java/com/example/short_link/federation/infrastructure/persistence/Remot
 src/main/java/com/example/short_link/federation/infrastructure/persistence/UtcColumns.java=2
 src/main/java/com/example/short_link/federation/presentation/ActivityPubMedia.java=2
 src/main/java/com/example/short_link/federation/presentation/ActorController.java=2
+src/main/java/com/example/short_link/federation/presentation/NodeInfoController.java=1
 src/main/java/com/example/short_link/federation/presentation/response/OrderedCollectionResponse.java=2
 src/main/java/com/example/short_link/federation/scheduler/DeliveryWorker.java=1
 src/main/java/com/example/short_link/federation/scheduler/DirectoryWorker.java=2
