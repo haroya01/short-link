@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
@@ -16,6 +17,7 @@ import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -172,10 +174,10 @@ class NoteReadersMatrixE2ETest {
     UserEntity otherUser = member(tag + "ot");
     other = otherUser.getId();
     otherName = otherUser.getUsername();
-    follows.save(new FollowEntity(ids.get(Viewer.FOLLOWER), author));
-    follows.save(new FollowEntity(ids.get(Viewer.MUTER), author));
+    follows.save(new FollowEntity(FollowEdge.follower(ids.get(Viewer.FOLLOWER)).following(author)));
+    follows.save(new FollowEntity(FollowEdge.follower(ids.get(Viewer.MUTER)).following(author)));
     mutes.save(new UserMuteEntity(ids.get(Viewer.MUTER), author, false, null));
-    blocks.save(new UserBlockEntity(author, ids.get(Viewer.BLOCKED)));
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(author).blocked(ids.get(Viewer.BLOCKED))));
     em.flush();
     jdbc.update(
         "INSERT INTO room (owner_id, name, created_at, updated_at) VALUES (?, ?, NOW(6), NOW(6))",

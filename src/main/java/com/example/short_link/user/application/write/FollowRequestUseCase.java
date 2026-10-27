@@ -3,6 +3,7 @@ package com.example.short_link.user.application.write;
 import com.example.short_link.common.event.AccountUnlockedEvent;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.user.application.read.FollowRequestView;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -40,8 +41,9 @@ public class FollowRequestUseCase {
   @Transactional
   public void authorize(Long ownerId, String username) {
     UserEntity requester = requester(ownerId, username);
-    if (!followRepository.existsByFollowerIdAndFollowingId(requester.getId(), ownerId)) {
-      followRepository.save(new FollowEntity(requester.getId(), ownerId));
+    FollowEdge follow = FollowEdge.follower(requester.getId()).following(ownerId);
+    if (!followRepository.exists(follow)) {
+      followRepository.save(new FollowEntity(follow));
     }
   }
 
@@ -61,7 +63,7 @@ public class FollowRequestUseCase {
         userRepository
             .findByUsername(username)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    if (followRequests.delete(requester.getId(), ownerId) == 0) {
+    if (followRequests.delete(FollowEdge.follower(requester.getId()).following(ownerId)) == 0) {
       throw new UserException(UserErrorCode.FOLLOW_REQUEST_NOT_FOUND, username);
     }
     events.publishEvent(new FollowRequestSettledEvent(ownerId, requester.getId(), null));

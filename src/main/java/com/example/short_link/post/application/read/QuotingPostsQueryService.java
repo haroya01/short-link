@@ -17,7 +17,7 @@ public class QuotingPostsQueryService {
   private final PostRepository postRepository;
   private final PostFeedItemAssembler feedItemAssembler;
 
-  public PublicFeedView ofNote(Long noteId, Long viewerId, int page) {
+  public PublicFeedView ofNote(Long viewerId, Long noteId, int page) {
     int current = Math.max(page, 0);
     List<PostEntity> rows =
         postRepository.findPublishedQuotingNote(noteId, viewerId, current * SIZE, SIZE + 1);

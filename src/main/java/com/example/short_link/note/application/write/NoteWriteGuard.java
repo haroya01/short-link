@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.domain.NoteEntity;
@@ -21,7 +22,8 @@ class NoteWriteGuard {
     if (note.isRemote()) {
       return;
     }
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
       throw new NoteException(code);
     }
   }

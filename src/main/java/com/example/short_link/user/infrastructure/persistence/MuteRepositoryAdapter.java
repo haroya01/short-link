@@ -2,6 +2,7 @@ package com.example.short_link.user.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.user.HeardSql;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.user.domain.UserMuteEntity;
 import com.example.short_link.user.domain.repository.MuteRepository;
 import jakarta.persistence.EntityManager;
@@ -41,27 +42,14 @@ class MuteRepositoryAdapter implements MuteRepository {
     return jpa.findActive(userId, now);
   }
 
-  @Override
-  public boolean silences(Long recipientId, Long actorId, Instant now) {
-    Object hit =
-        em.createNativeQuery(
-                "SELECT EXISTS (SELECT 1 FROM user_block b"
-                    + " WHERE b.blocker_id = :recipient AND b.blocked_id = :actor)"
-                    + " OR EXISTS (SELECT 1 FROM user_mute m"
-                    + " WHERE m.user_id = :recipient AND m.muted_user_id = :actor"
-                    + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))")
-            .setParameter("recipient", recipientId)
-            .setParameter("actor", actorId)
-            .setParameter("now", now)
-            .getSingleResult();
-    return ((Number) hit).intValue() == 1;
-  }
-
   // One statement either way. The conversation and server blocks belong to the note and federation
   // slices and are read here natively so a notice costs one check, not three.
   @Override
-  public boolean silences(
-      Long recipientId, Long actorId, Long remoteActorId, Long conversationId, Instant now) {
+  public boolean silences(SilenceCheck check, Instant now) {
+    Long recipientId = check.recipientId();
+    Long actorId = check.actor().userId();
+    Long remoteActorId = check.actor().remoteId();
+    Long conversationId = check.conversationId();
     List<String> checks = new ArrayList<>();
     if (actorId != null) {
       checks.add(

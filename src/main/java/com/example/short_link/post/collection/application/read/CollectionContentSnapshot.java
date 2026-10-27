@@ -4,7 +4,7 @@ import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
-import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.application.read.UserSummary;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,7 +14,7 @@ record CollectionContentSnapshot(
     Map<Long, PostEntity> posts,
     Map<Long, PostHighlightEntity> highlights,
     Map<Long, NoteBlock> notes,
-    Map<Long, UserEntity> authors) {
+    Map<Long, UserSummary> authors) {
 
   private static final int PREVIEW_LABEL_MAX = 40;
 
@@ -83,9 +83,9 @@ record CollectionContentSnapshot(
   }
 
   private String authorUsername(PostEntity post) {
-    UserEntity author = authors.get(post.getUserId());
+    UserSummary author = authors.get(post.getUserId());
     if (author == null) return null;
-    return author.getUsername();
+    return author.username();
   }
 
   private String previewLabel(CollectionConnectionEntity connection) {

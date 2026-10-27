@@ -10,6 +10,7 @@ import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -37,7 +38,10 @@ class PostLikeQueryServiceTest {
         new PostLikeQueryService(
             postRepository,
             postLikeRepository,
-            new PostFeedItemAssembler(userRepository, seriesRepository, PostAccessFixtures.rooms()),
+            new PostFeedItemAssembler(
+                new UserSummaryReader(userRepository),
+                seriesRepository,
+                PostAccessFixtures.rooms()),
             PostAccessFixtures.policy());
   }
 

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.note.application.access.NoteAccess;
 import com.example.short_link.note.application.read.NoteView;
@@ -149,7 +150,7 @@ class NotePollServiceTest {
     when(notes.findById(3L)).thenReturn(Optional.of(plain));
     fails(() -> service().vote(8L, 3L, List.of(0)), NoteErrorCode.NOTE_POLL_NOT_FOUND);
 
-    when(blocks.isBlocked(7L, 8L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
     fails(() -> service().vote(8L, 1L, List.of(0)), NoteErrorCode.NOTE_POLL_BLOCKED);
 
     when(notes.findById(4L)).thenReturn(Optional.empty());
