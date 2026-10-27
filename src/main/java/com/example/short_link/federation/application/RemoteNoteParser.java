@@ -145,6 +145,8 @@ public class RemoteNoteParser {
 
   public Parsed parse(JsonNode object, JsonNode activity) {
     Kind kind = kindOf(object).orElse(Kind.NOTE);
+    // An Article, Page or Video is kept as a card, as Mastodon converts them: title, summary or
+    // start of the text, one picture, the address; the full text and video stay on their server.
     boolean card = kind == Kind.ARTICLE || kind == Kind.PAGE || kind == Kind.VIDEO;
     String inReplyTo = idOf(object.get("inReplyTo"));
     Set<String> to = addresses(object.get("to"), activity.get("to"));
@@ -368,6 +370,8 @@ public class RemoteNoteParser {
     return addressed;
   }
 
+  // Mastodon's addressing: Public in "to" is public, in "cc" unlisted; a followers collection is
+  // followers-only; anything else is for the people named.
   static NoteVisibility visibility(Set<String> to, Set<String> cc) {
     return NoteVisibility.addressed(
         to.stream().anyMatch(PUBLIC::contains),
