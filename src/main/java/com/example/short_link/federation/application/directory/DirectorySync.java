@@ -94,7 +94,7 @@ public class DirectorySync {
   public List<Outcome> run() {
     Instant started = clock.instant();
     List<Outcome> outcomes = new ArrayList<>();
-    for (FederationDirectorySourceEntity source : sources.list()) {
+    for (FederationDirectorySourceEntity source : sources.findAllByOrderByHostAsc()) {
       if (source.isEnabled()
           && (source.getRetryAfter() == null || !started.isBefore(source.getRetryAfter()))) {
         try {
@@ -115,7 +115,7 @@ public class DirectorySync {
   // never read, or its last run was cut short.
   public boolean unreadSince(Instant since) {
     Instant now = clock.instant();
-    return sources.list().stream()
+    return sources.findAllByOrderByHostAsc().stream()
         .anyMatch(
             source ->
                 source.isEnabled()
@@ -125,7 +125,7 @@ public class DirectorySync {
   }
 
   public Outcome sync(String host) {
-    Optional<FederationDirectorySourceEntity> found = sources.find(host);
+    Optional<FederationDirectorySourceEntity> found = sources.findById(host);
     if (found.isEmpty()) {
       return new Outcome(host, 0, 0, 0, 0, 0, "gone");
     }

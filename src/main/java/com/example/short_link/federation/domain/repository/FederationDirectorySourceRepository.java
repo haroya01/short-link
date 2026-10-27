@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public interface FederationDirectorySourceRepository {
 
-  List<FederationDirectorySourceEntity> list();
+  List<FederationDirectorySourceEntity> findAllByOrderByHostAsc();
 
-  Optional<FederationDirectorySourceEntity> find(String host);
+  Optional<FederationDirectorySourceEntity> findById(String host);
 
   FederationDirectorySourceEntity save(FederationDirectorySourceEntity source);
 

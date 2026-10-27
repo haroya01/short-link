@@ -40,7 +40,7 @@ class DomainBlocksTest {
 
   @Test
   void blockingAServerEndsFollowsBothWaysAndClearsItsNotices() {
-    when(blocks.find(7L, "mastodon.social")).thenReturn(Optional.empty());
+    when(blocks.findByUserIdAndDomain(7L, "mastodon.social")).thenReturn(Optional.empty());
     when(blocks.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
     DomainBlocks.View view = service().block(7L, "  @Mastodon.Social ");
@@ -53,7 +53,7 @@ class DomainBlocksTest {
 
   @Test
   void blockingTheSameServerAgainKeepsOneRow() {
-    when(blocks.find(7L, "mastodon.social"))
+    when(blocks.findByUserIdAndDomain(7L, "mastodon.social"))
         .thenReturn(Optional.of(new UserDomainBlockEntity(7L, "mastodon.social")));
 
     service().block(7L, "mastodon.social");
@@ -86,7 +86,8 @@ class DomainBlocksTest {
 
   @Test
   void theListIsTheMembersServers() {
-    when(blocks.list(7L)).thenReturn(List.of(new UserDomainBlockEntity(7L, "a.example")));
+    when(blocks.findByUserIdOrderByDomainAsc(7L))
+        .thenReturn(List.of(new UserDomainBlockEntity(7L, "a.example")));
 
     assertThat(service().list(7L))
         .extracting(DomainBlocks.View::domain)

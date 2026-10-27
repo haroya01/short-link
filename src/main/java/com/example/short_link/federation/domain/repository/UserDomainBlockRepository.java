@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public interface UserDomainBlockRepository {
 
-  List<UserDomainBlockEntity> list(Long userId);
+  List<UserDomainBlockEntity> findByUserIdOrderByDomainAsc(Long userId);
 
-  Optional<UserDomainBlockEntity> find(Long userId, String domain);
+  Optional<UserDomainBlockEntity> findByUserIdAndDomain(Long userId, String domain);
 
   UserDomainBlockEntity save(UserDomainBlockEntity block);
 
