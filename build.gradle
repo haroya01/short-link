@@ -3,7 +3,10 @@ plugins {
 	id 'jacoco'
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
-	id 'com.diffplug.spotless' version '6.25.0'
+	id 'com.diffplug.spotless' version '8.10.4'
+	id 'net.ltgt.errorprone' version '5.1.1'
+	id 'pmd'
+	id 'info.solidsoft.pitest' version '1.19.0'
 }
 
 group = 'com.example'
@@ -65,9 +68,9 @@ dependencies {
 	runtimeOnly 'net.logstash.logback:logstash-logback-encoder:9.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
-	testImplementation 'io.github.haroya01:query-audit-spring-boot-starter:0.6.0'
-	testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-	testImplementation 'io.github.haroya01:query-audit-mysql:0.6.0'
+	testImplementation 'io.github.haroya01:query-audit-spring-boot-starter:0.7.2'
+	testImplementation 'com.tngtech.archunit:archunit-junit5:1.5.1'
+	testImplementation 'io.github.haroya01:query-audit-mysql:0.7.2'
 	// The HTTP capture helper calls QueryInterceptor directly (datasource-proxy is runtime-only upstream).
 	testImplementation 'net.ttddyy:datasource-proxy:1.10'
 	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
@@ -75,6 +78,16 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	errorprone 'com.google.errorprone:error_prone_core:2.51.0'
+}
+
+tasks.named('compileJava') {
+	options.compilerArgs += ['-Xmaxwarns', '100000']
+	options.errorprone.disableWarningsInGeneratedCode = true
+}
+
+tasks.named('compileTestJava') {
+	options.errorprone.enabled = false
 }
 
 tasks.named('test') {
@@ -249,11 +262,107 @@ jacocoTestCoverageVerification {
 spotless {
 	java {
 		target 'src/**/*.java'
-		googleJavaFormat('1.22.0')
+		googleJavaFormat('1.36.1')
 		removeUnusedImports()
 		trimTrailingWhitespace()
 		endWithNewline()
 	}
+}
+
+pmd {
+	toolVersion = '7.28.0'
+	ignoreFailures = true
+	consoleOutput = false
+	ruleSets = []
+	ruleSetFiles = files('config/pmd/size-rules.xml')
+}
+
+tasks.named('pmdTest') {
+	enabled = false
+}
+
+def pmdSizeBaseline = file('config/pmd/size-baseline.txt')
+
+def pmdSizeFindings = {
+	def report = tasks.named('pmdMain').get().reports.xml.outputLocation.get().asFile
+	def root = projectDir.toPath()
+	def found = [:]
+	new groovy.xml.XmlSlurper().parse(report).file.each { f ->
+		def path = root.relativize(new File(f.@name.toString()).toPath()).toString()
+		f.violation.each { v ->
+			def message = v.text().trim()
+			def quoted = message =~ /'([^']*)'/
+			def scope = quoted.find() ? quoted.group(1) : (v.@method.toString() ?: v.@class.toString())
+			def value = (message.replaceAll(/'[^']*'/, '') =~ /\d+/)[0] as long
+			def key = "${v.@rule}|${path}|${scope}"
+			def n = 1
+			while (found.containsKey("${key}#${n}".toString())) n++
+			found["${key}#${n}".toString()] = value
+		}
+	}
+	found
+}
+
+tasks.register('pmdSizeRatchet') {
+	group = 'verification'
+	description = 'Fail when a PMD size or complexity finding differs from config/pmd/size-baseline.txt.'
+	dependsOn 'pmdMain'
+	inputs.file(pmdSizeBaseline)
+	doLast {
+		def current = pmdSizeFindings()
+		def baseline = [:]
+		pmdSizeBaseline.eachLine { line ->
+			def cut = line.lastIndexOf('=')
+			baseline[line.substring(0, cut)] = line.substring(cut + 1) as long
+		}
+		def added = current.findAll { k, v -> !baseline.containsKey(k) }
+		def grew = current.findAll { k, v -> baseline.containsKey(k) && v > baseline[k] }
+		def shrank = current.findAll { k, v -> baseline.containsKey(k) && v < baseline[k] }
+		def fixed = baseline.keySet() - current.keySet()
+		logger.lifecycle("PMD size ratchet: current=${current.size()} baseline=${baseline.size()} new=${added.size()} grew=${grew.size()} shrank=${shrank.size()} fixed=${fixed.size()}")
+		if (added || grew) {
+			throw new GradleException("New or grown PMD size findings:\n" + (added + grew).collect { k, v -> "  ${k}=${v} (baseline ${baseline[k] ?: 'none'})" }.join('\n'))
+		}
+		if (shrank || fixed) {
+			throw new GradleException("PMD size findings went down; run ./gradlew pmdSizeBaselineWrite and commit config/pmd/size-baseline.txt:\n" + (shrank.collect { k, v -> "  ${k}: ${baseline[k]} -> ${v}" } + fixed.collect { "  ${it}: fixed" }).join('\n'))
+		}
+	}
+}
+
+tasks.register('pmdSizeBaselineWrite') {
+	group = 'verification'
+	description = 'Rewrite config/pmd/size-baseline.txt from the current PMD size and complexity findings.'
+	dependsOn 'pmdMain'
+	doLast {
+		pmdSizeBaseline.text = pmdSizeFindings().collect { k, v -> "${k}=${v}" }.sort().join('\n') + '\n'
+	}
+}
+
+tasks.named('check') {
+	dependsOn 'pmdSizeRatchet'
+}
+
+pitest {
+	pitestVersion = '1.30.1'
+	junit5PluginVersion = '1.2.3'
+	addJUnitPlatformLauncher = false
+	targetClasses = [
+		'com.example.short_link.notification.domain.policy.*',
+		'com.example.short_link.federation.domain.foryou.*',
+		'com.example.short_link.link.classifier.application.helper.*',
+	]
+	targetTests = [
+		'com.example.short_link.notification.domain.policy.*',
+		'com.example.short_link.federation.domain.foryou.*',
+		'com.example.short_link.home.HomeRankVectorsTest',
+		'com.example.short_link.link.classifier.application.helper.*',
+	]
+	excludedTestClasses = ['com.example.short_link.federation.domain.foryou.replay.*']
+	threads = 4
+	outputFormats = ['XML', 'HTML']
+	timestampedReports = false
+	jvmArgs = ['-Xmx1g']
+	mutationThreshold = 93
 }
 
 tasks.register('downloadGeoLite2Asn') {

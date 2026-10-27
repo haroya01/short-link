@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class JndiTxtResolver implements TxtResolver {
 
+  // JNDI here is the DNS provider only; a host must not carry a URL scheme such as ldap: or rmi:.
   @Override
+  @SuppressWarnings("BanJNDI")
   public List<String> lookup(String host) {
     try {
       InitialDirContext ctx =
