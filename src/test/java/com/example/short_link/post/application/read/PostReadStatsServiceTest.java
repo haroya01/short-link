@@ -103,9 +103,9 @@ class PostReadStatsServiceTest {
     VisitProjections.HourVisitRow h = mock(VisitProjections.HourVisitRow.class);
     when(h.getHour()).thenReturn(21);
     when(h.getCount()).thenReturn(50L);
-    when(reader.hourly(any(), any())).thenReturn(List.of(h));
+    when(reader.hourly(any(), any(), any(), any())).thenReturn(List.of(h));
     // dow 0 (default→UNKNOWN) + 1..7 covers every dayOfWeekName branch.
-    when(reader.heatmap(any(), any()))
+    when(reader.heatmap(any(), any(), any(), any()))
         .thenReturn(
             List.of(heat(0), heat(1), heat(2), heat(3), heat(4), heat(5), heat(6), heat(7)));
     VisitProjections.CountryVisitRow c = mock(VisitProjections.CountryVisitRow.class);
@@ -137,7 +137,11 @@ class PostReadStatsServiceTest {
     VisitProjections.DailyVisitRow day = mock(VisitProjections.DailyVisitRow.class);
     when(day.getDay()).thenReturn(LocalDate.of(2026, 6, 30));
     when(day.getCount()).thenReturn(4L);
-    when(reader.daily(List.of(1L), Instant.parse("2026-06-01T00:00:00Z"), "-04:00"))
+    when(reader.daily(
+            List.of(1L),
+            Instant.parse("2026-06-01T00:00:00Z"),
+            Instant.parse("2026-07-01T00:00:01Z"),
+            "-04:00"))
         .thenReturn(List.of(day));
 
     VisitStats stats = service.forPost(USER, 1L);
@@ -146,6 +150,44 @@ class PostReadStatsServiceTest {
     assertThat(stats.dailyVisits())
         .containsExactly(new VisitStats.DailyVisit(LocalDate.of(2026, 6, 30), 4L));
   }
+
+  @Test
+  void aNewYorkAuthorsStatsAreReadPerOffsetAndSummedAcrossTheFallBack() {
+    Instant fallBack = Instant.parse("2026-11-01T06:00:00Z");
+    Instant now = Instant.parse("2026-11-10T15:00:00Z");
+    Instant until = Instant.parse("2026-11-10T15:00:01Z");
+    Instant firstView = Instant.parse("2026-10-20T00:00:00Z");
+    PostReadStatsService inNovember =
+        new PostReadStatsService(
+            reader, postRepository, seriesOwnership, users, Clock.fixed(now, ZoneOffset.UTC));
+    when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
+    when(users.timezone(USER)).thenReturn(Optional.of("America/New_York"));
+    when(reader.firstViewedAt(List.of(1L))).thenReturn(firstView);
+    when(reader.daily(List.of(1L), Instant.parse("2026-10-11T15:00:00Z"), fallBack, "-04:00"))
+        .thenReturn(List.of(new Day(LocalDate.of(2026, 11, 1), 1L)));
+    when(reader.daily(List.of(1L), fallBack, until, "-05:00"))
+        .thenReturn(
+            List.of(
+                new Day(LocalDate.of(2026, 11, 1), 2L), new Day(LocalDate.of(2026, 11, 5), 1L)));
+    when(reader.hourly(List.of(1L), firstView, fallBack, "-04:00"))
+        .thenReturn(List.of(new Hour(9, 2L)));
+    when(reader.hourly(List.of(1L), fallBack, until, "-05:00"))
+        .thenReturn(List.of(new Hour(9, 1L), new Hour(10, 1L)));
+
+    VisitStats stats = inNovember.forPost(USER, 1L);
+
+    assertThat(stats.dailyVisits())
+        .containsExactly(
+            new VisitStats.DailyVisit(LocalDate.of(2026, 11, 1), 3L),
+            new VisitStats.DailyVisit(LocalDate.of(2026, 11, 5), 1L));
+    assertThat(stats.hourVisits())
+        .containsExactly(new VisitStats.HourVisit(9, 3L), new VisitStats.HourVisit(10, 1L));
+    assertThat(stats.peakHour()).isEqualTo(9);
+  }
+
+  record Day(LocalDate getDay, Long getCount) implements VisitProjections.DailyVisitRow {}
+
+  record Hour(Integer getHour, Long getCount) implements VisitProjections.HourVisitRow {}
 
   @Test
   void forPostFallsBackToDefaultTimezoneWhenUserMissing() {
@@ -199,6 +241,6 @@ class PostReadStatsServiceTest {
     assertThat(stats.countryVisits()).isEmpty();
     // Empty member set must not hit the reader (SQL IN () would be invalid).
     verify(reader, never()).countViews(any());
-    verify(reader, never()).daily(any(), any(), any());
+    verify(reader, never()).daily(any(), any(), any(), any());
   }
 }

@@ -89,7 +89,7 @@ class ProfileStatsServiceTest {
     stubVisits(1L);
     HourVisitRow hour1 = hourRow(0, 10L);
     HourVisitRow hour2 = hourRow(21, 99L);
-    when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of(hour1, hour2));
+    when(visits.findHourlyVisits(anyLong(), any(), any(), any())).thenReturn(List.of(hour1, hour2));
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
     VisitStats out = service.statsForOwner(1L);
@@ -110,7 +110,7 @@ class ProfileStatsServiceTest {
   void publicStatsOptedInComputes() {
     UserEntity u = user(1L, null, true);
     stubVisits(1L);
-    when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
+    when(visits.findHourlyVisits(anyLong(), any(), any(), any())).thenReturn(List.of());
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
     VisitStats out = service.publicStats("alice");
     assertThat(out.peakHour()).isNull();
@@ -140,7 +140,7 @@ class ProfileStatsServiceTest {
   void invalidTimezoneFallsBackToSeoul() {
     UserEntity u = user(1L, "Not/A/Zone", false);
     stubVisits(1L);
-    when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
+    when(visits.findHourlyVisits(anyLong(), any(), any(), any())).thenReturn(List.of());
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
     VisitStats out = service.statsForOwner(1L);
     assertThat(out.timezone()).isEqualTo("Asia/Seoul");
@@ -150,7 +150,7 @@ class ProfileStatsServiceTest {
   void heatmapDayOfWeekMapsAllValues() {
     UserEntity u = user(1L, "Asia/Seoul", false);
     stubVisits(1L);
-    when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
+    when(visits.findHourlyVisits(anyLong(), any(), any(), any())).thenReturn(List.of());
     List<HeatmapVisitRow> rows =
         List.of(
             heat(1, 0, 1L),
@@ -161,7 +161,7 @@ class ProfileStatsServiceTest {
             heat(6, 5, 6L),
             heat(7, 6, 7L),
             heat(99, 7, 8L));
-    when(visits.findHeatmap(anyLong(), any())).thenReturn(rows);
+    when(visits.findHeatmap(anyLong(), any(), any(), any())).thenReturn(rows);
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
     VisitStats out = service.statsForOwner(1L);
     assertThat(out.heatmap())
@@ -186,9 +186,10 @@ class ProfileStatsServiceTest {
     when(visits.countUniqueVisitorsByProfileUserId(1L)).thenReturn(1L);
     when(visits.findFirstVisitAt(1L)).thenReturn(null);
     when(visits.findLastVisitAt(1L)).thenReturn(null);
-    when(visits.findDailyVisits(anyLong(), any(Instant.class), any())).thenReturn(List.of());
-    when(visits.findHourlyVisits(anyLong(), any())).thenReturn(List.of());
-    when(visits.findHeatmap(anyLong(), any())).thenReturn(List.of());
+    when(visits.findDailyVisits(anyLong(), any(Instant.class), any(Instant.class), any()))
+        .thenReturn(List.of());
+    when(visits.findHourlyVisits(anyLong(), any(), any(), any())).thenReturn(List.of());
+    when(visits.findHeatmap(anyLong(), any(), any(), any())).thenReturn(List.of());
     CountryVisitRow nullCountry = country(null, 3L);
     DeviceVisitRow nullDevice = device(null, 3L);
     BrowserVisitRow nullBrowser = browser(null, 3L);
@@ -217,7 +218,11 @@ class ProfileStatsServiceTest {
   void statsReadTheOwnersOffsetAndWindowAtTheClocksInstant() {
     UserEntity u = user(1L, "America/New_York", false);
     DailyVisitRow day = mockDaily(LocalDate.of(2026, 6, 30), 4L);
-    when(visits.findDailyVisits(1L, Instant.parse("2026-06-01T00:00:00Z"), "-04:00"))
+    when(visits.findDailyVisits(
+            1L,
+            Instant.parse("2026-06-01T00:00:00Z"),
+            Instant.parse("2026-07-01T00:00:01Z"),
+            "-04:00"))
         .thenReturn(List.of(day));
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
@@ -226,6 +231,34 @@ class ProfileStatsServiceTest {
     assertThat(out.timezone()).isEqualTo("America/New_York");
     assertThat(out.dailyVisits())
         .containsExactly(new VisitStats.DailyVisit(LocalDate.of(2026, 6, 30), 4L));
+  }
+
+  @Test
+  void aNewYorkOwnersStatsAreReadPerOffsetAndSummedAcrossTheFallBack() {
+    Instant fallBack = Instant.parse("2026-11-01T06:00:00Z");
+    Instant now = Instant.parse("2026-11-10T15:00:00Z");
+    Instant until = Instant.parse("2026-11-10T15:00:01Z");
+    Instant firstVisit = Instant.parse("2026-10-20T00:00:00Z");
+    ProfileStatsService inNovember =
+        new ProfileStatsService(userRepository, visits, Clock.fixed(now, ZoneOffset.UTC));
+    UserEntity u = user(1L, "America/New_York", false);
+    when(userRepository.findById(1L)).thenReturn(Optional.of(u));
+    List<HourVisitRow> summerHours = List.of(hourRow(9, 2L));
+    List<HourVisitRow> winterHours = List.of(hourRow(9, 1L), hourRow(10, 1L));
+    List<HeatmapVisitRow> summerCells = List.of(heat(7, 0, 1L));
+    List<HeatmapVisitRow> winterCells = List.of(heat(5, 9, 1L), heat(7, 0, 1L));
+    when(visits.findFirstVisitAt(1L)).thenReturn(firstVisit);
+    when(visits.findHourlyVisits(1L, firstVisit, fallBack, "-04:00")).thenReturn(summerHours);
+    when(visits.findHourlyVisits(1L, fallBack, until, "-05:00")).thenReturn(winterHours);
+    when(visits.findHeatmap(1L, firstVisit, fallBack, "-04:00")).thenReturn(summerCells);
+    when(visits.findHeatmap(1L, fallBack, until, "-05:00")).thenReturn(winterCells);
+
+    VisitStats out = inNovember.statsForOwner(1L);
+
+    assertThat(out.hourVisits())
+        .containsExactly(new VisitStats.HourVisit(9, 3L), new VisitStats.HourVisit(10, 1L));
+    assertThat(out.heatmap())
+        .containsExactly(new HeatmapCell("THURSDAY", 9, 1L), new HeatmapCell("SATURDAY", 0, 2L));
   }
 
   private void stubVisits(long uid) {
@@ -244,8 +277,9 @@ class ProfileStatsServiceTest {
     when(visits.countUniqueVisitorsByProfileUserId(uid)).thenReturn(45L);
     when(visits.findFirstVisitAt(uid)).thenReturn(Instant.parse("2024-01-01T00:00:00Z"));
     when(visits.findLastVisitAt(uid)).thenReturn(Instant.parse("2024-01-02T00:00:00Z"));
-    when(visits.findDailyVisits(anyLong(), any(Instant.class), any())).thenReturn(List.of(daily));
-    when(visits.findHeatmap(anyLong(), any())).thenReturn(List.of(heat));
+    when(visits.findDailyVisits(anyLong(), any(Instant.class), any(Instant.class), any()))
+        .thenReturn(List.of(daily));
+    when(visits.findHeatmap(anyLong(), any(), any(), any())).thenReturn(List.of(heat));
     when(visits.topCountries(anyLong(), anyInt())).thenReturn(List.of(country));
     when(visits.findDeviceVisits(anyLong())).thenReturn(List.of(device));
     when(visits.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(browser));

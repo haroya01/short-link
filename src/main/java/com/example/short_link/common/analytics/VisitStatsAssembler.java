@@ -10,11 +10,15 @@ import com.example.short_link.common.analytics.VisitProjections.ReferrerHostVisi
 import com.example.short_link.common.analytics.VisitProjections.SourceChannelVisitRow;
 import com.example.short_link.common.analytics.VisitProjections.UtmCampaignVisitRow;
 import com.example.short_link.common.analytics.VisitProjections.UtmSourceVisitRow;
+import com.example.short_link.common.time.OffsetPeriod;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Function;
 
 public final class VisitStatsAssembler {
@@ -30,7 +34,12 @@ public final class VisitStatsAssembler {
       long botVisits,
       long uniqueVisits,
       Instant firstVisitAt,
-      Instant lastVisitAt) {}
+      Instant lastVisitAt) {
+
+    public Instant firstVisitOr(Instant fallback) {
+      return firstVisitAt == null ? fallback : firstVisitAt;
+    }
+  }
 
   public record Rows(
       List<DailyVisitRow> daily,
@@ -44,9 +53,22 @@ public final class VisitStatsAssembler {
       List<UtmCampaignVisitRow> utmCampaigns,
       List<UtmSourceVisitRow> utmSources) {}
 
+  public static <R> List<R> overPeriods(
+      List<OffsetPeriod> periods, Function<OffsetPeriod, List<R>> query) {
+    return periods.stream().flatMap(period -> query.apply(period).stream()).toList();
+  }
+
   public static VisitStats assemble(ZoneId zone, Totals totals, Rows rows) {
     List<VisitStats.HourVisit> hourly =
-        map(rows.hourly(), r -> new VisitStats.HourVisit(r.getHour(), r.getCount()));
+        sums(
+                rows.hourly(),
+                HourVisitRow::getHour,
+                HourVisitRow::getCount,
+                Comparator.naturalOrder())
+            .entrySet()
+            .stream()
+            .map(e -> new VisitStats.HourVisit(e.getKey(), e.getValue()))
+            .toList();
     return new VisitStats(
         zone.getId(),
         totals.totalVisits(),
@@ -56,11 +78,28 @@ public final class VisitStatsAssembler {
         totals.firstVisitAt(),
         totals.lastVisitAt(),
         peakHour(hourly),
-        map(rows.daily(), r -> new VisitStats.DailyVisit(r.getDay(), r.getCount())),
+        sums(
+                rows.daily(),
+                DailyVisitRow::getDay,
+                DailyVisitRow::getCount,
+                Comparator.naturalOrder())
+            .entrySet()
+            .stream()
+            .map(e -> new VisitStats.DailyVisit(e.getKey(), e.getValue()))
+            .toList(),
         hourly,
-        map(
-            rows.heatmap(),
-            r -> new HeatmapCell(dayOfWeekName(r.getDow()), r.getHour(), r.getCount())),
+        sums(
+                rows.heatmap(),
+                r -> new DowHour(r.getDow(), r.getHour()),
+                HeatmapVisitRow::getCount,
+                DowHour.ORDER)
+            .entrySet()
+            .stream()
+            .map(
+                e ->
+                    new HeatmapCell(
+                        dayOfWeekName(e.getKey().dow()), e.getKey().hour(), e.getValue()))
+            .toList(),
         map(
             rows.countries(),
             r -> new VisitStats.CountryVisit(orUnknown(r.getCountry()), r.getCount())),
@@ -78,6 +117,20 @@ public final class VisitStatsAssembler {
             rows.utmCampaigns(),
             r -> new VisitStats.UtmCampaignVisit(r.getCampaign(), r.getCount())),
         map(rows.utmSources(), r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount())));
+  }
+
+  private static <R, K> SortedMap<K, Long> sums(
+      List<R> rows, Function<R, K> key, Function<R, Long> count, Comparator<K> order) {
+    SortedMap<K, Long> sums = new TreeMap<>(order);
+    for (R row : rows) {
+      sums.merge(key.apply(row), count.apply(row), Long::sum);
+    }
+    return sums;
+  }
+
+  private record DowHour(int dow, int hour) {
+    static final Comparator<DowHour> ORDER =
+        Comparator.comparingInt(DowHour::dow).thenComparingInt(DowHour::hour);
   }
 
   private static Integer peakHour(List<VisitStats.HourVisit> hourly) {

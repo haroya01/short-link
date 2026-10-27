@@ -21,11 +21,14 @@ public interface PostReadStatsReader {
 
   Instant lastViewedAt(Collection<Long> postIds);
 
-  List<VisitProjections.DailyVisitRow> daily(Collection<Long> postIds, Instant from, String tz);
+  List<VisitProjections.DailyVisitRow> daily(
+      Collection<Long> postIds, Instant from, Instant until, String tz);
 
-  List<VisitProjections.HourVisitRow> hourly(Collection<Long> postIds, String tz);
+  List<VisitProjections.HourVisitRow> hourly(
+      Collection<Long> postIds, Instant from, Instant until, String tz);
 
-  List<VisitProjections.HeatmapVisitRow> heatmap(Collection<Long> postIds, String tz);
+  List<VisitProjections.HeatmapVisitRow> heatmap(
+      Collection<Long> postIds, Instant from, Instant until, String tz);
 
   List<VisitProjections.CountryVisitRow> topCountries(Collection<Long> postIds, int limit);
 

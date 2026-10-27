@@ -2,9 +2,11 @@ package com.example.short_link.profile.application.visit;
 
 import static com.example.short_link.common.analytics.VisitStatsAssembler.DAILY_WINDOW;
 import static com.example.short_link.common.analytics.VisitStatsAssembler.TOP_SIZE;
+import static com.example.short_link.common.analytics.VisitStatsAssembler.overPeriods;
 
 import com.example.short_link.common.analytics.VisitStats;
 import com.example.short_link.common.analytics.VisitStatsAssembler;
+import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -15,6 +17,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,7 +81,7 @@ public class ProfileStatsService {
     Long uid = owner.getId();
     ZoneId zone = ReportZones.zoneOf(owner.getTimezone());
     Instant now = clock.instant();
-    String tz = ReportZones.sqlOffset(zone, now);
+    Instant until = now.truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
 
     VisitStatsAssembler.Totals totals =
         new VisitStatsAssembler.Totals(
@@ -87,11 +91,14 @@ public class ProfileStatsService {
             visits.countUniqueVisitorsByProfileUserId(uid),
             visits.findFirstVisitAt(uid),
             visits.findLastVisitAt(uid));
+    List<OffsetPeriod> recent = OffsetPeriod.between(zone, now.minus(DAILY_WINDOW), until);
+    List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, totals.firstVisitOr(now), until);
     VisitStatsAssembler.Rows rows =
         new VisitStatsAssembler.Rows(
-            visits.findDailyVisits(uid, now.minus(DAILY_WINDOW), tz),
-            visits.findHourlyVisits(uid, tz),
-            visits.findHeatmap(uid, tz),
+            overPeriods(recent, p -> visits.findDailyVisits(uid, p.from(), p.until(), p.offset())),
+            overPeriods(
+                lifetime, p -> visits.findHourlyVisits(uid, p.from(), p.until(), p.offset())),
+            overPeriods(lifetime, p -> visits.findHeatmap(uid, p.from(), p.until(), p.offset())),
             visits.topCountries(uid, TOP_SIZE),
             visits.findDeviceVisits(uid),
             visits.topBrowsers(uid, TOP_SIZE),
