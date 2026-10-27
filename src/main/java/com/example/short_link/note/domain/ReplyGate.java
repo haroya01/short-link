@@ -4,9 +4,7 @@ import com.example.short_link.common.note.Mentions;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 
-// Who may answer a thread whose first note limits replies: its writer, anyone the first note names,
-// and under following anyone its writer follows. A thread whose first note is gone, or that started
-// on another server, takes answers from anyone. writerFollows is asked last, and only then.
+// writerFollows is asked last, and only when the other answers left the question open.
 public final class ReplyGate {
 
   private ReplyGate() {}

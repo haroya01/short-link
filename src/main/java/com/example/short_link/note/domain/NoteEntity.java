@@ -172,7 +172,6 @@ public class NoteEntity extends BaseCreatedEntity {
     return conversationId != null ? conversationId : id;
   }
 
-  // firstNote finds the thread's first note by id; it is not asked when this note is that note.
   public boolean threadWrittenBy(Long userId, Function<Long, Optional<NoteEntity>> firstNote) {
     Long root = conversation();
     if (root.equals(id)) {

@@ -645,7 +645,6 @@ class RoomRepositoryAdapter implements RoomRepository {
     return value instanceof Boolean b ? b : value != null && ((Number) value).intValue() != 0;
   }
 
-  // A note the member has not read: past their watermark and written by someone else.
   private static String unreadBy(String note) {
     return " AND "
         + note
