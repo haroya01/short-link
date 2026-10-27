@@ -12,6 +12,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+// 독자가 본 내용과, 되돌리기·덮어쓰기가 바꾸는 지금 내용을 버전으로 남긴다. 초안 자동 저장은 남기지 않는다.
 @Component
 @RequiredArgsConstructor
 public class PostRevisionCapture {

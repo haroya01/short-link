@@ -501,6 +501,7 @@ src/main/java/com/example/short_link/post/application/write/PostInteractionAcces
 src/main/java/com/example/short_link/post/application/write/PostNumbering.java=2
 src/main/java/com/example/short_link/post/application/write/PostOwnership.java=3
 src/main/java/com/example/short_link/post/application/write/PostReaders.java=3
+src/main/java/com/example/short_link/post/application/write/PostRevisionCapture.java=1
 src/main/java/com/example/short_link/post/application/write/PostSearchTextFlattener.java=6
 src/main/java/com/example/short_link/post/application/write/PostSnapshot.java=1
 src/main/java/com/example/short_link/post/application/write/PostWriteViewAssembler.java=1
@@ -521,6 +522,7 @@ src/main/java/com/example/short_link/post/application/write/SetSeriesPostsUseCas
 src/main/java/com/example/short_link/post/application/write/SetTagPrefUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/UnpublishPostUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/UpdatePostMetadataUseCase.java=2
+src/main/java/com/example/short_link/post/collection/application/read/CollectionContentReader.java=1
 src/main/java/com/example/short_link/post/collection/application/read/CollectionQueryService.java=1
 src/main/java/com/example/short_link/post/collection/application/write/CollectionCommandService.java=2
 src/main/java/com/example/short_link/post/collection/domain/CollectionConnectionEntity.java=1
@@ -534,6 +536,7 @@ src/main/java/com/example/short_link/post/domain/FollowingFeedRef.java=1
 src/main/java/com/example/short_link/post/domain/PostBlockEntity.java=1
 src/main/java/com/example/short_link/post/domain/PostEntity.java=9
 src/main/java/com/example/short_link/post/domain/PostHighlightEntity.java=3
+src/main/java/com/example/short_link/post/domain/PostPerformanceSort.java=1
 src/main/java/com/example/short_link/post/domain/PostViewEventEntity.java=2
 src/main/java/com/example/short_link/post/domain/ProfilePathSlugs.java=1
 src/main/java/com/example/short_link/post/domain/SeriesEntry.java=2

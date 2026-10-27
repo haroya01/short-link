@@ -48,6 +48,7 @@ public class CollectionContentReader {
     return loadPublishedContent(connections).connectionViews(connections);
   }
 
+  // 두 연결을 먼저 고르고 CollectionTargets.shows 는 그 뒤에 거른다. 숨겨진 연결을 더 오래된 연결로 채우지 않는다.
   private Map<Long, List<CollectionConnectionEntity>> previewConnections(
       List<CollectionEntity> collections) {
     Set<Long> ordered =
