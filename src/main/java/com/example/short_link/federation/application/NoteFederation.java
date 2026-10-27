@@ -19,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-// Sends a note's Create, Update or Delete to the shared inbox of every follower's server, once per
-// server. Cheapest checks first: most authors have no actor or no remote followers, and then the
-// note itself is never read.
 @Service
 @RequiredArgsConstructor
 public class NoteFederation {
@@ -83,11 +80,8 @@ public class NoteFederation {
     deliver(authorId, deletion(noteId));
   }
 
-  // A note that answers a note from another server, or names someone there, reaches those servers
-  // too, even when the writer has no followers on them; a direct note goes only to them. Handles
-  // that resolve to no one are left as text, and a note that reaches no one elsewhere takes the
-  // usual path. The people it names are looked up between two transactions: those lookups wait on
-  // other servers.
+  // The people it names are looked up between two transactions: those lookups wait on other
+  // servers.
   public void createdElsewhere(Long noteId, Long authorId) {
     transaction
         .execute(status -> stored(noteId, authorId))
@@ -120,8 +114,8 @@ public class NoteFederation {
             });
   }
 
-  // An edit goes wherever the note went: to the writer's followers, and to the server of the note
-  // it answers and of the people it names.
+  // An edit goes wherever the note went: to the writer's followers, and to the servers of the notes
+  // it answers or quotes and of the people it names.
   public void edited(Long noteId, Long authorId, boolean reachesElsewhere) {
     if (!reachesElsewhere) {
       transaction.executeWithoutResult(status -> deliver(authorId, edit(noteId)));
@@ -152,7 +146,7 @@ public class NoteFederation {
             });
   }
 
-  // The note is already gone, so what it answered and whom it named come with the call.
+  // The note is already gone, so what it answered or quoted and whom it named come with the call.
   public void deleted(
       Long noteId, Long authorId, Long inReplyToId, List<String> handles, Long quotedNoteId) {
     if (inReplyToId == null && handles.isEmpty() && quotedNoteId == null) {

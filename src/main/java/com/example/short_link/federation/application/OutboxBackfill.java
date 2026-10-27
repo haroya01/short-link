@@ -31,10 +31,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// Delivery only brings what an account writes after someone here follows it, so an account seen
-// for the first time has an empty page. Its outbox's first page fills that in: up to twenty of its
-// own public notes, told to no one. An account with five such notes kept is left alone, and any
-// account is looked at once in six hours, whoever asks.
+// Notes read from an outbox are told to no one, and an account's outbox is asked at most once in
+// AGAIN_AFTER, whoever asks.
 @Slf4j
 @Service
 public class OutboxBackfill implements RemoteHistory {
@@ -92,8 +90,6 @@ public class OutboxBackfill implements RemoteHistory {
     this.wait = wait;
   }
 
-  // A member opening the account's notes waits for the fill as long as one remote read may take,
-  // then sees what is kept by then; a slow fill finishes on its own and shows on the next load.
   @Override
   public void fillIn(Long remoteActorId, Long viewerId) {
     if (viewerId == null) {
@@ -131,7 +127,6 @@ public class OutboxBackfill implements RemoteHistory {
                     || actor.getOutboxCheckedAt().isBefore(lookedAtBefore));
   }
 
-  // Someone who blocked the account or its server sees none of it, so nothing is fetched for them.
   private boolean hears(Long viewerId, RemoteActorEntity actor) {
     RemoteAccountStanding standing =
         standings

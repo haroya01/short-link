@@ -64,7 +64,6 @@ public class DomainBlocks {
     return normalize(raw, urls.domain());
   }
 
-  // A server as people type it (any case, a leading @), never this one.
   public static String normalize(String raw, String ownDomain) {
     String domain = raw == null ? "" : raw.strip().toLowerCase(Locale.ROOT);
     if (domain.startsWith("@")) {

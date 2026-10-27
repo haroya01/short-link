@@ -6,9 +6,8 @@ import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-// Stops all relay work by itself when the queue stays four-fifths full for five minutes or five
-// posts in a row each take longer than slow-after; an ERROR line reaches the alerts. Only an admin
-// changing the relay setting starts it again, and a STORE setting has become COUNT by then.
+// Tripping logs at ERROR, which is what reaches the alerts. Only an admin changing the relay
+// setting starts it again, and a STORE setting has become COUNT by then.
 @Slf4j
 @Component
 public class RelayBreaker {

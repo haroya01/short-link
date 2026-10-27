@@ -30,10 +30,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// One low-priority thread works the relay queue, one post at a time and at most per-minute posts a
-// minute, so no server is asked twice at once. A post is believed only as its own server gives it,
-// and kept only in STORE. The thread does not run where scheduling is off; processNext does the
-// same step by hand.
+// One post at a time and at most per-minute posts a minute, so no server is asked twice at once. A
+// post is believed only as its own server gives it.
 @Slf4j
 @Component
 public class RelayWorker implements SmartLifecycle {

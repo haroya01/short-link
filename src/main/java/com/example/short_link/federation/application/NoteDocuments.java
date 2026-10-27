@@ -14,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
-// Renders a note as an ActivityStreams Note. Remote servers sanitise HTML themselves, but we only
-// ever emit escaped text, <p>, <br> and <a href> so nothing user-written becomes markup.
+// Remote servers sanitise HTML themselves, but user-written text is always escaped and the only
+// tags added around it are <p>, <br>, <a> and <span>, so none of it becomes markup.
 @Component
 @RequiredArgsConstructor
 public class NoteDocuments {
@@ -27,7 +27,6 @@ public class NoteDocuments {
 
   private final FederationUrls urls;
 
-  // Someone on another server the note addresses: the author it answers, or a person it names.
   public record Addressee(String actorUri, String handle, String profileUrl) {}
 
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId, Addressing addressing) {
@@ -159,8 +158,8 @@ public class NoteDocuments {
 
   // Mastodon's addressing: public is to everyone and copied to followers; unlisted is to followers
   // and copied to everyone, which keeps it off public timelines; followers-only is to followers
-  // alone. Direct notes leave only as a reply to someone elsewhere, addressed to that person alone;
-  // any other reply to them copies them in.
+  // alone. A direct note is addressed only to the people elsewhere it answers or names; any other
+  // note copies them in.
   private List<String> to(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
     if (note.visibility().direct()) {
       return addressed.stream().map(Addressee::actorUri).toList();

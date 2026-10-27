@@ -55,8 +55,7 @@ public class RemoteNoteIntake {
     return kept;
   }
 
-  // A note from the account's own outbox: written by it, public or unlisted, not a reply, and told
-  // to no one, since it may be years old.
+  // Told to no one, since a note from the account's history may be years old.
   public boolean fromHistory(RemoteActorEntity actor, JsonNode object) {
     String uri = idOf(object);
     if (uri == null
@@ -80,8 +79,9 @@ public class RemoteNoteIntake {
   }
 
   // What a quote shows: the quoted post kept beside it and linked when its author's server
-  // authorized the quote (or it is a member's public note, which anyone may quote here), else the
-  // quoted address at the end of the text. The quoted post's own quote is not followed.
+  // authorized the quote (or it is a member's public or unlisted note, which anyone may quote
+  // here), else the quoted address at the end of the text. The quoted post's own quote is not
+  // followed.
   public RemoteNoteParser.Parsed quoted(RemoteNoteParser.Parsed note) {
     return quoted(note, true);
   }

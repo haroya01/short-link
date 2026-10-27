@@ -30,11 +30,9 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// Reads each instance's public profile directory, most active first, one request at a time with a
-// pause between. An account is stored only as its own server gives its actor, at most new-per-run
-// of them an instance a run; the rest come in later runs. What was listed is marked seen and
-// findable; then anyone listed before with no word of consent for the consent window, from a
-// directory or from their own server, stops being findable by name.
+// One request at a time with a pause between. An account is stored only as its own server gives
+// its actor. Anyone listed before with no word of consent for the consent window, from a directory
+// or from their own server, stops being findable by name.
 @Slf4j
 @Service
 public class DirectorySync {
@@ -111,8 +109,6 @@ public class DirectorySync {
     return outcomes;
   }
 
-  // Whether an enabled source not waiting out a failure has gone unread since the given time:
-  // never read, or its last run was cut short.
   public boolean unreadSince(Instant since) {
     Instant now = clock.instant();
     return sources.findAllByOrderByHostAsc().stream()
