@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
 import com.example.short_link.user.domain.UserEntity;
@@ -39,7 +40,7 @@ class NoteCreatedViewIntegrationTest {
     em.flush();
     em.clear();
     NoteView listed =
-        query.byAuthor(handle, 0, 20, writer).items().stream()
+        query.byAuthor(handle, writer, new PageAsk(0, 20)).items().stream()
             .filter(note -> note.id().equals(created.id()))
             .findFirst()
             .orElseThrow();
