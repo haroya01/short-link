@@ -44,7 +44,7 @@ public class CommentController {
       HttpServletRequest req) {
     return createComment.execute(
         new CreateCommentCommand(userId, postId, request.parentId(), request.body()),
-        PostReaderHeaders.from(userId, req));
+        PostViewerHeaders.from(userId, req));
   }
 
   @DeleteMapping("/comments/{id}")
@@ -56,7 +56,7 @@ public class CommentController {
   @PostMapping("/comments/{id}/like")
   public CommentLikeStatus like(
       @AuthenticationPrincipal Long userId, @PathVariable Long id, HttpServletRequest req) {
-    return likeComment.like(PostReaderHeaders.from(userId, req), id);
+    return likeComment.like(PostViewerHeaders.from(userId, req), id);
   }
 
   @DeleteMapping("/comments/{id}/like")

@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -37,7 +37,7 @@ public class PostBookmarkQueryService {
         postBookmarkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (bookmarks.isEmpty()) return List.of();
 
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     List<Long> postIds = bookmarks.stream().map(PostBookmarkEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()

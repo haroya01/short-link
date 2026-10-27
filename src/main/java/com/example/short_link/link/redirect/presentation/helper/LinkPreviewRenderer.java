@@ -3,6 +3,7 @@ package com.example.short_link.link.redirect.presentation.helper;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.WebAddress;
 import com.example.short_link.link.redirect.application.LinkPreviewData;
+import com.example.short_link.link.redirect.application.PreviewScope;
 import com.example.short_link.link.redirect.application.read.LinkPreviewQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,22 +14,16 @@ public class LinkPreviewRenderer {
 
   private final LinkPreviewQueryService previews;
 
-  public enum Scope {
-    DESTINATION,
-    WITHOUT_DESTINATION_URL,
-    KURL_CARD_ONLY
-  }
-
   public String render(LinkEntity link, String shortUrl, long clickCount) {
-    return render(link, shortUrl, clickCount, Scope.DESTINATION);
+    return render(link, shortUrl, clickCount, PreviewScope.DESTINATION);
   }
 
-  public String render(LinkEntity link, String shortUrl, long clickCount, Scope scope) {
+  public String render(LinkEntity link, String shortUrl, long clickCount, PreviewScope scope) {
     LinkPreviewData preview =
-        scope == Scope.KURL_CARD_ONLY
+        scope == PreviewScope.KURL_CARD_ONLY
             ? previews.findWithoutDestination(link, shortUrl, clickCount)
             : previews.find(link, shortUrl, clickCount);
-    boolean revealDestination = scope == Scope.DESTINATION;
+    boolean revealDestination = scope == PreviewScope.DESTINATION;
     String original = preview.originalUrl();
     boolean linksDestination = revealDestination && WebAddress.is(original);
     // 제목이 없을 때 목적지 주소로 대신 채우는데, 목적지를 숨길 때는 그게 곧 누출이다.

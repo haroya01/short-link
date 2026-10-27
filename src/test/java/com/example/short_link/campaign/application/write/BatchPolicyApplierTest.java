@@ -10,13 +10,16 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
+import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.CampaignLinks;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.read.LinkRefReader;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
+import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +37,15 @@ class BatchPolicyApplierTest {
   private final LinkCacheEviction cache = mock(LinkCacheEviction.class);
   private final BatchPolicyApplier applier =
       new BatchPolicyApplier(
-          batches, new LinkRefReader(links), new CampaignLinks(links, policies, cache));
+          batches,
+          new LinkRefReader(links),
+          new CampaignLinks(
+              links,
+              new LinkSidecars(
+                  mock(LinkAccessControlRepository.class),
+                  policies,
+                  mock(LinkOgMetadataRepository.class)),
+              cache));
   private final List<CampaignBatchEntity> stored = new ArrayList<>();
 
   @Test

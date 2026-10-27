@@ -2,7 +2,9 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
@@ -66,9 +68,16 @@ class PostReadMilestoneConcurrencyIntegrationTest {
     return posts.save(post);
   }
 
-  private static ViewContext visitor(int i, String userAgent) {
-    return new ViewContext(
-        null, userAgent, "203.0.113." + i, "ko", null, null, null, null, null, null, false, null);
+  private static VisitRequest visitor(int i, String userAgent) {
+    return new VisitRequest(
+        null,
+        userAgent,
+        "203.0.113." + i,
+        "ko",
+        null,
+        new Utm(null, null, null, null, null),
+        false,
+        null);
   }
 
   private void runTogether(List<Runnable> tasks) throws Exception {
@@ -136,7 +145,7 @@ class PostReadMilestoneConcurrencyIntegrationTest {
                 views.execute(
                     new RecordPostViewCommand(username, "together"),
                     visitor(visitor, BROWSER),
-                    PostReader.of(null)));
+                    PostViewer.of(null)));
       }
     }
 
@@ -165,16 +174,23 @@ class PostReadMilestoneConcurrencyIntegrationTest {
     views.execute(
         new RecordPostViewCommand(username, "alone", authorId),
         visitor(50, BROWSER),
-        PostReader.of(authorId));
+        PostViewer.of(authorId));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
         visitor(51, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"),
-        PostReader.of(null));
+        PostViewer.of(null));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
-        new ViewContext(
-            null, BROWSER, "203.0.113.52", "ko", null, null, null, null, null, null, true, null),
-        PostReader.of(null));
+        new VisitRequest(
+            null,
+            BROWSER,
+            "203.0.113.52",
+            "ko",
+            null,
+            new Utm(null, null, null, null, null),
+            true,
+            null),
+        PostViewer.of(null));
 
     assertThat(
             jdbc.queryForObject(

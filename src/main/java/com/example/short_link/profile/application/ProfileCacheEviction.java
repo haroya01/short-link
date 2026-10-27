@@ -2,9 +2,9 @@ package com.example.short_link.profile.application;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.transaction.AfterCommit;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -24,7 +24,7 @@ public class ProfileCacheEviction implements ProfileCacheInvalidator {
   @Override
   public void evictByUsername(String username) {
     if (username == null || username.isBlank()) return;
-    String key = username.trim().toLowerCase(Locale.ROOT);
+    String key = Usernames.canonical(username);
     AfterCommit.run(() -> evictCommittedProfile(key));
   }
 

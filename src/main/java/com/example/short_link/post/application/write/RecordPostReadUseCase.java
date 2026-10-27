@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -11,8 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Rereading moves the history entry to the top. Missing or unpublished posts are silently ignored
-// because recording is a beacon.
+// Missing or unpublished posts are silently ignored because recording is a beacon.
 @Service
 @RequiredArgsConstructor
 public class RecordPostReadUseCase {
@@ -22,7 +21,7 @@ public class RecordPostReadUseCase {
   private final PostAccessPolicy access;
 
   @Transactional
-  public void record(PostReader reader, Long postId) {
+  public void record(PostViewer reader, Long postId) {
     Long userId = reader.viewerId();
     PostEntity post = postRepository.findById(postId).orElse(null);
     if (post == null || !access.decide(post, reader).full()) {

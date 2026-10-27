@@ -10,7 +10,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
-import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
+import com.example.short_link.link.redirect.presentation.helper.VisitResponses;
 import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
@@ -30,7 +30,7 @@ public class PasswordUnlockController {
   private final PasswordUnlockUseCase unlockUseCase;
   private final TurnstileProperties turnstile;
   private final LinkHtmlRenderer html;
-  private final VisitHandoff handoff;
+  private final VisitResponses responses;
 
   @OpenToSuspended
   @PostMapping(
@@ -69,7 +69,7 @@ public class PasswordUnlockController {
         return html.passwordPromptResponse(locale, status, shortCode, failed, turnstile.siteKey());
       }
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
-      ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
+      ResponseEntity<?> response = responses.unlocked(result, userAgent, locale);
       outcome =
           switch (result) {
             case RedirectOutcome.CountryBlocked b -> "blocked";
@@ -81,35 +81,10 @@ public class PasswordUnlockController {
           };
       return response;
     } catch (LinkException e) {
-      outcome =
-          switch (e.errorCode()) {
-            case LINK_NOT_FOUND -> "not_found";
-            case LINK_EXPIRED -> "expired";
-            case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
-            case LINK_DISABLED -> "disabled";
-            default -> "error";
-          };
-      // 비밀번호를 맞춰도 한도초과·만료면 JSON 대신 브랜드 HTML 페이지로.
-      ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
-      if (page != null) {
-        return page;
-      }
-      throw e;
+      outcome = VisitResponses.outcomeOf(e);
+      return responses.visitorErrorOrRethrow(e, locale);
     } finally {
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
-  }
-
-  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {
-    return switch (outcome) {
-      case RedirectOutcome.Redirect r -> handoff.unlocked(r, userAgent, locale);
-      case RedirectOutcome.CountryBlocked b -> html.blockedPageResponse(locale);
-      case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
-      case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
-      case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
-      case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
-      case RedirectOutcome.PasswordRequired pr ->
-          throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
-    };
   }
 }

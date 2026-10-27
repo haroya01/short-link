@@ -1,6 +1,6 @@
 package com.example.short_link.post.presentation;
 
-import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
+import static com.example.short_link.post.application.access.PostViewerMatchers.viewer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -41,7 +41,7 @@ class HighlightReplyControllerTest {
 
   @Test
   void createReturns201() throws Exception {
-    when(createReply.execute(any(CreateHighlightReplyCommand.class), any(PostReader.class)))
+    when(createReply.execute(any(CreateHighlightReplyCommand.class), any(PostViewer.class)))
         .thenReturn(
             new HighlightReplyView(
                 10L,

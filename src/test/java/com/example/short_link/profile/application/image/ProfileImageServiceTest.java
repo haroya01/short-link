@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.common.storage.PresignedUpload;
@@ -38,7 +39,8 @@ class ProfileImageServiceTest {
     when(objectStorage.isConfigured()).thenReturn(true);
     service =
         new ProfileImageService(
-            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties));
+            new ImageUploads(
+                UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)));
     when(objectStorage.presignPut(any(), any(), any(Duration.class))).thenReturn("https://signed");
   }
 
@@ -79,7 +81,8 @@ class ProfileImageServiceTest {
     S3StorageProperties unconfigured = new S3StorageProperties("", "", null);
     ProfileImageService unconfiguredService =
         new ProfileImageService(
-            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(unconfigured));
+            new ImageUploads(
+                UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(unconfigured)));
     assertThatThrownBy(() -> unconfiguredService.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(UserException.class);
   }
@@ -138,7 +141,7 @@ class ProfileImageServiceTest {
     S3StorageProperties noBaseUrl = new S3StorageProperties("test-bucket", "ap-northeast-2", null);
     ProfileImageService noCdnService =
         new ProfileImageService(
-            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBaseUrl));
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBaseUrl)));
     when(objectStorage.objectSize("profile-images/1/x.jpg")).thenReturn(Optional.of(1024L));
     ProfileImageService.CommitResult out = noCdnService.commitUpload(1L, "profile-images/1/x.jpg");
     assertThat(out.imageUrl())

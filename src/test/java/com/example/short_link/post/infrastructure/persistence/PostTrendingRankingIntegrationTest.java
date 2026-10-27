@@ -8,6 +8,7 @@ import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,7 +39,9 @@ class PostTrendingRankingIntegrationTest {
   @BeforeEach
   void setUp() {
     tag = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    posts = new PostRepositoryAdapter(jpa, new TrendingPostRanking(jpa, Duration.ofHours(1)));
+    posts =
+        new PostRepositoryAdapter(
+            jpa, new TrendingPostRanking(jpa, Duration.ofHours(1)), Clock.systemUTC());
   }
 
   private Long user(String prefix) {

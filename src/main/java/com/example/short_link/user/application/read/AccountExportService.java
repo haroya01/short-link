@@ -1,14 +1,13 @@
 package com.example.short_link.user.application.read;
 
+import com.example.short_link.common.federation.LocalAddress;
 import com.example.short_link.user.domain.repository.AccountExportReader;
 import com.example.short_link.user.domain.repository.AccountExportReader.Account;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
-import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,13 +48,10 @@ public class AccountExportService {
   private final String baseUrl;
   private final String domain;
 
-  public AccountExportService(
-      AccountExportReader reader,
-      @Value("${short-link.federation.base-url:http://localhost:8080}") String baseUrl) {
+  public AccountExportService(AccountExportReader reader, LocalAddress local) {
     this.reader = reader;
-    this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-    URI uri = URI.create(this.baseUrl);
-    this.domain = uri.getPort() == -1 ? uri.getHost() : uri.getHost() + ":" + uri.getPort();
+    this.baseUrl = local.baseUrl();
+    this.domain = local.domain();
   }
 
   @Transactional(readOnly = true)

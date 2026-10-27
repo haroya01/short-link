@@ -3,7 +3,6 @@ package com.example.short_link.post.domain;
 import com.example.short_link.common.note.Excerpt;
 import java.time.Instant;
 
-// A subscribed series' note as the subscription feed shows it, with its author and its series.
 public record SeriesFeedNote(
     Long id,
     String body,

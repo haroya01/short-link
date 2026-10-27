@@ -3,12 +3,13 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.cta.application.read.CtaCard;
 import com.example.short_link.cta.application.read.CtaCards;
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.access.PostUnlistedUrls;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -30,7 +31,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,7 +55,7 @@ public class PublicPostQueryService {
   private final PostRooms rooms;
   private final UserModerationGuard moderation;
 
-  public PostScoped<PublicPostListView> listPublicPosts(String username, PostReader reader) {
+  public PostScoped<PublicPostListView> listPublicPosts(String username, PostViewer reader) {
     UserSummary author = resolveAuthor(username);
     BlockRelation blocks = userBlocks.between(reader.viewerId(), author.id());
     PostAccessPolicy.Lists lists = access.forLists(reader);
@@ -90,7 +90,7 @@ public class PublicPostQueryService {
       };
 
   public PostScoped<PublicPostDetail> findPublicPost(
-      String username, String slug, PostReader reader, String acceptLanguage) {
+      String username, String slug, PostViewer reader, String acceptLanguage) {
     UserSummary author = resolveAuthor(username);
     PostEntity post =
         postRepository
@@ -109,7 +109,7 @@ public class PublicPostQueryService {
   }
 
   public PostScoped<PublicPostDetail> findReadablePost(
-      String username, String slug, PostReader reader) {
+      String username, String slug, PostViewer reader) {
     PostScoped<PublicPostDetail> found = findPublicPost(username, slug, reader, null);
     PostLockView locked = found.body().post().locked();
     if (locked != null) {
@@ -122,7 +122,7 @@ public class PublicPostQueryService {
       UserSummary author,
       PostEntity post,
       PostAccess decided,
-      PostReader reader,
+      PostViewer reader,
       String acceptLanguage) {
     OwnerAudience owner = ownerView(post, author, reader);
     if (decided.full()) {
@@ -142,14 +142,13 @@ public class PublicPostQueryService {
         null);
   }
 
-  private OwnerAudience ownerView(PostEntity post, UserSummary author, PostReader reader) {
+  private OwnerAudience ownerView(PostEntity post, UserSummary author, PostViewer reader) {
     if (reader.viewerId() == null || !post.isOwnedBy(reader.viewerId())) return null;
     return OwnerAudience.of(post, unlistedUrls.of(post, author.username()));
   }
 
-  // 토큰이 곧 접근 권한이라 로그인은 보지 않는다. 발행 글은 공개 읽기가 보여 줄 때만, 초안·예약 글은 내려지지 않았고 작성자가 쓸 수 있을 때만 본문을 주고, 나머지는
-  // 모두 404다. 비공개 글은 시리즈 탐색에 포함하지 않는다.
-  public PostScoped<PublicPostDetail> findPreviewPost(String token, PostReader reader) {
+  // 토큰이 곧 접근 권한이라 로그인은 보지 않는다.
+  public PostScoped<PublicPostDetail> findPreviewPost(String token, PostViewer reader) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
     }
@@ -168,7 +167,7 @@ public class PublicPostQueryService {
       return new PostScoped<>(
           buildDetail(author, post, PublicPostListItem.of(post, PostAccess.FULL, null)), true);
     }
-    PostReader anonymous = reader.withoutCredentials().anonymous();
+    PostViewer anonymous = reader.withoutCredentials().anonymous();
     PostAccess decided = access.decide(post, anonymous);
     if (decided.hidden()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
@@ -276,7 +275,7 @@ public class PublicPostQueryService {
   }
 
   private UserSummary resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(username);
     return userSummaries
         .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));

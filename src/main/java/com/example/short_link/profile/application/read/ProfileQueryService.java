@@ -1,7 +1,7 @@
 package com.example.short_link.profile.application.read;
 
+import com.example.short_link.link.application.read.ProfileLinks;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.PublicProfile;
@@ -23,20 +23,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProfileQueryService {
 
   private final UserProfileReader users;
-  private final LinkRepository linkRepository;
+  private final ProfileLinks profileLinks;
   private final PublicProfileLoader publicProfiles;
   private final Clock clock;
   private final String publicProfileBaseUrl;
 
   public ProfileQueryService(
       UserProfileReader users,
-      LinkRepository linkRepository,
+      ProfileLinks profileLinks,
       PublicProfileLoader publicProfiles,
       Clock clock,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
     this.users = users;
-    this.linkRepository = linkRepository;
+    this.profileLinks = profileLinks;
     this.publicProfiles = publicProfiles;
     this.clock = clock;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
@@ -54,9 +54,7 @@ public class ProfileQueryService {
     // View counts move after the profile is cached, so a limited link's count is read per request.
     Set<ShortCode> limited = snapshot.viewLimitedLinks();
     Set<ShortCode> spent =
-        limited.isEmpty()
-            ? Set.of()
-            : Set.copyOf(linkRepository.findShortCodesWithViewLimitReached(limited));
+        limited.isEmpty() ? Set.of() : Set.copyOf(profileLinks.viewLimitReached(limited));
     return snapshot.visibleAt(clock.instant(), spent);
   }
 

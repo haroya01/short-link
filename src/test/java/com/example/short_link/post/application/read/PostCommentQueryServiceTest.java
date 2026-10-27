@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -82,7 +82,7 @@ class PostCommentQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L, 2L)))
         .thenReturn(List.of(user(1L, "alice"), user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L, PostReader.of(null), false).body();
+    List<CommentView> views = service.listForPost(42L, PostViewer.of(null), false).body();
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -103,7 +103,7 @@ class PostCommentQueryServiceTest {
     when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
         .thenReturn(List.of(user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L, PostReader.of(null), true).body();
+    List<CommentView> views = service.listForPost(42L, PostViewer.of(null), true).body();
 
     assertThat(views.get(0).mentions()).containsExactly("bob");
     assertThat(views.get(1).mentions()).isEmpty();
@@ -122,7 +122,7 @@ class PostCommentQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
     when(commentLikeRepository.countByCommentIds(List.of(2L))).thenReturn(java.util.Map.of(2L, 1L));
 
-    List<CommentView> views = service.listForPost(42L, PostReader.of(7L), true).body();
+    List<CommentView> views = service.listForPost(42L, PostViewer.of(7L), true).body();
 
     assertThat(views.get(0))
         .isEqualTo(
@@ -148,7 +148,7 @@ class PostCommentQueryServiceTest {
         .thenReturn(List.of(comment(1L, 42L, 1L, null, "mail me at a@b.com")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
 
-    assertThat(service.listForPost(42L, PostReader.of(null), false).body().get(0).mentions())
+    assertThat(service.listForPost(42L, PostViewer.of(null), false).body().get(0).mentions())
         .isEmpty();
     org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never())
         .findActiveByUsernameIn(org.mockito.ArgumentMatchers.any());
@@ -157,7 +157,7 @@ class PostCommentQueryServiceTest {
   @Test
   void hidesCommentsOfUnpublishedOrMissingPost() {
     when(postRepository.findById(42L)).thenReturn(Optional.empty());
-    assertThat(service.listForPost(42L, PostReader.of(null), false).body()).isEmpty();
+    assertThat(service.listForPost(42L, PostViewer.of(null), false).body()).isEmpty();
   }
 
   @Test
@@ -174,7 +174,7 @@ class PostCommentQueryServiceTest {
     org.mockito.Mockito.when(commentLikeRepository.countByCommentIds(java.util.List.of(11L)))
         .thenReturn(java.util.Map.of(11L, 4L));
 
-    java.util.List<CommentView> views = service.listForPost(5L, PostReader.of(null), false).body();
+    java.util.List<CommentView> views = service.listForPost(5L, PostViewer.of(null), false).body();
 
     org.assertj.core.api.Assertions.assertThat(views).hasSize(1);
     org.assertj.core.api.Assertions.assertThat(views.get(0).likeCount()).isEqualTo(4L);

@@ -2,7 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -32,7 +32,7 @@ public class PostCommentQueryService {
   private final PostAccessPolicy access;
 
   public PostScoped<List<CommentView>> listForPost(
-      Long postId, PostReader reader, boolean tombstones) {
+      Long postId, PostViewer reader, boolean tombstones) {
     PostEntity post = postRepository.findById(postId).orElse(null);
     if (post == null || !access.readable(post, reader)) {
       return new PostScoped<>(List.of(), false);
@@ -80,7 +80,7 @@ public class PostCommentQueryService {
   public List<MyCommentView> listMyComments(Long userId) {
     List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(lists::keeps)
@@ -94,7 +94,7 @@ public class PostCommentQueryService {
             comments.stream().map(CommentEntity::getId).toList());
 
     return comments.stream()
-        // 글이 사라지면(소프트 참조, FK 없음) 링크백할 맥락이 없으므로 제외한다.
+        // 댓글의 글 참조는 FK 없는 소프트 참조라 사라진 글을 가리킬 수 있다.
         .filter(c -> posts.containsKey(c.getPostId()))
         .map(
             c -> {

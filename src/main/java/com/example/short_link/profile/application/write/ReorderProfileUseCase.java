@@ -1,7 +1,7 @@
 package com.example.short_link.profile.application.write;
 
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.application.write.LinkProfilePlacement;
+import com.example.short_link.link.application.write.ProfileLinkSlot;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
@@ -17,18 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ReorderProfileUseCase {
 
-  private final LinkRepository linkRepository;
+  private final LinkProfilePlacement linkPlacement;
   private final ProfileBlockRepository profileBlockRepository;
   private final ProfileCacheEviction cacheEviction;
 
   @Transactional
   public void execute(ReorderProfileCommand cmd) {
-    Map<String, LinkEntity> ownedLinks = new HashMap<>();
-    for (var link :
-        linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(
-            cmd.userId())) {
-      ownedLinks.put(link.getShortCode().value(), link);
-    }
+    Map<String, ProfileLinkSlot> ownedLinks = linkPlacement.placedSlots(cmd.userId());
     Map<Long, ProfileBlockEntity> ownedBlocks = new HashMap<>();
     for (var block : profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(cmd.userId())) {
       ownedBlocks.put(block.getId(), block);
@@ -38,8 +33,8 @@ public class ReorderProfileUseCase {
       if (item == null || item.kind() == null || item.id() == null) continue;
       switch (item.kind().toUpperCase(Locale.ROOT)) {
         case "LINK" -> {
-          LinkEntity link = ownedLinks.get(item.id());
-          if (link != null) link.setProfileOrder(order++);
+          ProfileLinkSlot link = ownedLinks.get(item.id());
+          if (link != null) link.placeAt(order++);
         }
         case "BLOCK" -> {
           ProfileBlockEntity block = parseBlockId(item.id()).map(ownedBlocks::get).orElse(null);

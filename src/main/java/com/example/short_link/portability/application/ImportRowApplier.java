@@ -1,5 +1,6 @@
 package com.example.short_link.portability.application;
 
+import com.example.short_link.common.federation.LocalAddress;
 import com.example.short_link.federation.application.DomainBlocks;
 import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
@@ -11,12 +12,10 @@ import com.example.short_link.portability.domain.ImportKind;
 import com.example.short_link.user.application.write.BlockUseCase;
 import com.example.short_link.user.application.write.FollowUseCase;
 import com.example.short_link.user.application.write.MuteUseCase;
-import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 // Applies one line of a Mastodon export as the member would by hand: the same follow, block,
@@ -53,7 +52,7 @@ class ImportRowApplier {
       NoteFeedSettingsService feedSettings,
       NoteListService lists,
       ImportLookup lookup,
-      @Value("${short-link.federation.base-url:http://localhost:8080}") String baseUrl) {
+      LocalAddress local) {
     this.follows = follows;
     this.blocks = blocks;
     this.mutes = mutes;
@@ -65,9 +64,8 @@ class ImportRowApplier {
     this.feedSettings = feedSettings;
     this.lists = lists;
     this.lookup = lookup;
-    this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-    URI uri = URI.create(this.baseUrl);
-    this.domain = uri.getPort() == -1 ? uri.getHost() : uri.getHost() + ":" + uri.getPort();
+    this.baseUrl = local.baseUrl();
+    this.domain = local.domain();
   }
 
   record Address(String username, String domain) {}

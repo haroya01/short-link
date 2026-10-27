@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesActivity;
@@ -24,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -71,7 +71,6 @@ public class PublicSeriesQueryService {
         .toList();
   }
 
-  // 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다.
   public List<PublicSeriesCard> discoverSeries(Long viewerId, int limit) {
     int safeLimit = Math.max(limit, 1);
     List<SeriesActivity> ranked = seriesItemReader.activeSeries(viewerId, MIN_ITEMS, safeLimit * 2);
@@ -84,7 +83,6 @@ public class PublicSeriesQueryService {
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
     Map<Long, UserSummary> authors = liveAuthorsOf(series.values());
 
-    // 제외될 시리즈의 항목을 읽지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
     List<SeriesEntity> chosen =
         ranked.stream()
             .map(a -> series.get(a.seriesId()))
@@ -212,7 +210,7 @@ public class PublicSeriesQueryService {
   }
 
   private UserSummary resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(username);
     return userSummaries
         .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));

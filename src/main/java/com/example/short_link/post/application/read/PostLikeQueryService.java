@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -27,7 +27,7 @@ public class PostLikeQueryService {
   private final PostFeedItemAssembler feedItemAssembler;
   private final PostAccessPolicy access;
 
-  public PostLikeStatus status(PostReader reader, Long postId) {
+  public PostLikeStatus status(PostViewer reader, Long postId) {
     Long userId = reader.viewerId();
     PostEntity post =
         access.requireReadable(
@@ -43,7 +43,7 @@ public class PostLikeQueryService {
     List<PostLikeEntity> likes = postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (likes.isEmpty()) return List.of();
 
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     List<Long> postIds = likes.stream().map(PostLikeEntity::getPostId).toList();
     Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()

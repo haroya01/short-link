@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.PostBookmarkStatus;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -42,7 +42,7 @@ class BookmarkPostUseCaseTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(published()));
     when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(1);
 
-    PostBookmarkStatus status = useCase.bookmark(PostReader.of(9L), 42L);
+    PostBookmarkStatus status = useCase.bookmark(PostViewer.of(9L), 42L);
 
     assertThat(status.bookmarked()).isTrue();
     verify(postBookmarkRepository).insertIgnore(42L, 9L);
@@ -53,7 +53,7 @@ class BookmarkPostUseCaseTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(published()));
     when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(0);
 
-    PostBookmarkStatus status = useCase.bookmark(PostReader.of(9L), 42L);
+    PostBookmarkStatus status = useCase.bookmark(PostViewer.of(9L), 42L);
 
     assertThat(status.bookmarked()).isTrue();
     verify(postBookmarkRepository).insertIgnore(42L, 9L);
@@ -63,7 +63,7 @@ class BookmarkPostUseCaseTest {
   void bookmarkUnknownPostThrows() {
     when(postRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> useCase.bookmark(PostReader.of(9L), 99L))
+    assertThatThrownBy(() -> useCase.bookmark(PostViewer.of(9L), 99L))
         .isInstanceOf(PostException.class);
     verify(postBookmarkRepository, never()).insertIgnore(any(), any());
   }

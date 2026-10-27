@@ -1,9 +1,10 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.post.application.write.RecordPostViewCommand;
 import com.example.short_link.post.application.write.RecordPostViewUseCase;
-import com.example.short_link.post.application.write.ViewContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,21 +44,17 @@ public class PublicPostViewBeaconController {
       HttpServletRequest req) {
     recordPostView.execute(
         new RecordPostViewCommand(username, slug, viewerId),
-        new ViewContext(
+        new VisitRequest(
             // fetch의 Referer는 글 자체이므로 document.referrer를 담은 ref 쿼리를 우선한다.
             ref != null && !ref.isBlank() ? ref : referrer,
             userAgent,
             ClientIp.of(req),
             acceptLanguage,
             src,
-            utmSource,
-            utmMedium,
-            utmCampaign,
-            utmTerm,
-            utmContent,
+            new Utm(utmSource, utmMedium, utmCampaign, utmTerm, utmContent),
             "1".equals(req.getHeader("Sec-GPC")),
             // behavior_event와 조인하는 탭 수명 세션 ID다.
             sid),
-        PostReaderHeaders.from(viewerId, req));
+        PostViewerHeaders.from(viewerId, req));
   }
 }

@@ -15,11 +15,11 @@ import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksCommand;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksUseCase;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.application.write.UserDeletionService;
@@ -66,7 +66,7 @@ class LinkCacheEvictingWritesTest {
             mock(CreateLinkUseCase.class),
             mock(CampaignQueryService.class),
             new LinkRefReader(links),
-            new CampaignLinks(links, mock(LinkExpirationPolicyRepository.class), cache));
+            new CampaignLinks(links, mock(LinkSidecars.class), cache));
 
     service.delete(5L, 4L, 9L);
 

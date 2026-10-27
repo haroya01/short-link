@@ -2,6 +2,7 @@ package com.example.short_link.link.expiration.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import org.junit.jupiter.api.Test;
 
@@ -19,48 +20,55 @@ class LinkExpirationPolicyEntityTest {
     assertThat(entity.linkId()).isEqualTo(new LinkId(7L));
   }
 
-  @Test
-  void changeBlockedCountriesAcceptsCsvAndClearsOnBlank() {
-    LinkExpirationPolicyEntity entity = new LinkExpirationPolicyEntity(new LinkId(1L));
+  private final LinkEntity link = new LinkEntity("https://target", "abc1234", 7L, null);
+  private final LinkExpirationPolicyEntity entity = new LinkExpirationPolicyEntity(new LinkId(1L));
 
-    entity.changeBlockedCountries("KR,JP");
+  @Test
+  void mirrorsTheBlockedCountriesTheLinkKeeps() {
+    link.setBlockedCountries("KR,JP");
+    entity.mirrorBlockedCountries(link);
     assertThat(entity.getBlockedCountries()).isEqualTo("KR,JP");
 
-    entity.changeBlockedCountries("  ");
+    link.setBlockedCountries("  ");
+    entity.mirrorBlockedCountries(link);
     assertThat(entity.getBlockedCountries()).isNull();
 
-    entity.changeBlockedCountries(null);
+    link.setBlockedCountries(null);
+    entity.mirrorBlockedCountries(link);
     assertThat(entity.getBlockedCountries()).isNull();
   }
 
   @Test
-  void changeExpiredMessageTruncatesAndNormalizesBlank() {
-    LinkExpirationPolicyEntity entity = new LinkExpirationPolicyEntity(new LinkId(1L));
-
-    entity.changeExpiredMessage("  hello  ");
+  void mirrorsTheExpiredMessageTrimmedAndCutAsTheLinkKeepsIt() {
+    link.updateExpiredMessage("  hello  ");
+    entity.mirrorExpiredMessage(link);
     assertThat(entity.getExpiredMessage()).isEqualTo("hello");
 
-    entity.changeExpiredMessage("");
+    link.updateExpiredMessage("");
+    entity.mirrorExpiredMessage(link);
     assertThat(entity.getExpiredMessage()).isNull();
 
-    entity.changeExpiredMessage(null);
+    link.updateExpiredMessage(null);
+    entity.mirrorExpiredMessage(link);
     assertThat(entity.getExpiredMessage()).isNull();
 
-    entity.changeExpiredMessage("x".repeat(600));
+    link.updateExpiredMessage("x".repeat(600));
+    entity.mirrorExpiredMessage(link);
     assertThat(entity.getExpiredMessage()).hasSize(500);
   }
 
   @Test
-  void changeExpiredRedirectUrlTrimsAndNormalizesBlank() {
-    LinkExpirationPolicyEntity entity = new LinkExpirationPolicyEntity(new LinkId(1L));
-
-    entity.changeExpiredRedirectUrl("  https://example.com  ");
+  void mirrorsTheExpiredRedirectUrlTrimmedAsTheLinkKeepsIt() {
+    link.changeExpiredRedirectUrl("  https://example.com  ");
+    entity.mirrorExpiredRedirectUrl(link);
     assertThat(entity.getExpiredRedirectUrl()).isEqualTo("https://example.com");
 
-    entity.changeExpiredRedirectUrl("");
+    link.changeExpiredRedirectUrl("");
+    entity.mirrorExpiredRedirectUrl(link);
     assertThat(entity.getExpiredRedirectUrl()).isNull();
 
-    entity.changeExpiredRedirectUrl(null);
+    link.changeExpiredRedirectUrl(null);
+    entity.mirrorExpiredRedirectUrl(link);
     assertThat(entity.getExpiredRedirectUrl()).isNull();
   }
 }

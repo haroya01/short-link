@@ -7,7 +7,7 @@ import com.example.short_link.common.event.HighlightReplyLikedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -76,7 +76,7 @@ class LikeHighlightReplyUseCaseTest {
     Mockito.when(likeRepository.insertIgnore(10L, 9L)).thenReturn(1);
     Mockito.when(likeRepository.countByReplyId(10L)).thenReturn(4L);
 
-    HighlightReplyLikeStatus status = useCase.like(PostReader.of(9L), 10L);
+    HighlightReplyLikeStatus status = useCase.like(PostViewer.of(9L), 10L);
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(4L);
@@ -90,7 +90,7 @@ class LikeHighlightReplyUseCaseTest {
     Mockito.when(likeRepository.insertIgnore(10L, 9L)).thenReturn(0);
     Mockito.when(likeRepository.countByReplyId(10L)).thenReturn(4L);
 
-    HighlightReplyLikeStatus status = useCase.like(PostReader.of(9L), 10L);
+    HighlightReplyLikeStatus status = useCase.like(PostViewer.of(9L), 10L);
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(4L);
@@ -114,7 +114,7 @@ class LikeHighlightReplyUseCaseTest {
   void anUnknownReplyCannotBeLikedOrUnliked() {
     Mockito.when(replyRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> useCase.like(PostReader.of(9L), 99L))
+    assertThatThrownBy(() -> useCase.like(PostViewer.of(9L), 99L))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND);

@@ -1,5 +1,7 @@
 package com.example.short_link.profile.presentation.visit;
 
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.profile.application.visit.ProfileVisitRecorder;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,17 +36,15 @@ public class PublicProfileVisitController {
       HttpServletRequest req) {
     recorder.recordUsername(
         username,
-        referrer,
-        userAgent,
-        ClientIp.of(req),
-        acceptLanguage,
-        src,
-        utmSource,
-        utmMedium,
-        utmCampaign,
-        utmTerm,
-        utmContent,
-        "1".equals(req.getHeader("Sec-GPC")));
+        new VisitRequest(
+            referrer,
+            userAgent,
+            ClientIp.of(req),
+            acceptLanguage,
+            src,
+            new Utm(utmSource, utmMedium, utmCampaign, utmTerm, utmContent),
+            "1".equals(req.getHeader("Sec-GPC")),
+            null));
     return ResponseEntity.noContent().build();
   }
 }

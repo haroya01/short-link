@@ -1,6 +1,7 @@
 package com.example.short_link.link.expiration.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,22 +38,15 @@ public class LinkExpirationPolicyEntity extends BaseTimeEntity {
     this.linkId = linkId == null ? null : linkId.value();
   }
 
-  public void changeBlockedCountries(String csv) {
-    this.blockedCountries = (csv == null || csv.isBlank()) ? null : csv;
+  public void mirrorBlockedCountries(LinkEntity link) {
+    this.blockedCountries = link.getBlockedCountries();
   }
 
-  public void changeExpiredMessage(String message) {
-    this.expiredMessage = truncate(message, 500);
+  public void mirrorExpiredMessage(LinkEntity link) {
+    this.expiredMessage = link.getExpiredMessage();
   }
 
-  public void changeExpiredRedirectUrl(String url) {
-    this.expiredRedirectUrl = (url == null || url.isBlank()) ? null : url.trim();
-  }
-
-  private static String truncate(String s, int max) {
-    if (s == null) return null;
-    String trimmed = s.trim();
-    if (trimmed.isEmpty()) return null;
-    return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+  public void mirrorExpiredRedirectUrl(LinkEntity link) {
+    this.expiredRedirectUrl = link.getExpiredRedirectUrl();
   }
 }

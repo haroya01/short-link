@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.write.LinkOwnership;
+import com.example.short_link.link.application.write.LinkProfilePlacement;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -34,8 +36,10 @@ class SetLinkHighlightUseCaseTest {
   void setUp() {
     useCase =
         new SetLinkHighlightUseCase(
-            linkRepository,
-            new ProfileFeaturedSlot(linkRepository, profileBlockRepository),
+            new LinkProfilePlacement(new LinkOwnership(linkRepository), linkRepository),
+            new ProfileFeaturedSlot(
+                new LinkProfilePlacement(new LinkOwnership(linkRepository), linkRepository),
+                profileBlockRepository),
             mock(ProfileCacheEviction.class));
   }
 

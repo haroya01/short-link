@@ -6,7 +6,7 @@ import java.util.List;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// 본문과 메타데이터를 FULLTEXT용 평문으로 펼친다. URL·CTA 참조·구분선은 제외한다. 작성자 핸들은 다른 테이블에 있으므로 검색 쿼리가 별도로 매칭한다.
+// 작성자 핸들은 다른 테이블에 있으므로 검색 쿼리가 별도로 매칭한다.
 public final class PostSearchTextFlattener {
 
   // MySQL TEXT의 65,535바이트 한도를 utf8mb4(문자당 최대 4바이트)에서도 넘지 않도록 제한한다.
@@ -40,7 +40,6 @@ public final class PostSearchTextFlattener {
     return flattened;
   }
 
-  // 제목·요약·태그를 뺀 본문만. 발견 품질 하한선이 이 글의 글자 수를 잰다.
   public String bodyText(List<PostBlockEntity> blocks) {
     StringBuilder sb = new StringBuilder();
     if (blocks != null) {

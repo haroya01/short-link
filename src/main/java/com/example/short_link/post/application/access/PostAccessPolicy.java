@@ -23,8 +23,7 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Who may read a post, for one post in Java; PostAccessSql says the same for lists in SQL. Each
-// answer is one of PostAudience's questions, asked of the reader in hand.
+// PostAccessSql says the same for lists in SQL; the two must agree.
 @Component
 @RequiredArgsConstructor
 public class PostAccessPolicy {
@@ -34,7 +33,7 @@ public class PostAccessPolicy {
   private final ReaderCountryResolver countries;
   private final PostRoomReader rooms;
 
-  public PostAccess decide(PostEntity post, PostReader reader) {
+  public PostAccess decide(PostEntity post, PostViewer reader) {
     return decide(
         post,
         isOwner(post, reader),
@@ -45,7 +44,7 @@ public class PostAccessPolicy {
         () -> rooms.isMember(post.getRoomId(), reader.viewerId()));
   }
 
-  public boolean readable(PostEntity post, PostReader reader) {
+  public boolean readable(PostEntity post, PostViewer reader) {
     PostAccess decided = decide(post, reader);
     if (decided.redacted()) {
       throw new PostException(PostErrorCode.POST_LOCKED, post.getId())
@@ -54,26 +53,25 @@ public class PostAccessPolicy {
     return decided.full();
   }
 
-  public PostEntity requireReadable(PostEntity post, PostReader reader) {
+  public PostEntity requireReadable(PostEntity post, PostViewer reader) {
     if (!readable(post, reader)) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, post.getId());
     }
     return post;
   }
 
-  public Lists forLists(PostReader reader) {
+  public Lists forLists(PostViewer reader) {
     return new Lists(reader.withoutCredentials());
   }
 
-  public boolean revealsExistence(PostEntity post, PostReader reader) {
+  public boolean revealsExistence(PostEntity post, PostViewer reader) {
     return post.getAudience().shownAsCard()
         || isOwner(post, reader)
         || keyMatches(post, reader.postKey())
         || (post.isInRoom() && rooms.isMember(post.getRoomId(), reader.viewerId()));
   }
 
-  // Of the people a post would tell about something said on it, those who may read it. Only a room
-  // narrows this: every other audience shows anyone at least its card.
+  // Only a room narrows this: every other audience shows anyone at least the post's card.
   public Set<Long> readersAmong(PostEntity post, Collection<Long> userIds) {
     if (!post.isInRoom()) {
       return Set.copyOf(userIds);
@@ -85,14 +83,12 @@ public class PostAccessPolicy {
     return readers;
   }
 
-  // A comment or highlight made while its post was in a room stays with that room's members, its
-  // writer too only while in the room; PostAccessSql.said asks the same for lists.
+  // PostAccessSql.said answers the same for lists; the two must agree.
   public boolean hears(Long viewerId, Long saidInRoom) {
     return saidInRoom == null || rooms.isMember(saidInRoom, viewerId);
   }
 
-  // What may stand on its own outside the post (a collection, a shared feed): never something said
-  // in a room. PostAccessSql.saidOpenly asks the same for lists.
+  // PostAccessSql.saidOpenly answers the same for lists; the two must agree.
   public static boolean saidOpenly(PostHighlightEntity highlight) {
     return highlight.getRoomId() == null;
   }
@@ -148,7 +144,7 @@ public class PostAccessPolicy {
     return post.isPublished() && post.getAudience().shownAsCard();
   }
 
-  private static boolean isOwner(PostEntity post, PostReader reader) {
+  private static boolean isOwner(PostEntity post, PostViewer reader) {
     return reader.viewerId() != null && post.isOwnedBy(reader.viewerId());
   }
 
@@ -166,12 +162,12 @@ public class PostAccessPolicy {
 
   public final class Lists {
 
-    private final PostReader reader;
+    private final PostViewer reader;
     private final Map<Long, Boolean> followed = new HashMap<>();
     private ReaderCountry resolved;
     private Set<Long> memberOf;
 
-    private Lists(PostReader reader) {
+    private Lists(PostViewer reader) {
       this.reader = reader;
     }
 
@@ -188,14 +184,10 @@ public class PostAccessPolicy {
           () -> memberOf().contains(post.getRoomId()));
     }
 
-    // What a list of the reader's own (likes, bookmarks, reading history) shows for a post: its
-    // card, and a room post only while the reader is in the room.
     public PostAccess card(PostEntity post) {
       return post.isInRoom() ? of(post) : PostAccessPolicy.card(post);
     }
 
-    // Whether the reader's own comments and highlights on a post still name it: always, but for a
-    // room post only while the reader is in the room.
     public boolean keeps(PostEntity post) {
       return !post.isInRoom() || !of(post).hidden();
     }
