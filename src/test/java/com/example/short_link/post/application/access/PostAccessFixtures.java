@@ -26,13 +26,22 @@ public final class PostAccessFixtures {
   }
 
   public static PostAccessPolicy policy(FollowRepository follows, String readerCountry) {
+    return policy(follows, readerCountry, mock(PostRoomReader.class));
+  }
+
+  public static PostAccessPolicy policy(PostRoomReader rooms) {
+    return policy(mock(FollowRepository.class), null, rooms);
+  }
+
+  private static PostAccessPolicy policy(
+      FollowRepository follows, String readerCountry, PostRoomReader rooms) {
     GeoIpResolver geo =
         mock(GeoIpResolver.class, invocation -> new GeoLocation(readerCountry, null, null));
     return new PostAccessPolicy(
         new FollowingReader(follows),
         new PostGrants("", Clock.systemUTC()),
         new ReaderCountryResolver(geo),
-        mock(PostRoomReader.class));
+        rooms);
   }
 
   public static PostRoomReader roomReader() {

@@ -169,7 +169,7 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
     LinkEntity disabled = profileLink("https://example.com/disabled", "pd", null);
     LinkEntity later = profileLink("https://example.com/later", "pl", null);
     profileLink("https://example.com/ended", "pe", Instant.now().minus(1, ChronoUnit.MINUTES));
-    moderation.disable(disabled.getShortCode(), LinkDisableReason.ADMIN, null);
+    moderation.disable(null, disabled.getShortCode(), LinkDisableReason.ADMIN);
     visitOptions.update(
         owner.getId(),
         later.getShortCode(),

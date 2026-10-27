@@ -7,5 +7,5 @@ import java.util.Optional;
  */
 public interface SplashCtaCatalog {
 
-  Optional<SplashCta> findOwned(Long ctaId, Long ownerId);
+  Optional<SplashCta> findOwned(Long ownerId, Long ctaId);
 }

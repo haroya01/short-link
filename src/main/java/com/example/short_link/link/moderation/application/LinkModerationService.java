@@ -24,7 +24,7 @@ public class LinkModerationService {
   private final Clock clock;
 
   @Transactional
-  public boolean disable(Long linkId, LinkDisableReason reason, Long adminUserId) {
+  public boolean disable(Long adminUserId, Long linkId, LinkDisableReason reason) {
     return switchOff(
         links
             .findById(linkId)
@@ -34,7 +34,7 @@ public class LinkModerationService {
   }
 
   @Transactional
-  public boolean disable(ShortCode shortCode, LinkDisableReason reason, Long adminUserId) {
+  public boolean disable(Long adminUserId, ShortCode shortCode, LinkDisableReason reason) {
     return switchOff(load(shortCode), reason, adminUserId);
   }
 
