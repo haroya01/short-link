@@ -13,11 +13,15 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkPreviewCrawlerDetector;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
+import com.example.short_link.link.redirect.application.PreviewScope;
+import com.example.short_link.link.redirect.application.RedirectDecider;
+import com.example.short_link.link.redirect.application.RedirectDecision;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkPreviewRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
+import com.example.short_link.link.redirect.presentation.helper.VisitResponses;
 import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
@@ -27,6 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +61,7 @@ public class RedirectController {
   private final BlockedDomainChecker blockedDomainChecker;
   private final LinkHtmlRenderer html;
   private final VisitHandoff handoff;
+  private final VisitResponses responses;
   private final Clock clock;
 
   @GetMapping({"/{shortCode:[0-9A-Za-z]{3,16}}", "/{shortCode:[0-9A-Za-z]{3,16}}/"})
@@ -72,31 +78,20 @@ public class RedirectController {
     Locale locale = VisitorLocale.resolve(acceptLanguage);
     try {
       ResponseEntity<?> response =
-          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, locale, req);
+          handleRedirect(
+              new Visitor(shortCode, src, post, referrer, userAgent, acceptLanguage, locale, req));
       outcome = LinkRedirectSupport.classifyOutcome(response);
       return response;
     } catch (LinkException e) {
-      outcome =
-          switch (e.errorCode()) {
-            case LINK_NOT_FOUND -> "not_found";
-            case LINK_EXPIRED -> "expired";
-            case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
-            case LINK_DISABLED -> "disabled";
-            default -> "error";
-          };
-      // 방문자가 연 링크 — 만료·한도초과·없음은 JSON 대신 브랜드 HTML 페이지로 보여준다.
-      ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
-      if (page != null) {
-        return page;
-      }
-      throw e;
+      outcome = VisitResponses.outcomeOf(e);
+      return responses.visitorErrorOrRethrow(e, locale);
     } finally {
       sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
   }
 
-  private ResponseEntity<?> handleRedirect(
+  private record Visitor(
       ShortCode shortCode,
       String src,
       Long post,
@@ -104,161 +99,120 @@ public class RedirectController {
       String userAgent,
       String acceptLanguage,
       Locale locale,
-      HttpServletRequest req) {
+      HttpServletRequest req) {}
+
+  private ResponseEntity<?> handleRedirect(Visitor visitor) {
+    RedirectDecider.Facts facts = facts(visitor);
     CachedLink link;
     try {
-      link = lookup.findActiveLink(shortCode);
+      link = lookup.findActiveLink(visitor.shortCode());
     } catch (LinkException e) {
-      if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
-        LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
-        if (expired != null && expired.getExpiredRedirectUrl() != null) {
-          return afterExpiry(expired, req, locale);
-        }
-        if (expired != null && expired.getExpiredMessage() != null) {
-          return html.expiredPageResponse(locale, expired.getExpiredMessage());
-        }
+      if (e.errorCode() != LinkErrorCode.LINK_EXPIRED) {
+        throw e;
       }
-      throw e;
+      LinkEntity expired = lookup.findEntity(visitor.shortCode()).orElse(null);
+      return switch (RedirectDecider.decideExpired(expired, facts)) {
+        case RedirectDecision.NotOnThisHost n ->
+            throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, expired.getShortCode());
+        case RedirectDecision.DestinationBlocked d -> domainBlocked(visitor.locale());
+        case RedirectDecision.AfterExpiry a -> handoff.afterExpiry(a.url());
+        case RedirectDecision.ExpiredMessage m ->
+            html.expiredPageResponse(visitor.locale(), m.message());
+        case RedirectDecision.Unhandled u -> throw e;
+      };
     }
-    // Match the inbound Host owner before exposing a link on a custom domain.
-    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(link.userId())) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
-    }
-    // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
-    if (anyDestinationBlocked(link)) {
-      meterRegistry.counter("redirect.domain_blocked").increment();
-      return html.domainBlockedPageResponse(locale);
-    }
-    // 공개 전에는 비밀번호도 묻지 않고, 미리보기 카드에도 목적지를 싣지 않는다.
-    if (link.visitOptions().opensLaterThan(clock.instant())) {
-      String crawler = crawlerDetector.crawlerName(userAgent);
-      if (crawler != null) {
-        return handlePreview(
-            shortCode,
-            link,
-            lookup.findEntity(shortCode).orElse(null),
-            referrer,
-            userAgent,
-            acceptLanguage,
-            src,
-            crawler,
-            req,
-            link.passwordRequired() || link.limitsVisitors()
-                ? LinkPreviewRenderer.Scope.KURL_CARD_ONLY
-                : LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
-      }
-      return html.notYetOpenPageResponse(locale, link.visitOptions().opensAt());
-    }
-    // 비밀번호 검사는 크롤러 분기보다 먼저 해야 스푸핑된 UA가 목적지를 노출하지 못한다.
-    if (link.passwordRequired()) {
-      return html.passwordPromptResponse(
-          locale, HttpStatus.OK, shortCode, false, turnstile.siteKey());
-    }
-    String crawlerLabel = crawlerDetector.crawlerName(userAgent);
-    if (crawlerLabel != null) {
-      LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
-      if (!link.limitsVisitors()) {
-        return handlePreview(
-            shortCode,
-            link,
-            entity,
-            referrer,
-            userAgent,
-            acceptLanguage,
-            src,
-            crawlerLabel,
-            req,
-            LinkPreviewRenderer.Scope.DESTINATION);
-      }
-      Optional<RedirectOutcome> refused =
-          flow.refuseCrawler(link, entity, LinkRedirectSupport.clientIp(req));
-      if (refused.isPresent()) {
-        return render(refused.get(), userAgent, locale);
-      }
-      return handlePreview(
-          shortCode,
-          link,
-          entity,
-          referrer,
-          userAgent,
-          acceptLanguage,
-          src,
-          crawlerLabel,
-          req,
-          LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
-    }
-    return render(
-        flow.execute(
-            link,
-            null,
-            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
-        userAgent,
-        locale);
-  }
-
-  private ResponseEntity<?> afterExpiry(LinkEntity expired, HttpServletRequest req, Locale locale) {
-    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(expired.getUserId())) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, expired.getShortCode());
-    }
-    if (blockedDomainChecker.isBlocked(expired.getExpiredRedirectUrl())) {
-      meterRegistry.counter("redirect.domain_blocked").increment();
-      return html.domainBlockedPageResponse(locale);
-    }
-    return handoff.afterExpiry(expired.getExpiredRedirectUrl());
-  }
-
-  private boolean anyDestinationBlocked(CachedLink link) {
-    if (blockedDomainChecker.isBlocked(link.originalUrl())) {
-      return true;
-    }
-    for (CachedLink.Variant variant : link.variants()) {
-      if (variant.enabled() && blockedDomainChecker.isBlocked(variant.url())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private ResponseEntity<?> render(RedirectOutcome outcome, String userAgent, Locale locale) {
-    return switch (outcome) {
-      case RedirectOutcome.Redirect r -> handoff.redirect(r, userAgent, locale);
-      case RedirectOutcome.CountryBlocked b -> html.blockedPageResponse(locale);
-      case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
-      case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
-      case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
-      case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
-      case RedirectOutcome.PasswordRequired pr ->
-          throw new IllegalStateException(
-              "PasswordRequired decided at controller before flow.execute()");
+    return switch (RedirectDecider.decide(link, facts)) {
+      case RedirectDecision.NotOnThisHost n ->
+          throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, visitor.shortCode());
+      case RedirectDecision.DestinationBlocked d -> domainBlocked(visitor.locale());
+      case RedirectDecision.Preview p ->
+          preview(
+              visitor,
+              link,
+              lookup.findEntity(visitor.shortCode()).orElse(null),
+              p.crawler(),
+              p.scope());
+      case RedirectDecision.NotYetOpen n ->
+          html.notYetOpenPageResponse(visitor.locale(), n.opensAt());
+      case RedirectDecision.PasswordPrompt p ->
+          html.passwordPromptResponse(
+              visitor.locale(), HttpStatus.OK, visitor.shortCode(), false, turnstile.siteKey());
+      case RedirectDecision.LimitedCrawler c -> limitedCrawler(visitor, link, c.crawler());
+      case RedirectDecision.Visit v ->
+          responses.redirect(
+              flow.execute(
+                  link,
+                  null,
+                  LinkRedirectSupport.visit(
+                      visitor.referrer(),
+                      visitor.userAgent(),
+                      visitor.acceptLanguage(),
+                      visitor.src(),
+                      visitor.post(),
+                      visitor.req())),
+              visitor.userAgent(),
+              visitor.locale());
     };
   }
 
-  private ResponseEntity<?> handlePreview(
-      ShortCode shortCode,
+  private RedirectDecider.Facts facts(Visitor visitor) {
+    return new RedirectDecider.Facts() {
+      @Override
+      public Long hostOwner() {
+        return customDomainService.resolveOwner(visitor.req().getHeader("Host"));
+      }
+
+      @Override
+      public boolean blocked(String url) {
+        return blockedDomainChecker.isBlocked(url);
+      }
+
+      @Override
+      public String crawlerName() {
+        return crawlerDetector.crawlerName(visitor.userAgent());
+      }
+
+      @Override
+      public Instant now() {
+        return clock.instant();
+      }
+    };
+  }
+
+  private ResponseEntity<?> domainBlocked(Locale locale) {
+    meterRegistry.counter("redirect.domain_blocked").increment();
+    return html.domainBlockedPageResponse(locale);
+  }
+
+  private ResponseEntity<?> limitedCrawler(Visitor visitor, CachedLink link, String crawler) {
+    LinkEntity entity = lookup.findEntity(visitor.shortCode()).orElse(null);
+    Optional<RedirectOutcome> refused =
+        flow.refuseCrawler(link, entity, LinkRedirectSupport.clientIp(visitor.req()));
+    if (refused.isPresent()) {
+      return responses.redirect(refused.get(), visitor.userAgent(), visitor.locale());
+    }
+    return preview(visitor, link, entity, crawler, PreviewScope.KURL_CARD_ONLY);
+  }
+
+  private ResponseEntity<?> preview(
+      Visitor visitor,
       CachedLink link,
       LinkEntity entity,
-      String referrer,
-      String userAgent,
-      String acceptLanguage,
-      String src,
       String crawlerLabel,
-      HttpServletRequest req,
-      LinkPreviewRenderer.Scope scope) {
+      PreviewScope scope) {
     meterRegistry.counter("short_link.preview").increment();
     clickRecorder.recordPreview(
         ClickContext.of(
                 link.linkId(),
                 link.originalUrl(),
-                referrer,
-                userAgent,
-                LinkRedirectSupport.clientIp(req),
-                acceptLanguage)
-            .withSourceChannel(src)
-            .withFetchSite(LinkRedirectSupport.fetchSite(req)),
+                visitor.referrer(),
+                visitor.userAgent(),
+                LinkRedirectSupport.clientIp(visitor.req()),
+                visitor.acceptLanguage())
+            .withSourceChannel(visitor.src())
+            .withFetchSite(LinkRedirectSupport.fetchSite(visitor.req())),
         crawlerLabel);
-    boolean revealDestination = scope == LinkPreviewRenderer.Scope.DESTINATION;
+    boolean revealDestination = scope == PreviewScope.DESTINATION;
     if (entity == null && !revealDestination) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
@@ -269,7 +223,8 @@ public class RedirectController {
           .build();
     }
     long clicks = lookup.countHumanClicks(link.linkId());
-    String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, scope);
+    String html =
+        previewRenderer.render(entity, urlBuilder.build(visitor.shortCode()), clicks, scope);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))

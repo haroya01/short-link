@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpHeaders;
@@ -182,17 +183,13 @@ public class LinkHtmlRenderer {
     return visitPage(inAppHandoffPage(locale, handoffUrl, destinationUrl));
   }
 
-  /**
-   * Returns null for errors that should propagate to the API error handler; visitor errors render
-   * HTML.
-   */
-  public ResponseEntity<byte[]> visitorErrorPage(Locale locale, LinkErrorCode code) {
+  public Optional<ResponseEntity<byte[]>> visitorErrorPage(Locale locale, LinkErrorCode code) {
     return switch (code) {
-      case LINK_NOT_FOUND -> notFoundPageResponse(locale);
-      case LINK_EXPIRED -> expiredPageResponse(locale, null);
-      case LINK_VIEW_LIMIT_EXCEEDED -> viewLimitPageResponse(locale);
-      case LINK_DISABLED -> disabledPageResponse(locale);
-      default -> null;
+      case LINK_NOT_FOUND -> Optional.of(notFoundPageResponse(locale));
+      case LINK_EXPIRED -> Optional.of(expiredPageResponse(locale, null));
+      case LINK_VIEW_LIMIT_EXCEEDED -> Optional.of(viewLimitPageResponse(locale));
+      case LINK_DISABLED -> Optional.of(disabledPageResponse(locale));
+      default -> Optional.empty();
     };
   }
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.eventlink.EventLinkPreview;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.redirect.application.PreviewScope;
 import com.example.short_link.link.redirect.application.read.LinkPreviewQueryService;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -60,16 +61,10 @@ class LinkPreviewRendererTest {
 
     String bare =
         renderer.render(
-            untitled,
-            "https://kurl.me/abcdefg",
-            0L,
-            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
+            untitled, "https://kurl.me/abcdefg", 0L, PreviewScope.WITHOUT_DESTINATION_URL);
     String card =
         renderer.render(
-            titled,
-            "https://kurl.me/abcdefg",
-            0L,
-            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
+            titled, "https://kurl.me/abcdefg", 0L, PreviewScope.WITHOUT_DESTINATION_URL);
 
     assertThat(bare).doesNotContain("secret.example.com");
     assertThat(bare).contains("<meta property=\"og:title\" content=\"https://kurl.me/abcdefg\">");
@@ -89,11 +84,9 @@ class LinkPreviewRendererTest {
     named.changeOgOverride("Owner's title", null, null);
 
     String bare =
-        renderer.render(
-            scraped, "https://kurl.me/once1", 4L, LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
+        renderer.render(scraped, "https://kurl.me/once1", 4L, PreviewScope.KURL_CARD_ONLY);
     String titled =
-        renderer.render(
-            named, "https://kurl.me/once1", 4L, LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
+        renderer.render(named, "https://kurl.me/once1", 4L, PreviewScope.KURL_CARD_ONLY);
 
     assertThat(bare)
         .doesNotContain("secret.example.com", "Secret page", "Secret description", "refresh")

@@ -28,6 +28,7 @@ import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
+import com.example.short_link.link.redirect.presentation.helper.VisitResponses;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class PasswordUnlockControllerTest {
               lookup, protectionService, attemptLimiter, flow, turnstileVerifier),
           turnstile,
           HTML,
-          new VisitHandoff(new ClientAppClassifier(), HTML));
+          new VisitResponses(HTML, new VisitHandoff(new ClientAppClassifier(), HTML)));
 
   private static final LinkHtmlRenderer HTML = new LinkHtmlRenderer(messageSource());
 

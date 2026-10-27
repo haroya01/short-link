@@ -266,7 +266,6 @@ src/main/java/com/example/short_link/link/access/application/LinkAccessGuard.jav
 src/main/java/com/example/short_link/link/access/application/PasswordAttempts.java=1
 src/main/java/com/example/short_link/link/access/application/TurnstileVerifier.java=1
 src/main/java/com/example/short_link/link/access/infrastructure/LinkPasswordAttemptLimiter.java=2
-src/main/java/com/example/short_link/link/access/presentation/PasswordUnlockController.java=1
 src/main/java/com/example/short_link/link/application/LinkAccountData.java=1
 src/main/java/com/example/short_link/link/application/LinkCacheEviction.java=3
 src/main/java/com/example/short_link/link/application/ShortLinkDetector.java=1
@@ -317,12 +316,13 @@ src/main/java/com/example/short_link/link/og/application/OgCardImageRenderer.jav
 src/main/java/com/example/short_link/link/og/application/dto/LinkPreview.java=2
 src/main/java/com/example/short_link/link/redirect/application/LinkPreviewCrawlerDetector.java=4
 src/main/java/com/example/short_link/link/redirect/application/LinkRedirectFlow.java=6
+src/main/java/com/example/short_link/link/redirect/application/RedirectDecider.java=4
 src/main/java/com/example/short_link/link/redirect/application/read/LinkPreviewQueryService.java=3
-src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java=5
 src/main/java/com/example/short_link/link/redirect/presentation/RootRedirectController.java=1
 src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkHtmlRenderer.java=1
 src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java=1
 src/main/java/com/example/short_link/link/redirect/presentation/helper/VisitHandoff.java=1
+src/main/java/com/example/short_link/link/redirect/presentation/helper/VisitResponses.java=1
 src/main/java/com/example/short_link/link/safety/application/LinkSafetyRescanner.java=1
 src/main/java/com/example/short_link/link/safety/application/SafeBrowsingClient.java=2
 src/main/java/com/example/short_link/link/safety/application/UrlThreatLookup.java=6

@@ -122,7 +122,8 @@ class LinkHtmlRendererTest {
 
   @Test
   void disabledLink_isGone_andPointsToTheReportPage() {
-    ResponseEntity<byte[]> r = renderer.visitorErrorPage(KO, LinkErrorCode.LINK_DISABLED);
+    ResponseEntity<byte[]> r =
+        renderer.visitorErrorPage(KO, LinkErrorCode.LINK_DISABLED).orElseThrow();
     assertThat(r.getStatusCode()).isEqualTo(HttpStatus.GONE);
     assertThat(new String(r.getBody(), StandardCharsets.UTF_8))
         .contains("꺼진 링크")
@@ -187,15 +188,23 @@ class LinkHtmlRendererTest {
   }
 
   @Test
-  void visitorErrorPage_mapsVisitorCodes_elseNull() {
+  void visitorErrorPage_mapsVisitorCodes_elseEmpty() {
     assertThat(
-            renderer.visitorErrorPage(KO, LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED).getStatusCode())
+            renderer
+                .visitorErrorPage(KO, LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED)
+                .orElseThrow()
+                .getStatusCode())
         .isEqualTo(HttpStatus.GONE);
-    assertThat(renderer.visitorErrorPage(KO, LinkErrorCode.LINK_NOT_FOUND).getStatusCode())
+    assertThat(
+            renderer
+                .visitorErrorPage(KO, LinkErrorCode.LINK_NOT_FOUND)
+                .orElseThrow()
+                .getStatusCode())
         .isEqualTo(HttpStatus.NOT_FOUND);
-    assertThat(renderer.visitorErrorPage(KO, LinkErrorCode.LINK_EXPIRED).getStatusCode())
+    assertThat(
+            renderer.visitorErrorPage(KO, LinkErrorCode.LINK_EXPIRED).orElseThrow().getStatusCode())
         .isEqualTo(HttpStatus.GONE);
-    assertThat(renderer.visitorErrorPage(KO, LinkErrorCode.LINK_NOT_OWNED)).isNull();
+    assertThat(renderer.visitorErrorPage(KO, LinkErrorCode.LINK_NOT_OWNED)).isEmpty();
   }
 
   @Test
