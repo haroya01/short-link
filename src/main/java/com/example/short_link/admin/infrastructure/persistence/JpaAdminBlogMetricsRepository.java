@@ -1,5 +1,6 @@
 package com.example.short_link.admin.infrastructure.persistence;
 
+import com.example.short_link.admin.domain.repository.AdminBlogMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminBlogMetricsRepository.TopPostRow;
 import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
@@ -8,16 +9,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface JpaAdminBlogMetricsRepository extends JpaRepository<PostEntity, Long> {
+public interface JpaAdminBlogMetricsRepository
+    extends JpaRepository<PostEntity, Long>, AdminBlogMetricsRepository {
 
+  @Override
   @Query(value = "SELECT COUNT(*) FROM posts WHERE status = 'PUBLISHED'", nativeQuery = true)
   long totalPublishedPosts();
 
+  @Override
   @Query(
       value = "SELECT CAST(COALESCE(SUM(view_count), 0) AS SIGNED) FROM posts",
       nativeQuery = true)
   long totalReads();
 
+  @Override
   @Query(
       value =
           "SELECT COUNT(*) FROM ("
@@ -30,11 +35,13 @@ public interface JpaAdminBlogMetricsRepository extends JpaRepository<PostEntity,
       nativeQuery = true)
   long activeAuthorsSince(@Param("since") Instant since);
 
+  @Override
   @Query(
       value = "SELECT COUNT(*) FROM abuse_report WHERE status IN ('OPEN', 'REVIEWING')",
       nativeQuery = true)
   long openReportCount();
 
+  @Override
   @Query(
       value =
           "SELECT p.id AS id, p.title AS title, p.slug AS slug, u.username AS authorHandle, "

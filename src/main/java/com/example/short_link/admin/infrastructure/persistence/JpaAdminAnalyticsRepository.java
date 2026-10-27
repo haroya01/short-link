@@ -1,5 +1,6 @@
 package com.example.short_link.admin.infrastructure.persistence;
 
+import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.ActivePerBucketRow;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.ActivePerBucketStringRow;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.ActivePerDayRow;
@@ -14,8 +15,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEntity, Long> {
+public interface JpaAdminAnalyticsRepository
+    extends JpaRepository<ClickEventEntity, Long>, AdminAnalyticsRepository {
 
+  @Override
   @Query(
       value =
           "SELECT YEARWEEK(created_at, 3) AS cohortKey, COUNT(*) AS count "
@@ -24,6 +27,7 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
       nativeQuery = true)
   List<CohortSizeRow> cohortSizes(@Param("since") Instant since);
 
+  @Override
   @Query(
       value =
           "SELECT YEARWEEK(u.created_at, 3) AS cohortKey, "
@@ -42,6 +46,7 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
       nativeQuery = true)
   List<CohortActivityRow> cohortActivity(@Param("since") Instant since);
 
+  @Override
   @Query(
       value =
           "SELECT day, CAST(SUM(n) AS SIGNED) AS clicks, COUNT(DISTINCT link_id) AS links "
@@ -58,6 +63,7 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
       nativeQuery = true)
   List<LifecycleDayRow> lifecycleDays(@Param("maxDay") int maxDay);
 
+  @Override
   @Query(
       value =
           "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS bucket, "
@@ -69,6 +75,7 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
   List<ActivePerDayRow> dailyActiveUsers(
       @Param("since") Instant since, @Param("tz") String timezone);
 
+  @Override
   @Query(
       value =
           "SELECT YEARWEEK(c.clicked_at, 3) AS bucket, "
@@ -79,6 +86,7 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
       nativeQuery = true)
   List<ActivePerBucketRow> weeklyActiveUsers(@Param("since") Instant since);
 
+  @Override
   @Query(
       value =
           "SELECT DATE_FORMAT(c.at, '%Y-%m') AS bucket, "
