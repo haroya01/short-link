@@ -49,6 +49,31 @@ public enum NotificationType {
     };
   }
 
+  public KeywordText keywordText() {
+    return switch (this) {
+      case NOTE_REPLY, NOTE_QUOTE -> KeywordText.SOURCE_EXCERPT;
+      case NOTE_MENTION, POST_QUOTE, NOTE_POST, NOTE_EDIT, NOTE_POLL -> KeywordText.EXCERPT;
+      default -> KeywordText.NONE;
+    };
+  }
+
+  public enum KeywordText {
+    SOURCE_EXCERPT,
+    EXCERPT,
+    NONE
+  }
+
+  public boolean opensTheActorsWork() {
+    return switch (this) {
+      case NEW_POST, NOTE_POLL, NOTE_POST, NOTE_EDIT, POST_QUOTE -> true;
+      default -> false;
+    };
+  }
+
+  public boolean mayBePrivateMention() {
+    return this == NOTE_MENTION;
+  }
+
   public static Set<NotificationType> mentionTypes() {
     return EnumSet.copyOf(Arrays.stream(values()).filter(NotificationType::inMentions).toList());
   }

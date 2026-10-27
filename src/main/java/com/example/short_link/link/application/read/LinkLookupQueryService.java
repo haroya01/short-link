@@ -7,7 +7,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.Optional;
@@ -21,7 +21,7 @@ public class LinkLookupQueryService {
 
   private final CachedLinkLoader cachedLinkLoader;
   private final LinkRepository repository;
-  private final ClickTotalsReadRepository clickTotalsRepository;
+  private final ClickTotalsReader clickTotalsRepository;
   private final MeterRegistry meterRegistry;
 
   @Transactional(readOnly = true)

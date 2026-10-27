@@ -13,7 +13,7 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +33,7 @@ class EventAnalyticsQueryServiceTest {
   @Mock private EventRepository eventRepository;
   @Mock private EventRegistrationRepository registrationRepository;
   @Mock private EventQueryService eventQueryService;
-  @Mock private ClickEventRepository clickEventRepository;
+  @Mock private ClickTotalsReader clickTotals;
 
   private EventAnalyticsQueryService service;
 
@@ -41,7 +41,7 @@ class EventAnalyticsQueryServiceTest {
   void setUp() {
     service =
         new EventAnalyticsQueryService(
-            eventRepository, registrationRepository, eventQueryService, clickEventRepository);
+            eventRepository, registrationRepository, eventQueryService, clickTotals);
   }
 
   private EventEntity event(String timezone) {
@@ -121,7 +121,7 @@ class EventAnalyticsQueryServiceTest {
     Map<Long, Map<String, Long>> clicks = new LinkedHashMap<>();
     clicks.put(7L, Map.of("kakaotalk", 1L));
     clicks.put(99L, fromUnknownLink);
-    when(clickEventRepository.humanClientAppCountsByLinkIds(Set.of(7L))).thenReturn(clicks);
+    when(clickTotals.humanClientAppCountsByLinkIds(Set.of(7L))).thenReturn(clicks);
 
     EventRegistrationEntity byLink = registration(1L, Instant.parse("2026-09-01T01:00:00Z"));
     byLink.attribute(7L, "messenger", "kakaotalk", null, null, null);

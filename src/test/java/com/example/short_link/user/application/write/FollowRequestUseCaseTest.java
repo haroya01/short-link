@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.AccountUnlockedEvent;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.user.application.read.FollowRequestView;
 import com.example.short_link.user.domain.FollowEdge;
@@ -86,7 +87,7 @@ class FollowRequestUseCaseTest {
     assertThat(saved.getValue().getFollowerId()).isEqualTo(9L);
     assertThat(saved.getValue().getFollowingId()).isEqualTo(2L);
     assertThat(saved.getValue().isNotifyNotes()).isTrue();
-    verify(events).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
+    verify(events).publishEvent(new FollowRequestSettledEvent(2L, Actor.member(9L)));
   }
 
   @Test
@@ -108,7 +109,7 @@ class FollowRequestUseCaseTest {
     useCase.reject(2L, "alice");
 
     verifyNoInteractions(followRepository);
-    verify(events).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
+    verify(events).publishEvent(new FollowRequestSettledEvent(2L, Actor.member(9L)));
   }
 
   @Test

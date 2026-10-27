@@ -1,11 +1,11 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerHostClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.SourceChannelClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.CountryClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DeviceClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.ReferrerHostClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.SourceChannelClickRow;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;

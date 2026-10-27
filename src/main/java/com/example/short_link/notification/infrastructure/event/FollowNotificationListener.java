@@ -35,10 +35,7 @@ public class FollowNotificationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onFollowRequested(FollowRequestedEvent event) {
     recordUseCase.record(
-        event.targetUserId(),
-        NotificationType.FOLLOW_REQUEST,
-        new Actor(event.followerUserId(), event.followerRemoteActorId()),
-        null);
+        event.targetUserId(), NotificationType.FOLLOW_REQUEST, event.follower(), null);
   }
 
   // A follow request's notification goes once the request is approved, turned down or withdrawn,
@@ -47,8 +44,7 @@ public class FollowNotificationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onSettled(FollowRequestSettledEvent event) {
-    notifications.deleteFollowRequest(
-        event.targetUserId(), event.followerUserId(), event.followerRemoteActorId());
+    notifications.deleteFollowRequest(event.targetUserId(), event.follower());
   }
 
   @Async("webhookExecutor")

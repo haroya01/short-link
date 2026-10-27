@@ -8,8 +8,9 @@ import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import com.example.short_link.user.domain.FollowEdge;
@@ -33,7 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NoteReplyControlsIntegrationTest {
 
-  @Autowired private NoteCommandService command;
+  @Autowired private NoteComposer composer;
+  @Autowired private NoteThreadControls threads;
   @Autowired private NoteQueryService query;
   @Autowired private RemoteNotes remoteNotes;
   @Autowired private UserRepository userRepository;
@@ -68,13 +70,13 @@ class NoteReplyControlsIntegrationTest {
     assertRestricted(() -> post(stranger, "저도요", root, null));
     assertRestricted(() -> post(stranger, "깊은 곳에서도", fromNamed, null));
 
-    command.setReplyPolicy(writer, root, "mentioned");
+    threads.setReplyPolicy(writer, root, "mentioned");
     flush();
     assertThat(policyOf(fromNamed)).isEqualTo("MENTIONED");
     assertRestricted(() -> post(followed, "이제는 못 해요", fromNamed, null));
     post(named, "저는 여전히", fromNamed, null);
 
-    command.setReplyPolicy(writer, root, "everyone");
+    threads.setReplyPolicy(writer, root, "everyone");
     flush();
     post(stranger, "이제 누구나", fromNamed, null);
   }
@@ -85,7 +87,7 @@ class NoteReplyControlsIntegrationTest {
     long later = user(laterHandle, true);
     long root = post(writer, "@" + namedHandle + " 에게만", null, "mentioned");
 
-    command.edit(writer, root, "@" + laterHandle + " 에게만", null, null);
+    composer.edit(writer, root, "@" + laterHandle + " 에게만", null, null);
     flush();
 
     assertRestricted(() -> post(named, "이제 저는 아니죠", root, null));
@@ -105,10 +107,10 @@ class NoteReplyControlsIntegrationTest {
     assertThat(canReply(root, named)).isTrue();
     assertThat(canReply(root, stranger)).isFalse();
     assertThat(canReply(root, null)).isNull();
-    NoteThreadView fromReply = query.thread(reply, stranger);
+    NoteThreadView fromReply = query.thread(stranger, reply);
     assertThat(fromReply.note().replyPolicy()).isEqualTo("mentioned");
     assertThat(fromReply.note().canReply()).isFalse();
-    assertThat(query.thread(reply, named).note().canReply()).isTrue();
+    assertThat(query.thread(named, reply).note().canReply()).isTrue();
   }
 
   @Test
@@ -118,33 +120,33 @@ class NoteReplyControlsIntegrationTest {
     long hidden = post(stranger, "숨길 답글", root, null);
     long underHidden = post(named, "숨긴 답글의 답글", hidden, null);
 
-    command.setReplyHidden(writer, hidden, true);
+    threads.setReplyHidden(writer, hidden, true);
     flush();
-    assertThat(query.thread(hidden, followed).replies())
+    assertThat(query.thread(followed, hidden).replies())
         .extracting(NoteView::id)
         .containsExactly(underHidden);
 
-    NoteThreadView thread = query.thread(root, followed);
+    NoteThreadView thread = query.thread(followed, root);
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(kept);
     assertThat(thread.note().replyCount()).isEqualTo(1);
     assertThat(thread.hiddenReplyCount()).isEqualTo(1);
-    assertThat(query.thread(root, null).hiddenReplyCount()).isEqualTo(1);
-    assertThat(query.hiddenReplies(root, followed))
+    assertThat(query.thread(null, root).hiddenReplyCount()).isEqualTo(1);
+    assertThat(query.hiddenReplies(followed, root))
         .extracting(NoteView::id, NoteView::hidden)
         .containsExactly(org.assertj.core.groups.Tuple.tuple(hidden, true));
-    assertThat(query.thread(hidden, null).note().hidden()).isTrue();
-    assertThatThrownBy(() -> command.setReplyHidden(named, kept, true))
+    assertThat(query.thread(null, hidden).note().hidden()).isTrue();
+    assertThatThrownBy(() -> threads.setReplyHidden(named, kept, true))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
 
-    command.setReplyHidden(writer, hidden, false);
+    threads.setReplyHidden(writer, hidden, false);
     flush();
-    assertThat(query.thread(root, null).replies())
+    assertThat(query.thread(null, root).replies())
         .extracting(NoteView::id)
         .containsExactly(kept, hidden);
-    assertThat(query.hiddenReplies(root, null)).isEmpty();
-    assertThat(query.thread(root, null).hiddenReplyCount()).isZero();
+    assertThat(query.hiddenReplies(null, root)).isEmpty();
+    assertThat(query.thread(null, root).hiddenReplyCount()).isZero();
   }
 
   @Test
@@ -156,14 +158,14 @@ class NoteReplyControlsIntegrationTest {
     flush();
 
     for (long note : List.of(root, reply, deep, deeper)) {
-      assertThat(query.thread(note, writer).viewerCanModerate()).as("note %d", note).isTrue();
-      assertThat(query.thread(note, named).viewerCanModerate()).as("note %d", note).isFalse();
-      assertThat(query.thread(note, null).viewerCanModerate()).as("note %d", note).isFalse();
+      assertThat(query.thread(writer, note).viewerCanModerate()).as("note %d", note).isTrue();
+      assertThat(query.thread(named, note).viewerCanModerate()).as("note %d", note).isFalse();
+      assertThat(query.thread(null, note).viewerCanModerate()).as("note %d", note).isFalse();
     }
-    command.setReplyHidden(writer, deeper, true);
+    threads.setReplyHidden(writer, deeper, true);
     flush();
-    assertThat(query.thread(deep, stranger).hiddenReplyCount()).isEqualTo(1);
-    assertThat(query.thread(root, stranger).hiddenReplyCount()).isZero();
+    assertThat(query.thread(stranger, deep).hiddenReplyCount()).isEqualTo(1);
+    assertThat(query.thread(stranger, root).hiddenReplyCount()).isZero();
   }
 
   @Test
@@ -173,12 +175,12 @@ class NoteReplyControlsIntegrationTest {
     long remoteActor = remoteActor("alice");
     long remote = remoteNotes.receive(remoteReply(remoteActor, statuses + "1", root)).orElseThrow();
     flush();
-    assertThat(query.thread(root, null).replies())
+    assertThat(query.thread(null, root).replies())
         .extracting(NoteView::id)
         .containsExactly(members, remote);
 
-    command.delete(writer, members);
-    command.delete(writer, remote);
+    threads.delete(writer, members);
+    threads.delete(writer, remote);
     flush();
 
     assertThat(count("SELECT COUNT(*) FROM note WHERE id = " + members)).isZero();
@@ -188,9 +190,9 @@ class NoteReplyControlsIntegrationTest {
                     + remote
                     + " AND in_reply_to_id IS NULL AND conversation_id IS NULL AND reply"))
         .isEqualTo(1);
-    assertThat(query.thread(root, null).replies()).isEmpty();
+    assertThat(query.thread(null, root).replies()).isEmpty();
     assertThat(remoteNotes.receive(remoteReply(remoteActor, statuses + "1", root))).isEmpty();
-    assertThatThrownBy(() -> command.delete(named, root))
+    assertThatThrownBy(() -> threads.delete(named, root))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
@@ -215,7 +217,7 @@ class NoteReplyControlsIntegrationTest {
     long fromDave = remoteNotes.receive(remoteReply(dave, statuses + "d", root)).orElseThrow();
     flush();
 
-    assertThat(query.thread(root, null).replies())
+    assertThat(query.thread(null, root).replies())
         .extracting(NoteView::id)
         .containsExactly(fromBob, fromCarol);
     assertThat(
@@ -238,7 +240,7 @@ class NoteReplyControlsIntegrationTest {
   }
 
   private long post(long author, String body, Long inReplyTo, String policy) {
-    return command
+    return composer
         .create(
             author,
             new NoteDraft(
@@ -247,7 +249,7 @@ class NoteReplyControlsIntegrationTest {
   }
 
   private Boolean canReply(long noteId, Long viewer) {
-    return query.thread(noteId, viewer).note().canReply();
+    return query.thread(viewer, noteId).note().canReply();
   }
 
   private String policyOf(long noteId) {

@@ -5,8 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.example.short_link.common.user.BlockEdge;
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteInteractions;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
@@ -67,7 +68,8 @@ class NoteNotificationReadersE2ETest {
   @Autowired private FollowRepository follows;
   @Autowired private BlockRepository blocks;
   @Autowired private MuteRepository mutes;
-  @Autowired private NoteCommandService command;
+  @Autowired private NoteComposer composer;
+  @Autowired private NoteInteractions interactions;
   @Autowired private JdbcTemplate jdbc;
 
   @Autowired
@@ -135,7 +137,7 @@ class NoteNotificationReadersE2ETest {
       markers.put(vis, marker);
       written.put(
           vis,
-          command
+          composer
               .create(
                   author,
                   new NoteDraft(
@@ -153,10 +155,10 @@ class NoteNotificationReadersE2ETest {
                       vis == Vis.ROOM ? room : null))
               .id());
     }
-    command.setRepost(ids.get(Viewer.SHARER), written.get(Vis.PUBLIC), true);
+    interactions.setRepost(ids.get(Viewer.SHARER), written.get(Vis.PUBLIC), true);
     drain();
     for (Vis vis : Vis.values()) {
-      command.edit(
+      composer.edit(
           author,
           written.get(vis),
           markers.get(vis) + " edited @" + mentioned + (vis == Vis.ROOM ? " @" + roommate : ""),

@@ -29,10 +29,11 @@ class UserSummaryReaderTest {
     alice.updateDisplayName("Alice");
     alice.updateBio("writes");
     alice.updateAvatar("https://cdn/a.png", "avatars/1");
+    alice.updateLocale("ja");
     when(users.findById(1L)).thenReturn(Optional.of(alice));
 
     assertThat(reader.find(1L))
-        .contains(new UserSummary(1L, "alice", "Alice", "https://cdn/a.png", "writes"));
+        .contains(new UserSummary(1L, "alice", "Alice", "https://cdn/a.png", "writes", "ja"));
   }
 
   @Test

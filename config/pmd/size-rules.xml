@@ -9,4 +9,5 @@
   <rule ref="category/java/design.xml/CognitiveComplexity"/>
   <rule ref="category/java/design.xml/NPathComplexity"/>
   <rule ref="category/java/design.xml/ExcessiveParameterList"/>
+  <rule ref="category/java/design.xml/AvoidDeeplyNestedIfStmts"/>
 </ruleset>

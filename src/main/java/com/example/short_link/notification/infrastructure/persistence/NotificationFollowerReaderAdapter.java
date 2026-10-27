@@ -47,9 +47,6 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
   }
 
-  // Members who reposted or quoted the note. A member author is silenced by a block either way and
-  // notice mutes, an author elsewhere by blocks, notice mutes and a blocked server; a muted
-  // conversation silences either.
   @Override
   public List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId) {
     String server =

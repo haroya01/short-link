@@ -3,8 +3,9 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.PostExportQueryService;
 import com.example.short_link.post.application.read.PostQueryService;
@@ -67,7 +68,8 @@ class PostModerationIntegrationTest {
   @Autowired private PostExportQueryService exportPosts;
   @Autowired private PublicPostQueryService publicPosts;
   @Autowired private PublicFeedQueryService feed;
-  @Autowired private NoteCommandService notes;
+  @Autowired private NoteComposer composer;
+  @Autowired private NoteThreadControls threads;
 
   private TransactionTemplate transactions;
   private Long authorId;
@@ -93,7 +95,7 @@ class PostModerationIntegrationTest {
 
   @AfterEach
   void cleanup() {
-    for (Long noteId : noteIds) notes.delete(authorId, noteId);
+    for (Long noteId : noteIds) threads.delete(authorId, noteId);
     transactions.executeWithoutResult(
         status -> {
           for (Long postId : postIds) {
@@ -295,8 +297,8 @@ class PostModerationIntegrationTest {
           restoreRevision.execute(new RestorePostRevisionCommand(authorId, postId, 1));
       case PREVIEW_TOKEN -> issuePreview.issue(authorId, postId);
       case NOTE_CREATE ->
-          notes.create(authorId, new NoteDraft("while suspended", List.of(), null, null));
-      case NOTE_EDIT -> notes.edit(authorId, noteId, "while suspended", null, null);
+          composer.create(authorId, new NoteDraft("while suspended", List.of(), null, null));
+      case NOTE_EDIT -> composer.edit(authorId, noteId, "while suspended", null, null);
     }
   }
 
@@ -326,7 +328,7 @@ class PostModerationIntegrationTest {
   }
 
   private Long note(String body) {
-    Long id = notes.create(authorId, new NoteDraft(body, List.of(), null, null)).id();
+    Long id = composer.create(authorId, new NoteDraft(body, List.of(), null, null)).id();
     noteIds.add(id);
     return id;
   }

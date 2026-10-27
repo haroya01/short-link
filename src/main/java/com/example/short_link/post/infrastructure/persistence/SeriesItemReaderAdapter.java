@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.PostAccessSql;
@@ -129,7 +130,7 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                   type,
                   refId,
                   null,
-                  SeriesNote.excerptOf((String) row[6], (String) row[7]),
+                  Excerpt.of((String) row[6], (String) row[7]),
                   null,
                   (Instant) row[8]);
       bySeries.computeIfAbsent((Long) row[0], id -> new ArrayList<>()).add(entry);

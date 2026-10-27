@@ -6,8 +6,8 @@ import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserProfile;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Clock;
@@ -22,34 +22,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ProfileQueryService {
 
-  private final UserRepository userRepository;
+  private final UserProfileReader users;
   private final LinkRepository linkRepository;
   private final PublicProfileLoader publicProfiles;
-  private final PublicHandleReader publicHandles;
   private final Clock clock;
   private final String publicProfileBaseUrl;
 
   public ProfileQueryService(
-      UserRepository userRepository,
+      UserProfileReader users,
       LinkRepository linkRepository,
       PublicProfileLoader publicProfiles,
-      PublicHandleReader publicHandles,
       Clock clock,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
-    this.userRepository = userRepository;
+    this.users = users;
     this.linkRepository = linkRepository;
     this.publicProfiles = publicProfiles;
-    this.publicHandles = publicHandles;
     this.clock = clock;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
   }
 
   public MyProfile myProfile(Long userId) {
-    UserEntity user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    UserProfile user =
+        users.find(userId).orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     return MyProfileMapper.from(user, publicProfileBaseUrl);
   }
 
@@ -66,8 +61,8 @@ public class ProfileQueryService {
   }
 
   public PublicHandlesPage publicHandlesPage(int page, int size) {
-    long total = userRepository.countByUsernameIsNotNullAndDeletedAtIsNull();
-    List<String> handles = publicHandles.findPage(page, size);
+    long total = users.countPublicHandles();
+    List<String> handles = users.publicHandles(page, size);
     return new PublicHandlesPage(handles, total);
   }
 

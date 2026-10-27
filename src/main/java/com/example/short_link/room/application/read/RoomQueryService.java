@@ -43,8 +43,8 @@ public class RoomQueryService {
   }
 
   @Transactional(readOnly = true)
-  public RoomView detail(Long roomId, Long userId) {
-    RoomEntity room = joined(roomId, userId);
+  public RoomView detail(Long userId, Long roomId) {
+    RoomEntity room = joined(userId, roomId);
     List<RoomPerson> members = rooms.members(roomId, RoomEntity.MAX_MEMBERS);
     return new RoomView(
         room.getId(),
@@ -60,8 +60,8 @@ public class RoomQueryService {
 
   // The owner sees every invite of the room, a member only their own.
   @Transactional(readOnly = true)
-  public List<RoomInviteView> invites(Long roomId, Long userId) {
-    RoomEntity room = joined(roomId, userId);
+  public List<RoomInviteView> invites(Long userId, Long roomId) {
+    RoomEntity room = joined(userId, roomId);
     List<RoomInviteEntity> invites =
         rooms.invites(roomId).stream()
             .filter(invite -> room.isOwnedBy(userId) || invite.getCreatorId().equals(userId))
@@ -81,8 +81,8 @@ public class RoomQueryService {
   }
 
   @Transactional(readOnly = true)
-  public List<RoomJoinRequest> requests(Long roomId, Long userId) {
-    RoomEntity room = joined(roomId, userId);
+  public List<RoomJoinRequest> requests(Long userId, Long roomId) {
+    RoomEntity room = joined(userId, roomId);
     if (!room.isOwnedBy(userId)) {
       throw new RoomException(RoomErrorCode.ROOM_OWNER_ONLY);
     }
@@ -125,8 +125,8 @@ public class RoomQueryService {
   }
 
   @Transactional(readOnly = true)
-  public List<RoomInvitee> invitees(Long roomId, Long userId) {
-    joined(roomId, userId);
+  public List<RoomInvitee> invitees(Long userId, Long roomId) {
+    joined(userId, roomId);
     return rooms.invitees(roomId);
   }
 
@@ -135,7 +135,7 @@ public class RoomQueryService {
     return rooms.invitationsFor(userId, SHOWN_INVITATIONS);
   }
 
-  private RoomEntity joined(Long roomId, Long userId) {
+  private RoomEntity joined(Long userId, Long roomId) {
     return rooms
         .findById(roomId)
         .filter(room -> rooms.isMember(roomId, userId))

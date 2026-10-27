@@ -1,11 +1,11 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.application.read.ClickTimeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
+class ClickTimeReadRepositoryAdapter implements ClickTimeReader {
 
   private final JpaClickTimeReadRepository jpa;
 

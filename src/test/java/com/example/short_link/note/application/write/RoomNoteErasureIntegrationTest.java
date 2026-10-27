@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class RoomNoteErasureIntegrationTest {
 
-  @Autowired private NoteCommandService command;
+  @Autowired private RoomNoteErasures erasures;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private EntityManager em;
@@ -46,21 +46,21 @@ class RoomNoteErasureIntegrationTest {
 
   @Test
   void aRequestIsErasedChunkByChunkAndThenForgotten() {
-    command.requestRoomNoteErasure(writer, room);
-    command.requestRoomNoteErasure(writer, room);
+    erasures.request(writer, room);
+    erasures.request(writer, room);
     assertThat(requests()).isOne();
 
-    assertThat(command.eraseRoomNotes(writer, room, 2)).isEqualTo(2);
+    assertThat(erasures.erase(writer, room, 2)).isEqualTo(2);
     em.flush();
     assertThat(notes(writer, room)).isOne();
     assertThat(requests()).isOne();
 
-    assertThat(command.eraseRoomNotes(writer, room, 2)).isEqualTo(1);
+    assertThat(erasures.erase(writer, room, 2)).isEqualTo(1);
     em.flush();
     assertThat(notes(writer, room)).isZero();
     assertThat(requests()).isZero();
 
-    assertThat(command.eraseRoomNotes(writer, room, 2)).isZero();
+    assertThat(erasures.erase(writer, room, 2)).isZero();
     assertThat(notes(other, room)).isOne();
     assertThat(notes(writer, elsewhere)).isOne();
   }

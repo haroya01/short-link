@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.link.stats.application.ClickFlusher;
+import com.example.short_link.link.stats.application.read.ClickTimeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,8 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   @Autowired private ClickFlusher clickFlusher;
   @Autowired private ClickEventRepository clickEvents;
-  @Autowired private ClickTimeReadRepository clickTime;
-  @Autowired private ClickTotalsReadRepository clickTotals;
+  @Autowired private ClickTimeReader clickTime;
+  @Autowired private ClickTotalsReader clickTotals;
   @Autowired private PlatformTransactionManager transactionManager;
 
   @Test

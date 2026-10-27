@@ -105,14 +105,16 @@ public class NoteFederation {
                             : List.of();
                     if (reach.isEmpty()) {
                       if (!followerInboxes.isEmpty()) {
-                        send(authorId, documents.create(note, publicId), followerInboxes);
+                        send(
+                            authorId,
+                            documents.create(note, publicId, Addressing.NONE),
+                            followerInboxes);
                       }
                       return;
                     }
                     send(
                         authorId,
-                        documents.create(
-                            note, publicId, reach.parent(), reach.addressees(), reach.quoted()),
+                        documents.create(note, publicId, reach),
                         reach.inboxes(followerInboxes));
                   });
             });
@@ -144,12 +146,7 @@ public class NoteFederation {
                     }
                     send(
                         authorId,
-                        documents.update(
-                            note,
-                            stored.actor().publicId(),
-                            reach.parent(),
-                            reach.addressees(),
-                            reach.quoted()),
+                        documents.update(note, stored.actor().publicId(), reach),
                         inboxes);
                   });
             });
@@ -238,7 +235,7 @@ public class NoteFederation {
         notes
             .find(noteId)
             .filter(NoteFederation::leaves)
-            .map(note -> documents.create(note, publicId));
+            .map(note -> documents.create(note, publicId, Addressing.NONE));
   }
 
   private Function<String, Optional<Map<String, Object>>> edit(Long noteId) {
@@ -246,7 +243,7 @@ public class NoteFederation {
         notes
             .find(noteId)
             .filter(NoteFederation::leaves)
-            .map(note -> documents.update(note, publicId));
+            .map(note -> documents.update(note, publicId, Addressing.NONE));
   }
 
   private Function<String, Optional<Map<String, Object>>> deletion(Long noteId) {

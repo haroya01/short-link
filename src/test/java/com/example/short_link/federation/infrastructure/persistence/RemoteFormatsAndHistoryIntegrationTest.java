@@ -246,7 +246,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
         .extracting(NoteView.Media::url)
         .containsExactly("https://" + host("peertube") + "/lazy-static/previews/9c9de5e8.jpg");
 
-    assertThat(query.byRemoteActor(maker.getId(), reader, new PageAsk(0, 20)).items())
+    assertThat(query.byRemoteActor(reader, maker.getId(), new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(video.id());
     assertThatThrownBy(() -> polls.vote(reader, question.id(), List.of(0)))
@@ -281,7 +281,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
     history.fillIn(account.getId(), reader);
 
     List<NoteView> listed =
-        query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items();
+        query.byRemoteActor(reader, account.getId(), new PageAsk(0, 20)).items();
     assertThat(listed)
         .extracting(NoteView::body)
         .containsExactly(
@@ -290,7 +290,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
             "Which editor do you write in?");
     assertThat(listed.get(2).poll().expired()).isTrue();
     assertThat(listed.get(1).media()).hasSize(1);
-    assertThat(query.byRemoteActor(account.getId(), blocker, new PageAsk(0, 20)).items()).isEmpty();
+    assertThat(query.byRemoteActor(blocker, account.getId(), new PageAsk(0, 20)).items()).isEmpty();
     assertThat(notifications(named)).isZero();
 
     history.fillIn(account.getId(), reader);
@@ -315,7 +315,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
 
     history.fillIn(account.getId(), reader);
     verify(http, times(6)).get(any(), any());
-    assertThat(query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items()).hasSize(4);
+    assertThat(query.byRemoteActor(reader, account.getId(), new PageAsk(0, 20)).items()).hasSize(4);
   }
 
   @Test
@@ -332,6 +332,6 @@ class RemoteFormatsAndHistoryIntegrationTest {
     following.follow(reader, account.getId());
     awaitBackgroundWork();
 
-    assertThat(query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items()).hasSize(3);
+    assertThat(query.byRemoteActor(reader, account.getId(), new PageAsk(0, 20)).items()).hasSize(3);
   }
 }

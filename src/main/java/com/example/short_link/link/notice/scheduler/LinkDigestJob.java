@@ -8,8 +8,8 @@ import com.example.short_link.common.notification.LinkNoticeSender;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.notice.application.LinkNoticeProperties;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -31,7 +31,7 @@ public class LinkDigestJob {
   private static final String LOCK_KEY = "notif:digest";
 
   private final LinkRepository links;
-  private final ClickRangeReadRepository ranges;
+  private final ClickRangeReader ranges;
   private final LinkNoticeSender notices;
   private final LinkNoticeProperties props;
   private final RedisDistributedLock lock;

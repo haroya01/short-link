@@ -19,6 +19,7 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -54,7 +55,7 @@ class EventQueryServiceTest {
             questionRepository,
             registrationRepository,
             eventLinkRepository,
-            linkRepository,
+            new LinkRefReader(linkRepository),
             coverImageUrls);
   }
 

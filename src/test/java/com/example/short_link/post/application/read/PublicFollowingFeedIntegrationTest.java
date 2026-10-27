@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 class PublicFollowingFeedIntegrationTest {
 
   @Autowired private PublicFeedQueryService service;
+  @Autowired private PostHomeSlices homeSlices;
   @Autowired private PostRepository postRepository;
   @Autowired private SeriesRepository seriesRepository;
   @Autowired private SeriesSubscriptionRepository subscriptionRepository;
@@ -142,7 +143,7 @@ class PublicFollowingFeedIntegrationTest {
     assertThat(service.feedFollowing(me, 1, 2).items())
         .extracting(PublicFeedItem::slug)
         .containsExactly("first-old");
-    assertThat(service.followingAt(me, 0, 20).items())
+    assertThat(homeSlices.followingAt(me, 0, 20).items())
         .extracting(at -> at.post().item().slug())
         .containsExactly("first-new", "second-mid", "first-old");
   }

@@ -1,9 +1,15 @@
 package com.example.short_link.note.application.write;
 
 import com.example.short_link.note.domain.RoomErasure;
+import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // Each tick takes the oldest requests and one chunk of each, every chunk in its own transaction, so
 // a
@@ -16,13 +22,32 @@ public class RoomNoteErasures {
   static final int CHUNK = 50;
 
   private final RoomNoteErasureRepository erasures;
-  private final NoteCommandService command;
+  private final NoteRepository notes;
+  private final NoteThreadControls threads;
+  private final TransactionTemplate transaction;
+  private final Clock clock;
+
+  @Transactional
+  public void request(Long userId, Long roomId) {
+    erasures.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+  }
 
   public int eraseDue() {
     int erased = 0;
     for (RoomErasure request : erasures.pendingRoomErasures(REQUESTS_PER_TICK)) {
-      erased += command.eraseRoomNotes(request.userId(), request.roomId(), CHUNK);
+      erased += transaction.execute(status -> erase(request.userId(), request.roomId(), CHUNK));
     }
     return erased;
+  }
+
+  // One chunk of a requested erasure, each note through the usual delete; the request is done once
+  // a chunk comes back short. Running it again after a crash only finds what is left.
+  int erase(Long userId, Long roomId, int chunk) {
+    List<Long> ids = erasures.roomNoteIdsBy(userId, roomId, chunk);
+    notes.findAllByIdIn(ids).forEach(threads::remove);
+    if (ids.size() < chunk) {
+      erasures.finishRoomErasure(userId, roomId);
+    }
+    return ids.size();
   }
 }

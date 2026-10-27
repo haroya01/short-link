@@ -1,5 +1,6 @@
 package com.example.short_link.notification.domain.repository;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
@@ -38,7 +39,7 @@ public interface NotificationRepository {
 
   int deleteFromServer(String domain);
 
-  int deleteFollowRequest(Long recipientUserId, Long actorUserId, Long actorRemoteId);
+  int deleteFollowRequest(Long recipientUserId, Actor follower);
 
   int deleteFollowRequests(Long recipientUserId);
 

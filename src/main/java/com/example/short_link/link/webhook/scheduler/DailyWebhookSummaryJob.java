@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.scheduler;
 
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.webhook.application.helper.DailySummaryAssembler;
@@ -67,7 +68,7 @@ public class DailyWebhookSummaryJob {
     if (link.getUserId() == null) return;
     String ownerTimezone = users.timezone(link.getUserId()).orElse(null);
     if (ownerTimezone == null) return;
-    ZoneId tz = resolveZone(ownerTimezone);
+    ZoneId tz = ReportZones.zoneOf(ownerTimezone);
     ZonedDateTime nowLocal = ZonedDateTime.now(clock.withZone(tz));
     LocalDate today = nowLocal.toLocalDate();
     if (nowLocal.getHour() < hourOfDay) return;
@@ -78,15 +79,6 @@ public class DailyWebhookSummaryJob {
         assembler.assemble(hook.linkId(), link.getShortCode(), yesterday, tz);
     deliveryClient.deliver(hook, new WebhookNotification.DailySummary(payload));
     hook.markSummarySent(today);
-  }
-
-  private static ZoneId resolveZone(String name) {
-    if (name == null || name.isBlank()) return ZoneId.of("Asia/Seoul");
-    try {
-      return ZoneId.of(name);
-    } catch (Exception e) {
-      return ZoneId.of("Asia/Seoul");
-    }
   }
 
   Optional<LocalDate> peekLastSent(LinkWebhookEntity hook) {

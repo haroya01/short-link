@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -28,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @KurlWebMvcTest(
     controllers = {WebFingerController.class, ActorController.class, NodeInfoController.class})
-@Import({FederationUrls.class, FederationControllersTest.Props.class})
+@Import({FederationUrls.class, ActorDocuments.class, FederationControllersTest.Props.class})
 class FederationControllersTest {
 
   @TestConfiguration

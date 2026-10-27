@@ -1,11 +1,11 @@
 package com.example.short_link.event.application.write;
 
 import com.example.short_link.common.mail.MailSender;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.event.application.helper.EventPublicUrlBuilder;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.EventRegistrationEntity;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class RegistrationMailer {
     if (event.getContactField() != ContactField.EMAIL) return;
     try {
       String when =
-          WHEN.withZone(zoneOf(event.getTimezone())).format(event.getStartsAt())
+          WHEN.withZone(ReportZones.zoneOf(event.getTimezone())).format(event.getStartsAt())
               + " ("
               + event.getTimezone()
               + ")";
@@ -53,14 +53,6 @@ public class RegistrationMailer {
           "confirmation mail skipped for registration {}: {}",
           registration.getId(),
           e.getMessage());
-    }
-  }
-
-  private static ZoneId zoneOf(String timezone) {
-    try {
-      return ZoneId.of(timezone);
-    } catch (Exception e) {
-      return ZoneId.of("Asia/Seoul");
     }
   }
 }

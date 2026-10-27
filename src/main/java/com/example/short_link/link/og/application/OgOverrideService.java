@@ -2,11 +2,9 @@ package com.example.short_link.link.og.application;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkErrorCode;
-import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.og.application.dto.OgOverrideResult;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
@@ -18,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OgOverrideService {
 
-  private final LinkRepository repository;
+  private final LinkOwnership ownership;
   private final LinkOgMetadataRepository ogMetadataRepository;
   private final ProfileCacheInvalidator cacheEviction;
   private final LinkCacheEviction linkCacheEviction;
@@ -26,13 +24,7 @@ public class OgOverrideService {
   @Transactional
   public OgOverrideResult update(
       Long userId, ShortCode shortCode, String title, String description, String image) {
-    LinkEntity link =
-        repository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
-    }
+    LinkEntity link = ownership.requireOwned(userId, shortCode);
     link.changeOgOverride(title, description, image);
     LinkOgMetadataEntity ogMeta =
         ogMetadataRepository

@@ -140,7 +140,7 @@ class CampaignBatchExportServiceTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("orig", "A", "East", 500, null, null).toCommand());
-    Long originalLinkId = original.link().getId();
+    Long originalLinkId = original.link().linkId().value();
 
     BatchWithLink updated =
         batchService.update(
@@ -153,7 +153,7 @@ class CampaignBatchExportServiceTest {
     assertThat(updated.batch().getName()).isEqualTo("renamed");
     assertThat(updated.batch().getDistributorName()).isEqualTo("B");
     assertThat(updated.batch().getQuantity()).isEqualTo(700);
-    assertThat(updated.link().getId()).isEqualTo(originalLinkId);
+    assertThat(updated.link().linkId().value()).isEqualTo(originalLinkId);
   }
 
   @Test

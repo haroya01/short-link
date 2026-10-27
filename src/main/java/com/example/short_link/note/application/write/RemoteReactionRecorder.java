@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
@@ -33,8 +34,7 @@ class RemoteReactionRecorder implements RemoteNoteReactions {
                             ? NoteInteractionEvent.Type.LIKE
                             : NoteInteractionEvent.Type.REPOST,
                         note.getUserId(),
-                        null,
-                        remoteActorId,
+                        Actor.remote(remoteActorId),
                         note.getId(),
                         note.excerpt(),
                         null,

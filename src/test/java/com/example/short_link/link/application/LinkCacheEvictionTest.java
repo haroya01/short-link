@@ -118,7 +118,7 @@ class LinkCacheEvictionTest {
   void endingACampaignDropsTheCachedBatchLinkSoTheEndPolicyApplies() {
     UserEntity owner = newUser();
     CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.REDIRECT);
-    ShortCode code = newBatch(owner, campaign).link().getShortCode();
+    ShortCode code = newBatch(owner, campaign).link().shortCode();
     Cache cache = cacheManager.getCache("link");
     loader.loadByShortCode(code);
     awaitCached(cache, code);
@@ -134,7 +134,7 @@ class LinkCacheEvictionTest {
     UserEntity owner = newUser();
     CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.KEEP);
     BatchWithLink batch = newBatch(owner, campaign);
-    ShortCode code = batch.link().getShortCode();
+    ShortCode code = batch.link().shortCode();
     Cache cache = cacheManager.getCache("link");
     loader.loadByShortCode(code);
     awaitCached(cache, code);

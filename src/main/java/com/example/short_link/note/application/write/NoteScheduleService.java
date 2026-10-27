@@ -29,7 +29,7 @@ public class NoteScheduleService {
   private static final String UNKNOWN_FAILURE = "NOTE_SCHEDULE_FAILED";
 
   private final NoteScheduleRepository schedules;
-  private final NoteCommandService command;
+  private final NoteComposer composer;
   private final NoteImages images;
   private final JsonMapper json;
   private final TransactionTemplate transaction;
@@ -64,7 +64,7 @@ public class NoteScheduleService {
             throw new NoteException(
                 NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PER_DAY);
           }
-          command.validate(userId, draft, stored);
+          composer.validate(userId, draft, stored);
           return view(
               schedules.save(new NoteScheduleEntity(userId, when, json.writeValueAsString(draft))));
         });
@@ -130,7 +130,7 @@ public class NoteScheduleService {
               if (row.isEmpty()) {
                 return false;
               }
-              command.write(userId, draft, stored);
+              composer.write(userId, draft, stored);
               schedules.delete(row.get());
               return true;
             }));

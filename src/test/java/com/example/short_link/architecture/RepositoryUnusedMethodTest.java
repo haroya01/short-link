@@ -2,6 +2,8 @@ package com.example.short_link.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -14,6 +16,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 // Catches dead methods on Repository / Service / UseCase classes. Byte-code call analysis sees
@@ -60,6 +63,8 @@ public class RepositoryUnusedMethodTest {
           .or()
           .areDeclaredInClassesThat()
           .haveSimpleNameEndingWith("UseCase")
+          .or()
+          .areDeclaredInClassesThat(areActionGroups())
           .and()
           .areDeclaredInClassesThat()
           .resideInAPackage("com.example.short_link..")
@@ -78,6 +83,14 @@ public class RepositoryUnusedMethodTest {
           .and()
           .areNotAnnotatedWith(Cacheable.class)
           .should(beCalledFromOutsideOwner());
+
+  private static DescribedPredicate<JavaClass> areActionGroups() {
+    return DescribedPredicate.describe(
+        "are write action groups",
+        javaClass ->
+            javaClass.isAnnotatedWith(Service.class)
+                && javaClass.getPackageName().contains(".application.write"));
+  }
 
   private static boolean implementsInterfaceMethod(JavaMethod method) {
     return method.getOwner().getAllRawInterfaces().stream()

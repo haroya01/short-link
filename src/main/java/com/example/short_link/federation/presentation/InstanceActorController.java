@@ -1,10 +1,9 @@
 package com.example.short_link.federation.presentation;
 
-import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.federation.application.ActorDocument;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.signature.SigningKeys;
-import com.example.short_link.federation.presentation.response.ActorResponse;
 import java.time.Duration;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -16,35 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class InstanceActorController {
 
   private final SigningKeys signingKeys;
-  private final FederationUrls urls;
+  private final ActorDocuments documents;
 
   @GetMapping("/ap/instance")
-  public ResponseEntity<ActorResponse> instance() {
-    String id = urls.instance();
+  public ResponseEntity<ActorDocument> instance() {
     return ResponseEntity.ok()
         .contentType(ActivityPubMedia.ACTIVITY_JSON)
         .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
-        .body(
-            new ActorResponse(
-                List.of(ActivityPubMedia.CONTEXT, "https://w3id.org/security/v1"),
-                id,
-                "Application",
-                urls.domain(),
-                urls.domain(),
-                null,
-                null,
-                urls.sharedInbox(),
-                id + "/outbox",
-                null,
-                null,
-                null,
-                null,
-                new ActorResponse.Endpoints(urls.sharedInbox()),
-                true,
-                false,
-                false,
-                null,
-                new ActorResponse.PublicKey(
-                    urls.instanceKey(), id, signingKeys.instanceActor().getPublicKeyPem())));
+        .body(documents.instance(signingKeys.instanceActor().getPublicKeyPem()));
   }
 }

@@ -5,10 +5,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-// Who on other servers a note addresses: the note it answers, the people it names and the note it
-// quotes.
 public record Addressing(
     RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
+
+  public static final Addressing NONE = new Addressing(null, List.of(), null);
 
   public Addressing naming(List<RemoteActorEntity> people) {
     return new Addressing(parent, people, quoted);

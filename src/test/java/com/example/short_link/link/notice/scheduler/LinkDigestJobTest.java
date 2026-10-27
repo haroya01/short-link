@@ -16,8 +16,8 @@ import com.example.short_link.common.notification.LinkNoticeKind;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.notice.application.LinkNoticeProperties;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class LinkDigestJobTest {
 
   private final LinkRepository links = mock(LinkRepository.class);
-  private final ClickRangeReadRepository ranges = mock(ClickRangeReadRepository.class);
+  private final ClickRangeReader ranges = mock(ClickRangeReader.class);
   private final RedisDistributedLock lock = mock(RedisDistributedLock.class);
   private final List<LinkNotice> sent = new ArrayList<>();
 

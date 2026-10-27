@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -90,7 +91,7 @@ public class FederationFollowers {
     if (existing.isEmpty()) {
       events.publishEvent(
           waits
-              ? new FollowRequestedEvent(userId, null, follower.getId())
+              ? new FollowRequestedEvent(userId, Actor.remote(follower.getId()))
               : new RemoteFollowedEvent(userId, follower.getId()));
     }
     if (!waits) {
@@ -115,7 +116,7 @@ public class FederationFollowers {
     FederationFollowerEntity row = waiting(userId, remoteActorId);
     row.accept(clock.instant());
     followers.save(row);
-    events.publishEvent(new FollowRequestSettledEvent(userId, null, remoteActorId));
+    events.publishEvent(new FollowRequestSettledEvent(userId, Actor.remote(remoteActorId)));
     answerAs(userId, "Accept", row.getFollowActivityId(), remoteActorId);
   }
 
@@ -123,7 +124,7 @@ public class FederationFollowers {
   public void reject(Long userId, Long remoteActorId) {
     FederationFollowerEntity row = waiting(userId, remoteActorId);
     followers.delete(userId, remoteActorId);
-    events.publishEvent(new FollowRequestSettledEvent(userId, null, remoteActorId));
+    events.publishEvent(new FollowRequestSettledEvent(userId, Actor.remote(remoteActorId)));
     answerAs(userId, "Reject", row.getFollowActivityId(), remoteActorId);
   }
 
@@ -185,7 +186,7 @@ public class FederationFollowers {
     }
     followers.delete(userId, follower.getId());
     if (row.get().isPending()) {
-      events.publishEvent(new FollowRequestSettledEvent(userId, null, follower.getId()));
+      events.publishEvent(new FollowRequestSettledEvent(userId, Actor.remote(follower.getId())));
     }
     actor.ifPresent(
         uri -> answer("Reject", userId, uri, row.get().getFollowActivityId(), follower));

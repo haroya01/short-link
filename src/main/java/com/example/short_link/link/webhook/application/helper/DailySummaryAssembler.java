@@ -2,8 +2,8 @@ package com.example.short_link.link.webhook.application.helper;
 
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DailySummaryAssembler {
 
-  private final ClickRangeReadRepository clickRanges;
+  private final ClickRangeReader clickRanges;
   private final ClickAlertReadRepository clickAlerts;
 
   public DailySummaryPayload assemble(

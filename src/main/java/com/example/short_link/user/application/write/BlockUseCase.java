@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.user.domain.FollowEdge;
@@ -44,7 +45,7 @@ public class BlockUseCase {
   private void withdrawRequest(FollowEdge request) {
     if (followRequests.delete(request) > 0) {
       events.publishEvent(
-          new FollowRequestSettledEvent(request.following(), request.follower(), null));
+          new FollowRequestSettledEvent(request.following(), Actor.member(request.follower())));
     }
   }
 

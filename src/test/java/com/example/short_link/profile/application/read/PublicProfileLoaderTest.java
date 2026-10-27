@@ -12,7 +12,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
 import com.example.short_link.profile.application.PublicProfileSnapshot.LinkWindow;
@@ -23,6 +23,7 @@ import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.read.UserProfileReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
@@ -44,7 +45,7 @@ class PublicProfileLoaderTest {
 
   @Mock private UserRepository userRepository;
   @Mock private LinkRepository linkRepository;
-  @Mock private ClickTotalsReadRepository clickRepository;
+  @Mock private ClickTotalsReader clickRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileBlockRepository profileBlockRepository;
   @Mock private PublishedPostCountReader postCountReader;
@@ -56,7 +57,7 @@ class PublicProfileLoaderTest {
   void setUp() {
     loader =
         new PublicProfileLoader(
-            userRepository,
+            new UserProfileReader(userRepository),
             linkRepository,
             clickRepository,
             usernameHistoryRepository,

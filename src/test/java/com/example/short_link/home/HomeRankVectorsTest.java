@@ -1,5 +1,6 @@
 package com.example.short_link.home;
 
+import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,9 +23,10 @@ import com.example.short_link.federation.domain.foryou.HomeRanking;
 import com.example.short_link.home.application.read.HomeFeedQueryService;
 import com.example.short_link.home.application.read.HomeForYou;
 import com.example.short_link.note.application.read.NoteQueryService;
+import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.post.application.read.PostCard;
+import com.example.short_link.post.application.read.PostHomeSlices;
 import com.example.short_link.post.application.read.PublicFeedItem;
-import com.example.short_link.post.application.read.PublicFeedQueryService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -247,7 +249,15 @@ class HomeRankVectorsTest {
     String cursor = null;
     for (int turn = 0; turn <= pages.size(); turn++) {
       HomeFeedQueryService.Page page =
-          forYou.page(in.reader().member(), in.viewer(), null, cursor, in.limit(), in.hide());
+          forYou.page(
+              ask(
+                  in.reader().member(),
+                  in.viewer(),
+                  "for-you",
+                  cursor,
+                  null,
+                  in.limit(),
+                  in.hide()));
       scrolled.add(page.items().stream().map(HomeRankVectorsTest::key).toList());
       cursor = page.next();
       if (cursor == null) {
@@ -261,7 +271,7 @@ class HomeRankVectorsTest {
   private static HomeForYou served(Case in) {
     RemoteForYou remote = mock(RemoteForYou.class);
     NoteQueryService notes = mock(NoteQueryService.class);
-    PublicFeedQueryService posts = mock(PublicFeedQueryService.class);
+    PostHomeSlices posts = mock(PostHomeSlices.class);
     NoteViewReader views = mock(NoteViewReader.class);
     LocalSeen localSeen = mock(LocalSeen.class);
     RemoteSeen remoteSeen = mock(RemoteSeen.class);
@@ -310,7 +320,9 @@ class HomeRankVectorsTest {
                   .map(
                       id ->
                           new NoteViewReader.Listed(
-                              id, notesById.get(id).key(), notesById.get(id).key()))
+                              id,
+                              NoteViewFixtures.note(id, notesById.get(id).key(), null, null, 0L),
+                              notesById.get(id).key()))
                   .toList();
             });
     when(posts.cards(any(), any()))
@@ -332,9 +344,9 @@ class HomeRankVectorsTest {
 
   private static String key(HomeFeedQueryService.Item item) {
     return switch (item.kind()) {
-      case "note" -> (String) item.note();
-      case "post" -> "kurl:post:" + ((PostCard) item.post()).item().id();
-      default -> (String) ((RemoteTrendingFeed.KeptNote) item.remote()).note();
+      case "note" -> item.note().body();
+      case "post" -> "kurl:post:" + item.post().item().id();
+      default -> ((RemoteTrendingFeed.KeptNote) item.remote()).uri();
     };
   }
 }

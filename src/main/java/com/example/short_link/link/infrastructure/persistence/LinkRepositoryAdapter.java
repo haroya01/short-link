@@ -100,21 +100,6 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
-  public long countByCreatedAtAfter(Instant since) {
-    return jpa.countByCreatedAtAfter(since);
-  }
-
-  @Override
-  public long countByUserIdIsNull() {
-    return jpa.countByUserIdIsNull();
-  }
-
-  @Override
-  public long countByExpiresAtBefore(Instant when) {
-    return jpa.countByExpiresAtBefore(when);
-  }
-
-  @Override
   public List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when) {
     return jpa.findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(when);
   }
