@@ -46,6 +46,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.support.DiscoverableBodies;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -115,8 +116,10 @@ class HeardRuleIntegrationTest {
       writers.put(handle, user(handle));
     }
     Instant now = Instant.now();
-    blockRepository.save(new UserBlockEntity(viewer, writer("hr-blocked")));
-    blockRepository.save(new UserBlockEntity(writer("hr-blocker"), viewer));
+    blockRepository.save(
+        new UserBlockEntity(BlockEdge.blocker(viewer).blocked(writer("hr-blocked"))));
+    blockRepository.save(
+        new UserBlockEntity(BlockEdge.blocker(writer("hr-blocker")).blocked(viewer)));
     muteRepository.save(new UserMuteEntity(viewer, writer("hr-muted"), false, null));
     muteRepository.save(
         new UserMuteEntity(viewer, writer("hr-mutedlater"), false, now.plus(1, ChronoUnit.HOURS)));
@@ -202,7 +205,8 @@ class HeardRuleIntegrationTest {
     long heardPost = publish(writer("hr-normal"), "hr-feed-post");
     for (String handle : all()) {
       highlight(heardPost, writer(handle));
-      followRepository.save(new FollowEntity(viewer, writer(handle)));
+      followRepository.save(
+          new FollowEntity(FollowEdge.follower(viewer).following(writer(handle))));
     }
     long blockerPost = publish(writer("hr-blocker"), "hr-feed-blocker-post");
     highlight(blockerPost, writer("hr-normal"));
@@ -222,7 +226,8 @@ class HeardRuleIntegrationTest {
   void theFollowingHighlightFeedDropsHighlightsOnAPostItsWriterUnpublished() {
     long post = publish(writer("hr-normal"), "hr-feed-withdrawn");
     highlight(post, writer("hr-expired"));
-    followRepository.save(new FollowEntity(viewer, writer("hr-expired")));
+    followRepository.save(
+        new FollowEntity(FollowEdge.follower(viewer).following(writer("hr-expired"))));
     assertThat(highlights.feed(viewer, 0, 50, false).items())
         .extracting(HighlightFeedItem::postSlug)
         .containsExactly("hr-feed-withdrawn");
@@ -244,7 +249,8 @@ class HeardRuleIntegrationTest {
     long heardPost = publish(writer("hr-normal"), "hr-connected");
     for (String handle : all()) {
       connect(writer(handle), "모아 둔 글 " + handle, ConnectionBlockType.POST, heardPost);
-      followRepository.save(new FollowEntity(viewer, writer(handle)));
+      followRepository.save(
+          new FollowEntity(FollowEdge.follower(viewer).following(writer(handle))));
     }
     long normal = writer("hr-normal");
     connect(
@@ -283,9 +289,9 @@ class HeardRuleIntegrationTest {
       noteQuotes.add(publish(writer(handle), handle + "-quoting"), List.of(quoted));
     }
 
-    assertThat(usernames(quotingPosts.ofNote(quoted, viewer, 0).items(), PublicFeedItem::author))
+    assertThat(usernames(quotingPosts.ofNote(viewer, quoted, 0).items(), PublicFeedItem::author))
         .containsExactlyInAnyOrderElementsOf(HEARD);
-    assertThat(quotingPosts.ofNote(quoted, null, 0).items()).hasSize(6);
+    assertThat(quotingPosts.ofNote(null, quoted, 0).items()).hasSize(6);
   }
 
   @Test
@@ -420,7 +426,8 @@ class HeardRuleIntegrationTest {
         .extracting(e -> ((NoteException) e).errorCode())
         .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
     assertThatThrownBy(() -> notes.history(null, hidden)).isInstanceOf(NoteException.class);
-    followRepository.save(new FollowEntity(viewer, writer("hr-normal")));
+    followRepository.save(
+        new FollowEntity(FollowEdge.follower(viewer).following(writer("hr-normal"))));
     assertThat(notes.history(viewer, hidden).versions()).hasSize(1);
   }
 

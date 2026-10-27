@@ -13,6 +13,7 @@ import com.example.short_link.note.application.write.NoteDraft;
 import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -56,7 +57,7 @@ class NoteReplyControlsIntegrationTest {
     named = user(namedHandle, true);
     followed = user("rc_f");
     stranger = user("rc_s");
-    followRepository.save(new FollowEntity(writer, followed));
+    followRepository.save(new FollowEntity(FollowEdge.follower(writer).following(followed)));
   }
 
   @Test

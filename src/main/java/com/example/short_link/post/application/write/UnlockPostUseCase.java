@@ -12,8 +12,8 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UnlockPostUseCase {
 
-  private final UserRepository users;
+  private final UserSummaryReader users;
   private final PostRepository posts;
   private final PostAccessPolicy access;
   private final PostPasswords passwords;
@@ -31,14 +31,13 @@ public class UnlockPostUseCase {
 
   public PostGrants.Grant unlock(String username, String slug, String password, PostReader reader) {
     String handle = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-    UserEntity author =
+    UserSummary author =
         users
-            .findByUsername(handle)
-            .filter(user -> !user.isDeleted())
+            .findActiveByUsername(handle)
             .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, handle));
     PostEntity post =
         posts
-            .findUnblockedByUserIdAndSlug(author.getId(), slug, reader.viewerId())
+            .findUnblockedByUserIdAndSlug(author.id(), slug, reader.viewerId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, slug));
     PostAccess decided = access.decide(post, reader.withoutCredentials());
     if (decided.hidden() || !post.getAudience().needsPassword()) {

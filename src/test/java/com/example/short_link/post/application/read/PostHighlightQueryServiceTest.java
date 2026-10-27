@@ -17,6 +17,8 @@ import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -48,8 +50,8 @@ class PostHighlightQueryServiceTest {
             highlightRepository,
             replyRepository,
             postRepository,
-            userRepository,
-            followRepository,
+            new UserSummaryReader(userRepository),
+            new FollowingReader(followRepository),
             PostAccessFixtures.policy());
   }
 

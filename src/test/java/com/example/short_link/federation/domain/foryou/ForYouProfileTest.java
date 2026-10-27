@@ -46,6 +46,12 @@ class ForYouProfileTest {
   }
 
   @Test
+  void theLanguagesAMemberSetAreKeptWithoutAnySignalInThem() {
+    assertThat(ForYouProfile.of(List.of("ko-KR", "*", "JA"), List.of()).languages())
+        .containsExactlyInAnyOrder("ko", "ja");
+  }
+
+  @Test
   void languageTagsComeDownToTheirFirstPartInLowerCase() {
     assertThat(ForYouProfile.language("ko-KR")).isEqualTo("ko");
     assertThat(ForYouProfile.language(" JA_jp ")).isEqualTo("ja");

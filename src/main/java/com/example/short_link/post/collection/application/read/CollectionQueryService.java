@@ -12,8 +12,8 @@ import com.example.short_link.post.collection.domain.repository.CollectionConnec
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,7 +41,7 @@ public class CollectionQueryService {
   private final CollectionRepository collectionRepository;
   private final CollectionConnectionRepository connectionRepository;
   private final CollectionContentReader contentReader;
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
 
   public CollectionSummaryView editedSummary(CollectionEntity saved) {
     long count = connectionRepository.countByCollectionId(saved.getId());
@@ -153,10 +153,10 @@ public class CollectionQueryService {
     Set<Long> ownerIds =
         collections.stream().map(CollectionEntity::getOwnerId).collect(Collectors.toSet());
     if (ownerIds.isEmpty()) return Map.of();
-    return userRepository.findAllByIdIn(ownerIds).stream()
+    return users.findAll(ownerIds).stream()
         .collect(
             Collectors.toMap(
-                UserEntity::getId, user -> new Curator(user.getUsername(), user.getAvatarUrl())));
+                UserSummary::id, user -> new Curator(user.username(), user.avatarUrl())));
   }
 
   private Map<Long, Integer> positionsFor(
@@ -189,9 +189,9 @@ public class CollectionQueryService {
     Map<Long, List<String>> previews = contentReader.previewByCollection(collections, userId);
     Map<Long, Long> connections = existingConnectionsFor(blockType, refId);
     Curator owner =
-        userRepository
-            .findById(userId)
-            .map(user -> new Curator(user.getUsername(), user.getAvatarUrl()))
+        users
+            .find(userId)
+            .map(user -> new Curator(user.username(), user.avatarUrl()))
             .orElse(Curator.UNKNOWN);
     return collections.stream()
         .map(
@@ -216,11 +216,11 @@ public class CollectionQueryService {
   }
 
   public List<CollectionSummaryView> listPublicByUsername(String username) {
-    Optional<UserEntity> user = userRepository.findByUsername(username);
+    Optional<UserSummary> user = users.findByUsername(username);
     if (user.isEmpty()) return List.of();
-    Curator owner = new Curator(user.get().getUsername(), user.get().getAvatarUrl());
+    Curator owner = new Curator(user.get().username(), user.get().avatarUrl());
     List<CollectionEntity> collections =
-        collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(user.get().getId()).stream()
+        collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(user.get().id()).stream()
             .filter(collection -> collection.getVisibility() == CollectionVisibility.PUBLIC)
             .toList();
     Map<Long, List<String>> previews = contentReader.previewByCollection(collections, null);
@@ -246,7 +246,7 @@ public class CollectionQueryService {
     List<CollectionConnectionEntity> connections =
         connectionRepository.findAllByCollectionIdOrderByPositionAsc(collectionId);
     List<ConnectionView> views = contentReader.connections(connections);
-    Optional<UserEntity> curator = userRepository.findById(collection.getOwnerId());
+    Optional<UserSummary> curator = users.find(collection.getOwnerId());
     return new CollectionDetailView(
         collection.getId(),
         collection.getTitle(),
@@ -254,8 +254,8 @@ public class CollectionQueryService {
         collection.getVisibility().name(),
         CollectionKind.of(collection.isOrdered()).name(),
         collection.isOrdered(),
-        curator.map(UserEntity::getUsername).orElse(null),
-        curator.map(UserEntity::getId).orElse(null),
+        curator.map(UserSummary::username).orElse(null),
+        curator.map(UserSummary::id).orElse(null),
         views);
   }
 }

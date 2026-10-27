@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -24,11 +25,10 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,7 +46,7 @@ public class PublicPostQueryService {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final PostRepository postRepository;
   private final PostBlockRepository postBlockRepository;
   private final SeriesRepository seriesRepository;
@@ -57,18 +57,18 @@ public class PublicPostQueryService {
   private final PostAccessPolicy access;
   private final PostUnlistedUrls unlistedUrls;
   private final PostRooms rooms;
-  private final Clock clock;
+  private final UserModerationGuard moderation;
 
   public PostScoped<PublicPostListView> listPublicPosts(String username, PostReader reader) {
-    UserEntity author = resolveAuthor(username);
-    BlockRelation blocks = userBlocks.between(reader.viewerId(), author.getId());
+    UserSummary author = resolveAuthor(username);
+    BlockRelation blocks = userBlocks.between(reader.viewerId(), author.id());
     PostAccessPolicy.Lists lists = access.forLists(reader);
     List<PublicPostListItem> posts = new ArrayList<>();
     boolean restricted = false;
     if (!blocks.any()) {
       // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
       for (PostEntity post :
-          postRepository.findProfilePosts(author.getId(), reader.viewerId()).stream()
+          postRepository.findProfilePosts(author.id(), reader.viewerId()).stream()
               .sorted(PINNED_FIRST)
               .toList()) {
         PostAccess decided = lists.of(post);
@@ -95,10 +95,10 @@ public class PublicPostQueryService {
 
   public PostScoped<PublicPostDetail> findPublicPost(
       String username, String slug, PostReader reader, String acceptLanguage) {
-    UserEntity author = resolveAuthor(username);
+    UserSummary author = resolveAuthor(username);
     PostEntity post =
         postRepository
-            .findUnblockedByUserIdAndSlug(author.getId(), slug, reader.viewerId())
+            .findUnblockedByUserIdAndSlug(author.id(), slug, reader.viewerId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, slug));
 
     if (post.isUnpublished() && access.revealsExistence(post, reader)) {
@@ -123,7 +123,7 @@ public class PublicPostQueryService {
   }
 
   private PublicPostDetail detail(
-      UserEntity author,
+      UserSummary author,
       PostEntity post,
       PostAccess decided,
       PostReader reader,
@@ -146,9 +146,9 @@ public class PublicPostQueryService {
         null);
   }
 
-  private OwnerAudience ownerView(PostEntity post, UserEntity author, PostReader reader) {
+  private OwnerAudience ownerView(PostEntity post, UserSummary author, PostReader reader) {
     if (reader.viewerId() == null || !post.isOwnedBy(reader.viewerId())) return null;
-    return OwnerAudience.of(post, unlistedUrls.of(post, author.getUsername()));
+    return OwnerAudience.of(post, unlistedUrls.of(post, author.username()));
   }
 
   // 토큰이 곧 접근 권한이라 로그인은 보지 않는다. 발행 글은 공개 읽기가 보여 줄 때만, 초안·예약 글은 내려지지 않았고 작성자가 쓸 수 있을 때만 본문을 주고, 나머지는
@@ -161,13 +161,12 @@ public class PublicPostQueryService {
         postRepository
             .findByPreviewToken(token)
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
-    UserEntity author =
-        userRepository
-            .findById(post.getUserId())
-            .filter(u -> !u.isDeleted())
+    UserSummary author =
+        userSummaries
+            .findActive(post.getUserId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
     if (post.isDraft() || post.isScheduled()) {
-      if (post.isTakenDown() || !author.canWriteAt(clock.instant())) {
+      if (post.isTakenDown() || !moderation.canWrite(author.id())) {
         throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
       }
       return new PostScoped<>(
@@ -183,7 +182,7 @@ public class PublicPostQueryService {
   }
 
   private PublicPostDetail buildDetail(
-      UserEntity author, PostEntity post, PublicPostListItem item) {
+      UserSummary author, PostEntity post, PublicPostListItem item) {
     List<PostBlockEntity> entities =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
     Map<Long, CtaEntity> ctaMap = hydrateCtas(entities);
@@ -286,11 +285,10 @@ public class PublicPostQueryService {
     }
   }
 
-  private UserEntity resolveAuthor(String username) {
+  private UserSummary resolveAuthor(String username) {
     String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-    return userRepository
-        .findByUsername(normalized)
-        .filter(u -> !u.isDeleted())
+    return userSummaries
+        .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
   }
 }

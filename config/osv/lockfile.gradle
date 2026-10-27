@@ -1,0 +1,6 @@
+allprojects {
+	dependencyLocking {
+		lockAllConfigurations()
+		lockFile = layout.buildDirectory.file('osv/gradle.lockfile')
+	}
+}
