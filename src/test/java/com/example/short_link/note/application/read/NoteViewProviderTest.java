@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NoteViewProviderTest {
 
   @Mock private NoteRepository notes;
+  @Mock private NoteFeedReader feeds;
+  @Mock private NotePageReader pages;
   @Mock private NoteViews views;
 
   @Test
@@ -27,7 +31,7 @@ class NoteViewProviderTest {
     when(notes.findUnblocked(9L, 7L)).thenReturn(Optional.of(note));
     when(views.ofFeed(List.of(note), 7L)).thenReturn(List.of(view));
 
-    assertThat(new NoteViewProvider(notes, views).view(9L, 7L)).contains(view);
+    assertThat(new NoteViewProvider(notes, feeds, pages, views).view(9L, 7L)).contains(view);
   }
 
   @Test
@@ -37,7 +41,7 @@ class NoteViewProviderTest {
     when(views.ofFeed(List.of(hidden), 7L)).thenReturn(List.of());
     when(notes.findUnblocked(10L, 7L)).thenReturn(Optional.empty());
 
-    NoteViewProvider provider = new NoteViewProvider(notes, views);
+    NoteViewProvider provider = new NoteViewProvider(notes, feeds, pages, views);
     assertThat(provider.view(9L, 7L)).isEmpty();
     assertThat(provider.view(10L, 7L)).isEmpty();
   }
@@ -46,7 +50,7 @@ class NoteViewProviderTest {
   void nothingIsRenderedForAMissingNote() {
     when(notes.findUnblocked(11L, null)).thenReturn(Optional.empty());
 
-    assertThat(new NoteViewProvider(notes, views).view(11L, null)).isEmpty();
+    assertThat(new NoteViewProvider(notes, feeds, pages, views).view(11L, null)).isEmpty();
     verifyNoInteractions(views);
   }
 }

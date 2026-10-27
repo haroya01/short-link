@@ -8,7 +8,8 @@ import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.domain.FollowEdge;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collection;
@@ -28,7 +29,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PostAccessPolicy {
 
-  private final FollowRepository follows;
+  private final FollowingReader follows;
   private final PostGrants grants;
   private final ReaderCountryResolver countries;
   private final PostRoomReader rooms;
@@ -86,7 +87,7 @@ public class PostAccessPolicy {
 
   // A comment or highlight made while its post was in a room stays with that room's members, its
   // writer too only while in the room; PostAccessSql.said asks the same for lists.
-  public boolean hears(Long saidInRoom, Long viewerId) {
+  public boolean hears(Long viewerId, Long saidInRoom) {
     return saidInRoom == null || rooms.isMember(saidInRoom, viewerId);
   }
 
@@ -160,7 +161,7 @@ public class PostAccessPolicy {
   }
 
   private boolean follows(Long viewerId, Long authorId) {
-    return viewerId != null && follows.existsByFollowerIdAndFollowingId(viewerId, authorId);
+    return viewerId != null && follows.follows(FollowEdge.follower(viewerId).following(authorId));
   }
 
   public final class Lists {

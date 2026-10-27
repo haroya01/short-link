@@ -63,7 +63,7 @@ public class CachedLinkLoader {
     SplashCta cta =
         link.getSplashCtaId() == null
             ? null
-            : ctaCatalog.findOwned(link.getSplashCtaId(), link.getUserId()).orElse(null);
+            : ctaCatalog.findOwned(link.getUserId(), link.getSplashCtaId()).orElse(null);
     return new CachedLink.Splash(
         link.getSplashMessage(),
         link.getSplashSeconds() == null ? 3 : link.getSplashSeconds(),

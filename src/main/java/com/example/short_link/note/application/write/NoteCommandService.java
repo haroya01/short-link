@@ -17,6 +17,7 @@ import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.post.SeriesItemCleaner;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -35,11 +36,13 @@ import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -67,6 +70,8 @@ public class NoteCommandService {
   private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
 
   private final NoteRepository notes;
+  private final NotePageReader pages;
+  private final RoomNoteErasureRepository erasures;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
   private final NoteBookmarkRepository bookmarks;
@@ -129,8 +134,8 @@ public class NoteCommandService {
       parent = find(draft.inReplyToId());
       requireReadable(userId, parent);
       if (!parent.isRemote()
-          && (blocks.isBlocked(parent.getUserId(), userId)
-              || blocks.isBlocked(userId, parent.getUserId()))) {
+          && (blocks.isBlocked(BlockEdge.blocker(parent.getUserId()).blocked(userId))
+              || blocks.isBlocked(BlockEdge.blocker(userId).blocked(parent.getUserId())))) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
       }
     }
@@ -250,13 +255,11 @@ public class NoteCommandService {
     throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
   }
 
-  public static final int MAX_THREAD_NOTES = 10;
-
   // A thread posts as one: each note answers the one before it, and all of them land or none does.
   @Transactional
   public List<NoteView> createThread(Long userId, List<NoteDraft> drafts) {
-    if (drafts == null || drafts.size() < 2 || drafts.size() > MAX_THREAD_NOTES) {
-      throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, MAX_THREAD_NOTES);
+    if (drafts == null || drafts.size() < 2 || drafts.size() > NoteEntity.MAX_THREAD_NOTES) {
+      throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, NoteEntity.MAX_THREAD_NOTES);
     }
     List<NoteView> created = new ArrayList<>(drafts.size());
     NoteView previous = null;
@@ -690,17 +693,17 @@ public class NoteCommandService {
 
   @Transactional
   public void requestRoomNoteErasure(Long userId, Long roomId) {
-    notes.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+    erasures.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
   }
 
   // One chunk of a requested erasure, each note through the usual delete; the request is done once
   // a chunk comes back short. Running it again after a crash only finds what is left.
   @Transactional
   public int eraseRoomNotes(Long userId, Long roomId, int chunk) {
-    List<Long> ids = notes.roomNoteIdsBy(userId, roomId, chunk);
+    List<Long> ids = erasures.roomNoteIdsBy(userId, roomId, chunk);
     notes.findAllByIdIn(ids).forEach(this::remove);
     if (ids.size() < chunk) {
-      notes.finishRoomErasure(userId, roomId);
+      erasures.finishRoomErasure(userId, roomId);
     }
     return ids.size();
   }
@@ -778,7 +781,7 @@ public class NoteCommandService {
   }
 
   private NoteStats statsOf(Long noteId) {
-    return notes.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
+    return pages.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
   }
 
   private static NoteInteractionEvent interaction(
@@ -799,7 +802,8 @@ public class NoteCommandService {
     if (note.isRemote()) {
       return;
     }
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
       throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     }
   }

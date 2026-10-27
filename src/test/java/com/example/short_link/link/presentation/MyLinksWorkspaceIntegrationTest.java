@@ -28,7 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +44,7 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
   @Autowired UserRepository users;
   @Autowired JwtTokenService jwt;
   @Autowired EntityManager em;
-  @MockitoBean Clock clock;
+  @MockitoSpyBean Clock clock;
   UserEntity owner;
   UserEntity other;
   String token;

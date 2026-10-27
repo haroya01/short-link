@@ -1,7 +1,7 @@
 package com.example.short_link.notification.application.write;
 
 import com.example.short_link.notification.domain.repository.LinkNotificationRepository;
-import java.time.Instant;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,14 +10,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MarkLinkNotificationReadUseCase {
   private final LinkNotificationRepository repository;
+  private final Clock clock;
 
   @Transactional
   public void markRead(Long recipientUserId, Long notificationId) {
-    repository.markRead(notificationId, recipientUserId, Instant.now());
+    repository.markRead(notificationId, recipientUserId, clock.instant());
   }
 
   @Transactional
   public int markAllRead(Long recipientUserId) {
-    return repository.markAllRead(recipientUserId, Instant.now());
+    return repository.markAllRead(recipientUserId, clock.instant());
   }
 }

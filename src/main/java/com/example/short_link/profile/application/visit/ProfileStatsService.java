@@ -1,19 +1,20 @@
 package com.example.short_link.profile.application.visit;
 
-import com.example.short_link.common.analytics.HeatmapCell;
+import static com.example.short_link.common.analytics.VisitStatsAssembler.DAILY_WINDOW;
+import static com.example.short_link.common.analytics.VisitStatsAssembler.TOP_SIZE;
+
 import com.example.short_link.common.analytics.VisitStats;
-import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
+import com.example.short_link.common.analytics.VisitStatsAssembler;
+import com.example.short_link.common.time.ReportZones;
+import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
-import java.time.DateTimeException;
-import java.time.DayOfWeek;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProfileStatsService {
 
-  private static final Duration DAILY_WINDOW = Duration.ofDays(30);
-  private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
-  private static final int TOP_SIZE = 50;
-
   private final UserRepository userRepository;
   private final ProfileVisitRepository visits;
-  private final ProfileVisitBreakdownReader breakdowns;
+  private final Clock clock;
 
   @Transactional(readOnly = true)
   public VisitStats statsForOwner(Long ownerUserId) {
@@ -62,7 +59,7 @@ public class ProfileStatsService {
 
   @Transactional(readOnly = true)
   public ProfileVisitSummary summaryForOwner(Long ownerUserId) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     long allTime = visits.countByProfileUserIdAndBotFalse(ownerUserId);
     long today =
         visits.countByProfileUserIdAndBotFalseAndVisitedAtAfter(
@@ -78,122 +75,30 @@ public class ProfileStatsService {
 
   private VisitStats computeStats(UserEntity owner) {
     Long uid = owner.getId();
-    ZoneId zone = safeZone(owner.getTimezone());
-    String tz = currentOffset(zone);
+    ZoneId zone = ReportZones.zoneOf(owner.getTimezone());
+    Instant now = clock.instant();
+    String tz = ReportZones.sqlOffset(zone, now);
 
-    long total = visits.countByProfileUserId(uid);
-    long human = visits.countByProfileUserIdAndBotFalse(uid);
-    long bot = visits.countBotByProfileUserId(uid);
-    long unique = visits.countUniqueVisitorsByProfileUserId(uid);
-
-    Instant firstAt = visits.findFirstVisitAt(uid);
-    Instant lastAt = visits.findLastVisitAt(uid);
-
-    Instant now = Instant.now();
-    List<VisitStats.DailyVisit> daily =
-        visits.findDailyVisits(uid, now.minus(DAILY_WINDOW), tz).stream()
-            .map(r -> new VisitStats.DailyVisit(r.getDay(), r.getCount()))
-            .toList();
-
-    List<VisitStats.HourVisit> hourly =
-        visits.findHourlyVisits(uid, tz).stream()
-            .map(r -> new VisitStats.HourVisit(r.getHour(), r.getCount()))
-            .toList();
-    Integer peakHour =
-        hourly.stream()
-            .max((a, b) -> Long.compare(a.count(), b.count()))
-            .map(VisitStats.HourVisit::hour)
-            .orElse(null);
-
-    List<HeatmapCell> heatmap =
-        visits.findHeatmap(uid, tz).stream()
-            .map(r -> new HeatmapCell(dayOfWeekName(r.getDow()), r.getHour(), r.getCount()))
-            .toList();
-
-    List<VisitStats.CountryVisit> countries =
-        breakdowns.topCountries(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
-            .toList();
-
-    List<VisitStats.DeviceVisit> devices =
-        visits.findDeviceVisits(uid).stream()
-            .map(r -> new VisitStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount()))
-            .toList();
-
-    List<VisitStats.BrowserVisit> browsers =
-        breakdowns.topBrowsers(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
-            .toList();
-
-    List<VisitStats.ReferrerHostVisit> referrerHosts =
-        breakdowns.topReferrerHosts(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.ReferrerHostVisit(r.getHost(), r.getCount()))
-            .toList();
-
-    List<VisitStats.SourceChannelVisit> channels =
-        breakdowns.topSourceChannels(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.SourceChannelVisit(r.getSource(), r.getCount()))
-            .toList();
-
-    List<VisitStats.UtmCampaignVisit> utmCampaigns =
-        breakdowns.topUtmCampaigns(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
-            .toList();
-
-    List<VisitStats.UtmSourceVisit> utmSources =
-        breakdowns.topUtmSources(uid, TOP_SIZE).stream()
-            .map(r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount()))
-            .toList();
-
-    return new VisitStats(
-        zone.getId(),
-        total,
-        human,
-        bot,
-        unique,
-        firstAt,
-        lastAt,
-        peakHour,
-        daily,
-        hourly,
-        heatmap,
-        countries,
-        devices,
-        browsers,
-        referrerHosts,
-        channels,
-        utmCampaigns,
-        utmSources);
-  }
-
-  private static String dayOfWeekName(int dow) {
-    return switch (dow) {
-      case 1 -> DayOfWeek.SUNDAY.name();
-      case 2 -> DayOfWeek.MONDAY.name();
-      case 3 -> DayOfWeek.TUESDAY.name();
-      case 4 -> DayOfWeek.WEDNESDAY.name();
-      case 5 -> DayOfWeek.THURSDAY.name();
-      case 6 -> DayOfWeek.FRIDAY.name();
-      case 7 -> DayOfWeek.SATURDAY.name();
-      default -> "UNKNOWN";
-    };
-  }
-
-  private static String orUnknown(String v) {
-    return v == null ? "unknown" : v;
-  }
-
-  private static ZoneId safeZone(String tz) {
-    if (tz == null || tz.isBlank()) return DEFAULT_ZONE;
-    try {
-      return ZoneId.of(tz);
-    } catch (DateTimeException e) {
-      return DEFAULT_ZONE;
-    }
-  }
-
-  private static String currentOffset(ZoneId zone) {
-    ZoneOffset offset = zone.getRules().getOffset(Instant.now());
-    return offset.getId().equals("Z") ? "+00:00" : offset.getId();
+    VisitStatsAssembler.Totals totals =
+        new VisitStatsAssembler.Totals(
+            visits.countByProfileUserId(uid),
+            visits.countByProfileUserIdAndBotFalse(uid),
+            visits.countBotByProfileUserId(uid),
+            visits.countUniqueVisitorsByProfileUserId(uid),
+            visits.findFirstVisitAt(uid),
+            visits.findLastVisitAt(uid));
+    VisitStatsAssembler.Rows rows =
+        new VisitStatsAssembler.Rows(
+            visits.findDailyVisits(uid, now.minus(DAILY_WINDOW), tz),
+            visits.findHourlyVisits(uid, tz),
+            visits.findHeatmap(uid, tz),
+            visits.topCountries(uid, TOP_SIZE),
+            visits.findDeviceVisits(uid),
+            visits.topBrowsers(uid, TOP_SIZE),
+            visits.topReferrerHosts(uid, TOP_SIZE),
+            visits.topSourceChannels(uid, TOP_SIZE),
+            visits.topUtmCampaigns(uid, TOP_SIZE),
+            visits.topUtmSources(uid, TOP_SIZE));
+    return VisitStatsAssembler.assemble(zone, totals, rows);
   }
 }

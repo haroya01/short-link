@@ -11,6 +11,7 @@ import com.example.short_link.post.collection.domain.repository.CollectionReposi
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -74,7 +75,7 @@ class DiscoverFeedFallbackIntegrationTest {
   void quietFollowsFallBackOnFirstPageOnly() {
     Long viewer = user("viewer-dfq", "vdfq");
     Long quiet = user("quiet-dfq", "qdfq");
-    followRepository.save(new FollowEntity(viewer, quiet));
+    followRepository.save(new FollowEntity(FollowEdge.follower(viewer).following(quiet)));
     Long stranger = user("stranger-dfq", "sdfq");
     connectPost(stranger, "DFQ-global", post(stranger, "dfq-uniq-global"));
 
@@ -92,7 +93,7 @@ class DiscoverFeedFallbackIntegrationTest {
   void activeFollowsStayPersonalizedAndScopeGlobalPins() {
     Long viewer = user("viewer-dfa", "vdfa");
     Long followed = user("followed-dfa", "fdfa");
-    followRepository.save(new FollowEntity(viewer, followed));
+    followRepository.save(new FollowEntity(FollowEdge.follower(viewer).following(followed)));
     connectPost(followed, "DFA-followed", post(followed, "dfa-uniq-followed"));
     Long stranger = user("stranger-dfa", "sdfa");
     connectPost(stranger, "DFA-global", post(stranger, "dfa-uniq-global"));

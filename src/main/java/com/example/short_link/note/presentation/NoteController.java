@@ -6,6 +6,7 @@ import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.read.PostQuotesView;
 import com.example.short_link.note.application.read.ProfileMediaView;
 import com.example.short_link.note.application.read.ProfileRepliesView;
@@ -54,8 +55,8 @@ public class NoteController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return "trending".equalsIgnoreCase(sort)
-        ? query.trending(page, size, viewerId)
-        : query.everyone(page, size, viewerId);
+        ? query.trending(viewerId, new PageAsk(page, size))
+        : query.everyone(viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/trending-tags")
@@ -74,7 +75,7 @@ public class NoteController {
       @RequestParam(defaultValue = "") String url,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.linked(url, page, size, viewerId);
+    return query.linked(url, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/tags/{tag}")
@@ -83,7 +84,7 @@ public class NoteController {
       @PathVariable String tag,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.tagged(tag, page, size, viewerId);
+    return query.tagged(tag, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/search")
@@ -92,7 +93,7 @@ public class NoteController {
       @RequestParam(defaultValue = "") String q,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.search(q, page, size, viewerId);
+    return query.search(q, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/federation/accounts/{id}/notes")
@@ -104,7 +105,7 @@ public class NoteController {
     if (page <= 0) {
       remoteHistory.fillIn(id, viewerId);
     }
-    return query.byRemoteActor(id, page, size, viewerId);
+    return query.byRemoteActor(id, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/{id}/history")
@@ -118,7 +119,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.room(id, viewerId, page, size);
+    return query.room(id, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/rooms/feed")
@@ -126,7 +127,7 @@ public class NoteController {
       @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.rooms(viewerId, page, size);
+    return query.rooms(viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/rooms/my-notes")
@@ -134,7 +135,7 @@ public class NoteController {
       @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.roomNotesBy(viewerId, page, size);
+    return query.roomNotesBy(viewerId, new PageAsk(page, size));
   }
 
   @DeleteMapping("/api/v1/rooms/my-notes")
@@ -148,7 +149,7 @@ public class NoteController {
       @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.direct(viewerId, page, size);
+    return query.direct(viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/{id}")
@@ -168,7 +169,7 @@ public class NoteController {
       @PathVariable String username,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.byAuthor(username, page, size, viewerId);
+    return query.byAuthor(username, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/replies")
@@ -177,7 +178,7 @@ public class NoteController {
       @PathVariable String username,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.repliesByAuthor(username, page, size, viewerId);
+    return query.repliesByAuthor(username, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/media")
@@ -186,7 +187,7 @@ public class NoteController {
       @PathVariable String username,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.mediaByAuthor(username, page, size, viewerId);
+    return query.mediaByAuthor(username, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/reposts")
@@ -195,7 +196,7 @@ public class NoteController {
       @PathVariable String username,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.reposts(username, page, size, viewerId);
+    return query.reposts(username, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/notes/following")
@@ -203,7 +204,7 @@ public class NoteController {
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.following(userId, page, size);
+    return query.following(userId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/notes/federated")
@@ -211,7 +212,7 @@ public class NoteController {
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.federated(userId, page, size);
+    return query.federated(userId, new PageAsk(page, size));
   }
 
   @PostMapping("/api/v1/notes")
@@ -295,7 +296,7 @@ public class NoteController {
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.bookmarks(userId, page, size);
+    return query.bookmarks(userId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/posts/{id}/quotes")
@@ -304,7 +305,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.postQuotes(id, page, size, viewerId);
+    return query.postQuotes(id, viewerId, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/public/notes/{id}/quotes")
@@ -313,7 +314,7 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.quotes(id, page, size, viewerId);
+    return query.quotes(id, viewerId, new PageAsk(page, size));
   }
 
   @PutMapping("/api/v1/notes/{id}/pin")
