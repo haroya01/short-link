@@ -1,0 +1,7071 @@
+{
+  "endpoints" : {
+    "DELETE /api/v1/admin/blocked-domains/{domain}" : {
+      "parameters" : {
+        "domain" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/admin/federation/directories/{host}" : {
+      "parameters" : {
+        "host" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/admin/federation/relays/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/admin/federation/servers/{domain}" : {
+      "parameters" : {
+        "domain" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/admin/posts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/blog/webhooks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/bookmarks/folders/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/campaigns/{campaignId}/batches/{batchId}" : {
+      "parameters" : {
+        "batchId" : "path integer(int64) required",
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/campaigns/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "DELETE /api/v1/collections/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/collections/{id}/connections/{connectionId}" : {
+      "parameters" : {
+        "connectionId" : "path integer(int64) required",
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/comments/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/comments/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CommentLikeStatus"
+      }
+    },
+    "DELETE /api/v1/ctas/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/custom-domains/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/federation/accounts/{id}/block" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "DELETE /api/v1/federation/accounts/{id}/follow" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "DELETE /api/v1/federation/accounts/{id}/mute" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "DELETE /api/v1/federation/domain-blocks/{domain}" : {
+      "parameters" : {
+        "domain" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/highlight-replies/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/highlight-replies/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#HighlightReplyLikeStatus"
+      }
+    },
+    "DELETE /api/v1/highlights/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/links" : {
+      "request" : "#BulkDeleteRequest required",
+      "responses" : {
+        "200" : "#BulkDeleteResponse"
+      }
+    },
+    "DELETE /api/v1/links/me/favorites/{code}" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/links/{shortCode}" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/links/{shortCode}/destinations/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/links/{shortCode}/webhooks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/filters/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/lists/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/lists/{id}/members/{username}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/repost-visibility/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#RepostVisibility"
+      }
+    },
+    "DELETE /api/v1/notes/scheduled/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/bookmark" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#BookmarkStatus"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/conversation-mute" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#ConversationMuteStatus"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/hidden" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#ReplyHiddenStatus"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LikeStatus"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/pin" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PinStatus"
+      }
+    },
+    "DELETE /api/v1/notes/{id}/repost" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RepostStatus"
+      }
+    },
+    "DELETE /api/v1/notifications/devices" : {
+      "request" : "#RegisterDeviceRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/notifications/web-push" : {
+      "parameters" : {
+        "endpoint" : "query string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/posts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/posts/{postId}/bookmark" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostBookmarkStatus"
+      }
+    },
+    "DELETE /api/v1/posts/{postId}/like" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostLikeStatus"
+      }
+    },
+    "DELETE /api/v1/rooms/my-notes" : {
+      "parameters" : {
+        "roomId" : "query integer(int64) required"
+      },
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "DELETE /api/v1/rooms/my-posts" : {
+      "parameters" : {
+        "roomId" : "query integer(int64) required"
+      },
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/feed-hidden" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#FeedHiddenResponse"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/invitations/{inviteeId}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "inviteeId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/invites/{inviteId}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "inviteId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RoomInviteView"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/members/{memberId}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "memberId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/pin" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/rooms/{id}/requests/{memberId}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "memberId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/series/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/series/{seriesId}/subscription" : {
+      "parameters" : {
+        "seriesId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#SeriesSubscriptionStatus"
+      }
+    },
+    "DELETE /api/v1/tags/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me" : {
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/api-keys/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/avatar" : {
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/banner" : {
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/email-leads/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/profile/blocks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/reading-history" : {
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/reading-history/{postId}" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/suggestions/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "DELETE /api/v1/users/me/tag-prefs/followed/{tag}" : {
+      "parameters" : {
+        "tag" : "path string required"
+      },
+      "responses" : {
+        "200" : "#TagPrefsView"
+      }
+    },
+    "DELETE /api/v1/users/me/tag-prefs/hidden/{tag}" : {
+      "parameters" : {
+        "tag" : "path string required"
+      },
+      "responses" : {
+        "200" : "#TagPrefsView"
+      }
+    },
+    "DELETE /api/v1/users/{username}/block" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "DELETE /api/v1/users/{username}/follow" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#FollowStatus"
+      }
+    },
+    "DELETE /api/v1/users/{username}/follow/notes" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#NoteNotifications"
+      }
+    },
+    "DELETE /api/v1/users/{username}/mute" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "GET /" : {
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "GET /.well-known/host-meta" : {
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /.well-known/nodeinfo" : {
+      "responses" : {
+        "200" : "#NodeInfoLinksResponse"
+      }
+    },
+    "GET /.well-known/webfinger" : {
+      "parameters" : {
+        "resource" : "query string required"
+      },
+      "responses" : {
+        "200" : "#WebFingerResponse"
+      }
+    },
+    "GET /ap/actors/{publicId}" : {
+      "parameters" : {
+        "Accept" : "header string",
+        "publicId" : "path string required"
+      },
+      "responses" : {
+        "200" : "#ActorDocument"
+      }
+    },
+    "GET /ap/actors/{publicId}/featured" : {
+      "parameters" : {
+        "publicId" : "path string required"
+      },
+      "responses" : {
+        "200" : "#OrderedCollectionResponse"
+      }
+    },
+    "GET /ap/actors/{publicId}/followers" : {
+      "parameters" : {
+        "publicId" : "path string required"
+      },
+      "responses" : {
+        "200" : "#OrderedCollectionResponse"
+      }
+    },
+    "GET /ap/actors/{publicId}/following" : {
+      "parameters" : {
+        "publicId" : "path string required"
+      },
+      "responses" : {
+        "200" : "#OrderedCollectionResponse"
+      }
+    },
+    "GET /ap/actors/{publicId}/outbox" : {
+      "parameters" : {
+        "publicId" : "path string required"
+      },
+      "responses" : {
+        "200" : "#OrderedCollectionResponse"
+      }
+    },
+    "GET /ap/instance" : {
+      "responses" : {
+        "200" : "#ActorDocument"
+      }
+    },
+    "GET /ap/nodeinfo/2.1" : {
+      "responses" : {
+        "200" : "#NodeInfoResponse"
+      }
+    },
+    "GET /ap/notes/{id}" : {
+      "parameters" : {
+        "Accept" : "header string",
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "map<object>"
+      }
+    },
+    "GET /api/v1/2fa/status" : {
+      "responses" : {
+        "200" : "#TwoFactorStatusResponse"
+      }
+    },
+    "GET /api/v1/admin/abuse-reports" : {
+      "parameters" : {
+        "status" : "query string"
+      },
+      "responses" : {
+        "200" : "[#AbuseReportView]"
+      }
+    },
+    "GET /api/v1/admin/active-users" : {
+      "parameters" : {
+        "period" : "query string"
+      },
+      "responses" : {
+        "200" : "#AdminActiveUsers"
+      }
+    },
+    "GET /api/v1/admin/blocked-domains" : {
+      "responses" : {
+        "200" : "[#BlockedDomainResponse]"
+      }
+    },
+    "GET /api/v1/admin/blog/metrics" : {
+      "responses" : {
+        "200" : "#BlogAdminMetrics"
+      }
+    },
+    "GET /api/v1/admin/cohort" : {
+      "parameters" : {
+        "weeks" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#AdminCohort"
+      }
+    },
+    "GET /api/v1/admin/federation/directories" : {
+      "responses" : {
+        "200" : "#DirectoryStatusResponse"
+      }
+    },
+    "GET /api/v1/admin/federation/relays" : {
+      "responses" : {
+        "200" : "#RelayStatusResponse"
+      }
+    },
+    "GET /api/v1/admin/federation/servers" : {
+      "responses" : {
+        "200" : "[#View]"
+      }
+    },
+    "GET /api/v1/admin/funnel" : {
+      "parameters" : {
+        "window" : "query string"
+      },
+      "responses" : {
+        "200" : "#Funnel"
+      }
+    },
+    "GET /api/v1/admin/health-metrics" : {
+      "responses" : {
+        "200" : "#AdminHealthMetrics"
+      }
+    },
+    "GET /api/v1/admin/lifecycle" : {
+      "parameters" : {
+        "days" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#AdminLifecycle"
+      }
+    },
+    "GET /api/v1/admin/link-metrics" : {
+      "parameters" : {
+        "sort" : "query string",
+        "window" : "query string"
+      },
+      "responses" : {
+        "200" : "[#AdminLinkMetric]"
+      }
+    },
+    "GET /api/v1/admin/links" : {
+      "parameters" : {
+        "ownerId" : "query integer(int64)",
+        "page" : "query integer(int32)",
+        "q" : "query string",
+        "size" : "query integer(int32)",
+        "sort" : "query string"
+      },
+      "responses" : {
+        "200" : "#LinksPage"
+      }
+    },
+    "GET /api/v1/admin/links/activity" : {
+      "responses" : {
+        "200" : "#AdminActivity"
+      }
+    },
+    "GET /api/v1/admin/links/{code}" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "#AdminLinkDetail"
+      }
+    },
+    "GET /api/v1/admin/metrics/outcomes" : {
+      "parameters" : {
+        "shortCode" : "query string required",
+        "window" : "query string"
+      },
+      "responses" : {
+        "200" : "#OutcomeDistribution"
+      }
+    },
+    "GET /api/v1/admin/metrics/requests" : {
+      "parameters" : {
+        "from" : "query string(date-time)",
+        "limit" : "query integer(int32)",
+        "outcome" : "query string",
+        "route" : "query string",
+        "shortCode" : "query string",
+        "to" : "query string(date-time)",
+        "userId" : "query integer(int64)"
+      },
+      "responses" : {
+        "200" : "[#RawRow]"
+      }
+    },
+    "GET /api/v1/admin/metrics/routes" : {
+      "parameters" : {
+        "window" : "query string"
+      },
+      "responses" : {
+        "200" : "[#RouteAggregate]"
+      }
+    },
+    "GET /api/v1/admin/metrics/system" : {
+      "responses" : {
+        "200" : "#SystemMetrics"
+      }
+    },
+    "GET /api/v1/admin/overview" : {
+      "responses" : {
+        "200" : "#AdminOverview"
+      }
+    },
+    "GET /api/v1/admin/recent-errors" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#RecentError]"
+      }
+    },
+    "GET /api/v1/admin/route-metrics" : {
+      "parameters" : {
+        "window" : "query string"
+      },
+      "responses" : {
+        "200" : "[#AdminRouteMetric]"
+      }
+    },
+    "GET /api/v1/admin/top-links-by-clicks" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#TopLinksPage"
+      }
+    },
+    "GET /api/v1/admin/top-users-by-clicks" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#TopUsersPage"
+      }
+    },
+    "GET /api/v1/admin/top-users-by-links" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#TopUsersPage"
+      }
+    },
+    "GET /api/v1/admin/users" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "q" : "query string",
+        "role" : "query string",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#UsersPage"
+      }
+    },
+    "GET /api/v1/admin/users/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#AdminUserRow"
+      }
+    },
+    "GET /api/v1/auth/mobile/start" : {
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "GET /api/v1/blog/webhooks" : {
+      "responses" : {
+        "200" : "[#BlogWebhookSummary]"
+      }
+    },
+    "GET /api/v1/bookmarks" : {
+      "responses" : {
+        "200" : "[#BookmarkView]"
+      }
+    },
+    "GET /api/v1/bookmarks/folders" : {
+      "responses" : {
+        "200" : "[#BookmarkFolderView]"
+      }
+    },
+    "GET /api/v1/campaigns" : {
+      "responses" : {
+        "200" : "[#CampaignSummaryResponse]"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/batches" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#CampaignBatchResponse]"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/batches/csv" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/batches/qr-zip" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required",
+        "ec" : "query string",
+        "label" : "query boolean",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/batches/{batchId}" : {
+      "parameters" : {
+        "batchId" : "path integer(int64) required",
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignBatchResponse"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/batches/{batchId}/qr" : {
+      "parameters" : {
+        "batchId" : "path integer(int64) required",
+        "campaignId" : "path integer(int64) required",
+        "ec" : "query string",
+        "label" : "query boolean",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/recommendations" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignRecommendationView"
+      }
+    },
+    "GET /api/v1/campaigns/{campaignId}/stats" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignStatsView"
+      }
+    },
+    "GET /api/v1/campaigns/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "GET /api/v1/collections/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CollectionDetailView"
+      }
+    },
+    "GET /api/v1/ctas" : {
+      "responses" : {
+        "200" : "[#CtaView]"
+      }
+    },
+    "GET /api/v1/ctas/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CtaView"
+      }
+    },
+    "GET /api/v1/custom-domains" : {
+      "responses" : {
+        "200" : "[#DomainSummary]"
+      }
+    },
+    "GET /api/v1/events" : {
+      "responses" : {
+        "200" : "[#EventView]"
+      }
+    },
+    "GET /api/v1/events/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#EventView"
+      }
+    },
+    "GET /api/v1/events/{id}/analytics" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#EventAnalyticsView"
+      }
+    },
+    "GET /api/v1/events/{id}/attendees" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#AttendeeView]"
+      }
+    },
+    "GET /api/v1/events/{id}/attendees.csv" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "GET /api/v1/federation/accounts/lookup" : {
+      "parameters" : {
+        "acct" : "query string required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "GET /api/v1/federation/accounts/search" : {
+      "parameters" : {
+        "limit" : "query integer(int32)",
+        "q" : "query string"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountSearchResponse"
+      }
+    },
+    "GET /api/v1/federation/accounts/suggestions" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountListResponse"
+      }
+    },
+    "GET /api/v1/federation/accounts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "GET /api/v1/federation/accounts/{id}/notes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/federation/blocks" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountListResponse"
+      }
+    },
+    "GET /api/v1/federation/domain-blocks" : {
+      "responses" : {
+        "200" : "[#View]"
+      }
+    },
+    "GET /api/v1/federation/domains" : {
+      "parameters" : {
+        "limit" : "query integer(int32)",
+        "prefix" : "query string"
+      },
+      "responses" : {
+        "200" : "#RemoteDomainListResponse"
+      }
+    },
+    "GET /api/v1/federation/follow-requests" : {
+      "parameters" : {
+        "page" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#RemoteFollowRequestView]"
+      }
+    },
+    "GET /api/v1/federation/following" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#RemoteAccountView]"
+      }
+    },
+    "GET /api/v1/federation/for-you" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "X-Kurl-Device" : "header string",
+        "cursor" : "query string",
+        "limit" : "query integer(int32)",
+        "seen" : "query string"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/federation/latest" : {
+      "parameters" : {
+        "X-Kurl-Device" : "header string",
+        "cursor" : "query string",
+        "limit" : "query integer(int32)",
+        "since" : "query string"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/federation/mutes" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#RemoteMuteListResponse"
+      }
+    },
+    "GET /api/v1/federation/resolve" : {
+      "parameters" : {
+        "q" : "query string"
+      },
+      "responses" : {
+        "200" : "#RemoteResolveResponse"
+      }
+    },
+    "GET /api/v1/federation/settings" : {
+      "responses" : {
+        "200" : "#FederationSettingsView"
+      }
+    },
+    "GET /api/v1/federation/trending" : {
+      "parameters" : {
+        "cursor" : "query string",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/feed/connections" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "scope" : "query string",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#DiscoverFeedView"
+      }
+    },
+    "GET /api/v1/feed/following" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#PublicFeedView"
+      }
+    },
+    "GET /api/v1/feed/for-you" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#PublicFeedView"
+      }
+    },
+    "GET /api/v1/highlights/feed" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "scope" : "query string",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#HighlightFeedView"
+      }
+    },
+    "GET /api/v1/links/me" : {
+      "parameters" : {
+        "after" : "query string",
+        "createdAfter" : "query string",
+        "createdBefore" : "query string",
+        "dir" : "query string",
+        "domain" : "query string",
+        "expiry" : "query string",
+        "q" : "query string",
+        "size" : "query integer(int32)",
+        "sort" : "query string",
+        "tag" : "query string"
+      },
+      "responses" : {
+        "200" : "#MyLinksPage"
+      }
+    },
+    "GET /api/v1/links/me/by-codes" : {
+      "parameters" : {
+        "codes" : "query [string] required"
+      },
+      "responses" : {
+        "200" : "#MyLinksPage"
+      }
+    },
+    "GET /api/v1/links/me/favorites" : {
+      "responses" : {
+        "200" : "#MyLinksPage"
+      }
+    },
+    "GET /api/v1/links/me/overview" : {
+      "responses" : {
+        "200" : "#MyLinksOverviewResponse"
+      }
+    },
+    "GET /api/v1/links/notifications" : {
+      "parameters" : {
+        "before" : "query integer(int64)",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#LinkNotificationsPage"
+      }
+    },
+    "GET /api/v1/links/notifications/unread-count" : {
+      "responses" : {
+        "200" : "#UnreadCountResponse"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/blocked-countries" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkDestinationBlockedCountriesResponse"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/destinations" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "[#DestinationSummary]"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/detail" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkDetailResponse"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/events" : {
+      "parameters" : {
+        "cursor" : "query string",
+        "limit" : "query integer(int32)",
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkEventsPage"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/events.csv" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/public-stats" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkStats"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/stats" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkStats"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/stats.csv" : {
+      "parameters" : {
+        "dimension" : "query string",
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/stream" : {
+      "parameters" : {
+        "claimToken" : "query string",
+        "shortCode" : "path string required",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/tags" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkTagsResponse"
+      }
+    },
+    "GET /api/v1/links/{shortCode}/webhooks" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "[#WebhookSummary]"
+      }
+    },
+    "GET /api/v1/me/saved" : {
+      "responses" : {
+        "200" : "[#SavedView]"
+      }
+    },
+    "GET /api/v1/notes/bookmarks" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/notes/direct" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/notes/federated" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/notes/feed-preferences" : {
+      "responses" : {
+        "200" : "#FeedPreferences"
+      }
+    },
+    "GET /api/v1/notes/filters" : {
+      "responses" : {
+        "200" : "[#FilterView]"
+      }
+    },
+    "GET /api/v1/notes/following" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/notes/like-status" : {
+      "parameters" : {
+        "ids" : "query [integer(int64)] required"
+      },
+      "responses" : {
+        "200" : "#LikedIdsResponse"
+      }
+    },
+    "GET /api/v1/notes/list-memberships/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#Membership"
+      }
+    },
+    "GET /api/v1/notes/lists" : {
+      "responses" : {
+        "200" : "[#ListView]"
+      }
+    },
+    "GET /api/v1/notes/lists/{id}/members" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#NoteAuthor]"
+      }
+    },
+    "GET /api/v1/notes/lists/{id}/notes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/notes/repost-visibility/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#RepostVisibility"
+      }
+    },
+    "GET /api/v1/notes/scheduled" : {
+      "responses" : {
+        "200" : "[#View]"
+      }
+    },
+    "GET /api/v1/notifications" : {
+      "parameters" : {
+        "before" : "query integer(int64)",
+        "filter" : "query string",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NotificationsPage"
+      }
+    },
+    "GET /api/v1/notifications/blog-preferences" : {
+      "responses" : {
+        "200" : "map<boolean>"
+      }
+    },
+    "GET /api/v1/notifications/policy" : {
+      "responses" : {
+        "200" : "#NotificationPolicy"
+      }
+    },
+    "GET /api/v1/notifications/preferences" : {
+      "responses" : {
+        "200" : "map<boolean>"
+      }
+    },
+    "GET /api/v1/notifications/requests" : {
+      "responses" : {
+        "200" : "[#NotificationRequestResponse]"
+      }
+    },
+    "GET /api/v1/notifications/unread-count" : {
+      "responses" : {
+        "200" : "#UnreadCountResponse"
+      }
+    },
+    "GET /api/v1/posts" : {
+      "responses" : {
+        "200" : "[#PostView]"
+      }
+    },
+    "GET /api/v1/posts/analytics/overview" : {
+      "parameters" : {
+        "days" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#AuthorAnalyticsOverview"
+      }
+    },
+    "GET /api/v1/posts/analytics/posts" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "sort" : "query string"
+      },
+      "responses" : {
+        "200" : "#PostPerformanceResult"
+      }
+    },
+    "GET /api/v1/posts/analytics/series" : {
+      "responses" : {
+        "200" : "[#SeriesAnalyticsRow]"
+      }
+    },
+    "GET /api/v1/posts/analytics/series/{id}" : {
+      "parameters" : {
+        "days" : "query integer(int32)",
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#SeriesAnalyticsDetail"
+      }
+    },
+    "GET /api/v1/posts/export" : {
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "GET /api/v1/posts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "GET /api/v1/posts/{id}/analytics" : {
+      "parameters" : {
+        "days" : "query integer(int32)",
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostAnalyticsView"
+      }
+    },
+    "GET /api/v1/posts/{id}/blocks" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#PostBlockView]"
+      }
+    },
+    "GET /api/v1/posts/{id}/markdown" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostMarkdownResponse"
+      }
+    },
+    "GET /api/v1/posts/{id}/revisions" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#PostRevisionView]"
+      }
+    },
+    "GET /api/v1/posts/{id}/stats" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#VisitStats"
+      }
+    },
+    "GET /api/v1/posts/{postId}/bookmark" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostBookmarkStatus"
+      }
+    },
+    "GET /api/v1/posts/{postId}/comments/liked" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[integer(int64)]"
+      }
+    },
+    "GET /api/v1/posts/{postId}/like" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostLikeStatus"
+      }
+    },
+    "GET /api/v1/pow/challenge" : {
+      "responses" : {
+        "200" : "#ChallengeResponse"
+      }
+    },
+    "GET /api/v1/public/authors" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#SuggestedAuthorView]"
+      }
+    },
+    "GET /api/v1/public/events/{slug}" : {
+      "parameters" : {
+        "slug" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicEventView"
+      }
+    },
+    "GET /api/v1/public/feed/connections" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#DiscoverFeedView"
+      }
+    },
+    "GET /api/v1/public/feed/trending-by-tag" : {
+      "parameters" : {
+        "perTag" : "query integer(int32)",
+        "tagLimit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#TrendingTagSection]"
+      }
+    },
+    "GET /api/v1/public/graph/blocks/{blockType}/{refId}/related" : {
+      "parameters" : {
+        "blockType" : "path string required",
+        "limit" : "query integer(int32)",
+        "refId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#RelatedBlockView]"
+      }
+    },
+    "GET /api/v1/public/highlights/{highlightId}/replies" : {
+      "parameters" : {
+        "highlightId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#HighlightReplyView]"
+      }
+    },
+    "GET /api/v1/public/highlights/{id}/collections" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#CollectionSummaryView]"
+      }
+    },
+    "GET /api/v1/public/home" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "X-Kurl-Device" : "header string",
+        "cursor" : "query string",
+        "limit" : "query integer(int32)",
+        "seen" : "query string",
+        "since" : "query string",
+        "tab" : "query string"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/public/link-preview" : {
+      "parameters" : {
+        "url" : "query string required"
+      },
+      "responses" : {
+        "200" : "#LinkPreview"
+      }
+    },
+    "GET /api/v1/public/notes" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "sort" : "query string"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/links" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "url" : "query string"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/search" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "q" : "query string",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/tags/{tag}" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "tag" : "path string required"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/trending-links" : {
+      "responses" : {
+        "200" : "[#TrendingLinkView]"
+      }
+    },
+    "GET /api/v1/public/notes/trending-tags" : {
+      "responses" : {
+        "200" : "[#TrendingTagView]"
+      }
+    },
+    "GET /api/v1/public/notes/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#NoteThreadView"
+      }
+    },
+    "GET /api/v1/public/notes/{id}/hidden-replies" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#NoteView]"
+      }
+    },
+    "GET /api/v1/public/notes/{id}/history" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#NoteHistoryView"
+      }
+    },
+    "GET /api/v1/public/notes/{id}/quotes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/{noteId}/posts" : {
+      "parameters" : {
+        "noteId" : "path integer(int64) required",
+        "page" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#PublicFeedView"
+      }
+    },
+    "GET /api/v1/public/oembed" : {
+      "parameters" : {
+        "url" : "query string required"
+      },
+      "responses" : {
+        "200" : "#OembedMetadata"
+      }
+    },
+    "GET /api/v1/public/posts" : {
+      "parameters" : {
+        "lang" : "query string",
+        "page" : "query integer(int32)",
+        "q" : "query string",
+        "size" : "query integer(int32)",
+        "sort" : "query string",
+        "tag" : "query string"
+      },
+      "responses" : {
+        "200" : "#PublicFeedView"
+      }
+    },
+    "GET /api/v1/public/posts/collections" : {
+      "parameters" : {
+        "ids" : "query [integer(int64)] required"
+      },
+      "responses" : {
+        "200" : "[#PostCollectionsView]"
+      }
+    },
+    "GET /api/v1/public/posts/{id}/collections" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#CollectionSummaryView]"
+      }
+    },
+    "GET /api/v1/public/posts/{id}/quotes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#PostQuotesView"
+      }
+    },
+    "GET /api/v1/public/posts/{postId}/comments" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required",
+        "tombstones" : "query boolean"
+      },
+      "responses" : {
+        "200" : "[#CommentView]"
+      }
+    },
+    "GET /api/v1/public/posts/{postId}/highlights" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#HighlightView]"
+      }
+    },
+    "GET /api/v1/public/preview/{token}" : {
+      "parameters" : {
+        "token" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicPostDetail"
+      }
+    },
+    "GET /api/v1/public/profiles" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#PublicProfileListResponse"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicProfile"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/collections" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "[#CollectionSummaryView]"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/kindred" : {
+      "parameters" : {
+        "limit" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "[#KindredCuratorView]"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/media" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#ProfileMediaView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/notes" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/posts" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicPostListView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/posts/{slug}" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "slug" : "path string required",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicPostDetail"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/posts/{slug}/markdown" : {
+      "parameters" : {
+        "slug" : "path string required",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/replies" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#ProfileRepliesView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/reposts" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/series" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicSeriesListView"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/series/{slug}" : {
+      "parameters" : {
+        "slug" : "path string required",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#PublicSeriesDetail"
+      }
+    },
+    "GET /api/v1/public/profiles/{username}/stats" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#VisitStats"
+      }
+    },
+    "GET /api/v1/public/room-invites/{code}" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "#RoomInviteLanding"
+      }
+    },
+    "GET /api/v1/public/search/related" : {
+      "parameters" : {
+        "limit" : "query integer(int32)",
+        "q" : "query string"
+      },
+      "responses" : {
+        "200" : "#RelatedSearchView"
+      }
+    },
+    "GET /api/v1/public/series" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#PublicSeriesCard]"
+      }
+    },
+    "GET /api/v1/public/stats" : {
+      "responses" : {
+        "200" : "#PublicStats"
+      }
+    },
+    "GET /api/v1/public/tags" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#TagCount]"
+      }
+    },
+    "GET /api/v1/public/users/search" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "q" : "query string",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#UserSearchView"
+      }
+    },
+    "GET /api/v1/rooms" : {
+      "responses" : {
+        "200" : "[#RoomListItem]"
+      }
+    },
+    "GET /api/v1/rooms/feed" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/rooms/invitations" : {
+      "responses" : {
+        "200" : "[#RoomInvitation]"
+      }
+    },
+    "GET /api/v1/rooms/items" : {
+      "parameters" : {
+        "cursor" : "query string",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/rooms/my-notes" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/rooms/suggestions" : {
+      "responses" : {
+        "200" : "#RoomSuggestions"
+      }
+    },
+    "GET /api/v1/rooms/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RoomView"
+      }
+    },
+    "GET /api/v1/rooms/{id}/invitations" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#RoomInvitee]"
+      }
+    },
+    "GET /api/v1/rooms/{id}/invites" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#RoomInviteView]"
+      }
+    },
+    "GET /api/v1/rooms/{id}/items" : {
+      "parameters" : {
+        "cursor" : "query string",
+        "id" : "path integer(int64) required",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#Page"
+      }
+    },
+    "GET /api/v1/rooms/{id}/notes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/rooms/{id}/requests" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "[#RoomJoinRequest]"
+      }
+    },
+    "GET /api/v1/series" : {
+      "responses" : {
+        "200" : "[#SeriesView]"
+      }
+    },
+    "GET /api/v1/series/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#SeriesDetailView"
+      }
+    },
+    "GET /api/v1/series/{id}/stats" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#VisitStats"
+      }
+    },
+    "GET /api/v1/series/{seriesId}/subscription" : {
+      "parameters" : {
+        "seriesId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#SeriesSubscriptionStatus"
+      }
+    },
+    "GET /api/v1/tags" : {
+      "responses" : {
+        "200" : "[#TagSummary]"
+      }
+    },
+    "GET /api/v1/users/me" : {
+      "responses" : {
+        "200" : "#MeResponse"
+      }
+    },
+    "GET /api/v1/users/me/api-keys" : {
+      "responses" : {
+        "200" : "[#ApiKeySummary]"
+      }
+    },
+    "GET /api/v1/users/me/blocks" : {
+      "responses" : {
+        "200" : "[#BlockedUserView]"
+      }
+    },
+    "GET /api/v1/users/me/clicks/stream" : {
+      "parameters" : {
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/users/me/collections" : {
+      "parameters" : {
+        "blockType" : "query string enum[HIGHLIGHT|NOTE|POST]",
+        "refId" : "query integer(int64)"
+      },
+      "responses" : {
+        "200" : "[#CollectionSummaryView]"
+      }
+    },
+    "GET /api/v1/users/me/comments" : {
+      "responses" : {
+        "200" : "[#MyCommentView]"
+      }
+    },
+    "GET /api/v1/users/me/email-leads" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#MyEmailLeadPage"
+      }
+    },
+    "GET /api/v1/users/me/email-leads/export.csv" : {
+      "parameters" : {
+        "includeOptedOut" : "query boolean"
+      },
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /api/v1/users/me/export" : {
+      "responses" : {
+        "200" : "#UserDataExport"
+      }
+    },
+    "GET /api/v1/users/me/exports/{kind}" : {
+      "parameters" : {
+        "kind" : "path string required"
+      },
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "GET /api/v1/users/me/feed-prefs" : {
+      "responses" : {
+        "200" : "#FeedPrefsView"
+      }
+    },
+    "GET /api/v1/users/me/follow-requests" : {
+      "parameters" : {
+        "page" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#FollowRequestView]"
+      }
+    },
+    "GET /api/v1/users/me/highlights" : {
+      "responses" : {
+        "200" : "[#MyHighlightView]"
+      }
+    },
+    "GET /api/v1/users/me/imports" : {
+      "responses" : {
+        "200" : "[#ImportView]"
+      }
+    },
+    "GET /api/v1/users/me/insights/week" : {
+      "responses" : {
+        "200" : "#WeeklyInsights"
+      }
+    },
+    "GET /api/v1/users/me/likes" : {
+      "responses" : {
+        "200" : "[#PublicFeedItem]"
+      }
+    },
+    "GET /api/v1/users/me/mention-candidates" : {
+      "parameters" : {
+        "limit" : "query integer(int32)",
+        "q" : "query string"
+      },
+      "responses" : {
+        "200" : "[#Candidate]"
+      }
+    },
+    "GET /api/v1/users/me/mutes" : {
+      "responses" : {
+        "200" : "[#MutedUserView]"
+      }
+    },
+    "GET /api/v1/users/me/profile" : {
+      "responses" : {
+        "200" : "#MyProfile"
+      }
+    },
+    "GET /api/v1/users/me/profile/stats" : {
+      "responses" : {
+        "200" : "#VisitStats"
+      }
+    },
+    "GET /api/v1/users/me/profile/stats/summary" : {
+      "responses" : {
+        "200" : "#ProfileVisitSummary"
+      }
+    },
+    "GET /api/v1/users/me/profile/stats/visibility" : {
+      "responses" : {
+        "200" : "#StatsVisibilityResponse"
+      }
+    },
+    "GET /api/v1/users/me/reading-history" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#ReadingHistoryView"
+      }
+    },
+    "GET /api/v1/users/me/series-subscriptions" : {
+      "responses" : {
+        "200" : "[integer(int64)]"
+      }
+    },
+    "GET /api/v1/users/me/subscribed-series" : {
+      "responses" : {
+        "200" : "[#PublicSeriesCard]"
+      }
+    },
+    "GET /api/v1/users/me/suggestions" : {
+      "parameters" : {
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "[#Suggestion]"
+      }
+    },
+    "GET /api/v1/users/me/tag-prefs" : {
+      "responses" : {
+        "200" : "#TagPrefsView"
+      }
+    },
+    "GET /api/v1/users/{username}/follow" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#FollowStatus"
+      }
+    },
+    "GET /api/v1/users/{username}/followers" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "oneOf(#MixedFollowListView, #FollowListView)"
+      }
+    },
+    "GET /api/v1/users/{username}/following" : {
+      "parameters" : {
+        "page" : "query integer(int32)",
+        "size" : "query integer(int32)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "oneOf(#MixedFollowListView, #FollowListView)"
+      }
+    },
+    "GET /api/v1/users/{username}/mute" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#MuteStatus"
+      }
+    },
+    "GET /{shortCode}" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "Referer" : "header string",
+        "User-Agent" : "header string",
+        "post" : "query integer(int64)",
+        "shortCode" : "path string required",
+        "src" : "query string"
+      },
+      "responses" : {
+        "200" : "object"
+      }
+    },
+    "GET /{shortCode}/" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "Referer" : "header string",
+        "User-Agent" : "header string",
+        "post" : "query integer(int64)",
+        "shortCode" : "path string required",
+        "src" : "query string"
+      },
+      "responses" : {
+        "200" : "object"
+      }
+    },
+    "GET /{shortCode}/og.png" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
+    "PATCH /api/v1/admin/posts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#AdminUpdatePostRequest required",
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "PATCH /api/v1/blog/webhooks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#BlogWebhookUpdateRequest required",
+      "responses" : {
+        "200" : "#BlogWebhookSummary"
+      }
+    },
+    "PATCH /api/v1/bookmarks/folders/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#BookmarkFolderNameRequest required",
+      "responses" : {
+        "200" : "#BookmarkFolderView"
+      }
+    },
+    "PATCH /api/v1/campaigns/{campaignId}/batches/{batchId}" : {
+      "parameters" : {
+        "batchId" : "path integer(int64) required",
+        "campaignId" : "path integer(int64) required"
+      },
+      "request" : "#CampaignBatchUpdateRequest required",
+      "responses" : {
+        "200" : "#CampaignBatchResponse"
+      }
+    },
+    "PATCH /api/v1/campaigns/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#CampaignUpdateRequest required",
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "PATCH /api/v1/ctas/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#UpdateCtaRequest required",
+      "responses" : {
+        "200" : "#CtaView"
+      }
+    },
+    "PATCH /api/v1/events/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#UpdateEventRequest required",
+      "responses" : {
+        "200" : "#EventView"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#UpdateLinkRequest required",
+      "responses" : {
+        "200" : "#MyLinkResponse"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/destinations/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkDestinationUpdateRequest required",
+      "responses" : {
+        "200" : "#DestinationSummary"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/og" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#OgOverrideRequest required",
+      "responses" : {
+        "200" : "#OgOverrideResponse"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/protection" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkProtectionRequest required",
+      "responses" : {
+        "200" : "#LinkProtectionResponse"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/visibility" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkVisibilityRequest required",
+      "responses" : {
+        "200" : "#LinkVisibilityResponse"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/visit-options" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkVisitOptionsRequest required",
+      "responses" : {
+        "200" : "#LinkVisitOptionsResponse"
+      }
+    },
+    "PATCH /api/v1/links/{shortCode}/webhooks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkWebhookToggleRequest required",
+      "responses" : {
+        "200" : "#WebhookSummary"
+      }
+    },
+    "PATCH /api/v1/notes/lists/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#NoteListRequest required",
+      "responses" : {
+        "200" : "#ListView"
+      }
+    },
+    "PATCH /api/v1/notes/scheduled/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#RescheduleNoteRequest required",
+      "responses" : {
+        "200" : "#View"
+      }
+    },
+    "PATCH /api/v1/notes/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#EditNoteRequest required",
+      "responses" : {
+        "200" : "#NoteView"
+      }
+    },
+    "PATCH /api/v1/posts/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#UpdatePostRequest required",
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "PATCH /api/v1/rooms/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#UpdateRoomRequest required",
+      "responses" : {
+        "200" : "#RoomView"
+      }
+    },
+    "PATCH /api/v1/series/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#UpdateSeriesRequest required",
+      "responses" : {
+        "200" : "#SeriesDetailView"
+      }
+    },
+    "PATCH /api/v1/tags/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#TagRequest required",
+      "responses" : {
+        "200" : "#TagSummary"
+      }
+    },
+    "PATCH /api/v1/users/me/email-leads/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#MyEmailLeadPatchRequest required",
+      "responses" : {
+        "200" : "#MyEmailLeadResponse"
+      }
+    },
+    "PATCH /api/v1/users/me/profile/blocks/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ProfileBlockUpdateRequest required",
+      "responses" : {
+        "200" : "#ProfileBlockResponse"
+      }
+    },
+    "PATCH /api/v1/users/me/profile/stats/visibility" : {
+      "request" : "#StatsVisibilityRequest required",
+      "responses" : {
+        "200" : "#StatsVisibilityResponse"
+      }
+    },
+    "POST /ap/actors/{publicId}/inbox" : {
+      "parameters" : {
+        "publicId" : "path string required"
+      },
+      "request" : "string(byte)",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /ap/inbox" : {
+      "request" : "string(byte)",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/2fa/confirm" : {
+      "request" : "#TwoFactorCodeRequest required",
+      "responses" : {
+        "200" : "#TwoFactorConfirmResponse"
+      }
+    },
+    "POST /api/v1/2fa/disable" : {
+      "request" : "#TwoFactorCodeRequest required",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/2fa/recovery-codes/regenerate" : {
+      "request" : "#TwoFactorCodeRequest required",
+      "responses" : {
+        "200" : "#TwoFactorConfirmResponse"
+      }
+    },
+    "POST /api/v1/2fa/setup" : {
+      "responses" : {
+        "200" : "#TwoFactorSetupResponse"
+      }
+    },
+    "POST /api/v1/admin/abuse-reports/{id}/resolve" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ResolveAbuseReportRequest required",
+      "responses" : {
+        "200" : "#AbuseReportView"
+      }
+    },
+    "POST /api/v1/admin/access-token" : {
+      "responses" : {
+        "200" : "#MintedAccessToken"
+      }
+    },
+    "POST /api/v1/admin/blocked-domains" : {
+      "request" : "#BlockDomainRequest required",
+      "responses" : {
+        "200" : "#BlockedDomainResponse"
+      }
+    },
+    "POST /api/v1/admin/federation/directories/run" : {
+      "responses" : {
+        "200" : "map<boolean>"
+      }
+    },
+    "POST /api/v1/admin/federation/relays" : {
+      "request" : "#RelaySubscribeRequest required",
+      "responses" : {
+        "200" : "#View"
+      }
+    },
+    "POST /api/v1/admin/federation/servers/import" : {
+      "parameters" : {
+        "dryRun" : "query boolean"
+      },
+      "request" : "string required",
+      "responses" : {
+        "200" : "#Imported"
+      }
+    },
+    "POST /api/v1/admin/links/{code}/disable" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkModerationResponse"
+      }
+    },
+    "POST /api/v1/admin/links/{code}/enable" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "#LinkModerationResponse"
+      }
+    },
+    "POST /api/v1/admin/posts/{id}/release" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/admin/posts/{id}/unpublish" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/admin/users/{id}/warning" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#WarnUserRequest required",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/admin/webhooks/redetect-formats" : {
+      "responses" : {
+        "200" : "#WebhookReDetectResult"
+      }
+    },
+    "POST /api/v1/auth/2fa/verify" : {
+      "parameters" : {
+        "twofa_challenge" : "cookie string"
+      },
+      "request" : "#WebTwoFactorVerifyRequest required",
+      "responses" : {
+        "200" : "#TokenResponse"
+      }
+    },
+    "POST /api/v1/auth/apple" : {
+      "request" : "#AppleLoginRequest required",
+      "responses" : {
+        "200" : "#AppleWebLoginResponse"
+      }
+    },
+    "POST /api/v1/auth/dev-login" : {
+      "request" : "#DevLoginRequest required",
+      "responses" : {
+        "200" : "object"
+      }
+    },
+    "POST /api/v1/auth/logout" : {
+      "parameters" : {
+        "refresh_token" : "cookie string"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/auth/mobile/2fa/verify" : {
+      "request" : "#TwoFactorVerifyRequest required",
+      "responses" : {
+        "200" : "#MobileTokenResponse"
+      }
+    },
+    "POST /api/v1/auth/mobile/apple" : {
+      "request" : "#AppleLoginRequest required",
+      "responses" : {
+        "200" : "#AppleLoginResponse"
+      }
+    },
+    "POST /api/v1/auth/mobile/exchange" : {
+      "request" : "#MobileExchangeRequest required",
+      "responses" : {
+        "200" : "#MobileTokenResponse"
+      }
+    },
+    "POST /api/v1/auth/mobile/logout" : {
+      "request" : "#MobileRefreshRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/auth/mobile/refresh" : {
+      "request" : "#MobileRefreshRequest required",
+      "responses" : {
+        "200" : "#MobileTokenResponse"
+      }
+    },
+    "POST /api/v1/auth/refresh" : {
+      "parameters" : {
+        "refresh_token" : "cookie string"
+      },
+      "responses" : {
+        "200" : "#TokenResponse"
+      }
+    },
+    "POST /api/v1/blog/webhooks" : {
+      "request" : "#BlogWebhookRegisterRequest required",
+      "responses" : {
+        "201" : "#IssuedBlogWebhook"
+      }
+    },
+    "POST /api/v1/bookmarks/folders" : {
+      "request" : "#BookmarkFolderNameRequest required",
+      "responses" : {
+        "201" : "#BookmarkFolderView"
+      }
+    },
+    "POST /api/v1/campaigns" : {
+      "request" : "#CampaignCreateRequest required",
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "POST /api/v1/campaigns/stats/compare" : {
+      "request" : "#CampaignStatsCompareRequest required",
+      "responses" : {
+        "200" : "#CampaignStatsCompareView"
+      }
+    },
+    "POST /api/v1/campaigns/{campaignId}/batches" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "request" : "#CampaignBatchCreateRequest required",
+      "responses" : {
+        "200" : "#CampaignBatchResponse"
+      }
+    },
+    "POST /api/v1/campaigns/{campaignId}/batches/bulk" : {
+      "parameters" : {
+        "campaignId" : "path integer(int64) required"
+      },
+      "request" : "#CampaignBatchBulkRequest required",
+      "responses" : {
+        "200" : "[#CampaignBatchResponse]"
+      }
+    },
+    "POST /api/v1/campaigns/{id}/end" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "POST /api/v1/campaigns/{id}/reapply-policy" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CampaignDetailResponse"
+      }
+    },
+    "POST /api/v1/collections" : {
+      "request" : "#CreateCollectionRequest required",
+      "responses" : {
+        "201" : "#CollectionSummaryView"
+      }
+    },
+    "POST /api/v1/collections/{id}/connections" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ConnectBlockRequest required",
+      "responses" : {
+        "201" : "-"
+      }
+    },
+    "POST /api/v1/comments/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#CommentLikeStatus"
+      }
+    },
+    "POST /api/v1/ctas" : {
+      "request" : "#CreateCtaRequest required",
+      "responses" : {
+        "201" : "#CtaView"
+      }
+    },
+    "POST /api/v1/custom-domains" : {
+      "request" : "#CustomDomainRegisterRequest required",
+      "responses" : {
+        "200" : "#DomainSummary"
+      }
+    },
+    "POST /api/v1/custom-domains/{id}/verify" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#DomainSummary"
+      }
+    },
+    "POST /api/v1/events" : {
+      "request" : "#CreateEventRequest required",
+      "responses" : {
+        "201" : "#EventView"
+      }
+    },
+    "POST /api/v1/events/{id}/cover/commit" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#CommitCoverRequest required",
+      "responses" : {
+        "200" : "#CommitCoverResponse"
+      }
+    },
+    "POST /api/v1/events/{id}/cover/presign" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#PresignCoverRequest required",
+      "responses" : {
+        "200" : "#PresignResult"
+      }
+    },
+    "POST /api/v1/events/{id}/links" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#CreateAliasLinkRequest required",
+      "responses" : {
+        "201" : "#IssuedLink"
+      }
+    },
+    "POST /api/v1/events/{id}/status" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ChangeStatusRequest required",
+      "responses" : {
+        "200" : "#EventView"
+      }
+    },
+    "POST /api/v1/federation/accounts/{id}/follow" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "POST /api/v1/federation/follow-requests/{id}/authorize" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/federation/follow-requests/{id}/reject" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/federation/seen" : {
+      "parameters" : {
+        "X-Kurl-Device" : "header string"
+      },
+      "request" : "#SeenRequest",
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "POST /api/v1/highlight-replies/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#HighlightReplyLikeStatus"
+      }
+    },
+    "POST /api/v1/highlights/{highlightId}/replies" : {
+      "parameters" : {
+        "highlightId" : "path integer(int64) required"
+      },
+      "request" : "#CreateHighlightReplyRequest required",
+      "responses" : {
+        "201" : "#HighlightReplyView"
+      }
+    },
+    "POST /api/v1/links" : {
+      "parameters" : {
+        "X-Pow-Challenge" : "header string",
+        "X-Pow-Nonce" : "header string"
+      },
+      "request" : "#CreateLinkRequest required",
+      "responses" : {
+        "200" : "#CreateLinkResponse"
+      }
+    },
+    "POST /api/v1/links/bulk" : {
+      "request" : "{file: string(binary) required}",
+      "responses" : {
+        "200" : "string"
+      }
+    },
+    "POST /api/v1/links/notifications/read-all" : {
+      "responses" : {
+        "200" : "#UnreadCountResponse"
+      }
+    },
+    "POST /api/v1/links/notifications/{id}/read" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/links/{shortCode}/destinations" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkDestinationAddRequest required",
+      "responses" : {
+        "200" : "#DestinationSummary"
+      }
+    },
+    "POST /api/v1/links/{shortCode}/stream-token" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "responses" : {
+        "200" : "#StreamTokenResponse"
+      }
+    },
+    "POST /api/v1/links/{shortCode}/webhooks" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkWebhookRegisterRequest required",
+      "responses" : {
+        "200" : "#IssuedWebhook"
+      }
+    },
+    "POST /api/v1/notes" : {
+      "request" : "#CreateNoteRequest required",
+      "responses" : {
+        "201" : "#NoteView"
+      }
+    },
+    "POST /api/v1/notes/filters" : {
+      "request" : "#NoteFilterRequest required",
+      "responses" : {
+        "201" : "#FilterView"
+      }
+    },
+    "POST /api/v1/notes/images/presign" : {
+      "request" : "#NoteImagePresignRequest required",
+      "responses" : {
+        "200" : "#PresignedImage"
+      }
+    },
+    "POST /api/v1/notes/lists" : {
+      "request" : "#NoteListRequest required",
+      "responses" : {
+        "201" : "#ListView"
+      }
+    },
+    "POST /api/v1/notes/scheduled" : {
+      "request" : "#ScheduleNoteRequest required",
+      "responses" : {
+        "201" : "#View"
+      }
+    },
+    "POST /api/v1/notes/threads" : {
+      "request" : "#CreateNoteThreadRequest required",
+      "responses" : {
+        "201" : "[#NoteView]"
+      }
+    },
+    "POST /api/v1/notes/{id}/poll/votes" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#NotePollVoteRequest required",
+      "responses" : {
+        "200" : "#Poll"
+      }
+    },
+    "POST /api/v1/notifications/devices" : {
+      "request" : "#RegisterDeviceRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/notifications/read-all" : {
+      "parameters" : {
+        "filter" : "query string"
+      },
+      "responses" : {
+        "200" : "#UnreadCountResponse"
+      }
+    },
+    "POST /api/v1/notifications/requests/accept" : {
+      "request" : "#NotificationSenderRequest required",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/notifications/requests/dismiss" : {
+      "request" : "#NotificationSenderRequest required",
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/notifications/web-push" : {
+      "request" : "#SubscribeWebPushRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/notifications/{id}/read" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/posts" : {
+      "request" : "#CreatePostRequest required",
+      "responses" : {
+        "201" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/back-to-draft" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/preview-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PreviewTokenResponse"
+      }
+    },
+    "POST /api/v1/posts/{id}/publish" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/republish" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/revisions/{versionNumber}/restore" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "versionNumber" : "path integer(int32) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/schedule" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#SchedulePostRequest required",
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{id}/unlisted-key/rotate" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#UnlistedLinkResponse"
+      }
+    },
+    "POST /api/v1/posts/{id}/unpublish" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostView"
+      }
+    },
+    "POST /api/v1/posts/{postId}/comments" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#CreateCommentRequest required",
+      "responses" : {
+        "201" : "#CommentView"
+      }
+    },
+    "POST /api/v1/posts/{postId}/highlights" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#CreateHighlightRequest required",
+      "responses" : {
+        "201" : "#HighlightRef"
+      }
+    },
+    "POST /api/v1/posts/{postId}/images/commit" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#PostImageCommitRequest required",
+      "responses" : {
+        "200" : "#CommitResult"
+      }
+    },
+    "POST /api/v1/posts/{postId}/images/import" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#PostImageImportRequest required",
+      "responses" : {
+        "200" : "#CommitResult"
+      }
+    },
+    "POST /api/v1/posts/{postId}/images/presign" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#PostImagePresignRequest required",
+      "responses" : {
+        "200" : "#PresignedUpload"
+      }
+    },
+    "POST /api/v1/posts/{postId}/read" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/public/abuse-reports" : {
+      "request" : "#SubmitAbuseReportRequest required",
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "POST /api/v1/public/abuse-reports/links" : {
+      "request" : "#SubmitLinkAbuseReportRequest required",
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "POST /api/v1/public/behavior-events" : {
+      "parameters" : {
+        "User-Agent" : "header string"
+      },
+      "request" : "string",
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "POST /api/v1/public/email-leads" : {
+      "request" : "#EmailLeadSubmitRequest required",
+      "responses" : {
+        "200" : "#EmailLeadSubmitResponse"
+      }
+    },
+    "POST /api/v1/public/events/registrations/cancel" : {
+      "request" : "#CancelRegistrationRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/public/events/{slug}/registrations" : {
+      "parameters" : {
+        "User-Agent" : "header string",
+        "X-Pow-Challenge" : "header string",
+        "X-Pow-Nonce" : "header string",
+        "slug" : "path string required"
+      },
+      "request" : "#RegisterRequest required",
+      "responses" : {
+        "201" : "#RegistrationResult"
+      }
+    },
+    "POST /api/v1/public/profiles/{username}/posts/{slug}/unlock" : {
+      "parameters" : {
+        "slug" : "path string required",
+        "username" : "path string required"
+      },
+      "request" : "#UnlockPostRequest required",
+      "responses" : {
+        "200" : "#Grant"
+      }
+    },
+    "POST /api/v1/public/profiles/{username}/posts/{slug}/view" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "Referer" : "header string",
+        "User-Agent" : "header string",
+        "ref" : "query string",
+        "sid" : "query string",
+        "slug" : "path string required",
+        "src" : "query string",
+        "username" : "path string required",
+        "utm_campaign" : "query string",
+        "utm_content" : "query string",
+        "utm_medium" : "query string",
+        "utm_source" : "query string",
+        "utm_term" : "query string"
+      },
+      "responses" : {
+        "202" : "-"
+      }
+    },
+    "POST /api/v1/public/profiles/{username}/visit" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "Referer" : "header string",
+        "User-Agent" : "header string",
+        "src" : "query string",
+        "username" : "path string required",
+        "utm_campaign" : "query string",
+        "utm_content" : "query string",
+        "utm_medium" : "query string",
+        "utm_source" : "query string",
+        "utm_term" : "query string"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/room-invites/{code}/join" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "#JoinRoomResponse"
+      }
+    },
+    "POST /api/v1/rooms" : {
+      "request" : "#CreateRoomRequest required",
+      "responses" : {
+        "201" : "#RoomView"
+      }
+    },
+    "POST /api/v1/rooms/invitations/{roomId}/accept" : {
+      "parameters" : {
+        "roomId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#JoinRoomResponse"
+      }
+    },
+    "POST /api/v1/rooms/invitations/{roomId}/decline" : {
+      "parameters" : {
+        "roomId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/rooms/suggestions/dismiss" : {
+      "request" : "#DismissRoomSuggestionsRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/rooms/{id}/invitations" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#InviteToRoomRequest required",
+      "responses" : {
+        "200" : "[#RoomInvitee]"
+      }
+    },
+    "POST /api/v1/rooms/{id}/invites" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#CreateRoomInviteRequest",
+      "responses" : {
+        "201" : "#RoomInviteView"
+      }
+    },
+    "POST /api/v1/rooms/{id}/leave" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#LeaveRoomRequest",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/rooms/{id}/read" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ReadRoomRequest required",
+      "responses" : {
+        "200" : "#UnreadResponse"
+      }
+    },
+    "POST /api/v1/rooms/{id}/requests/{memberId}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "memberId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "POST /api/v1/series" : {
+      "request" : "#CreateSeriesRequest required",
+      "responses" : {
+        "201" : "#SeriesDetailView"
+      }
+    },
+    "POST /api/v1/tags" : {
+      "request" : "#TagRequest required",
+      "responses" : {
+        "200" : "#TagSummary"
+      }
+    },
+    "POST /api/v1/users/me/api-keys" : {
+      "request" : "#ApiKeyCreateRequest required",
+      "responses" : {
+        "200" : "#IssuedApiKey"
+      }
+    },
+    "POST /api/v1/users/me/avatar/presigned-url" : {
+      "request" : "#AvatarPresignRequest required",
+      "responses" : {
+        "200" : "#PresignedUpload"
+      }
+    },
+    "POST /api/v1/users/me/banner/presigned-url" : {
+      "request" : "#BannerPresignRequest required",
+      "responses" : {
+        "200" : "#PresignedUpload"
+      }
+    },
+    "POST /api/v1/users/me/claim-anonymous" : {
+      "request" : "#AnonymousClaimRequest required",
+      "responses" : {
+        "200" : "#ClaimResult"
+      }
+    },
+    "POST /api/v1/users/me/clicks/stream-token" : {
+      "responses" : {
+        "200" : "#StreamTokenResponse"
+      }
+    },
+    "POST /api/v1/users/me/follow-requests/{username}/authorize" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/users/me/follow-requests/{username}/reject" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "-"
+      }
+    },
+    "POST /api/v1/users/me/imports" : {
+      "request" : "#StartImportRequest required",
+      "responses" : {
+        "201" : "#ImportView"
+      }
+    },
+    "POST /api/v1/users/me/profile/blocks" : {
+      "request" : "#ProfileBlockCreateRequest required",
+      "responses" : {
+        "200" : "#ProfileBlockResponse"
+      }
+    },
+    "POST /api/v1/users/me/profile/images/presigned-url" : {
+      "request" : "#ProfileImagePresignRequest required",
+      "responses" : {
+        "200" : "#PresignedUpload"
+      }
+    },
+    "POST /{shortCode}" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "Referer" : "header string",
+        "User-Agent" : "header string",
+        "cf-turnstile-response" : "query string",
+        "password" : "query string required",
+        "shortCode" : "path string required",
+        "src" : "query string"
+      },
+      "responses" : {
+        "200" : "object"
+      }
+    },
+    "PUT /api/v1/admin/federation/directories/{host}" : {
+      "parameters" : {
+        "host" : "path string required"
+      },
+      "request" : "#DirectorySourceRequest required",
+      "responses" : {
+        "200" : "#View"
+      }
+    },
+    "PUT /api/v1/admin/federation/relays/setting" : {
+      "request" : "#RelaySettingRequest required",
+      "responses" : {
+        "200" : "#RelayStatusResponse"
+      }
+    },
+    "PUT /api/v1/admin/federation/servers/{domain}" : {
+      "parameters" : {
+        "domain" : "path string required"
+      },
+      "request" : "#ServerBlockRequest required",
+      "responses" : {
+        "200" : "#View"
+      }
+    },
+    "PUT /api/v1/collections/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#EditCollectionRequest required",
+      "responses" : {
+        "200" : "#CollectionSummaryView"
+      }
+    },
+    "PUT /api/v1/collections/{id}/connections/order" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ReorderConnectionsRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/federation/accounts/{id}/block" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "PUT /api/v1/federation/accounts/{id}/mute" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#RemoteMuteRequest",
+      "responses" : {
+        "200" : "#RemoteAccountView"
+      }
+    },
+    "PUT /api/v1/federation/domain-blocks/{domain}" : {
+      "parameters" : {
+        "domain" : "path string required"
+      },
+      "responses" : {
+        "200" : "#View"
+      }
+    },
+    "PUT /api/v1/federation/settings" : {
+      "request" : "#UpdateFederationSettingsRequest required",
+      "responses" : {
+        "200" : "#FederationSettingsView"
+      }
+    },
+    "PUT /api/v1/links/me/favorites/order" : {
+      "request" : "#FavoriteOrderRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/links/me/favorites/{code}" : {
+      "parameters" : {
+        "code" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/links/{shortCode}/blocked-countries" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkDestinationBlockedCountriesRequest required",
+      "responses" : {
+        "200" : "#LinkDestinationBlockedCountriesResponse"
+      }
+    },
+    "PUT /api/v1/links/{shortCode}/profile" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkProfileToggleRequest required",
+      "responses" : {
+        "200" : "#LinkProfileToggleResponse"
+      }
+    },
+    "PUT /api/v1/links/{shortCode}/profile/highlight" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkProfileHighlightRequest required",
+      "responses" : {
+        "200" : "#LinkProfileHighlightResponse"
+      }
+    },
+    "PUT /api/v1/links/{shortCode}/tags" : {
+      "parameters" : {
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkTagsRequest required",
+      "responses" : {
+        "200" : "#LinkTagsResponse"
+      }
+    },
+    "PUT /api/v1/links/{shortCode}/webhooks/{id}/config" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "shortCode" : "path string required"
+      },
+      "request" : "#LinkWebhookConfigRequest required",
+      "responses" : {
+        "200" : "#WebhookSummary"
+      }
+    },
+    "PUT /api/v1/me/saved/{postId}/folder" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "request" : "#MoveBookmarkRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/notes/feed-preferences" : {
+      "request" : "#NoteFeedPreferencesRequest required",
+      "responses" : {
+        "200" : "#FeedPreferences"
+      }
+    },
+    "PUT /api/v1/notes/filters/{id}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#NoteFilterRequest required",
+      "responses" : {
+        "200" : "#FilterView"
+      }
+    },
+    "PUT /api/v1/notes/lists/{id}/members/{username}" : {
+      "parameters" : {
+        "id" : "path integer(int64) required",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/notes/repost-visibility/{username}" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#RepostVisibility"
+      }
+    },
+    "PUT /api/v1/notes/{id}/bookmark" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#BookmarkStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/conversation-mute" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#ConversationMuteStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/hidden" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#ReplyHiddenStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/like" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LikeStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/pin" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PinStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/reply-policy" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ReplyPolicyRequest required",
+      "responses" : {
+        "200" : "#ReplyPolicyStatus"
+      }
+    },
+    "PUT /api/v1/notes/{id}/repost" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#RepostStatus"
+      }
+    },
+    "PUT /api/v1/notifications/blog-preferences" : {
+      "request" : "#UpdateBlogNotificationPreferenceRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/notifications/policy" : {
+      "request" : "#UpdateNotificationPolicyRequest required",
+      "responses" : {
+        "200" : "#NotificationPolicy"
+      }
+    },
+    "PUT /api/v1/notifications/preferences" : {
+      "request" : "#UpdateNotificationPreferenceRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/posts/pins" : {
+      "request" : "#SetPinnedPostsRequest required",
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/posts/{id}/blocks" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ReplaceBlocksRequest required",
+      "responses" : {
+        "200" : "[#PostBlockView]"
+      }
+    },
+    "PUT /api/v1/posts/{id}/markdown" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#PostMarkdownRequest required",
+      "responses" : {
+        "200" : "#PostMarkdownResponse"
+      }
+    },
+    "PUT /api/v1/posts/{postId}/bookmark" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostBookmarkStatus"
+      }
+    },
+    "PUT /api/v1/posts/{postId}/like" : {
+      "parameters" : {
+        "postId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#PostLikeStatus"
+      }
+    },
+    "PUT /api/v1/rooms/{id}/feed-hidden" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#FeedHiddenResponse"
+      }
+    },
+    "PUT /api/v1/rooms/{id}/pin" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/series/{id}/items" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#SetSeriesItemsRequest required",
+      "responses" : {
+        "200" : "#SeriesDetailView"
+      }
+    },
+    "PUT /api/v1/series/{id}/posts" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#SetSeriesPostsRequest required",
+      "responses" : {
+        "200" : "#SeriesDetailView"
+      }
+    },
+    "PUT /api/v1/series/{seriesId}/subscription" : {
+      "parameters" : {
+        "seriesId" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#SeriesSubscriptionStatus"
+      }
+    },
+    "PUT /api/v1/users/me/avatar" : {
+      "request" : "#AvatarCommitRequest required",
+      "responses" : {
+        "200" : "#CommitResult"
+      }
+    },
+    "PUT /api/v1/users/me/banner" : {
+      "request" : "#BannerCommitRequest required",
+      "responses" : {
+        "200" : "#CommitResult"
+      }
+    },
+    "PUT /api/v1/users/me/feed-prefs/default-tab/{tab}" : {
+      "parameters" : {
+        "tab" : "path string required"
+      },
+      "responses" : {
+        "200" : "#FeedPrefsView"
+      }
+    },
+    "PUT /api/v1/users/me/preferences" : {
+      "request" : "#UpdatePreferencesRequest required",
+      "responses" : {
+        "200" : "#MeResponse"
+      }
+    },
+    "PUT /api/v1/users/me/profile" : {
+      "request" : "#MyProfileUpdateRequest required",
+      "responses" : {
+        "200" : "#MyProfile"
+      }
+    },
+    "PUT /api/v1/users/me/profile/blocks/{id}/highlight" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "request" : "#ProfileBlockHighlightRequest required",
+      "responses" : {
+        "200" : "#ProfileBlockHighlightResponse"
+      }
+    },
+    "PUT /api/v1/users/me/profile/images" : {
+      "request" : "#ProfileImageCommitRequest required",
+      "responses" : {
+        "200" : "#CommitResult"
+      }
+    },
+    "PUT /api/v1/users/me/profile/order" : {
+      "request" : "#MyProfileReorderRequest required",
+      "responses" : {
+        "200" : "#MyProfile"
+      }
+    },
+    "PUT /api/v1/users/me/tag-prefs/followed/{tag}" : {
+      "parameters" : {
+        "tag" : "path string required"
+      },
+      "responses" : {
+        "200" : "#TagPrefsView"
+      }
+    },
+    "PUT /api/v1/users/me/tag-prefs/hidden/{tag}" : {
+      "parameters" : {
+        "tag" : "path string required"
+      },
+      "responses" : {
+        "200" : "#TagPrefsView"
+      }
+    },
+    "PUT /api/v1/users/{username}/block" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "204" : "-"
+      }
+    },
+    "PUT /api/v1/users/{username}/follow" : {
+      "parameters" : {
+        "sourcePostId" : "query integer(int64)",
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#FollowStatus"
+      }
+    },
+    "PUT /api/v1/users/{username}/follow/notes" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "responses" : {
+        "200" : "#NoteNotifications"
+      }
+    },
+    "PUT /api/v1/users/{username}/mute" : {
+      "parameters" : {
+        "username" : "path string required"
+      },
+      "request" : "#MuteRequest",
+      "responses" : {
+        "200" : "#MuteStatus"
+      }
+    }
+  },
+  "schemas" : {
+    "AbuseReportView" : {
+      "adminNote" : "string",
+      "createdAt" : "string(date-time)",
+      "detail" : "string",
+      "id" : "integer(int64)",
+      "reasonCode" : "string",
+      "reporterUserId" : "integer(int64)",
+      "resolvedAt" : "string(date-time)",
+      "status" : "string",
+      "subjectAuthorHandle" : "string",
+      "subjectExcerpt" : "string",
+      "subjectId" : "integer(int64)",
+      "subjectRemoved" : "boolean",
+      "subjectTitle" : "string",
+      "subjectType" : "string",
+      "subjectUrl" : "string"
+    },
+    "Actor" : {
+      "avatarUrl" : "string",
+      "id" : "integer(int64)",
+      "profileUrl" : "string",
+      "username" : "string"
+    },
+    "ActorDocument" : {
+      "@context" : "[object]",
+      "attachment" : "[#PropertyValue]",
+      "discoverable" : "boolean",
+      "endpoints" : "#Endpoints",
+      "featured" : "string",
+      "followers" : "string",
+      "following" : "string",
+      "icon" : "#Image",
+      "id" : "string",
+      "inbox" : "string",
+      "indexable" : "boolean",
+      "manuallyApprovesFollowers" : "boolean",
+      "name" : "string",
+      "outbox" : "string",
+      "preferredUsername" : "string",
+      "publicKey" : "#PublicKey",
+      "summary" : "string",
+      "type" : "string",
+      "url" : "string"
+    },
+    "AdminActiveUsers" : {
+      "buckets" : "[#Bucket]",
+      "period" : "string"
+    },
+    "AdminActivity" : {
+      "recentClicks" : "[#RecentClick]",
+      "recentLinks" : "[#RecentLink]",
+      "trending24h" : "[#TrendingLink]"
+    },
+    "AdminCohort" : {
+      "rows" : "[#Row]",
+      "weeks" : "integer(int32)"
+    },
+    "AdminHealthMetrics" : {
+      "authFailures" : "integer(int64)",
+      "cache" : "#Cache",
+      "dbPool" : "#DbPool",
+      "httpLatency" : "#HttpLatency",
+      "httpStatusCounts" : "#HttpStatusCounts",
+      "rateLimitExceeded" : "integer(int64)",
+      "redirect" : "#RedirectPerf",
+      "safeBrowsingMalicious" : "integer(int64)"
+    },
+    "AdminLifecycle" : {
+      "days" : "[#DayPoint]",
+      "maxDay" : "integer(int32)"
+    },
+    "AdminLinkDetail" : {
+      "meta" : "#AdminLinkRow",
+      "stats" : "#LinkStats"
+    },
+    "AdminLinkMetric" : {
+      "errorRate" : "number(double)",
+      "lastRedirectAt" : "string(date-time)",
+      "originalUrl" : "string",
+      "outcomeCounts" : "map<integer(int64)>",
+      "ownerEmail" : "string",
+      "p50Millis" : "integer(int64)",
+      "p95Millis" : "integer(int64)",
+      "p99Millis" : "integer(int64)",
+      "shortCode" : "string",
+      "totalRedirects" : "integer(int64)",
+      "userId" : "integer(int64)",
+      "windowedRedirects" : "integer(int64)"
+    },
+    "AdminLinkRow" : {
+      "clickCount" : "integer(int64)",
+      "createdAt" : "string(date-time)",
+      "disabledAt" : "string(date-time)",
+      "disabledReason" : "string",
+      "expiresAt" : "string(date-time)",
+      "maxViews" : "integer(int32)",
+      "originalUrl" : "string",
+      "ownerEmail" : "string",
+      "ownerId" : "integer(int64)",
+      "passwordProtected" : "boolean",
+      "shortCode" : "string",
+      "status" : "string",
+      "viewCount" : "integer(int32)"
+    },
+    "AdminOverview" : {
+      "anonymousLinkRatio" : "number(double)",
+      "clicklessLinkRatio" : "number(double)",
+      "clicks7d" : "integer(int64)",
+      "dailyClicks" : "[#DailyPoint]",
+      "dailyLinks" : "[#DailyPoint]",
+      "dailySignups" : "[#DailyPoint]",
+      "expiredLinkRatio" : "number(double)",
+      "newLinks7d" : "integer(int64)",
+      "newUsers7d" : "integer(int64)",
+      "topLinksByClicks" : "[#LinkStat]",
+      "topLinksByClicksTotal" : "integer(int64)",
+      "topUsersByClicks" : "[#UserStat]",
+      "topUsersByClicksTotal" : "integer(int64)",
+      "topUsersByLinks" : "[#UserStat]",
+      "topUsersByLinksTotal" : "integer(int64)",
+      "totals" : "#Totals"
+    },
+    "AdminRouteMetric" : {
+      "count" : "integer(int64)",
+      "error5xxCount" : "integer(int64)",
+      "errorRate" : "number(double)",
+      "method" : "string",
+      "p50Millis" : "number(double)",
+      "p95Millis" : "number(double)",
+      "p99Millis" : "number(double)",
+      "statusDistribution" : "map<integer(int64)>",
+      "uri" : "string"
+    },
+    "AdminUpdatePostRequest" : {
+      "tags" : "[string]",
+      "title" : "string"
+    },
+    "AdminUserRow" : {
+      "createdAt" : "string(date-time)",
+      "deleted" : "boolean",
+      "email" : "string",
+      "id" : "integer(int64)",
+      "linkCount" : "integer(int64)",
+      "role" : "string",
+      "username" : "string"
+    },
+    "AnonymousClaimRequest" : {
+      "claimTokens" : "[string] required"
+    },
+    "ApiKeyCreateRequest" : {
+      "name" : "string"
+    },
+    "ApiKeySummary" : {
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "lastUsedAt" : "string(date-time)",
+      "name" : "string",
+      "prefix" : "string",
+      "revokedAt" : "string(date-time)"
+    },
+    "AppleLoginRequest" : {
+      "identityToken" : "string required",
+      "nonce" : "string required"
+    },
+    "AppleLoginResponse" : {
+      "accessToken" : "string",
+      "challenge" : "string",
+      "refreshToken" : "string"
+    },
+    "AppleWebLoginResponse" : {
+      "accessToken" : "string",
+      "challenge" : "string"
+    },
+    "AsnClick" : {
+      "asn" : "integer(int32)",
+      "count" : "integer(int64)",
+      "organization" : "string"
+    },
+    "AttendeeView" : {
+      "answers" : "map<string>",
+      "canceledAt" : "string(date-time)",
+      "channel" : "string",
+      "contact" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "status" : "string"
+    },
+    "Author" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "id" : "integer(int64)",
+      "username" : "string"
+    },
+    "AuthorAnalyticsOverview" : {
+      "daily" : "[#DailyPoint]",
+      "lifetimeFollows" : "integer(int64)",
+      "lifetimeLikes" : "integer(int64)",
+      "lifetimeLinkClicks" : "integer(int64)",
+      "lifetimeViews" : "integer(int64)",
+      "publishedPosts" : "integer(int64)",
+      "referrers" : "[#ReferrerPoint]",
+      "totalPosts" : "integer(int64)",
+      "windowDays" : "integer(int32)",
+      "windowFollows" : "integer(int64)",
+      "windowLinkClicks" : "integer(int64)",
+      "windowViews" : "integer(int64)"
+    },
+    "AvatarCommitRequest" : {
+      "key" : "string"
+    },
+    "AvatarPresignRequest" : {
+      "contentType" : "string"
+    },
+    "BannerCommitRequest" : {
+      "key" : "string"
+    },
+    "BannerPresignRequest" : {
+      "contentType" : "string"
+    },
+    "BatchRecommendation" : {
+      "area" : "string",
+      "batchId" : "integer(int64)",
+      "batchName" : "string",
+      "currentClicks" : "integer(int64)",
+      "currentQuantity" : "integer(int32)",
+      "currentRatePerHundred" : "number(double)",
+      "delta" : "integer(int32)",
+      "distributor" : "string",
+      "recommendedQuantity" : "integer(int32)",
+      "verdict" : "string enum[BOOST|KEEP|PRUNE|REDUCE]"
+    },
+    "BatchStats" : {
+      "area" : "string",
+      "batchId" : "integer(int64)",
+      "batchName" : "string",
+      "clicks" : "integer(int64)",
+      "distributor" : "string",
+      "quantity" : "integer(int32)",
+      "shortCode" : "string"
+    },
+    "BlockDomainRequest" : {
+      "domain" : "string required",
+      "reason" : "string"
+    },
+    "BlockItem" : {
+      "content" : "string",
+      "type" : "string required"
+    },
+    "BlockedDomainResponse" : {
+      "blockedAt" : "string(date-time)",
+      "blockedByUserId" : "integer(int64)",
+      "domain" : "string",
+      "id" : "integer(int64)",
+      "reason" : "string",
+      "warnedOwners" : "integer(int32)"
+    },
+    "BlockedUserView" : {
+      "avatarUrl" : "string",
+      "id" : "integer(int64)",
+      "username" : "string"
+    },
+    "BlogAdminMetrics" : {
+      "activeAuthors" : "integer(int64)",
+      "openReports" : "integer(int64)",
+      "topPosts" : "[#TopPost]",
+      "totalPosts" : "integer(int64)",
+      "totalReads" : "integer(int64)"
+    },
+    "BlogWebhookRegisterRequest" : {
+      "events" : "[string enum[COMMENT|FOLLOW|LIKE|SERIES_SUBSCRIBE]]",
+      "name" : "string",
+      "url" : "string required"
+    },
+    "BlogWebhookSummary" : {
+      "autoDisabledReason" : "string",
+      "consecutiveFailures" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "enabled" : "boolean",
+      "events" : "[string enum[COMMENT|FOLLOW|LIKE|SERIES_SUBSCRIBE]]",
+      "format" : "string enum[DISCORD|GENERIC|SLACK]",
+      "id" : "integer(int64)",
+      "lastCalledAt" : "string(date-time)",
+      "lastError" : "string",
+      "lastStatusCode" : "integer(int32)",
+      "name" : "string",
+      "url" : "string"
+    },
+    "BlogWebhookUpdateRequest" : {
+      "enabled" : "boolean",
+      "events" : "[string enum[COMMENT|FOLLOW|LIKE|SERIES_SUBSCRIBE]]",
+      "name" : "string"
+    },
+    "BookmarkFolderNameRequest" : {
+      "name" : "string required"
+    },
+    "BookmarkFolderView" : {
+      "count" : "integer(int64)",
+      "id" : "integer(int64)",
+      "name" : "string"
+    },
+    "BookmarkStatus" : {
+      "bookmarked" : "boolean"
+    },
+    "BookmarkView" : {
+      "id" : "integer(int64)",
+      "slug" : "string",
+      "title" : "string",
+      "username" : "string"
+    },
+    "BotClick" : {
+      "bot" : "string",
+      "count" : "integer(int64)"
+    },
+    "BrowserClick" : {
+      "browser" : "string",
+      "count" : "integer(int64)"
+    },
+    "BrowserVisit" : {
+      "browser" : "string",
+      "count" : "integer(int64)"
+    },
+    "Bucket" : {
+      "count" : "integer(int64)",
+      "key" : "string"
+    },
+    "BulkDeleteRequest" : {
+      "shortCodes" : "[string] required"
+    },
+    "BulkDeleteResponse" : {
+      "deleted" : "integer(int32)",
+      "skipped" : "integer(int32)"
+    },
+    "Cache" : {
+      "gets" : "integer(int64)",
+      "hitRatio" : "number(double)",
+      "hits" : "integer(int64)",
+      "misses" : "integer(int64)"
+    },
+    "CacheStat" : {
+      "hits" : "integer(int64)",
+      "misses" : "integer(int64)"
+    },
+    "CampaignBatchBulkRequest" : {
+      "batches" : "[#CampaignBatchCreateRequest] required"
+    },
+    "CampaignBatchCreateRequest" : {
+      "areaLabel" : "string",
+      "destinationUrl" : "string",
+      "distributorName" : "string",
+      "memo" : "string",
+      "name" : "string required",
+      "quantity" : "integer(int32)"
+    },
+    "CampaignBatchResponse" : {
+      "areaLabel" : "string",
+      "campaignId" : "integer(int64)",
+      "createdAt" : "string(date-time)",
+      "destinationUrl" : "string",
+      "distributorName" : "string",
+      "id" : "integer(int64)",
+      "linkId" : "integer(int64)",
+      "memo" : "string",
+      "name" : "string",
+      "quantity" : "integer(int32)",
+      "shortCode" : "string",
+      "shortUrl" : "string"
+    },
+    "CampaignBatchUpdateRequest" : {
+      "areaLabel" : "string",
+      "distributorName" : "string",
+      "memo" : "string",
+      "name" : "string",
+      "quantity" : "integer(int32)"
+    },
+    "CampaignCreateRequest" : {
+      "defaultDestinationUrl" : "string",
+      "endsAt" : "string(date-time) required",
+      "name" : "string required",
+      "postEndAction" : "string enum[EXPIRE|KEEP|REDIRECT]",
+      "postEndDestinationUrl" : "string",
+      "postEndMessage" : "string",
+      "startsAt" : "string(date-time)"
+    },
+    "CampaignDetailResponse" : {
+      "batchCount" : "integer(int64)",
+      "createdAt" : "string(date-time)",
+      "defaultDestinationUrl" : "string",
+      "endedAt" : "string(date-time)",
+      "endsAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "postEndAction" : "string enum[EXPIRE|KEEP|REDIRECT]",
+      "postEndDestinationUrl" : "string",
+      "postEndMessage" : "string",
+      "startsAt" : "string(date-time)",
+      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]",
+      "updatedAt" : "string(date-time)"
+    },
+    "CampaignRecommendationView" : {
+      "avgRatePerHundred" : "number(double)",
+      "insufficient" : "boolean",
+      "insufficientReason" : "string",
+      "recommendations" : "[#BatchRecommendation]",
+      "totalClicks" : "integer(int32)",
+      "totalQuantity" : "integer(int32)"
+    },
+    "CampaignStatsCompareRequest" : {
+      "campaignIds" : "[integer(int64)] required"
+    },
+    "CampaignStatsCompareView" : {
+      "campaigns" : "[#CampaignWithStats]"
+    },
+    "CampaignStatsView" : {
+      "byArea" : "[#GroupStats]",
+      "byBatch" : "[#BatchStats]",
+      "byDay" : "[#DayBucket]",
+      "byDistributor" : "[#GroupStats]",
+      "byHour" : "[#HourBucket]",
+      "heatmap" : "[#HeatmapCell]",
+      "lastTestScanAt" : "string(date-time)",
+      "testScans" : "integer(int64)",
+      "totalClicks" : "integer(int64)"
+    },
+    "CampaignSummaryResponse" : {
+      "batchCount" : "integer(int64)",
+      "endsAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "startsAt" : "string(date-time)",
+      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]"
+    },
+    "CampaignUpdateRequest" : {
+      "defaultDestinationUrl" : "string",
+      "endsAt" : "string(date-time)",
+      "name" : "string",
+      "postEndAction" : "string enum[EXPIRE|KEEP|REDIRECT]",
+      "postEndDestinationUrl" : "string",
+      "postEndMessage" : "string"
+    },
+    "CampaignWithStats" : {
+      "campaignId" : "integer(int64)",
+      "name" : "string",
+      "stats" : "#CampaignStatsView"
+    },
+    "CancelRegistrationRequest" : {
+      "token" : "string required"
+    },
+    "Candidate" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "following" : "boolean",
+      "userId" : "integer(int64)",
+      "username" : "string"
+    },
+    "Cell" : {
+      "active" : "integer(int64)",
+      "ratio" : "number(double)",
+      "weekOffset" : "integer(int32)"
+    },
+    "ChallengeResponse" : {
+      "challenge" : "string",
+      "difficulty" : "integer(int32)",
+      "enforced" : "boolean"
+    },
+    "ChangeStatusRequest" : {
+      "action" : "string required"
+    },
+    "ChannelClick" : {
+      "channel" : "string",
+      "count" : "integer(int64)"
+    },
+    "ChannelDepth" : {
+      "count" : "integer(int64)",
+      "firstSeenAt" : "string(date-time)",
+      "host" : "string",
+      "returnRatio" : "number(double)",
+      "returningVisitors" : "integer(int64)"
+    },
+    "CityClick" : {
+      "city" : "string",
+      "count" : "integer(int64)"
+    },
+    "ClaimResult" : {
+      "claimed" : "integer(int32)",
+      "skipped" : "integer(int32)"
+    },
+    "ClientAppClick" : {
+      "app" : "string",
+      "count" : "integer(int64)"
+    },
+    "CollectionDetailView" : {
+      "connections" : "[#ConnectionView]",
+      "curatorUserId" : "integer(int64)",
+      "curatorUsername" : "string",
+      "description" : "string",
+      "id" : "integer(int64)",
+      "kind" : "string",
+      "ordered" : "boolean",
+      "title" : "string",
+      "visibility" : "string"
+    },
+    "CollectionSummaryView" : {
+      "connectionId" : "integer(int64)",
+      "count" : "integer(int32)",
+      "curatorAvatarUrl" : "string",
+      "curatorUsername" : "string",
+      "description" : "string",
+      "id" : "integer(int64)",
+      "kind" : "string",
+      "ordered" : "boolean",
+      "position" : "integer(int32)",
+      "preview" : "[string]",
+      "title" : "string",
+      "updatedAt" : "string(date-time)",
+      "visibility" : "string"
+    },
+    "CommentLikeStatus" : {
+      "likeCount" : "integer(int64)",
+      "liked" : "boolean"
+    },
+    "CommentView" : {
+      "author" : "#PublicAuthorView",
+      "body" : "string",
+      "createdAt" : "string(date-time)",
+      "deleted" : "boolean",
+      "id" : "integer(int64)",
+      "likeCount" : "integer(int64)",
+      "mentions" : "[string]",
+      "parentId" : "integer(int64)"
+    },
+    "CommitCoverRequest" : {
+      "key" : "string"
+    },
+    "CommitCoverResponse" : {
+      "coverImageUrl" : "string"
+    },
+    "CommitResult" : {
+      "imageUrl" : "string",
+      "key" : "string"
+    },
+    "ConnectBlockRequest" : {
+      "blockType" : "string enum[HIGHLIGHT|NOTE|POST] required",
+      "refId" : "integer(int64) required",
+      "why" : "string"
+    },
+    "ConnectionView" : {
+      "blockType" : "string",
+      "body" : "string",
+      "connectedAt" : "string(date-time)",
+      "excerpt" : "string",
+      "id" : "integer(int64)",
+      "noteId" : "integer(int64)",
+      "quote" : "string",
+      "slug" : "string",
+      "title" : "string",
+      "username" : "string",
+      "why" : "string"
+    },
+    "ConversationMuteStatus" : {
+      "muted" : "boolean"
+    },
+    "CountryClick" : {
+      "count" : "integer(int64)",
+      "country" : "string"
+    },
+    "CountryVisit" : {
+      "count" : "integer(int64)",
+      "country" : "string"
+    },
+    "CreateAliasLinkRequest" : {
+      "label" : "string required"
+    },
+    "CreateCollectionRequest" : {
+      "description" : "string",
+      "kind" : "string enum[COLLECTION|PATH]",
+      "ordered" : "boolean",
+      "title" : "string required",
+      "visibility" : "string enum[PRIVATE|PUBLIC|UNLISTED]"
+    },
+    "CreateCommentRequest" : {
+      "body" : "string required",
+      "parentId" : "integer(int64)"
+    },
+    "CreateCtaRequest" : {
+      "label" : "string required",
+      "purpose" : "string",
+      "style" : "string",
+      "url" : "string required"
+    },
+    "CreateEventRequest" : {
+      "capacity" : "integer(int32)",
+      "closeAt" : "string(date-time)",
+      "contactField" : "string",
+      "descriptionMd" : "string",
+      "endsAt" : "string(date-time)",
+      "locationText" : "string",
+      "locationUrl" : "string",
+      "onlineUrl" : "string",
+      "questions" : "[#QuestionSpecRequest]",
+      "startsAt" : "string(date-time) required",
+      "timezone" : "string required",
+      "title" : "string required"
+    },
+    "CreateHighlightReplyRequest" : {
+      "body" : "string required"
+    },
+    "CreateHighlightRequest" : {
+      "blockOrder" : "integer(int32) required",
+      "endBlockOrder" : "integer(int32)",
+      "endOffset" : "integer(int32) required",
+      "note" : "string",
+      "quote" : "string required",
+      "startOffset" : "integer(int32) required"
+    },
+    "CreateLinkRequest" : {
+      "customCode" : "string",
+      "expiresAt" : "string(date-time)",
+      "password" : "string",
+      "url" : "string required"
+    },
+    "CreateLinkResponse" : {
+      "claimToken" : "string",
+      "passwordProtected" : "boolean",
+      "shortCode" : "string",
+      "shortUrl" : "string"
+    },
+    "CreateNoteRequest" : {
+      "body" : "string",
+      "contentWarning" : "string",
+      "images" : "[#ImageRequest]",
+      "inReplyToId" : "integer(int64)",
+      "language" : "string",
+      "poll" : "#PollRequest",
+      "quotedNoteId" : "integer(int64)",
+      "quotedPostId" : "integer(int64)",
+      "replyPolicy" : "string",
+      "roomId" : "integer(int64)",
+      "sensitive" : "boolean",
+      "visibility" : "string"
+    },
+    "CreateNoteThreadRequest" : {
+      "notes" : "[#CreateNoteRequest] required"
+    },
+    "CreatePostRequest" : {
+      "audience" : "string",
+      "languageTag" : "string",
+      "roomId" : "integer(int64)",
+      "slug" : "string required",
+      "title" : "string"
+    },
+    "CreateRoomInviteRequest" : {
+      "approval" : "boolean",
+      "expiresInSeconds" : "integer(int64)",
+      "maxUses" : "integer(int32)"
+    },
+    "CreateRoomRequest" : {
+      "name" : "string"
+    },
+    "CreateSeriesRequest" : {
+      "slug" : "string required",
+      "title" : "string required"
+    },
+    "CtaInfo" : {
+      "deleted" : "boolean",
+      "label" : "string",
+      "purpose" : "string",
+      "style" : "string",
+      "url" : "string"
+    },
+    "CtaView" : {
+      "createdAt" : "string(date-time)",
+      "deleted" : "boolean",
+      "id" : "integer(int64)",
+      "label" : "string",
+      "purpose" : "string",
+      "style" : "string",
+      "updatedAt" : "string(date-time)",
+      "url" : "string"
+    },
+    "CustomDomainRegisterRequest" : {
+      "domain" : "string required"
+    },
+    "DailyBucket" : {
+      "count" : "integer(int64)",
+      "date" : "string"
+    },
+    "DailyClick" : {
+      "count" : "integer(int64)",
+      "date" : "string(date)"
+    },
+    "DailyPoint" : {
+      "date" : "string(date)",
+      "views" : "integer(int64)"
+    },
+    "DailyVisit" : {
+      "count" : "integer(int64)",
+      "date" : "string(date)"
+    },
+    "DayBucket" : {
+      "clicks" : "integer(int64)",
+      "day" : "string(date)"
+    },
+    "DayClick" : {
+      "count" : "integer(int64)",
+      "day" : "integer(int32)"
+    },
+    "DayOfWeekClick" : {
+      "count" : "integer(int64)",
+      "dayOfWeek" : "string"
+    },
+    "DayPoint" : {
+      "clicks" : "integer(int64)",
+      "contributingLinks" : "integer(int64)",
+      "day" : "integer(int32)"
+    },
+    "DbPool" : {
+      "active" : "integer(int32)",
+      "idle" : "integer(int32)",
+      "max" : "integer(int32)",
+      "waiting" : "integer(int32)"
+    },
+    "DestinationClick" : {
+      "count" : "integer(int64)",
+      "destinationId" : "integer(int64)",
+      "enabled" : "boolean",
+      "label" : "string",
+      "url" : "string",
+      "weight" : "integer(int32)"
+    },
+    "DestinationHealth" : {
+      "broken" : "boolean",
+      "brokenSince" : "string(date-time)",
+      "checkedAt" : "string(date-time)",
+      "failure" : "string",
+      "httpStatus" : "integer(int32)"
+    },
+    "DestinationSummary" : {
+      "countryCode" : "string",
+      "createdAt" : "string(date-time)",
+      "deviceClass" : "string",
+      "enabled" : "boolean",
+      "id" : "integer(int64)",
+      "label" : "string",
+      "os" : "string",
+      "url" : "string",
+      "weight" : "integer(int32)"
+    },
+    "DevLoginRequest" : {
+      "email" : "string required"
+    },
+    "DeviceClick" : {
+      "count" : "integer(int64)",
+      "device" : "string"
+    },
+    "DeviceVisit" : {
+      "count" : "integer(int64)",
+      "device" : "string"
+    },
+    "DirectorySourceRequest" : {
+      "cap" : "integer(int32)",
+      "enabled" : "boolean required"
+    },
+    "DirectoryStatusResponse" : {
+      "enabled" : "boolean",
+      "running" : "boolean",
+      "sources" : "[#View]"
+    },
+    "DiscoverConnectionView" : {
+      "blockType" : "string",
+      "body" : "string",
+      "collectionId" : "integer(int64)",
+      "collectionKind" : "string",
+      "collectionOrdered" : "boolean",
+      "collectionTitle" : "string",
+      "connectedAt" : "string(date-time)",
+      "curator" : "#PublicAuthorView",
+      "excerpt" : "string",
+      "id" : "integer(int64)",
+      "noteId" : "integer(int64)",
+      "quote" : "string",
+      "slug" : "string",
+      "title" : "string",
+      "username" : "string",
+      "why" : "string"
+    },
+    "DiscoverFeedView" : {
+      "hasNext" : "boolean",
+      "items" : "[#DiscoverConnectionView]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)",
+      "source" : "string"
+    },
+    "DismissRoomSuggestionsRequest" : {
+      "userIds" : "[integer(int64)]"
+    },
+    "DomainSummary" : {
+      "autoVerifyUntil" : "string(date-time)",
+      "createdAt" : "string(date-time)",
+      "domain" : "string",
+      "id" : "integer(int64)",
+      "lastCheckedAt" : "string(date-time)",
+      "verificationHost" : "string",
+      "verificationToken" : "string",
+      "verified" : "boolean",
+      "verifiedAt" : "string(date-time)"
+    },
+    "Dwell" : {
+      "ms" : "integer(int64)",
+      "uri" : "string"
+    },
+    "EditCollectionRequest" : {
+      "description" : "string",
+      "ordered" : "boolean",
+      "title" : "string required",
+      "visibility" : "string enum[PRIVATE|PUBLIC|UNLISTED]"
+    },
+    "EditNoteRequest" : {
+      "body" : "string",
+      "contentWarning" : "string",
+      "sensitive" : "boolean"
+    },
+    "EmailLeadSubmitRequest" : {
+      "blockId" : "integer(int64) required",
+      "email" : "string required"
+    },
+    "EmailLeadSubmitResponse" : {
+      "ok" : "boolean"
+    },
+    "Endpoints" : {
+      "sharedInbox" : "string"
+    },
+    "EventAnalyticsView" : {
+      "clicksByClientApp" : "[#Bucket]",
+      "clicksByLink" : "[#Bucket]",
+      "dailyRegistrations" : "[#DailyBucket]",
+      "registrationsByChannel" : "[#Bucket]",
+      "totalClicks" : "integer(int64)",
+      "totalRegistrations" : "integer(int64)"
+    },
+    "EventLinkView" : {
+      "label" : "string",
+      "linkId" : "integer(int64)",
+      "shortCode" : "string"
+    },
+    "EventQuestionView" : {
+      "id" : "integer(int64)",
+      "label" : "string",
+      "options" : "[string]",
+      "required" : "boolean",
+      "type" : "string"
+    },
+    "EventView" : {
+      "capacity" : "integer(int32)",
+      "closeAt" : "string(date-time)",
+      "contactField" : "string",
+      "coverImageUrl" : "string",
+      "createdAt" : "string(date-time)",
+      "descriptionMd" : "string",
+      "endsAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "links" : "[#EventLinkView]",
+      "locationText" : "string",
+      "locationUrl" : "string",
+      "onlineUrl" : "string",
+      "questions" : "[#EventQuestionView]",
+      "registrationCount" : "integer(int32)",
+      "slug" : "string",
+      "startsAt" : "string(date-time)",
+      "status" : "string",
+      "timezone" : "string",
+      "title" : "string"
+    },
+    "ExportedClick" : {
+      "bot" : "boolean",
+      "botName" : "string",
+      "browserName" : "string",
+      "cityName" : "string",
+      "clickedAt" : "string(date-time)",
+      "countryCode" : "string",
+      "deviceClass" : "string",
+      "language" : "string",
+      "osName" : "string",
+      "referrerHost" : "string",
+      "regionName" : "string",
+      "shortCode" : "string"
+    },
+    "ExportedLink" : {
+      "createdAt" : "string(date-time)",
+      "expiresAt" : "string(date-time)",
+      "ogDescription" : "string",
+      "ogImage" : "string",
+      "ogTitle" : "string",
+      "originalUrl" : "string",
+      "shortCode" : "string"
+    },
+    "ExportedUser" : {
+      "createdAt" : "string(date-time)",
+      "email" : "string",
+      "id" : "integer(int64)",
+      "oauthProvider" : "string",
+      "role" : "string",
+      "timezone" : "string"
+    },
+    "FavoriteOrderRequest" : {
+      "shortCodes" : "[string] required"
+    },
+    "FederationSettingsView" : {
+      "enabled" : "boolean",
+      "handle" : "string",
+      "noticeSeen" : "boolean"
+    },
+    "FeedHiddenResponse" : {
+      "hiddenFromFeed" : "boolean"
+    },
+    "FeedPreferences" : {
+      "languages" : "[string]",
+      "showReposts" : "boolean"
+    },
+    "FeedPrefsView" : {
+      "defaultTab" : "string"
+    },
+    "FeedSeriesNote" : {
+      "author" : "#PublicAuthorView",
+      "body" : "string",
+      "contentWarning" : "string",
+      "createdAt" : "string(date-time)",
+      "excerpt" : "string",
+      "id" : "integer(int64)",
+      "series" : "#SeriesRef"
+    },
+    "FeedSeriesRef" : {
+      "postCount" : "integer(int32)",
+      "slug" : "string",
+      "title" : "string"
+    },
+    "FetchSiteClick" : {
+      "count" : "integer(int64)",
+      "fetchSite" : "string"
+    },
+    "FilterView" : {
+      "action" : "string",
+      "context" : "[string]",
+      "expiresAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "phrase" : "string",
+      "wholeWord" : "boolean"
+    },
+    "FollowListItem" : {
+      "type" : "string required"
+    },
+    "FollowListView" : {
+      "hasNext" : "boolean",
+      "items" : "[#FollowUserView]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)"
+    },
+    "FollowReason" : {
+      "kind" : "string",
+      "tag" : "string"
+    },
+    "FollowRequestView" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "requestedAt" : "string(date-time)",
+      "userId" : "integer(int64)",
+      "username" : "string"
+    },
+    "FollowStatus" : {
+      "blockedByViewer" : "boolean",
+      "blocksViewer" : "boolean",
+      "followerCount" : "integer(int64)",
+      "following" : "boolean",
+      "followingCount" : "integer(int64)",
+      "hideFollowerCount" : "boolean",
+      "locked" : "boolean",
+      "notifyNotes" : "boolean",
+      "remoteFollowerCount" : "integer(int64)",
+      "remoteFollowingCount" : "integer(int64)",
+      "requested" : "boolean"
+    },
+    "FollowUserView" : {
+      "avatarUrl" : "string",
+      "bio" : "string",
+      "followedByMe" : "boolean",
+      "followerCount" : "integer(int64)",
+      "id" : "integer(int64)",
+      "username" : "string"
+    },
+    "Funnel" : {
+      "conversion" : "map<number(double)>",
+      "users" : "integer(int64)",
+      "window" : "string enum[ALL|D1|D30|D7]",
+      "withClick" : "integer(int64)",
+      "withLink" : "integer(int64)",
+      "withWebhook" : "integer(int64)"
+    },
+    "GcStat" : {
+      "count" : "integer(int64)",
+      "maxMillis" : "number(double)",
+      "meanMillis" : "number(double)"
+    },
+    "Grant" : {
+      "expiresAt" : "string(date-time)",
+      "grant" : "string"
+    },
+    "GroupStats" : {
+      "clickRatePerHundred" : "number(double)",
+      "clicks" : "integer(int64)",
+      "key" : "string",
+      "totalQuantity" : "integer(int32)"
+    },
+    "HeatmapCell" : {
+      "clicks" : "integer(int64)",
+      "dayOfWeek" : "integer(int32)",
+      "hour" : "integer(int32)"
+    },
+    "HighlightFeedItem" : {
+      "blockOrder" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "curator" : "#PublicAuthorView",
+      "endBlockOrder" : "integer(int32)",
+      "endOffset" : "integer(int32)",
+      "id" : "integer(int64)",
+      "note" : "string",
+      "postAuthorUsername" : "string",
+      "postId" : "integer(int64)",
+      "postSlug" : "string",
+      "postTitle" : "string",
+      "quote" : "string",
+      "replyCount" : "integer(int64)",
+      "startOffset" : "integer(int32)"
+    },
+    "HighlightFeedView" : {
+      "hasNext" : "boolean",
+      "items" : "[#HighlightFeedItem]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)",
+      "source" : "string"
+    },
+    "HighlightRef" : {
+      "blockOrder" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "endBlockOrder" : "integer(int32)",
+      "endOffset" : "integer(int32)",
+      "id" : "integer(int64)",
+      "note" : "string",
+      "quote" : "string",
+      "startOffset" : "integer(int32)"
+    },
+    "HighlightReplyLikeStatus" : {
+      "likeCount" : "integer(int64)",
+      "liked" : "boolean"
+    },
+    "HighlightReplyView" : {
+      "author" : "#PublicAuthorView",
+      "body" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "likeCount" : "integer(int64)",
+      "liked" : "boolean",
+      "mentions" : "[string]"
+    },
+    "HighlightView" : {
+      "author" : "#PublicAuthorView",
+      "blockOrder" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "endBlockOrder" : "integer(int32)",
+      "endOffset" : "integer(int32)",
+      "id" : "integer(int64)",
+      "note" : "string",
+      "quote" : "string",
+      "replyCount" : "integer(int64)",
+      "startOffset" : "integer(int32)"
+    },
+    "HikariStats" : {
+      "acquireMillisMean" : "number(double)",
+      "active" : "integer(int32)",
+      "idle" : "integer(int32)",
+      "pending" : "integer(int32)",
+      "total" : "integer(int32)"
+    },
+    "HourBucket" : {
+      "clicks" : "integer(int64)",
+      "hour" : "integer(int32)"
+    },
+    "HourClick" : {
+      "count" : "integer(int64)",
+      "hour" : "integer(int32)"
+    },
+    "HourVisit" : {
+      "count" : "integer(int64)",
+      "hour" : "integer(int32)"
+    },
+    "HttpLatency" : {
+      "p50Millis" : "number(double)",
+      "p95Millis" : "number(double)",
+      "p99Millis" : "number(double)",
+      "sampleCount" : "integer(int64)"
+    },
+    "HttpStatusCounts" : {
+      "count2xx" : "integer(int64)",
+      "count4xx" : "integer(int64)",
+      "count5xx" : "integer(int64)"
+    },
+    "Image" : {
+      "type" : "string",
+      "url" : "string"
+    },
+    "ImageRequest" : {
+      "altText" : "string",
+      "height" : "integer(int32)",
+      "key" : "string",
+      "width" : "integer(int32)"
+    },
+    "ImportView" : {
+      "createdAt" : "string(date-time)",
+      "finished" : "boolean",
+      "id" : "integer(int64)",
+      "imported" : "integer(int32)",
+      "kind" : "string enum[BLOCKS|BOOKMARKS|DOMAIN_BLOCKS|FOLLOWING|LISTS|MUTES]",
+      "processed" : "integer(int32)",
+      "total" : "integer(int32)"
+    },
+    "Imported" : {
+      "added" : "integer(int32)",
+      "invalid" : "[string]",
+      "kept" : "integer(int32)",
+      "skipped" : "integer(int32)"
+    },
+    "Insight" : {
+      "data" : "map<object>",
+      "message" : "string",
+      "severity" : "string",
+      "type" : "string"
+    },
+    "InviteToRoomRequest" : {
+      "userIds" : "[integer(int64)]"
+    },
+    "IssuedApiKey" : {
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "prefix" : "string",
+      "rawKey" : "string"
+    },
+    "IssuedBlogWebhook" : {
+      "createdAt" : "string(date-time)",
+      "events" : "[string enum[COMMENT|FOLLOW|LIKE|SERIES_SUBSCRIBE]]",
+      "format" : "string enum[DISCORD|GENERIC|SLACK]",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "secret" : "string",
+      "url" : "string"
+    },
+    "IssuedLink" : {
+      "linkId" : "integer(int64)",
+      "shortCode" : "string"
+    },
+    "IssuedWebhook" : {
+      "createdAt" : "string(date-time)",
+      "format" : "string enum[DISCORD|GENERIC|SLACK]",
+      "id" : "integer(int64)",
+      "name" : "string",
+      "secret" : "string",
+      "url" : "string"
+    },
+    "Item" : {
+      "id" : "integer(int64) required",
+      "type" : "string enum[NOTE|POST] required"
+    },
+    "ItemLink" : {
+      "noteId" : "integer(int64)",
+      "slug" : "string",
+      "title" : "string",
+      "type" : "string"
+    },
+    "JoinRoomResponse" : {
+      "roomId" : "integer(int64)",
+      "status" : "string"
+    },
+    "JvmStats" : {
+      "gc" : "#GcStat",
+      "heapMaxBytes" : "integer(int64)",
+      "heapUsedBytes" : "integer(int64)",
+      "nonHeapUsedBytes" : "integer(int64)",
+      "threadsDaemon" : "integer(int32)",
+      "threadsLive" : "integer(int32)"
+    },
+    "KindredCuratorView" : {
+      "curator" : "#PublicAuthorView",
+      "sharedItems" : "integer(int32)"
+    },
+    "LanguageClick" : {
+      "count" : "integer(int64)",
+      "language" : "string"
+    },
+    "LastNote" : {
+      "author" : "#RoomPerson",
+      "createdAt" : "string(date-time)",
+      "excerpt" : "string",
+      "id" : "integer(int64)"
+    },
+    "LeaveRoomRequest" : {
+      "deleteMyNotes" : "boolean"
+    },
+    "Lifecycle" : {
+      "dayClicks" : "[#DayClick]",
+      "halfLifeDays" : "integer(int32)"
+    },
+    "LikeStatus" : {
+      "likeCount" : "integer(int64)",
+      "liked" : "boolean"
+    },
+    "LikedIdsResponse" : {
+      "likedIds" : "[integer(int64)]"
+    },
+    "Link" : {
+      "href" : "string",
+      "rel" : "string",
+      "type" : "string"
+    },
+    "LinkDestinationAddRequest" : {
+      "countryCode" : "string",
+      "deviceClass" : "string",
+      "label" : "string",
+      "os" : "string",
+      "url" : "string required",
+      "weight" : "integer(int32)"
+    },
+    "LinkDestinationBlockedCountriesRequest" : {
+      "codes" : "string"
+    },
+    "LinkDestinationBlockedCountriesResponse" : {
+      "codes" : "string"
+    },
+    "LinkDestinationUpdateRequest" : {
+      "countryCode" : "string",
+      "deviceClass" : "string",
+      "enabled" : "boolean",
+      "label" : "string",
+      "os" : "string",
+      "url" : "string",
+      "weight" : "integer(int32)"
+    },
+    "LinkDetailResponse" : {
+      "destinationHealth" : "#DestinationHealth",
+      "expiredMessage" : "string",
+      "expiresAt" : "string(date-time)",
+      "maxViews" : "integer(int32)",
+      "moderation" : "#Moderation",
+      "note" : "string",
+      "ogDescription" : "string",
+      "ogDescriptionOverride" : "string",
+      "ogImage" : "string",
+      "ogImageOverride" : "string",
+      "ogTitle" : "string",
+      "ogTitleOverride" : "string",
+      "openInBrowser" : "boolean",
+      "opensAt" : "string(date-time)",
+      "originalUrl" : "string",
+      "passwordProtected" : "boolean",
+      "shortCode" : "string",
+      "splash" : "#Splash",
+      "statsPublic" : "boolean",
+      "tags" : "[string]",
+      "viewCount" : "integer(int32)"
+    },
+    "LinkEventResponse" : {
+      "bot" : "boolean",
+      "botName" : "string",
+      "browser" : "string",
+      "channel" : "string",
+      "city" : "string",
+      "clickedAt" : "string(date-time)",
+      "country" : "string",
+      "device" : "string",
+      "ipMasked" : "string",
+      "language" : "string",
+      "os" : "string",
+      "referrer" : "string",
+      "referrerHost" : "string",
+      "region" : "string"
+    },
+    "LinkEventsPage" : {
+      "items" : "[#LinkEventResponse]",
+      "nextCursor" : "string"
+    },
+    "LinkModerationResponse" : {
+      "changed" : "boolean",
+      "disabled" : "boolean",
+      "shortCode" : "string"
+    },
+    "LinkNotificationResponse" : {
+      "body" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "read" : "boolean",
+      "shortCode" : "string",
+      "subtitle" : "string",
+      "type" : "string"
+    },
+    "LinkNotificationsPage" : {
+      "hasMore" : "boolean",
+      "items" : "[#LinkNotificationResponse]",
+      "nextCursor" : "integer(int64)"
+    },
+    "LinkPreview" : {
+      "description" : "string",
+      "image" : "string",
+      "title" : "string",
+      "url" : "string"
+    },
+    "LinkProfileHighlightRequest" : {
+      "highlighted" : "boolean"
+    },
+    "LinkProfileHighlightResponse" : {
+      "highlighted" : "boolean"
+    },
+    "LinkProfileToggleRequest" : {
+      "show" : "boolean"
+    },
+    "LinkProfileToggleResponse" : {
+      "show" : "boolean"
+    },
+    "LinkProtectionRequest" : {
+      "maxViews" : "integer(int32)",
+      "password" : "string"
+    },
+    "LinkProtectionResponse" : {
+      "maxViews" : "integer(int32)",
+      "passwordProtected" : "boolean",
+      "shortCode" : "string",
+      "viewCount" : "integer(int32)"
+    },
+    "LinkStat" : {
+      "clickCount" : "integer(int64)",
+      "ownerEmail" : "string",
+      "shortCode" : "string"
+    },
+    "LinkStats" : {
+      "asnClicks" : "[#AsnClick]",
+      "botClicks" : "integer(int64)",
+      "botClicks2" : "[#BotClick]",
+      "browserClicks" : "[#BrowserClick]",
+      "channelClicks" : "[#ChannelClick]",
+      "channelDepth" : "[#ChannelDepth]",
+      "cityClicks" : "[#CityClick]",
+      "clientAppClicks" : "[#ClientAppClick]",
+      "countryClicks" : "[#CountryClick]",
+      "dailyClicks" : "[#DailyClick]",
+      "datacenterClicks" : "integer(int64)",
+      "dayOfWeekClicks" : "[#DayOfWeekClick]",
+      "destinationClicks" : "[#DestinationClick]",
+      "deviceClicks" : "[#DeviceClick]",
+      "fetchSiteClicks" : "[#FetchSiteClick]",
+      "firstClickAt" : "string(date-time)",
+      "heatmap" : "[#HeatmapCell]",
+      "hourClicks" : "[#HourClick]",
+      "humanClicks" : "integer(int64)",
+      "insights" : "[#Insight]",
+      "languageClicks" : "[#LanguageClick]",
+      "lastClickAt" : "string(date-time)",
+      "lifecycle" : "#Lifecycle",
+      "osClicks" : "[#OsClick]",
+      "peakHour" : "integer(int32)",
+      "postClicks" : "[#PostClick]",
+      "previewClicks" : "integer(int64)",
+      "profileClicks" : "integer(int64)",
+      "rawRetentionDays" : "integer(int32)",
+      "rawSince" : "string(date-time)",
+      "referrerClicks" : "[#ReferrerClick]",
+      "referrerHostClicks" : "[#ReferrerHostClick]",
+      "regionClicks" : "[#RegionClick]",
+      "returnRate" : "#ReturnRate",
+      "shortCode" : "string",
+      "sourceChannelClicks" : "[#SourceChannelClick]",
+      "timeToFirstClickMinutes" : "integer(int64)",
+      "timezone" : "string",
+      "totalClicks" : "integer(int64)",
+      "uniqueClicks" : "integer(int64)",
+      "utmCampaignClicks" : "[#UtmCampaignClick]",
+      "utmContentClicks" : "[#UtmContentClick]",
+      "utmMediumClicks" : "[#UtmMediumClick]",
+      "utmSourceClicks" : "[#UtmSourceClick]",
+      "utmTermClicks" : "[#UtmTermClick]",
+      "velocity" : "#Velocity"
+    },
+    "LinkTagsRequest" : {
+      "tags" : "[string]"
+    },
+    "LinkTagsResponse" : {
+      "shortCode" : "string",
+      "tags" : "[string]"
+    },
+    "LinkVisibilityRequest" : {
+      "statsPublic" : "boolean required"
+    },
+    "LinkVisibilityResponse" : {
+      "shortCode" : "string",
+      "statsPublic" : "boolean"
+    },
+    "LinkVisitOptionsRequest" : {
+      "clearOpensAt" : "boolean",
+      "openInBrowser" : "boolean",
+      "openingChangeConsistent" : "boolean",
+      "opensAt" : "string(date-time)",
+      "splash" : "#Splash"
+    },
+    "LinkVisitOptionsResponse" : {
+      "openInBrowser" : "boolean",
+      "opensAt" : "string(date-time)",
+      "shortCode" : "string",
+      "splash" : "#Splash"
+    },
+    "LinkWebhookConfigRequest" : {
+      "batchEnabled" : "boolean",
+      "dailyQuota" : "integer(int32)",
+      "deliveryMode" : "string enum[BOTH|DAILY_SUMMARY|PER_EVENT|THRESHOLD_SPIKE]",
+      "includeBots" : "boolean",
+      "referrerHostFilter" : "string",
+      "sampleRate" : "integer(int32)",
+      "spikeThreshold" : "integer(int32)",
+      "spikeWindowMinutes" : "integer(int32)",
+      "summaryHourOfDay" : "integer(int32)",
+      "utmSourceFilter" : "string"
+    },
+    "LinkWebhookRegisterRequest" : {
+      "name" : "string",
+      "url" : "string required"
+    },
+    "LinkWebhookToggleRequest" : {
+      "enabled" : "boolean"
+    },
+    "LinksPage" : {
+      "items" : "[#AdminLinkRow]",
+      "total" : "integer(int64)"
+    },
+    "ListView" : {
+      "id" : "integer(int64)",
+      "memberCount" : "integer(int64)",
+      "title" : "string"
+    },
+    "Locked" : {
+      "reason" : "string enum[FOLLOWERS|PASSWORD|REGION|REGION_CHECK]"
+    },
+    "MeResponse" : {
+      "avatarUrl" : "string",
+      "createdAt" : "string(date-time)",
+      "displayName" : "string",
+      "email" : "string",
+      "id" : "integer(int64)",
+      "provider" : "string",
+      "role" : "string",
+      "timezone" : "string",
+      "username" : "string"
+    },
+    "Media" : {
+      "altText" : "string",
+      "contentType" : "string",
+      "height" : "integer(int32)",
+      "url" : "string",
+      "width" : "integer(int32)"
+    },
+    "Member" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "id" : "integer(int64)",
+      "role" : "string",
+      "username" : "string"
+    },
+    "Membership" : {
+      "listIds" : "[integer(int64)]"
+    },
+    "MintedAccessToken" : {
+      "accessToken" : "string",
+      "expiresInSeconds" : "integer(int64)"
+    },
+    "MixedFollowListView" : {
+      "hasNext" : "boolean",
+      "items" : "[#FollowListItem]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)"
+    },
+    "MobileExchangeRequest" : {
+      "code" : "string required"
+    },
+    "MobileRefreshRequest" : {
+      "refreshToken" : "string required"
+    },
+    "MobileTokenResponse" : {
+      "accessToken" : "string",
+      "refreshToken" : "string"
+    },
+    "Moderation" : {
+      "disabledAt" : "string(date-time)",
+      "reason" : "string"
+    },
+    "MoveBookmarkRequest" : {
+      "folderId" : "integer(int64)"
+    },
+    "MuteRequest" : {
+      "duration" : "integer(int64)",
+      "notifications" : "boolean"
+    },
+    "MuteStatus" : {
+      "expiresAt" : "string(date-time)",
+      "muted" : "boolean",
+      "notifications" : "boolean"
+    },
+    "MutedUserView" : {
+      "avatarUrl" : "string",
+      "expiresAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "notifications" : "boolean",
+      "username" : "string"
+    },
+    "MyCommentView" : {
+      "body" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "likeCount" : "integer(int64)",
+      "parentId" : "integer(int64)",
+      "postSlug" : "string",
+      "postTitle" : "string",
+      "postUsername" : "string"
+    },
+    "MyEmailLeadPage" : {
+      "items" : "[#MyEmailLeadResponse]",
+      "total" : "integer(int64)"
+    },
+    "MyEmailLeadPatchRequest" : {
+      "optedOut" : "boolean"
+    },
+    "MyEmailLeadResponse" : {
+      "blockId" : "integer(int64)",
+      "email" : "string",
+      "id" : "integer(int64)",
+      "optedOut" : "boolean",
+      "submittedAt" : "string(date-time)"
+    },
+    "MyHighlightView" : {
+      "blockOrder" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "endBlockOrder" : "integer(int32)",
+      "id" : "integer(int64)",
+      "note" : "string",
+      "postSlug" : "string",
+      "postTitle" : "string",
+      "postUsername" : "string",
+      "quote" : "string"
+    },
+    "MyLinkResponse" : {
+      "clickCount" : "integer(int64)",
+      "clicksLast7d" : "[integer(int64)]",
+      "createdAt" : "string(date-time)",
+      "expiresAt" : "string(date-time)",
+      "humanClickCount" : "integer(int64)",
+      "note" : "string",
+      "originalUrl" : "string",
+      "shortCode" : "string",
+      "shortUrl" : "string",
+      "tags" : "[string]",
+      "timezone" : "string"
+    },
+    "MyLinksOverviewResponse" : {
+      "clicks7d" : "integer(int64)",
+      "clicksToday" : "integer(int64)",
+      "dailyClicks" : "[#DayClick]",
+      "expiringLinks" : "integer(int64)",
+      "humanClicks" : "integer(int64)",
+      "peak" : "#Peak",
+      "previousClicks7d" : "integer(int64)",
+      "timezone" : "string",
+      "topLinks" : "[#MyLinkResponse]",
+      "totalClicks" : "integer(int64)",
+      "totalLinks" : "integer(int64)",
+      "updatedAt" : "string(date-time)",
+      "weekTopLinks" : "[#MyLinkResponse]",
+      "zeroClickLinks" : "integer(int64)"
+    },
+    "MyLinksPage" : {
+      "hasMore" : "boolean",
+      "items" : "[#MyLinkResponse]",
+      "nextCursor" : "string"
+    },
+    "MyProfile" : {
+      "avatarUrl" : "string",
+      "bannerUrl" : "string",
+      "bio" : "string",
+      "displayName" : "string",
+      "hideFollowerCount" : "boolean",
+      "locked" : "boolean",
+      "publicUrl" : "string",
+      "socials" : "[#Social]",
+      "theme" : "string",
+      "username" : "string"
+    },
+    "MyProfileReorderRequest" : {
+      "items" : "[#ReorderItem]"
+    },
+    "MyProfileUpdateRequest" : {
+      "bio" : "string",
+      "displayName" : "string",
+      "hideFollowerCount" : "boolean",
+      "locked" : "boolean",
+      "socials" : "string",
+      "theme" : "string",
+      "username" : "string"
+    },
+    "NavLink" : {
+      "slug" : "string",
+      "title" : "string"
+    },
+    "NodeInfoLinksResponse" : {
+      "links" : "[#Link]"
+    },
+    "NodeInfoResponse" : {
+      "metadata" : "map<object>",
+      "openRegistrations" : "boolean",
+      "protocols" : "[string]",
+      "services" : "#Services",
+      "software" : "#Software",
+      "usage" : "#Usage",
+      "version" : "string"
+    },
+    "NoteAuthor" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "id" : "integer(int64)",
+      "remoteId" : "integer(int64)",
+      "url" : "string",
+      "username" : "string"
+    },
+    "NoteFeedPreferencesRequest" : {
+      "languages" : "[string]",
+      "showReposts" : "boolean"
+    },
+    "NoteFeedView" : {
+      "hasNext" : "boolean",
+      "items" : "[#NoteView]",
+      "page" : "integer(int32)"
+    },
+    "NoteFilterRequest" : {
+      "action" : "string",
+      "context" : "[string]",
+      "expiresIn" : "integer(int64)",
+      "phrase" : "string",
+      "wholeWord" : "boolean"
+    },
+    "NoteHistoryView" : {
+      "noteId" : "integer(int64)",
+      "versions" : "[#Version]"
+    },
+    "NoteImagePresignRequest" : {
+      "contentType" : "string required"
+    },
+    "NoteListRequest" : {
+      "title" : "string"
+    },
+    "NoteNotifications" : {
+      "notifyNotes" : "boolean"
+    },
+    "NotePollVoteRequest" : {
+      "choices" : "[integer(int32)]"
+    },
+    "NoteSeriesNavView" : {
+      "next" : "#ItemLink",
+      "position" : "integer(int32)",
+      "prev" : "#ItemLink",
+      "slug" : "string",
+      "title" : "string",
+      "total" : "integer(int32)"
+    },
+    "NoteThreadView" : {
+      "continuation" : "[#NoteView]",
+      "hiddenReplyCount" : "integer(int32)",
+      "note" : "#NoteView",
+      "parent" : "#NoteView",
+      "replies" : "[#NoteView]",
+      "series" : "#NoteSeriesNavView",
+      "viewerCanModerate" : "boolean"
+    },
+    "NoteView" : {
+      "author" : "#NoteAuthor",
+      "body" : "string",
+      "bookmarkedByMe" : "boolean",
+      "canReply" : "boolean",
+      "contentWarning" : "string",
+      "conversationMuted" : "boolean",
+      "createdAt" : "string(date-time)",
+      "editedAt" : "string(date-time)",
+      "hidden" : "boolean",
+      "id" : "integer(int64)",
+      "inReplyToId" : "integer(int64)",
+      "language" : "string",
+      "likeCount" : "integer(int64)",
+      "likedByMe" : "boolean",
+      "linkPreview" : "#LinkPreview",
+      "media" : "[#Media]",
+      "mentions" : "[string]",
+      "pinned" : "boolean",
+      "poll" : "#Poll",
+      "quoteCount" : "integer(int64)",
+      "quotedNote" : "#QuotedNote",
+      "quotedPost" : "#QuotedPost",
+      "remote" : "#Remote",
+      "replyCount" : "integer(int64)",
+      "replyPolicy" : "string",
+      "repostCount" : "integer(int64)",
+      "repostedBy" : "#NoteAuthor",
+      "repostedByMe" : "boolean",
+      "room" : "#Room",
+      "sensitive" : "boolean",
+      "thread" : "#SelfThread",
+      "visibility" : "string"
+    },
+    "NotificationPolicy" : {
+      "forNewAccounts" : "string enum[ACCEPT|DROP|FILTER]",
+      "forNotFollowers" : "string enum[ACCEPT|DROP|FILTER]",
+      "forNotFollowing" : "string enum[ACCEPT|DROP|FILTER]",
+      "forPrivateMentions" : "string enum[ACCEPT|DROP|FILTER]"
+    },
+    "NotificationRequestResponse" : {
+      "actorRemoteId" : "integer(int64)",
+      "actorUserId" : "integer(int64)",
+      "avatarUrl" : "string",
+      "count" : "integer(int64)",
+      "lastAt" : "string(date-time)",
+      "profileUrl" : "string",
+      "username" : "string"
+    },
+    "NotificationResponse" : {
+      "actorAvatarUrl" : "string",
+      "actorId" : "integer(int64)",
+      "actorProfileUrl" : "string",
+      "actorRemoteId" : "integer(int64)",
+      "actorUsername" : "string",
+      "actors" : "[#Actor]",
+      "collectionId" : "integer(int64)",
+      "collectionName" : "string",
+      "commentId" : "integer(int64)",
+      "count" : "integer(int64)",
+      "createdAt" : "string(date-time)",
+      "highlightId" : "integer(int64)",
+      "id" : "integer(int64)",
+      "milestone" : "integer(int32)",
+      "noteExcerpt" : "string",
+      "noteId" : "integer(int64)",
+      "postAuthorUsername" : "string",
+      "postId" : "integer(int64)",
+      "postSlug" : "string",
+      "postTitle" : "string",
+      "read" : "boolean",
+      "seriesId" : "integer(int64)",
+      "seriesSlug" : "string",
+      "seriesTitle" : "string",
+      "sourceExcerpt" : "string",
+      "sourceNoteId" : "integer(int64)",
+      "type" : "string"
+    },
+    "NotificationSenderRequest" : {
+      "actorRemoteId" : "integer(int64)",
+      "actorUserId" : "integer(int64)"
+    },
+    "NotificationsPage" : {
+      "hasMore" : "boolean",
+      "items" : "[#NotificationResponse]",
+      "nextCursor" : "integer(int64)"
+    },
+    "OembedMetadata" : {
+      "authorName" : "string",
+      "height" : "integer(int32)",
+      "html" : "string",
+      "provider" : "string",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "type" : "string",
+      "width" : "integer(int32)"
+    },
+    "OgOverrideRequest" : {
+      "ogDescription" : "string",
+      "ogImage" : "string",
+      "ogTitle" : "string"
+    },
+    "OgOverrideResponse" : {
+      "ogDescription" : "string",
+      "ogImage" : "string",
+      "ogTitle" : "string",
+      "shortCode" : "string"
+    },
+    "OrderedCollectionResponse" : {
+      "@context" : "string",
+      "id" : "string",
+      "orderedItems" : "[object]",
+      "totalItems" : "integer(int32)",
+      "type" : "string"
+    },
+    "OsClick" : {
+      "count" : "integer(int64)",
+      "os" : "string"
+    },
+    "OutboundHttpStat" : {
+      "count" : "integer(int64)",
+      "maxMillis" : "number(double)",
+      "meanMillis" : "number(double)",
+      "resultCounts" : "map<integer(int64)>"
+    },
+    "OutcomeDistribution" : {
+      "outcomes" : "map<integer(int64)>",
+      "shortCode" : "string",
+      "total" : "integer(int64)"
+    },
+    "Page" : {
+      "items" : "[#RoomItem]",
+      "next" : "string"
+    },
+    "Peak" : {
+      "clicks" : "integer(int64)",
+      "dayOfWeek" : "integer(int32)",
+      "hour" : "integer(int32)"
+    },
+    "PinStatus" : {
+      "pinned" : "boolean"
+    },
+    "Poll" : {
+      "expired" : "boolean",
+      "expiresAt" : "string(date-time)",
+      "multiple" : "boolean",
+      "options" : "[#PollOption]",
+      "ownVotes" : "[integer(int32)]",
+      "voted" : "boolean",
+      "votersCount" : "integer(int64)",
+      "votesCount" : "integer(int64)"
+    },
+    "PollOption" : {
+      "title" : "string",
+      "votesCount" : "integer(int64)"
+    },
+    "PollRequest" : {
+      "expiresIn" : "integer(int64)",
+      "multiple" : "boolean",
+      "options" : "[string]"
+    },
+    "PostAnalyticsView" : {
+      "daily" : "[#DailyPoint]",
+      "lifetimeFollows" : "integer(int64)",
+      "lifetimeLikes" : "integer(int64)",
+      "lifetimeLinkClicks" : "integer(int64)",
+      "lifetimeViews" : "integer(int64)",
+      "linkBreakdown" : "[#PostLinkClick]",
+      "postId" : "integer(int64)",
+      "slug" : "string",
+      "status" : "string",
+      "title" : "string",
+      "windowDays" : "integer(int32)",
+      "windowFollows" : "integer(int64)",
+      "windowLinkClicks" : "integer(int64)",
+      "windowViews" : "integer(int64)"
+    },
+    "PostBlockView" : {
+      "blockOrder" : "integer(int32)",
+      "content" : "string",
+      "id" : "integer(int64)",
+      "type" : "string"
+    },
+    "PostBookmarkStatus" : {
+      "bookmarked" : "boolean"
+    },
+    "PostCard" : {
+      "audience" : "string",
+      "author" : "#PublicAuthorView",
+      "commentCount" : "integer(int64)",
+      "excerpt" : "string",
+      "followReason" : "#FollowReason",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "likeCount" : "integer(int64)",
+      "likedByMe" : "boolean",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "publishedAt" : "string(date-time)",
+      "readMinutes" : "integer(int32)",
+      "regionRestricted" : "boolean",
+      "room" : "#PostRoomView",
+      "series" : "#FeedSeriesRef",
+      "slug" : "string",
+      "tags" : "[string]",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "viewCount" : "integer(int64)"
+    },
+    "PostClick" : {
+      "count" : "integer(int64)",
+      "postId" : "integer(int64)",
+      "title" : "string"
+    },
+    "PostCollectionsView" : {
+      "collections" : "[#CollectionSummaryView]",
+      "postId" : "integer(int64)"
+    },
+    "PostImageCommitRequest" : {
+      "key" : "string required"
+    },
+    "PostImageImportRequest" : {
+      "url" : "string required"
+    },
+    "PostImagePresignRequest" : {
+      "contentType" : "string required"
+    },
+    "PostLikeStatus" : {
+      "likeCount" : "integer(int64)",
+      "liked" : "boolean"
+    },
+    "PostLinkClick" : {
+      "clicks" : "integer(int64)",
+      "destinationUrl" : "string",
+      "shortCode" : "string"
+    },
+    "PostLockView" : {
+      "reason" : "string enum[FOLLOWERS|PASSWORD|REGION|REGION_CHECK]"
+    },
+    "PostMarkdownRequest" : {
+      "baseVersion" : "integer(int64)",
+      "markdown" : "string required",
+      "overwrite" : "boolean"
+    },
+    "PostMarkdownResponse" : {
+      "contentVersion" : "integer(int64)",
+      "markdown" : "string"
+    },
+    "PostPerformanceResult" : {
+      "hasNext" : "boolean",
+      "items" : "[#TopPostView]",
+      "page" : "integer(int32)"
+    },
+    "PostQuotesView" : {
+      "hasNext" : "boolean",
+      "items" : "[#NoteView]",
+      "page" : "integer(int32)",
+      "total" : "integer(int64)"
+    },
+    "PostRevisionView" : {
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "titleSnapshot" : "string",
+      "versionNumber" : "integer(int32)"
+    },
+    "PostRoomView" : {
+      "id" : "integer(int64)",
+      "name" : "string"
+    },
+    "PostView" : {
+      "audience" : "string",
+      "blockedCountries" : "[string]",
+      "contentVersion" : "integer(int64)",
+      "coverChosen" : "boolean",
+      "createdAt" : "string(date-time)",
+      "excerpt" : "string",
+      "hasPassword" : "boolean",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "likeCount" : "integer(int64)",
+      "ogImageUrl" : "string",
+      "pinOrder" : "integer(int32)",
+      "publishedAt" : "string(date-time)",
+      "room" : "#PostRoomView",
+      "scheduledAt" : "string(date-time)",
+      "seriesId" : "integer(int64)",
+      "seriesOrder" : "integer(int32)",
+      "slug" : "string",
+      "status" : "string",
+      "tags" : "[string]",
+      "takenDown" : "boolean",
+      "title" : "string",
+      "unlistedUrl" : "string",
+      "updatedAt" : "string(date-time)",
+      "viewCount" : "integer(int64)"
+    },
+    "PresignCoverRequest" : {
+      "contentType" : "string"
+    },
+    "PresignResult" : {
+      "contentType" : "string",
+      "key" : "string",
+      "maxBytes" : "integer(int64)",
+      "publicUrl" : "string",
+      "uploadUrl" : "string"
+    },
+    "PresignedImage" : {
+      "key" : "string",
+      "maxBytes" : "integer(int64)",
+      "publicUrl" : "string",
+      "uploadUrl" : "string"
+    },
+    "PresignedUpload" : {
+      "contentType" : "string",
+      "expiresIn" : "integer(int64)",
+      "key" : "string",
+      "maxBytes" : "integer(int64)",
+      "publicUrl" : "string",
+      "uploadUrl" : "string"
+    },
+    "PreviewTokenResponse" : {
+      "token" : "string"
+    },
+    "ProfileBlockCreateRequest" : {
+      "content" : "string",
+      "type" : "string"
+    },
+    "ProfileBlockHighlightRequest" : {
+      "highlighted" : "boolean"
+    },
+    "ProfileBlockHighlightResponse" : {
+      "highlighted" : "boolean"
+    },
+    "ProfileBlockResponse" : {
+      "content" : "string",
+      "id" : "integer(int64)",
+      "profileOrder" : "integer(int32)",
+      "type" : "string"
+    },
+    "ProfileBlockUpdateRequest" : {
+      "content" : "string"
+    },
+    "ProfileEntry" : {
+      "clickCount" : "integer(int64)",
+      "content" : "string",
+      "highlighted" : "boolean",
+      "id" : "integer(int64)",
+      "kind" : "string",
+      "ogImage" : "string",
+      "ogTitle" : "string",
+      "originalUrl" : "string",
+      "protected" : "boolean",
+      "shortCode" : "string",
+      "shortUrl" : "string"
+    },
+    "ProfileImageCommitRequest" : {
+      "key" : "string"
+    },
+    "ProfileImagePresignRequest" : {
+      "contentType" : "string"
+    },
+    "ProfileMediaView" : {
+      "hasNext" : "boolean",
+      "items" : "[#Item]",
+      "page" : "integer(int32)"
+    },
+    "ProfileRepliesView" : {
+      "hasNext" : "boolean",
+      "items" : "[#Item]",
+      "page" : "integer(int32)"
+    },
+    "ProfileVisitSummary" : {
+      "allTime" : "integer(int64)",
+      "month" : "integer(int64)",
+      "today" : "integer(int64)",
+      "week" : "integer(int64)"
+    },
+    "PropertyValue" : {
+      "name" : "string",
+      "type" : "string",
+      "value" : "string"
+    },
+    "PublicAuthorView" : {
+      "avatarUrl" : "string",
+      "bio" : "string",
+      "displayName" : "string",
+      "id" : "integer(int64)",
+      "username" : "string"
+    },
+    "PublicEventView" : {
+      "acceptingRegistrations" : "boolean",
+      "attending" : "integer(int32)",
+      "capacity" : "integer(int32)",
+      "closeAt" : "string(date-time)",
+      "contactField" : "string",
+      "coverImageUrl" : "string",
+      "descriptionMd" : "string",
+      "endsAt" : "string(date-time)",
+      "locationText" : "string",
+      "locationUrl" : "string",
+      "onlineUrl" : "string",
+      "organizerAvatarUrl" : "string",
+      "organizerName" : "string",
+      "questions" : "[#EventQuestionView]",
+      "slug" : "string",
+      "spotsLeft" : "integer(int32)",
+      "startsAt" : "string(date-time)",
+      "status" : "string",
+      "timezone" : "string",
+      "title" : "string"
+    },
+    "PublicFeedItem" : {
+      "audience" : "string",
+      "author" : "#PublicAuthorView",
+      "excerpt" : "string",
+      "followReason" : "#FollowReason",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "likeCount" : "integer(int64)",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "publishedAt" : "string(date-time)",
+      "regionRestricted" : "boolean",
+      "room" : "#PostRoomView",
+      "series" : "#FeedSeriesRef",
+      "slug" : "string",
+      "tags" : "[string]",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "viewCount" : "integer(int64)"
+    },
+    "PublicFeedView" : {
+      "hasNext" : "boolean",
+      "items" : "[#PublicFeedItem]",
+      "page" : "integer(int32)",
+      "seriesNotes" : "[#FeedSeriesNote]",
+      "size" : "integer(int32)"
+    },
+    "PublicKey" : {
+      "id" : "string",
+      "owner" : "string",
+      "publicKeyPem" : "string"
+    },
+    "PublicPostBlockView" : {
+      "blockOrder" : "integer(int32)",
+      "content" : "string",
+      "cta" : "#CtaInfo",
+      "type" : "string"
+    },
+    "PublicPostDetail" : {
+      "author" : "#PublicAuthorView",
+      "blocks" : "[#PublicPostBlockView]",
+      "post" : "#PublicPostListItem",
+      "series" : "#PublicPostSeriesNav"
+    },
+    "PublicPostListItem" : {
+      "audience" : "string",
+      "blockedCountries" : "[string]",
+      "excerpt" : "string",
+      "hasPassword" : "boolean",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "lastEditedAt" : "string(date-time)",
+      "likeCount" : "integer(int64)",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "pinned" : "boolean",
+      "publishedAt" : "string(date-time)",
+      "regionRestricted" : "boolean",
+      "room" : "#PostRoomView",
+      "slug" : "string",
+      "tags" : "[string]",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "unlistedUrl" : "string"
+    },
+    "PublicPostListView" : {
+      "author" : "#PublicAuthorView",
+      "blockedByViewer" : "boolean",
+      "blocksViewer" : "boolean",
+      "posts" : "[#PublicPostListItem]"
+    },
+    "PublicPostSeriesNav" : {
+      "itemPosition" : "integer(int32)",
+      "itemTotal" : "integer(int32)",
+      "next" : "#NavLink",
+      "nextItem" : "#ItemLink",
+      "position" : "integer(int32)",
+      "prev" : "#NavLink",
+      "prevItem" : "#ItemLink",
+      "slug" : "string",
+      "title" : "string",
+      "total" : "integer(int32)"
+    },
+    "PublicProfile" : {
+      "avatarUrl" : "string",
+      "bannerUrl" : "string",
+      "bio" : "string",
+      "entries" : "[#ProfileEntry]",
+      "hideFollowerCount" : "boolean",
+      "publishedPostCount" : "integer(int64)",
+      "socials" : "[#Social]",
+      "theme" : "string",
+      "username" : "string"
+    },
+    "PublicProfileHandleItem" : {
+      "username" : "string"
+    },
+    "PublicProfileListResponse" : {
+      "items" : "[#PublicProfileHandleItem]",
+      "total" : "integer(int64)"
+    },
+    "PublicSeriesCard" : {
+      "author" : "#PublicAuthorView",
+      "id" : "integer(int64)",
+      "itemCount" : "integer(int32)",
+      "items" : "[#SeriesItemPreview]",
+      "lastPublishedAt" : "string(date-time)",
+      "postCount" : "integer(int32)",
+      "posts" : "[#SeriesPostRef]",
+      "slug" : "string",
+      "title" : "string"
+    },
+    "PublicSeriesDetail" : {
+      "author" : "#PublicAuthorView",
+      "items" : "[#PublicSeriesItem]",
+      "posts" : "[#PublicPostListItem]",
+      "series" : "#PublicSeriesListItem"
+    },
+    "PublicSeriesItem" : {
+      "note" : "#SeriesNoteView",
+      "post" : "#PublicPostListItem",
+      "type" : "string"
+    },
+    "PublicSeriesListItem" : {
+      "id" : "integer(int64)",
+      "itemCount" : "integer(int32)",
+      "postCount" : "integer(int32)",
+      "slug" : "string",
+      "tags" : "[string]",
+      "title" : "string"
+    },
+    "PublicSeriesListView" : {
+      "author" : "#PublicAuthorView",
+      "series" : "[#PublicSeriesListItem]"
+    },
+    "PublicStats" : {
+      "clicks" : "integer(int64)",
+      "links" : "integer(int64)"
+    },
+    "QuestionSpecRequest" : {
+      "label" : "string required",
+      "options" : "[string]",
+      "required" : "boolean",
+      "type" : "string required"
+    },
+    "QuotedNote" : {
+      "author" : "#NoteAuthor",
+      "body" : "string",
+      "contentWarning" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "media" : "[#Media]",
+      "sensitive" : "boolean"
+    },
+    "QuotedPost" : {
+      "audience" : "string",
+      "authorUsername" : "string",
+      "id" : "integer(int64)",
+      "locked" : "#Locked",
+      "regionRestricted" : "boolean",
+      "slug" : "string",
+      "title" : "string"
+    },
+    "RawRow" : {
+      "latencyMs" : "integer(int64)",
+      "method" : "string",
+      "occurredAt" : "string(date-time)",
+      "outcome" : "string",
+      "route" : "string",
+      "shortCode" : "string",
+      "status" : "integer(int32)",
+      "traceId" : "string",
+      "userId" : "integer(int64)"
+    },
+    "ReadRoomRequest" : {
+      "noteId" : "integer(int64) required"
+    },
+    "ReadingHistoryEntryView" : {
+      "audience" : "string",
+      "avatarUrl" : "string",
+      "excerpt" : "string",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "postId" : "integer(int64)",
+      "readAt" : "string(date-time)",
+      "regionRestricted" : "boolean",
+      "slug" : "string",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "userId" : "integer(int64)",
+      "username" : "string"
+    },
+    "ReadingHistoryView" : {
+      "hasNext" : "boolean",
+      "items" : "[#ReadingHistoryEntryView]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)"
+    },
+    "RecentClick" : {
+      "clickedAt" : "string(date-time)",
+      "country" : "string",
+      "deviceClass" : "string",
+      "referrerHost" : "string",
+      "shortCode" : "string"
+    },
+    "RecentError" : {
+      "causeChain" : "[string]",
+      "clientIp" : "string",
+      "exceptionClass" : "string",
+      "exceptionMessage" : "string",
+      "level" : "string",
+      "logger" : "string",
+      "message" : "string",
+      "requestId" : "string",
+      "requestMethod" : "string",
+      "requestUri" : "string",
+      "stackTrace" : "string",
+      "taskName" : "string",
+      "thread" : "string",
+      "timestamp" : "string(date-time)",
+      "userId" : "string"
+    },
+    "RecentLink" : {
+      "createdAt" : "string(date-time)",
+      "originalUrl" : "string",
+      "ownerEmail" : "string",
+      "shortCode" : "string"
+    },
+    "RedirectPerf" : {
+      "errors" : "integer(int64)",
+      "expired" : "integer(int64)",
+      "notFound" : "integer(int64)",
+      "p50Millis" : "number(double)",
+      "p95Millis" : "number(double)",
+      "p99Millis" : "number(double)",
+      "passwordRequired" : "integer(int64)",
+      "previews" : "integer(int64)",
+      "redirects" : "integer(int64)",
+      "total" : "integer(int64)",
+      "viewLimit" : "integer(int64)"
+    },
+    "ReferrerClick" : {
+      "count" : "integer(int64)",
+      "referrer" : "string"
+    },
+    "ReferrerHostClick" : {
+      "count" : "integer(int64)",
+      "host" : "string"
+    },
+    "ReferrerHostVisit" : {
+      "count" : "integer(int64)",
+      "host" : "string"
+    },
+    "ReferrerPoint" : {
+      "host" : "string",
+      "views" : "integer(int64)"
+    },
+    "RegionClick" : {
+      "count" : "integer(int64)",
+      "region" : "string"
+    },
+    "RegisterDeviceRequest" : {
+      "platform" : "string required",
+      "token" : "string required",
+      "topic" : "string"
+    },
+    "RegisterRequest" : {
+      "answers" : "map<string>",
+      "contact" : "string required",
+      "name" : "string required"
+    },
+    "RegistrationResult" : {
+      "cancelToken" : "string",
+      "registrationId" : "integer(int64)",
+      "spotsLeft" : "integer(int32)"
+    },
+    "RelatedBlockView" : {
+      "blockType" : "string",
+      "body" : "string",
+      "excerpt" : "string",
+      "quote" : "string",
+      "refId" : "integer(int64)",
+      "sharedCount" : "integer(int32)",
+      "slug" : "string",
+      "title" : "string",
+      "username" : "string"
+    },
+    "RelatedSearchView" : {
+      "tags" : "[#RelatedTag]"
+    },
+    "RelatedTag" : {
+      "notes" : "integer(int64)",
+      "posts" : "integer(int64)",
+      "tag" : "string"
+    },
+    "RelaySettingRequest" : {
+      "languages" : "[string] required",
+      "mode" : "string enum[COUNT|OFF|STORE] required"
+    },
+    "RelayStatusResponse" : {
+      "enabled" : "boolean",
+      "kept" : "integer(int64)",
+      "languages" : "[string]",
+      "mode" : "string enum[COUNT|OFF|STORE]",
+      "queued" : "integer(int32)",
+      "relays" : "[#View]",
+      "stopped" : "boolean",
+      "today" : "map<integer(int64)>"
+    },
+    "RelaySubscribeRequest" : {
+      "actorUri" : "string required"
+    },
+    "Remote" : {
+      "community" : "string",
+      "kind" : "string",
+      "title" : "string",
+      "url" : "string"
+    },
+    "RemoteAccountListResponse" : {
+      "items" : "[#RemoteAccountView]"
+    },
+    "RemoteAccountSearchResponse" : {
+      "items" : "[#RemoteAccountView]"
+    },
+    "RemoteAccountView" : {
+      "acct" : "string",
+      "avatarUrl" : "string",
+      "blocking" : "boolean",
+      "displayName" : "string",
+      "domain" : "string",
+      "domainBlocked" : "boolean",
+      "following" : "boolean",
+      "id" : "integer(int64)",
+      "muting" : "boolean",
+      "requested" : "boolean",
+      "url" : "string",
+      "username" : "string"
+    },
+    "RemoteDomainListResponse" : {
+      "items" : "[#Item]"
+    },
+    "RemoteFollowRequestView" : {
+      "acct" : "string",
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "domain" : "string",
+      "id" : "integer(int64)",
+      "requestedAt" : "string(date-time)",
+      "url" : "string",
+      "username" : "string"
+    },
+    "RemoteMuteListResponse" : {
+      "items" : "[#RemoteMuteView]"
+    },
+    "RemoteMuteRequest" : {
+      "duration" : "integer(int64)",
+      "notifications" : "boolean"
+    },
+    "RemoteMuteView" : {
+      "account" : "#RemoteAccountView",
+      "expiresAt" : "string(date-time)",
+      "notifications" : "boolean"
+    },
+    "RemoteResolveResponse" : {
+      "account" : "#RemoteAccountView",
+      "note" : "object"
+    },
+    "ReorderConnectionsRequest" : {
+      "connectionIds" : "[integer(int64)] required"
+    },
+    "ReorderItem" : {
+      "id" : "string",
+      "kind" : "string"
+    },
+    "ReplaceBlocksRequest" : {
+      "baseVersion" : "integer(int64)",
+      "blocks" : "[#BlockItem] required",
+      "overwrite" : "boolean"
+    },
+    "Reply" : {
+      "author" : "#Author",
+      "body" : "string",
+      "id" : "integer(int64)"
+    },
+    "ReplyHiddenStatus" : {
+      "hidden" : "boolean"
+    },
+    "ReplyPolicyRequest" : {
+      "replyPolicy" : "string"
+    },
+    "ReplyPolicyStatus" : {
+      "replyPolicy" : "string"
+    },
+    "RepostStatus" : {
+      "repostCount" : "integer(int64)",
+      "reposted" : "boolean"
+    },
+    "RepostVisibility" : {
+      "hidden" : "boolean"
+    },
+    "RescheduleNoteRequest" : {
+      "scheduledAt" : "string(date-time)"
+    },
+    "ResolveAbuseReportRequest" : {
+      "action" : "string",
+      "adminNote" : "string",
+      "resolution" : "string required",
+      "suspendUntil" : "string(date-time)"
+    },
+    "ReturnRate" : {
+      "newVisitors" : "integer(int64)",
+      "ratio" : "number(double)",
+      "returningVisitors" : "integer(int64)"
+    },
+    "Room" : {
+      "id" : "integer(int64)",
+      "name" : "string"
+    },
+    "RoomInvitation" : {
+      "approvalRequired" : "boolean",
+      "invitedAt" : "string(date-time)",
+      "inviter" : "#RoomPerson",
+      "memberCount" : "integer(int64)",
+      "roomId" : "integer(int64)",
+      "roomName" : "string"
+    },
+    "RoomInviteLanding" : {
+      "approval" : "boolean",
+      "inviter" : "#RoomPerson",
+      "memberCount" : "integer(int64)",
+      "members" : "[#RoomPerson]",
+      "reason" : "string",
+      "roomName" : "string",
+      "usable" : "boolean"
+    },
+    "RoomInviteView" : {
+      "approval" : "boolean",
+      "code" : "string",
+      "creator" : "#RoomPerson",
+      "disabled" : "boolean",
+      "expiresAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "maxUses" : "integer(int32)",
+      "pageUrl" : "string",
+      "url" : "string",
+      "uses" : "integer(int32)"
+    },
+    "RoomInvitee" : {
+      "invitedAt" : "string(date-time)",
+      "inviterId" : "integer(int64)",
+      "person" : "#RoomPerson"
+    },
+    "RoomItem" : {
+      "kind" : "string",
+      "note" : "#NoteView",
+      "post" : "#PostCard",
+      "replies" : "[#Reply]"
+    },
+    "RoomJoinRequest" : {
+      "person" : "#RoomPerson",
+      "requestedAt" : "string(date-time)"
+    },
+    "RoomListItem" : {
+      "faces" : "[#RoomPerson]",
+      "hiddenFromFeed" : "boolean",
+      "id" : "integer(int64)",
+      "lastActivityAt" : "string(date-time)",
+      "lastNote" : "#LastNote",
+      "memberCount" : "integer(int64)",
+      "name" : "string",
+      "pinned" : "boolean",
+      "role" : "string",
+      "unreadCount" : "integer(int64)"
+    },
+    "RoomPerson" : {
+      "avatarUrl" : "string",
+      "displayName" : "string",
+      "id" : "integer(int64)",
+      "username" : "string"
+    },
+    "RoomSuggestions" : {
+      "friends" : "[#RoomPerson]"
+    },
+    "RoomView" : {
+      "approvalRequired" : "boolean",
+      "hiddenFromFeed" : "boolean",
+      "id" : "integer(int64)",
+      "memberCount" : "integer(int64)",
+      "members" : "[#Member]",
+      "name" : "string",
+      "role" : "string"
+    },
+    "RouteAggregate" : {
+      "count" : "integer(int64)",
+      "errorRate" : "number(double)",
+      "method" : "string",
+      "outcomeDistribution" : "map<integer(int64)>",
+      "p50" : "number(double)",
+      "p95" : "number(double)",
+      "p99" : "number(double)",
+      "route" : "string",
+      "statusDistribution" : "map<integer(int64)>"
+    },
+    "Row" : {
+      "cells" : "[#Cell]",
+      "cohortWeek" : "string",
+      "size" : "integer(int64)"
+    },
+    "SavedView" : {
+      "audience" : "string",
+      "author" : "#PublicAuthorView",
+      "excerpt" : "string",
+      "folderId" : "integer(int64)",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "likeCount" : "integer(int64)",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "publishedAt" : "string(date-time)",
+      "regionRestricted" : "boolean",
+      "slug" : "string",
+      "tags" : "[string]",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "viewCount" : "integer(int64)"
+    },
+    "ScheduleNoteRequest" : {
+      "note" : "#CreateNoteRequest required",
+      "scheduledAt" : "string(date-time)"
+    },
+    "SchedulePostRequest" : {
+      "scheduledAt" : "string(date-time) required"
+    },
+    "ScheduledTaskStat" : {
+      "count" : "integer(int64)",
+      "maxMillis" : "number(double)",
+      "meanMillis" : "number(double)",
+      "resultCounts" : "map<integer(int64)>"
+    },
+    "SeenRequest" : {
+      "dwell" : "[#Dwell]",
+      "feed" : "string",
+      "uris" : "[string]"
+    },
+    "SelfThread" : {
+      "preview" : "[#NoteView]",
+      "total" : "integer(int32)"
+    },
+    "SeriesAnalyticsDetail" : {
+      "members" : "[#SeriesMemberStat]",
+      "series" : "#SeriesAnalyticsRow",
+      "subscriberDaily" : "[#DailyPoint]",
+      "windowDays" : "integer(int32)"
+    },
+    "SeriesAnalyticsRow" : {
+      "postCount" : "integer(int64)",
+      "seriesId" : "integer(int64)",
+      "slug" : "string",
+      "subscriberCount" : "integer(int64)",
+      "title" : "string",
+      "totalLikes" : "integer(int64)",
+      "totalViews" : "integer(int64)"
+    },
+    "SeriesDetailView" : {
+      "items" : "[#SeriesItemView]",
+      "posts" : "[#PostView]",
+      "series" : "#SeriesView"
+    },
+    "SeriesItemPreview" : {
+      "noteId" : "integer(int64)",
+      "ogImageUrl" : "string",
+      "slug" : "string",
+      "title" : "string",
+      "type" : "string"
+    },
+    "SeriesItemView" : {
+      "note" : "#SeriesNoteView",
+      "post" : "#PostView",
+      "type" : "string"
+    },
+    "SeriesMemberStat" : {
+      "continuedToNext" : "integer(int64)",
+      "episode" : "integer(int32)",
+      "follows" : "integer(int64)",
+      "likes" : "integer(int64)",
+      "postId" : "integer(int64)",
+      "slug" : "string",
+      "title" : "string",
+      "uniqueReaders" : "integer(int64)",
+      "views" : "integer(int64)"
+    },
+    "SeriesNoteView" : {
+      "body" : "string",
+      "contentWarning" : "string",
+      "createdAt" : "string(date-time)",
+      "excerpt" : "string",
+      "id" : "integer(int64)"
+    },
+    "SeriesPostRef" : {
+      "ogImageUrl" : "string",
+      "slug" : "string",
+      "title" : "string"
+    },
+    "SeriesRef" : {
+      "id" : "integer(int64)",
+      "slug" : "string",
+      "title" : "string"
+    },
+    "SeriesSubscriptionStatus" : {
+      "subscribed" : "boolean",
+      "subscriberCount" : "integer(int64)"
+    },
+    "SeriesView" : {
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "itemCount" : "integer(int32)",
+      "postCount" : "integer(int32)",
+      "slug" : "string",
+      "title" : "string",
+      "updatedAt" : "string(date-time)"
+    },
+    "ServerBlockRequest" : {
+      "reason" : "string",
+      "severity" : "string enum[LIMIT|SUSPEND] required"
+    },
+    "Services" : {
+      "inbound" : "[string]",
+      "outbound" : "[string]"
+    },
+    "SetPinnedPostsRequest" : {
+      "postIds" : "[integer(int64)] required"
+    },
+    "SetSeriesItemsRequest" : {
+      "items" : "[#Item] required"
+    },
+    "SetSeriesPostsRequest" : {
+      "postIds" : "[integer(int64)] required"
+    },
+    "Social" : {
+      "channel" : "string",
+      "url" : "string"
+    },
+    "Software" : {
+      "homepage" : "string",
+      "name" : "string",
+      "repository" : "string",
+      "version" : "string"
+    },
+    "SourceChannelClick" : {
+      "count" : "integer(int64)",
+      "source" : "string"
+    },
+    "SourceChannelVisit" : {
+      "count" : "integer(int64)",
+      "source" : "string"
+    },
+    "Splash" : {
+      "ctaId" : "integer(int64)",
+      "enabled" : "boolean",
+      "message" : "string",
+      "messagePresentWhenEnabled" : "boolean",
+      "seconds" : "integer(int32)"
+    },
+    "SseEmitter" : {
+      "timeout" : "integer(int64)"
+    },
+    "StartImportRequest" : {
+      "csv" : "string required",
+      "kind" : "string required"
+    },
+    "StatsVisibilityRequest" : {
+      "isPublic" : "boolean"
+    },
+    "StatsVisibilityResponse" : {
+      "isPublic" : "boolean"
+    },
+    "StreamTokenResponse" : {
+      "streamToken" : "string"
+    },
+    "SubmitAbuseReportRequest" : {
+      "detail" : "string",
+      "forward" : "boolean",
+      "reason" : "string",
+      "reasonCode" : "string",
+      "subjectId" : "integer(int64) required",
+      "subjectType" : "string required"
+    },
+    "SubmitLinkAbuseReportRequest" : {
+      "detail" : "string",
+      "link" : "string required",
+      "reasonCode" : "string"
+    },
+    "SubscribeWebPushRequest" : {
+      "auth" : "string required",
+      "endpoint" : "string required",
+      "p256dh" : "string required"
+    },
+    "SuggestedAuthorView" : {
+      "author" : "#PublicAuthorView",
+      "postCount" : "integer(int64)"
+    },
+    "Suggestion" : {
+      "avatarUrl" : "string",
+      "bio" : "string",
+      "displayName" : "string",
+      "locked" : "boolean",
+      "mutuals" : "integer(int64)",
+      "reason" : "string enum[FRIENDS|POPULAR]",
+      "userId" : "integer(int64)",
+      "username" : "string"
+    },
+    "SystemMetrics" : {
+      "caches" : "map<#CacheStat>",
+      "hikari" : "#HikariStats",
+      "jvm" : "#JvmStats",
+      "outboundHttp" : "map<#OutboundHttpStat>",
+      "scheduledTasks" : "map<#ScheduledTaskStat>"
+    },
+    "TagCount" : {
+      "count" : "integer(int64)",
+      "tag" : "string"
+    },
+    "TagPrefsView" : {
+      "followed" : "[string]",
+      "hidden" : "[string]"
+    },
+    "TagRequest" : {
+      "color" : "string",
+      "name" : "string"
+    },
+    "TagSummary" : {
+      "color" : "string",
+      "createdAt" : "string(date-time)",
+      "id" : "integer(int64)",
+      "linkCount" : "integer(int64)",
+      "name" : "string"
+    },
+    "TokenResponse" : {
+      "accessToken" : "string"
+    },
+    "TopLink" : {
+      "clicks" : "integer(int64)",
+      "originalUrl" : "string",
+      "shortCode" : "string",
+      "topUtmSource" : "string"
+    },
+    "TopLinksPage" : {
+      "items" : "[#LinkStat]",
+      "total" : "integer(int64)"
+    },
+    "TopPost" : {
+      "authorHandle" : "string",
+      "id" : "integer(int64)",
+      "reads" : "integer(int64)",
+      "title" : "string",
+      "url" : "string"
+    },
+    "TopPostView" : {
+      "followsGained" : "integer(int64)",
+      "likeCount" : "integer(int64)",
+      "postId" : "integer(int64)",
+      "slug" : "string",
+      "title" : "string",
+      "viewCount" : "integer(int64)"
+    },
+    "TopUsersPage" : {
+      "items" : "[#UserStat]",
+      "total" : "integer(int64)"
+    },
+    "Totals" : {
+      "clicks" : "integer(int64)",
+      "links" : "integer(int64)",
+      "users" : "integer(int64)"
+    },
+    "TrendingLink" : {
+      "clickCount" : "integer(int64)",
+      "ownerEmail" : "string",
+      "shortCode" : "string"
+    },
+    "TrendingLinkView" : {
+      "accounts" : "integer(int64)",
+      "description" : "string",
+      "history" : "[integer(int64)]",
+      "imageUrl" : "string",
+      "title" : "string",
+      "url" : "string",
+      "uses" : "integer(int64)"
+    },
+    "TrendingTagSection" : {
+      "postCount" : "integer(int64)",
+      "posts" : "[#PublicFeedItem]",
+      "tag" : "string"
+    },
+    "TrendingTagView" : {
+      "accounts" : "integer(int64)",
+      "history" : "[integer(int64)]",
+      "tag" : "string",
+      "uses" : "integer(int64)"
+    },
+    "TwoFactorCodeRequest" : {
+      "code" : "string required"
+    },
+    "TwoFactorConfirmResponse" : {
+      "recoveryCodes" : "[string]"
+    },
+    "TwoFactorSetupResponse" : {
+      "provisioningUri" : "string",
+      "secret" : "string"
+    },
+    "TwoFactorStatusResponse" : {
+      "enabled" : "boolean",
+      "lastUsedAt" : "string(date-time)"
+    },
+    "TwoFactorVerifyRequest" : {
+      "challenge" : "string required",
+      "code" : "string required",
+      "recovery" : "boolean"
+    },
+    "UnlistedLinkResponse" : {
+      "unlistedUrl" : "string"
+    },
+    "UnlockPostRequest" : {
+      "password" : "string required"
+    },
+    "UnreadCountResponse" : {
+      "count" : "integer(int64)"
+    },
+    "UnreadResponse" : {
+      "unreadCount" : "integer(int64)"
+    },
+    "UpdateBlogNotificationPreferenceRequest" : {
+      "enabled" : "boolean required",
+      "type" : "string enum[COMMENT|COMMENT_LIKE|CONNECTED|FOLLOW|FOLLOW_REQUEST|HIGHLIGHT|LIKE|MENTION|NEW_POST|NOTE_EDIT|NOTE_EMBED|NOTE_LIKE|NOTE_MENTION|NOTE_POLL|NOTE_POST|NOTE_QUOTE|NOTE_REPLY|NOTE_REPOST|PATH_GREW|POST_FIRST_READER|POST_QUOTE|POST_READ_MILESTONE|REMOTE_FOLLOW|REPLY|SERIES_SUBSCRIBE] required"
+    },
+    "UpdateCtaRequest" : {
+      "label" : "string",
+      "purpose" : "string",
+      "style" : "string",
+      "url" : "string"
+    },
+    "UpdateEventRequest" : {
+      "capacity" : "integer(int32)",
+      "closeAt" : "string(date-time)",
+      "descriptionMd" : "string",
+      "endsAt" : "string(date-time)",
+      "locationText" : "string",
+      "locationUrl" : "string",
+      "onlineUrl" : "string",
+      "questions" : "[#QuestionSpecRequest]",
+      "startsAt" : "string(date-time) required",
+      "timezone" : "string required",
+      "title" : "string required"
+    },
+    "UpdateFederationSettingsRequest" : {
+      "enabled" : "boolean",
+      "noticeSeen" : "boolean"
+    },
+    "UpdateLinkRequest" : {
+      "clearExpiresAt" : "boolean",
+      "expiredMessage" : "string",
+      "expiresAt" : "string(date-time)",
+      "expiryChangeConsistent" : "boolean",
+      "note" : "string",
+      "originalUrl" : "string"
+    },
+    "UpdateNotificationPolicyRequest" : {
+      "forNewAccounts" : "string enum[ACCEPT|DROP|FILTER]",
+      "forNotFollowers" : "string enum[ACCEPT|DROP|FILTER]",
+      "forNotFollowing" : "string enum[ACCEPT|DROP|FILTER]",
+      "forPrivateMentions" : "string enum[ACCEPT|DROP|FILTER]"
+    },
+    "UpdateNotificationPreferenceRequest" : {
+      "enabled" : "boolean",
+      "type" : "string enum[DESTINATION_BROKEN|DIGEST|EXPIRY_IMMINENT|FIRST_CLICK|MILESTONE|VELOCITY_SPIKE|WARNING] required"
+    },
+    "UpdatePostRequest" : {
+      "audience" : "string",
+      "baseVersion" : "integer(int64)",
+      "blockedCountries" : "[string]",
+      "coverChosen" : "boolean",
+      "excerpt" : "string",
+      "languageTag" : "string",
+      "ogImageKey" : "string",
+      "ogImageUrl" : "string",
+      "overwrite" : "boolean",
+      "password" : "string",
+      "roomId" : "integer(int64)",
+      "slug" : "string",
+      "tags" : "[string]",
+      "title" : "string"
+    },
+    "UpdatePreferencesRequest" : {
+      "timezone" : "string required"
+    },
+    "UpdateRoomRequest" : {
+      "approvalRequired" : "boolean",
+      "name" : "string"
+    },
+    "UpdateSeriesRequest" : {
+      "slug" : "string",
+      "title" : "string"
+    },
+    "Usage" : {
+      "localPosts" : "integer(int64)",
+      "users" : "map<object>"
+    },
+    "UserDataExport" : {
+      "clickEvents" : "[#ExportedClick]",
+      "links" : "[#ExportedLink]",
+      "user" : "#ExportedUser"
+    },
+    "UserSearchView" : {
+      "hasNext" : "boolean",
+      "items" : "[#Item]",
+      "page" : "integer(int32)",
+      "size" : "integer(int32)"
+    },
+    "UserStat" : {
+      "count" : "integer(int64)",
+      "email" : "string",
+      "userId" : "integer(int64)"
+    },
+    "UsersPage" : {
+      "items" : "[#AdminUserRow]",
+      "total" : "integer(int64)"
+    },
+    "UtmCampaignClick" : {
+      "campaign" : "string",
+      "count" : "integer(int64)"
+    },
+    "UtmCampaignVisit" : {
+      "campaign" : "string",
+      "count" : "integer(int64)"
+    },
+    "UtmContentClick" : {
+      "content" : "string",
+      "count" : "integer(int64)"
+    },
+    "UtmMediumClick" : {
+      "count" : "integer(int64)",
+      "medium" : "string"
+    },
+    "UtmSourceClick" : {
+      "count" : "integer(int64)",
+      "source" : "string"
+    },
+    "UtmSourceVisit" : {
+      "count" : "integer(int64)",
+      "source" : "string"
+    },
+    "UtmTermClick" : {
+      "count" : "integer(int64)",
+      "term" : "string"
+    },
+    "Velocity" : {
+      "baselinePerHour" : "number(double)",
+      "currentHour" : "integer(int64)",
+      "ratio" : "number(double)"
+    },
+    "Version" : {
+      "at" : "string(date-time)",
+      "body" : "string",
+      "contentWarning" : "string",
+      "sensitive" : "boolean"
+    },
+    "View" : {
+      "createdAt" : "string(date-time)",
+      "domain" : "string"
+    },
+    "VisitStats" : {
+      "botVisits" : "integer(int64)",
+      "browserVisits" : "[#BrowserVisit]",
+      "countryVisits" : "[#CountryVisit]",
+      "dailyVisits" : "[#DailyVisit]",
+      "deviceVisits" : "[#DeviceVisit]",
+      "firstVisitAt" : "string(date-time)",
+      "heatmap" : "[#HeatmapCell]",
+      "hourVisits" : "[#HourVisit]",
+      "humanVisits" : "integer(int64)",
+      "lastVisitAt" : "string(date-time)",
+      "peakHour" : "integer(int32)",
+      "referrerHostVisits" : "[#ReferrerHostVisit]",
+      "sourceChannelVisits" : "[#SourceChannelVisit]",
+      "timezone" : "string",
+      "totalVisits" : "integer(int64)",
+      "uniqueVisits" : "integer(int64)",
+      "utmCampaignVisits" : "[#UtmCampaignVisit]",
+      "utmSourceVisits" : "[#UtmSourceVisit]"
+    },
+    "WarnUserRequest" : {
+      "message" : "string required",
+      "shortCode" : "string"
+    },
+    "WebFingerResponse" : {
+      "aliases" : "[string]",
+      "links" : "[#Link]",
+      "subject" : "string"
+    },
+    "WebTwoFactorVerifyRequest" : {
+      "challenge" : "string",
+      "code" : "string required",
+      "recovery" : "boolean"
+    },
+    "WebhookReDetectResult" : {
+      "formatChanged" : "integer(int32)",
+      "reactivated" : "integer(int32)",
+      "scanned" : "integer(int32)"
+    },
+    "WebhookSummary" : {
+      "autoDisabledReason" : "string",
+      "batchEnabled" : "boolean",
+      "consecutiveFailures" : "integer(int32)",
+      "createdAt" : "string(date-time)",
+      "dailyQuota" : "integer(int32)",
+      "deliveryMode" : "string enum[BOTH|DAILY_SUMMARY|PER_EVENT|THRESHOLD_SPIKE]",
+      "enabled" : "boolean",
+      "format" : "string enum[DISCORD|GENERIC|SLACK]",
+      "id" : "integer(int64)",
+      "includeBots" : "boolean",
+      "lastCalledAt" : "string(date-time)",
+      "lastError" : "string",
+      "lastStatusCode" : "integer(int32)",
+      "name" : "string",
+      "referrerHostFilter" : "string",
+      "sampleRate" : "integer(int32)",
+      "spikeThreshold" : "integer(int32)",
+      "spikeWindowMinutes" : "integer(int32)",
+      "summaryHourOfDay" : "integer(int32)",
+      "url" : "string",
+      "utmSourceFilter" : "string"
+    },
+    "WeeklyInsights" : {
+      "deltaPercent" : "number(double)",
+      "from" : "string(date-time)",
+      "humanClicks" : "integer(int64)",
+      "humanRatio" : "number(double)",
+      "peak" : "#Peak",
+      "previousHumanClicks" : "integer(int64)",
+      "to" : "string(date-time)",
+      "topLink" : "#TopLink",
+      "totalClicks" : "integer(int64)"
+    }
+  }
+}
