@@ -160,7 +160,8 @@ public class LinkHtmlRenderer {
       ShortCode shortCode,
       boolean failed,
       String turnstileSiteKey) {
-    return htmlResponse(status, passwordPrompt(locale, shortCode, failed, turnstileSiteKey));
+    return visitPage(
+        passwordPrompt(locale, shortCode, failed, turnstileSiteKey), status, "password_required");
   }
 
   public ResponseEntity<byte[]> unlockedPageResponse(Locale locale, String destinationUrl) {
