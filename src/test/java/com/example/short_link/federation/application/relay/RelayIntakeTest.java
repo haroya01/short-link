@@ -8,7 +8,10 @@ import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.domain.RelayMode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +23,8 @@ class RelayIntakeTest {
   private static final String RELAY = "https://relay.example/tag/dev";
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
-  private final RelayTally tally = new RelayTally(meters);
+  private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T19:20:00Z"), ZoneOffset.UTC);
+  private final RelayTally tally = new RelayTally(meters, clock);
   private final RelaySubscriptions subscriptions = mock(RelaySubscriptions.class);
 
   private RelayIntake intake(int queue, int perDay, RelayBreaker breaker) {
@@ -40,7 +44,7 @@ class RelayIntakeTest {
     RelayProperties props =
         new RelayProperties(
             true, 30, perDay, queue, Duration.ofSeconds(5), Duration.ofSeconds(4), null, List.of());
-    return intake(queue, perDay, new RelayBreaker(props, tally, subscriptions));
+    return intake(queue, perDay, new RelayBreaker(props, tally, subscriptions, clock));
   }
 
   private void mode(RelayMode mode) {
