@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccess;
@@ -77,11 +78,11 @@ public class PostInteractionAccess {
   }
 
   public boolean hears(CommentEntity comment, PostReader reader) {
-    return access.hears(comment.getRoomId(), reader.viewerId());
+    return access.hears(reader.viewerId(), comment.getRoomId());
   }
 
   public boolean hears(PostHighlightEntity highlight, PostReader reader) {
-    return access.hears(highlight.getRoomId(), reader.viewerId());
+    return access.hears(reader.viewerId(), highlight.getRoomId());
   }
 
   public record LikeableComment(CommentEntity comment, PostEntity post) {}
@@ -120,7 +121,7 @@ public class PostInteractionAccess {
     if (decided.hidden()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, postId);
     }
-    if (blocks.isBlocked(post.getUserId(), reader.viewerId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(post.getUserId()).blocked(reader.viewerId()))) {
       throw new PostException(blockedCode).with("postId", postId);
     }
     if (decided.redacted()) {

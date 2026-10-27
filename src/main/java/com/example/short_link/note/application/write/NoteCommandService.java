@@ -13,6 +13,7 @@ import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.post.SeriesItemCleaner;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -345,6 +346,22 @@ public class NoteCommandService {
                 quoteSeen,
                 rows.stream().map(NoteMediaEntity::getStorageKey).toList()))
         .forEach(events::publishEvent);
+    return NoteViews.assemble(
+        note,
+        NoteBatch.justWritten(
+            note,
+            authors,
+            quotedNote,
+            checked.quotedAuthor(),
+            quoted,
+            images(note, rows, quotedNote),
+            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
+            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
+        userId);
+  }
+
+  private Map<Long, List<NoteView.Media>> images(
+      NoteEntity note, List<NoteMediaEntity> rows, NoteEntity quotedNote) {
     Map<Long, List<NoteView.Media>> images = new HashMap<>();
     images.put(note.getId(), rows.stream().map(NoteView.Media::of).toList());
     if (quotedNote != null) {
@@ -354,18 +371,7 @@ public class NoteCommandService {
               .map(NoteView.Media::of)
               .toList());
     }
-    return NoteViews.assemble(
-        note,
-        NoteBatch.justWritten(
-            note,
-            authors,
-            quotedNote,
-            checked.quotedAuthor(),
-            quoted,
-            images,
-            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
-            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
-        userId);
+    return images;
   }
 
   static String language(String raw) {
@@ -712,7 +718,8 @@ public class NoteCommandService {
     if (note.isRemote()) {
       return;
     }
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
       throw new NoteException(code);
     }
   }

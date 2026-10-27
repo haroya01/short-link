@@ -84,12 +84,19 @@ class InboxServiceTest {
 
   private InboxService service() {
     return new InboxService(
+        new InboxClassifier(
+            URLS,
+            localActors,
+            notes,
+            remoteNotes,
+            followingRows,
+            relays,
+            new RemoteNoteParser(URLS)),
         verifier,
         localActors,
         actorRows,
         followers,
         following,
-        notes,
         reactions,
         votes,
         remoteNotes,
@@ -105,7 +112,6 @@ class InboxServiceTest {
             earlyDeletes,
             URLS,
             mock(RemoteDocuments.class)),
-        followingRows,
         URLS,
         JsonMapper.builder().build(),
         meters,

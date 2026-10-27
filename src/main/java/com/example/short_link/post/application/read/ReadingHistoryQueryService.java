@@ -7,8 +7,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -24,7 +24,7 @@ public class ReadingHistoryQueryService {
 
   private final PostReadRepository postReadRepository;
   private final PostRepository postRepository;
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
   private final PostAccessPolicy access;
 
   public ReadingHistoryView list(Long userId, int page, int size) {
@@ -44,12 +44,11 @@ public class ReadingHistoryQueryService {
         postRepository.findAllByIdIn(postIds).stream()
             .filter(post -> !lists.card(post).hidden())
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors =
-        userRepository
-            .findAllByIdIn(posts.values().stream().map(PostEntity::getUserId).distinct().toList())
+    Map<Long, UserSummary> authors =
+        userSummaries
+            .findAllActive(posts.values().stream().map(PostEntity::getUserId).distinct().toList())
             .stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+            .collect(Collectors.toMap(UserSummary::id, Function.identity()));
 
     return reads.stream()
         .filter(r -> posts.containsKey(r.getPostId()))
@@ -57,14 +56,14 @@ public class ReadingHistoryQueryService {
         .map(
             r -> {
               PostEntity post = posts.get(r.getPostId());
-              UserEntity author = authors.get(post.getUserId());
+              UserSummary author = authors.get(post.getUserId());
               PostAccess card = PostAccessPolicy.card(post);
               boolean redacted = card.redacted();
               return new ReadingHistoryEntryView(
                   post.getId(),
-                  author.getId(),
-                  author.getUsername(),
-                  author.getAvatarUrl(),
+                  author.id(),
+                  author.username(),
+                  author.avatarUrl(),
                   post.getTitle(),
                   post.getSlug(),
                   redacted ? null : post.getExcerpt(),

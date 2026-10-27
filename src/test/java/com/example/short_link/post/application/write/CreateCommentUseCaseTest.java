@@ -13,6 +13,7 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
@@ -27,6 +28,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -64,10 +66,14 @@ class CreateCommentUseCaseTest {
                 blockChecker,
                 PostAccessFixtures.policy()),
             commentRepository,
-            userRepository,
+            new UserSummaryReader(userRepository),
             new CommentNotifications(
-                userRepository, postRepository, events, muteReader, PostAccessFixtures.policy()),
-            new CommentMentions(userRepository));
+                new UserSummaryReader(userRepository),
+                postRepository,
+                events,
+                muteReader,
+                PostAccessFixtures.policy()),
+            new CommentMentions(new UserSummaryReader(userRepository)));
   }
 
   private PostEntity publishedPost() {
@@ -141,7 +147,7 @@ class CreateCommentUseCaseTest {
   @Test
   void rejectsWhenPostAuthorBlockedCommenter() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
-    when(blockChecker.isBlocked(7L, 9L)).thenReturn(true);
+    when(blockChecker.isBlocked(BlockEdge.blocker(7L).blocked(9L))).thenReturn(true);
 
     assertThatThrownBy(
             () -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi"), PostReader.of(9L)))
