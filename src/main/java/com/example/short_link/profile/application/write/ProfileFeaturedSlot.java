@@ -1,7 +1,7 @@
 package com.example.short_link.profile.application.write;
 
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.application.write.LinkProfilePlacement;
+import com.example.short_link.link.application.write.ProfileLinkSlot;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import java.util.Objects;
@@ -13,31 +13,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ProfileFeaturedSlot {
 
-  private final LinkRepository linkRepository;
+  private final LinkProfilePlacement linkPlacement;
   private final ProfileBlockRepository profileBlockRepository;
 
-  public void featureLink(Long userId, LinkEntity link) {
-    clearLinks(userId, link.getId());
+  public void featureLink(Long userId, ProfileLinkSlot link) {
+    linkPlacement.unfeatureAllBut(userId, link.id());
     clearBlocks(userId, null);
-    link.featureOnProfile();
+    link.feature();
   }
 
-  public void unfeatureLink(LinkEntity link) {
-    link.unfeatureOnProfile();
+  public void unfeatureLink(ProfileLinkSlot link) {
+    link.unfeature();
   }
 
   public void featureBlock(Long userId, ProfileBlockEntity block) {
-    clearLinks(userId, null);
+    linkPlacement.unfeatureAll(userId);
     clearBlocks(userId, block.getId());
     block.feature();
-  }
-
-  private void clearLinks(Long userId, Long keepId) {
-    for (LinkEntity other : linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(userId)) {
-      if (!Objects.equals(other.getId(), keepId)) {
-        other.unfeatureOnProfile();
-      }
-    }
   }
 
   private void clearBlocks(Long userId, Long keepId) {

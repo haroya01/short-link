@@ -1,12 +1,8 @@
 package com.example.short_link.profile.application.read;
 
 import com.example.short_link.common.post.PublishedPostCountReader;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
-import com.example.short_link.link.stats.application.read.ClickTotalsReader;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.application.read.ProfileLinkCard;
+import com.example.short_link.link.application.read.ProfileLinks;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
@@ -21,10 +17,8 @@ import com.example.short_link.user.application.read.UserProfile;
 import com.example.short_link.user.application.read.UserProfileReader;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -38,12 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublicProfileLoader {
 
   private final UserProfileReader users;
-  private final LinkRepository linkRepository;
-  private final ClickTotalsReader clickRepository;
+  private final ProfileLinks profileLinks;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final PublishedPostCountReader postCountReader;
-  private final ShortLinkUrlBuilder urlBuilder;
   private final Clock clock;
 
   @Cacheable(
@@ -58,11 +50,10 @@ public class PublicProfileLoader {
             .or(() -> resolveByHistory(normalized))
             .orElseThrow(
                 () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
-    List<ProfileLinkRow> links = linkRepository.findPublicProfileLinks(user.id());
+    List<ProfileLinkCard> links = profileLinks.publicCards(user.id());
     List<ProfileBlockEntity> blocks =
         profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.id());
-    Map<Long, Long> counts = clickCounts(links);
-    List<PublicProfile.ProfileEntry> entries = entriesInProfileOrder(links, blocks, counts);
+    List<PublicProfile.ProfileEntry> entries = entriesInProfileOrder(links, blocks);
     long publishedPostCount = postCountReader.countPublishedByUserId(user.id());
     PublicProfile profile =
         new PublicProfile(
@@ -78,30 +69,18 @@ public class PublicProfileLoader {
     return new PublicProfileSnapshot(profile, windows(links));
   }
 
-  private Map<Long, Long> clickCounts(List<ProfileLinkRow> links) {
-    Map<Long, Long> counts = new HashMap<>();
-    if (!links.isEmpty()) {
-      List<Long> ids = links.stream().map(row -> row.getLink().getId()).toList();
-      for (LinkClickCount row : clickRepository.countsByLinkIds(ids)) {
-        counts.put(row.getLinkId(), row.getCount());
-      }
-    }
-    return counts;
-  }
-
   private List<PublicProfile.ProfileEntry> entriesInProfileOrder(
-      List<ProfileLinkRow> links, List<ProfileBlockEntity> blocks, Map<Long, Long> counts) {
+      List<ProfileLinkCard> links, List<ProfileBlockEntity> blocks) {
     List<PublicProfile.ProfileEntry> entries = new ArrayList<>(links.size() + blocks.size());
     int linkIndex = 0;
     int blockIndex = 0;
     while (linkIndex < links.size() || blockIndex < blocks.size()) {
-      ProfileLinkRow link = linkIndex < links.size() ? links.get(linkIndex) : null;
+      ProfileLinkCard link = linkIndex < links.size() ? links.get(linkIndex) : null;
       ProfileBlockEntity block = blockIndex < blocks.size() ? blocks.get(blockIndex) : null;
       boolean takeLink =
-          link != null
-              && (block == null || link.getLink().getProfileOrder() <= block.getProfileOrder());
+          link != null && (block == null || link.profileOrder() <= block.getProfileOrder());
       if (takeLink) {
-        entries.add(linkEntry(link, counts));
+        entries.add(linkEntry(link));
         linkIndex++;
       } else {
         entries.add(blockEntry(block));
@@ -111,41 +90,35 @@ public class PublicProfileLoader {
     return entries;
   }
 
-  private PublicProfile.ProfileEntry linkEntry(ProfileLinkRow row, Map<Long, Long> counts) {
-    LinkEntity link = row.getLink();
-    long clicks = counts.getOrDefault(link.getId(), 0L);
-    if (Boolean.TRUE.equals(row.getPasswordRequired())) {
+  private static PublicProfile.ProfileEntry linkEntry(ProfileLinkCard link) {
+    if (link.passwordRequired()) {
       return PublicProfile.ProfileEntry.protectedLink(
-          link.getShortCode(),
-          urlBuilder.build(link.getShortCode()),
-          link.getOgTitleOverride(),
-          clicks,
-          link.isProfileHighlighted());
+          link.shortCode(),
+          link.url(),
+          link.preview().titleOverride(),
+          link.clicks(),
+          link.highlighted());
     }
     return PublicProfile.ProfileEntry.link(
-        link.getShortCode(),
-        urlBuilder.build(link.getShortCode()),
-        link.getOriginalUrl(),
-        link.getEffectiveOgTitle(),
-        link.getEffectiveOgImage(),
-        clicks,
-        link.isProfileHighlighted());
+        link.shortCode(),
+        link.url(),
+        link.originalUrl(),
+        link.preview().title(),
+        link.preview().image(),
+        link.clicks(),
+        link.highlighted());
   }
 
-  private static List<LinkWindow> windows(List<ProfileLinkRow> links) {
+  private static List<LinkWindow> windows(List<ProfileLinkCard> links) {
     return links.stream()
-        .filter(
-            row ->
-                row.getOpensAt() != null
-                    || row.getLink().getExpiresAt() != null
-                    || row.getLink().getMaxViews() != null)
+        .filter(link -> link.window().limits())
         .map(
-            row ->
+            link ->
                 new LinkWindow(
-                    row.getLink().getShortCode(),
-                    row.getOpensAt(),
-                    row.getLink().getExpiresAt(),
-                    row.getLink().getMaxViews() != null))
+                    link.shortCode(),
+                    link.window().opensAt(),
+                    link.window().expiresAt(),
+                    link.window().viewLimited()))
         .toList();
   }
 
