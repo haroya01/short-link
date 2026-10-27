@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesActivity;
@@ -24,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -210,7 +210,7 @@ public class PublicSeriesQueryService {
   }
 
   private UserSummary resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(username);
     return userSummaries
         .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));

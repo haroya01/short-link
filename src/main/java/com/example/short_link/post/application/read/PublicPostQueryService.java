@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.cta.application.read.CtaCard;
 import com.example.short_link.cta.application.read.CtaCards;
 import com.example.short_link.post.application.access.PostAccess;
@@ -30,7 +31,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -275,7 +275,7 @@ public class PublicPostQueryService {
   }
 
   private UserSummary resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(username);
     return userSummaries
         .findActiveByUsername(normalized)
         .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));

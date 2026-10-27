@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application.read;
 
 import com.example.short_link.common.post.PublishedPostCountReader;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.link.application.read.ProfileLinkCard;
 import com.example.short_link.link.application.read.ProfileLinks;
 import com.example.short_link.profile.application.ProfileCacheEviction;
@@ -18,7 +19,6 @@ import com.example.short_link.user.application.read.UserProfileReader;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -43,7 +43,7 @@ public class PublicProfileLoader {
       key = "#username == null ? '' : #username.trim().toLowerCase(T(java.util.Locale).ROOT)")
   @Transactional(readOnly = true)
   public PublicProfileSnapshot load(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(username);
     UserProfile user =
         users
             .findActiveByUsername(normalized)

@@ -1,5 +1,6 @@
 package com.example.short_link.common.note;
 
+import com.example.short_link.common.user.Usernames;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -15,9 +16,10 @@ public final class Mentions {
 
   public static final int MAX_MENTIONS = 10;
 
-  private static final Pattern LOCAL =
-      Pattern.compile(
-          "(?<![A-Za-z0-9_])@([a-z0-9][a-z0-9_]{2,15})(?![A-Za-z0-9_@])", Pattern.CASE_INSENSITIVE);
+  public static final String LOCAL_HANDLE =
+      "(?<![A-Za-z0-9_])@(" + Usernames.GRAMMAR + ")(?![A-Za-z0-9_@])";
+
+  private static final Pattern LOCAL = Pattern.compile(LOCAL_HANDLE, Pattern.CASE_INSENSITIVE);
 
   private static final Pattern REMOTE =
       Pattern.compile(

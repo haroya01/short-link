@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.federation.application.DomainBlocks;
+import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.RemoteAccountView;
 import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
@@ -58,7 +59,7 @@ class ImportRowApplierTest {
         feedSettings,
         lists,
         lookup,
-        "https://kurl.me/");
+        new FederationProperties("https://kurl.me/", null));
   }
 
   @Test
