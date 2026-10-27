@@ -263,8 +263,8 @@ public class NoteEntity extends BaseCreatedEntity {
     return pollExpiresAt != null && !pollExpiresAt.isAfter(now);
   }
 
-  // Closed here from the start, so the close job, which tells voters and federates the result,
-  // never takes a poll from elsewhere.
+  // A poll from elsewhere is counted and closed by its own server. It is closed here from the
+  // start, so the close job, which tells voters and federates the result, never takes it.
   public void pollElsewhere(
       List<String> options,
       Instant expiresAt,

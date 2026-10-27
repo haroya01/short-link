@@ -155,6 +155,8 @@ class NoteTrendsReaderAdapter implements NoteTrendsReader {
     return links;
   }
 
+  // A note from elsewhere trends only once a member liked, reposted or answered it: that touch
+  // stands in for moderator review. Never from a server moderators blocked.
   private static String trendable(String alias) {
     return " AND ("
         + alias

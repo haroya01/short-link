@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
+// A draft that can no longer be posted stays, with its reason, instead of vanishing.
 @Service
 @RequiredArgsConstructor
 public class NoteScheduleService {

@@ -95,6 +95,7 @@ public class NoteInteractions {
     return new ConversationMuteStatus(on);
   }
 
+  // A bookmark is the reader's own: it notifies no one and never federates.
   @Transactional
   public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
     guard.readable(userId, noteId);

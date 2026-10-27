@@ -56,6 +56,8 @@ public class NoteThreadControls {
     return new PinStatus(true);
   }
 
+  // A reply from elsewhere that the thread's writer removes is only unhooked here: its server keeps
+  // it.
   @Transactional
   public void delete(Long userId, Long noteId) {
     NoteEntity note = guard.find(noteId);
@@ -73,6 +75,7 @@ public class NoteThreadControls {
     }
   }
 
+  // The replier is not told.
   @Transactional
   public ReplyHiddenStatus setReplyHidden(Long userId, Long noteId, boolean on) {
     NoteEntity reply = guard.find(noteId);

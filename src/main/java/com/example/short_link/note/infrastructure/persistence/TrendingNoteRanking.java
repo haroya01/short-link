@@ -15,7 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-// The ranking holds ids alone: what a note says and who may see it are read on every request.
+// One ranking serves every reader for cacheFor or longer, and each request only filters it. It
+// holds ids alone: what a note says and who may see it are read again on every request.
 @Component
 class TrendingNoteRanking {
 

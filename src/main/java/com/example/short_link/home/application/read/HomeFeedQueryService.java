@@ -120,6 +120,8 @@ public class HomeFeedQueryService {
         null);
   }
 
+  // Since brings what was published above the marker, at most SINCE_LIMIT; more than that is a gap
+  // and a fresh first page.
   private Page blog(Long viewerId, String cursor, String since, int size) {
     if (since != null && cursor == null) {
       HomeCursor.Blog marker = HomeCursor.Blog.parse(since);
@@ -158,6 +160,10 @@ public class HomeFeedQueryService {
     return clock.instant().truncatedTo(ChronoUnit.MILLIS);
   }
 
+  // A marker no longer within reach (deleted, or more than SINCE_LIMIT above it) is a gap: a fresh
+  // first page replaces the list. Trending has no "above", so it always starts over. When hiding,
+  // the marker is looked for in the list as it is, since the reader saw it; only what came above it
+  // leaves out the seen.
   private Page newer(HomeAsk ask, SeenViewer hideFor) {
     Tab chosen = ask.tab();
     Long viewerId = ask.viewerId();
@@ -211,6 +217,7 @@ public class HomeFeedQueryService {
     return new Page(first.items(), first.next(), first.newest(), true);
   }
 
+  // -1 when the marker is not in the list.
   private static int above(List<Long> ids, long marker) {
     if (marker == 0) {
       return -1;
