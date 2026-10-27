@@ -63,7 +63,7 @@ class QuotingPostsQueryServiceTest {
         .thenReturn(rows);
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(alice()));
 
-    PublicFeedView view = service.ofNote(5L, null, 0);
+    PublicFeedView view = service.ofNote(null, 5L, 0);
 
     assertThat(view.items()).hasSize(QuotingPostsQueryService.SIZE);
     assertThat(view.items().getFirst().author().username()).isEqualTo("alice");
@@ -77,7 +77,7 @@ class QuotingPostsQueryServiceTest {
         .thenReturn(List.of(published(1L)));
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(alice()));
 
-    PublicFeedView view = service.ofNote(5L, null, -3);
+    PublicFeedView view = service.ofNote(null, 5L, -3);
 
     assertThat(view.items()).extracting(PublicFeedItem::id).containsExactly(1L);
     assertThat(view.hasNext()).isFalse();

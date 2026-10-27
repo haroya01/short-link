@@ -39,9 +39,10 @@ public class RelayRetentionJob {
   public RelayRetentionJob(
       FederationRelayedNoteRepository relayed,
       RelayTally tally,
+      Clock clock,
       @Value("${short-link.federation.relay.keep-for:7d}") Duration keepFor,
       @Value("${short-link.scheduling.enabled:true}") boolean scheduling) {
-    this(relayed, tally, Clock.systemUTC(), keepFor, PAUSE, scheduling);
+    this(relayed, tally, clock, keepFor, PAUSE, scheduling);
   }
 
   RelayRetentionJob(

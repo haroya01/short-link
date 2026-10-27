@@ -13,6 +13,7 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
@@ -146,7 +147,7 @@ class CreateCommentUseCaseTest {
   @Test
   void rejectsWhenPostAuthorBlockedCommenter() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
-    when(blockChecker.isBlocked(7L, 9L)).thenReturn(true);
+    when(blockChecker.isBlocked(BlockEdge.blocker(7L).blocked(9L))).thenReturn(true);
 
     assertThatThrownBy(
             () -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi"), PostReader.of(9L)))

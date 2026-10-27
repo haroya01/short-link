@@ -42,14 +42,14 @@ public class PostHighlightReplyQueryService {
         highlight == null ? null : postRepository.findById(highlight.getPostId()).orElse(null);
     if (post == null
         || !access.readable(post, reader)
-        || !access.hears(highlight.getRoomId(), reader.viewerId())) {
+        || !access.hears(reader.viewerId(), highlight.getRoomId())) {
       return new PostScoped<>(List.of(), false);
     }
     return new PostScoped<>(
-        replies(highlightId, reader.viewerId()), !PostAccessPolicy.isOpen(post));
+        replies(reader.viewerId(), highlightId), !PostAccessPolicy.isOpen(post));
   }
 
-  private List<HighlightReplyView> replies(Long highlightId, Long viewerId) {
+  private List<HighlightReplyView> replies(Long viewerId, Long highlightId) {
     List<PostHighlightReplyEntity> replies =
         replyRepository.findHeardByHighlightId(highlightId, viewerId);
     List<Long> authorIds =

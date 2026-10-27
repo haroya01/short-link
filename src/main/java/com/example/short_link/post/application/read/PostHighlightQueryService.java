@@ -38,10 +38,10 @@ public class PostHighlightQueryService {
     if (post == null || !access.readable(post, reader)) {
       return new PostScoped<>(List.of(), false);
     }
-    return new PostScoped<>(highlights(postId, reader.viewerId()), !PostAccessPolicy.isOpen(post));
+    return new PostScoped<>(highlights(reader.viewerId(), postId), !PostAccessPolicy.isOpen(post));
   }
 
-  private List<HighlightView> highlights(Long postId, Long viewerId) {
+  private List<HighlightView> highlights(Long viewerId, Long postId) {
     List<PostHighlightEntity> highlights = highlightRepository.findHeardByPostId(postId, viewerId);
     List<Long> userIds =
         highlights.stream().map(PostHighlightEntity::getUserId).distinct().toList();
