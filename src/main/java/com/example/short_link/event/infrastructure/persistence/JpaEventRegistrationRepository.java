@@ -1,25 +1,16 @@
 package com.example.short_link.event.infrastructure.persistence;
 
 import com.example.short_link.event.domain.EventRegistrationEntity;
-import com.example.short_link.event.domain.RegistrationStatus;
-import java.util.List;
-import java.util.Optional;
+import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaEventRegistrationRepository
-    extends JpaRepository<EventRegistrationEntity, Long> {
+    extends JpaRepository<EventRegistrationEntity, Long>, EventRegistrationRepository {
 
-  Optional<EventRegistrationEntity> findByEventIdAndContact(Long eventId, String contact);
-
-  Optional<EventRegistrationEntity> findByCancelTokenHash(String cancelTokenHash);
-
-  List<EventRegistrationEntity> findAllByEventIdOrderByCreatedAtAsc(Long eventId);
-
-  long countByEventIdAndStatus(Long eventId, RegistrationStatus status);
-
+  @Override
   @Modifying
   @Query(
       "UPDATE EventRegistrationEntity r SET r.name = '[purged]', "
