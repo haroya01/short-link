@@ -18,6 +18,7 @@ import com.example.short_link.common.note.NoteSnapshotReader.PollOption;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationSettings;
@@ -29,7 +30,9 @@ import com.example.short_link.federation.application.NoteFederation;
 import com.example.short_link.federation.application.RemoteAccountFinder;
 import com.example.short_link.federation.application.RemoteParents;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
+import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.FederationInstanceActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
@@ -63,9 +66,15 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-@KurlWebMvcTest(controllers = {NoteObjectController.class, ActorController.class})
+@KurlWebMvcTest(
+    controllers = {
+      NoteObjectController.class,
+      ActorController.class,
+      InstanceActorController.class
+    })
 @Import({
   FederationUrls.class,
+  ActorDocuments.class,
   NoteDocuments.class,
   NoteAddressing.class,
   OutgoingDocumentsGoldenTest.Props.class
@@ -177,6 +186,7 @@ class OutgoingDocumentsGoldenTest {
   @MockitoBean private FederationActorService localActors;
   @MockitoBean private RemoteParents remoteParents;
   @MockitoBean private RemoteAccountFinder finder;
+  @MockitoBean private SigningKeys signingKeys;
   @Autowired private NoteAddressing addressing;
 
   private final FederationSettings settings = mock(FederationSettings.class);
@@ -412,6 +422,13 @@ class OutgoingDocumentsGoldenTest {
 
     assertGolden("actor-full", fetched("/ap/actors/full"), "@context/2", "@context/2/featured");
     assertGolden("actor-plain", fetched("/ap/actors/pid"), "@context/2", "@context/2/featured");
+  }
+
+  @Test
+  void theInstanceActorDocumentIsByteForByteAsRecorded() throws Exception {
+    when(signingKeys.instanceActor()).thenReturn(new FederationInstanceActorEntity(PEM, "enc"));
+
+    assertGolden("actor-instance", fetched("/ap/instance"));
   }
 
   private String delivered(List<String> inboxes, Runnable send) {

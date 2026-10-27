@@ -16,11 +16,4 @@ class ActivityPubMediaTest {
     assertThat(ActivityPubMedia.wantsHtml(null)).isFalse();
     assertThat(ActivityPubMedia.wantsHtml(";;;")).isFalse();
   }
-
-  @Test
-  void summaryEscapesHtmlAndKeepsLineBreaks() {
-    assertThat(ActorController.summary(" a\n<b> ")).isEqualTo("<p>a<br>&lt;b&gt;</p>");
-    assertThat(ActorController.summary(" ")).isNull();
-    assertThat(ActorController.summary(null)).isNull();
-  }
 }

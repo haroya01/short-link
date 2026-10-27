@@ -1,16 +1,14 @@
 package com.example.short_link.federation.presentation;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.federation.application.ActorDocument;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
-import com.example.short_link.federation.application.LocalActor;
-import com.example.short_link.federation.domain.FederationUser;
-import com.example.short_link.federation.presentation.response.ActorResponse;
 import com.example.short_link.federation.presentation.response.OrderedCollectionResponse;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -20,45 +18,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.util.HtmlUtils;
 
 @RestController
 @RequestMapping(FederationUrls.ACTOR_PATH + "{publicId}")
 @RequiredArgsConstructor
 public class ActorController {
 
-  private static final boolean DISCOVERABLE = true;
-
-  private static final List<Object> ACTOR_CONTEXT =
-      List.of(
-          ActivityPubMedia.CONTEXT,
-          "https://w3id.org/security/v1",
-          Map.of(
-              "manuallyApprovesFollowers", "as:manuallyApprovesFollowers",
-              "toot", "http://joinmastodon.org/ns#",
-              "discoverable", "toot:discoverable",
-              "indexable", "toot:indexable",
-              "featured", Map.of("@id", "toot:featured", "@type", "@id"),
-              "schema", "http://schema.org#",
-              "PropertyValue", "schema:PropertyValue",
-              "value", "schema:value"));
-
-  private static final Map<String, String> LINK_NAMES =
-      Map.of(
-          "x", "X",
-          "line", "LINE",
-          "threads", "Threads",
-          "facebook", "Facebook",
-          "kakao", "Kakao",
-          "instagram", "Instagram",
-          "linkedin", "LinkedIn");
-
   private final FederationActorService actors;
   private final FederationUrls urls;
   private final NoteSnapshotReader notes;
+  private final ActorDocuments documents;
 
   @GetMapping
-  public ResponseEntity<ActorResponse> actor(
+  public ResponseEntity<ActorDocument> actor(
       @PathVariable String publicId,
       @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept) {
     return actors
@@ -68,11 +40,11 @@ public class ActorController {
                 ActivityPubMedia.wantsHtml(accept)
                     ? ResponseEntity.status(302)
                         .location(URI.create(urls.profile(actor.user().username())))
-                        .<ActorResponse>build()
+                        .<ActorDocument>build()
                     : ResponseEntity.ok()
                         .contentType(ActivityPubMedia.ACTIVITY_JSON)
                         .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
-                        .body(document(actor)))
+                        .body(documents.person(actor)))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
@@ -137,61 +109,5 @@ public class ActorController {
   private static ResponseEntity<OrderedCollectionResponse> collection(
       OrderedCollectionResponse body) {
     return ResponseEntity.ok().contentType(ActivityPubMedia.ACTIVITY_JSON).body(body);
-  }
-
-  private ActorResponse document(LocalActor actor) {
-    String id = urls.actor(actor.publicId());
-    String username = actor.user().username();
-    String avatar = actor.user().avatarUrl();
-    return new ActorResponse(
-        ACTOR_CONTEXT,
-        id,
-        "Person",
-        username,
-        actor.user().displayName() == null ? username : actor.user().displayName(),
-        summary(actor.user().bio()),
-        urls.profile(username),
-        urls.inbox(actor.publicId()),
-        urls.outbox(actor.publicId()),
-        urls.followers(actor.publicId()),
-        urls.following(actor.publicId()),
-        urls.featured(actor.publicId()),
-        attachment(actor.user().links()),
-        new ActorResponse.Endpoints(urls.sharedInbox()),
-        actor.user().locked(),
-        DISCOVERABLE,
-        DISCOVERABLE,
-        avatar == null || avatar.isBlank() ? null : new ActorResponse.Image("Image", avatar),
-        new ActorResponse.PublicKey(urls.key(actor.publicId()), id, actor.publicKeyPem()));
-  }
-
-  static List<ActorResponse.PropertyValue> attachment(List<FederationUser.ProfileLink> links) {
-    if (links == null || links.isEmpty()) {
-      return null;
-    }
-    return links.stream()
-        .map(
-            link ->
-                new ActorResponse.PropertyValue(
-                    "PropertyValue",
-                    LINK_NAMES.getOrDefault(link.channel(), link.channel()),
-                    anchor(link.url())))
-        .toList();
-  }
-
-  private static String anchor(String url) {
-    String shown = url.replaceFirst("^https?://", "").replaceFirst("/$", "");
-    return "<a href=\""
-        + HtmlUtils.htmlEscape(url)
-        + "\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\">"
-        + HtmlUtils.htmlEscape(shown)
-        + "</a>";
-  }
-
-  static String summary(String bio) {
-    if (bio == null || bio.isBlank()) {
-      return null;
-    }
-    return "<p>" + HtmlUtils.htmlEscape(bio.strip()).replace("\n", "<br>") + "</p>";
   }
 }

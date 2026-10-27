@@ -71,7 +71,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/event/application/help
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateSpecs(List<QuestionSpec>)#1=19
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|execute(RegisterForEventCommand)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/ActivityStreams.java|isDocumentType(String)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/NoteDocuments.java|note(NoteSnapshot, String, Parent, List<Addressee>, Parent)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/OutboxBackfill.java|fill(RemoteActorEntity)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/RemoteActorParser.java|parse(JsonNode, URI, String)#1=18
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/RemoteActorResolver.java|byKeyId(String, boolean)#1=10
@@ -242,7 +241,6 @@ ExcessiveParameterList|src/main/java/com/example/short_link/profile/domain/visit
 ExcessiveParameterList|src/main/java/com/example/short_link/profile/presentation/visit/PublicProfileVisitController.java|visit#1=11
 NPathComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=524
 NPathComplexity|src/main/java/com/example/short_link/common/observability/AdminRequestMetricsService.java|raw(RawQuery)#1=384
-NPathComplexity|src/main/java/com/example/short_link/federation/application/NoteDocuments.java|note(NoteSnapshot, String, Parent, List<Addressee>, Parent)#1=1536
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|parse(JsonNode, JsonNode)#1=384
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|plain(String)#1=268
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|poll(JsonNode)#1=212

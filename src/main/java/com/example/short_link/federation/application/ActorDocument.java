@@ -1,11 +1,11 @@
-package com.example.short_link.federation.presentation.response;
+package com.example.short_link.federation.application;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ActorResponse(
+public record ActorDocument(
     @JsonProperty("@context") List<Object> context,
     String id,
     String type,
