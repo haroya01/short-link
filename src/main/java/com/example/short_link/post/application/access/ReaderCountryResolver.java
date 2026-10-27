@@ -10,7 +10,7 @@ public class ReaderCountryResolver {
 
   private final GeoIpResolver geoIp;
 
-  public ReaderCountry resolve(PostReader reader) {
+  public ReaderCountry resolve(PostViewer reader) {
     if (reader.serverRender()) {
       return ReaderCountry.DEFERRED;
     }

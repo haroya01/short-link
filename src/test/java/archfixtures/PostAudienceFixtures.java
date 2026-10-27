@@ -2,7 +2,7 @@ package archfixtures;
 
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRoomReader;
 
@@ -39,7 +39,7 @@ public final class PostAudienceFixtures {
 
   public static class AsksThePolicy {
     boolean readable(PostAccessPolicy access, PostEntity post, Long viewerId) {
-      return access.readable(post, PostReader.of(viewerId));
+      return access.readable(post, PostViewer.of(viewerId));
     }
   }
 }

@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.CommentLikedEvent;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -24,7 +24,7 @@ public class LikeCommentUseCase {
   private final CommentNotifications notifications;
 
   @Transactional
-  public CommentLikeStatus like(PostReader reader, Long commentId) {
+  public CommentLikeStatus like(PostViewer reader, Long commentId) {
     Long userId = reader.viewerId();
     PostInteractionAccess.LikeableComment target = access.requireLikeableComment(reader, commentId);
     if (commentLikeRepository.insertIgnore(commentId, userId) > 0

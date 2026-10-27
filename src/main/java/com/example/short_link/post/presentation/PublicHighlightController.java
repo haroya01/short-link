@@ -23,6 +23,6 @@ public class PublicHighlightController {
   public ResponseEntity<List<HighlightView>> list(
       @AuthenticationPrincipal Long viewerId, @PathVariable Long postId, HttpServletRequest req) {
     return PostResponses.of(
-        highlightQuery.listForPost(postId, PostReaderHeaders.from(viewerId, req)));
+        highlightQuery.listForPost(postId, PostViewerHeaders.from(viewerId, req)));
   }
 }

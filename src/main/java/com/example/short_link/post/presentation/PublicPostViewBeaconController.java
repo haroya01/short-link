@@ -55,6 +55,6 @@ public class PublicPostViewBeaconController {
             "1".equals(req.getHeader("Sec-GPC")),
             // behavior_event와 조인하는 탭 수명 세션 ID다.
             sid),
-        PostReaderHeaders.from(viewerId, req));
+        PostViewerHeaders.from(viewerId, req));
   }
 }

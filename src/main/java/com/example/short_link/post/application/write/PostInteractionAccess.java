@@ -5,7 +5,7 @@ import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -32,12 +32,12 @@ public class PostInteractionAccess {
   private final UserBlockChecker blocks;
   private final PostAccessPolicy access;
 
-  public PostEntity requireCommentablePost(PostReader reader, Long postId) {
+  public PostEntity requireCommentablePost(PostViewer reader, Long postId) {
     moderation.requireCanWrite(reader.viewerId());
     return readablePost(postId, reader, PostErrorCode.COMMENT_BLOCKED);
   }
 
-  public PostHighlightEntity requireReplyableHighlight(PostReader reader, Long highlightId) {
+  public PostHighlightEntity requireReplyableHighlight(PostViewer reader, Long highlightId) {
     moderation.requireCanWrite(reader.viewerId());
     PostHighlightEntity highlight =
         highlights
@@ -50,19 +50,19 @@ public class PostInteractionAccess {
     return highlight;
   }
 
-  public PostEntity requireInteractablePost(PostReader reader, Long postId) {
+  public PostEntity requireInteractablePost(PostViewer reader, Long postId) {
     moderation.requireCanWrite(reader.viewerId());
     return readablePost(postId, reader, PostErrorCode.POST_INTERACTION_BLOCKED);
   }
 
   // Parent counter mutations must lock the post before inserting or deleting interaction rows.
-  public PostEntity requireInteractablePostForUpdate(PostReader reader, Long postId) {
+  public PostEntity requireInteractablePostForUpdate(PostViewer reader, Long postId) {
     moderation.requireCanWrite(reader.viewerId());
     return readablePost(
         posts.findByIdForUpdate(postId), postId, reader, PostErrorCode.POST_INTERACTION_BLOCKED);
   }
 
-  public LikeableComment requireLikeableComment(PostReader reader, Long commentId) {
+  public LikeableComment requireLikeableComment(PostViewer reader, Long commentId) {
     moderation.requireCanWrite(reader.viewerId());
     CommentEntity comment =
         comments
@@ -77,17 +77,17 @@ public class PostInteractionAccess {
     return new LikeableComment(comment, post);
   }
 
-  public boolean hears(CommentEntity comment, PostReader reader) {
+  public boolean hears(CommentEntity comment, PostViewer reader) {
     return access.hears(reader.viewerId(), comment.getRoomId());
   }
 
-  public boolean hears(PostHighlightEntity highlight, PostReader reader) {
+  public boolean hears(PostHighlightEntity highlight, PostViewer reader) {
     return access.hears(reader.viewerId(), highlight.getRoomId());
   }
 
   public record LikeableComment(CommentEntity comment, PostEntity post) {}
 
-  public LikeableHighlightReply requireLikeableHighlightReply(PostReader reader, Long replyId) {
+  public LikeableHighlightReply requireLikeableHighlightReply(PostViewer reader, Long replyId) {
     moderation.requireCanWrite(reader.viewerId());
     PostHighlightReplyEntity reply =
         highlightReplies
@@ -109,12 +109,12 @@ public class PostInteractionAccess {
   public record LikeableHighlightReply(
       PostHighlightReplyEntity reply, PostHighlightEntity highlight, PostEntity post) {}
 
-  private PostEntity readablePost(Long postId, PostReader reader, PostErrorCode blockedCode) {
+  private PostEntity readablePost(Long postId, PostViewer reader, PostErrorCode blockedCode) {
     return readablePost(posts.findById(postId), postId, reader, blockedCode);
   }
 
   private PostEntity readablePost(
-      Optional<PostEntity> candidate, Long postId, PostReader reader, PostErrorCode blockedCode) {
+      Optional<PostEntity> candidate, Long postId, PostViewer reader, PostErrorCode blockedCode) {
     PostEntity post =
         candidate.orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
     PostAccess decided = access.decide(post, reader);

@@ -28,6 +28,6 @@ public class PostUnlockController {
       @Valid @RequestBody UnlockPostRequest request,
       HttpServletRequest req) {
     return unlockPost.unlock(
-        username, slug, request.password(), PostReaderHeaders.from(viewerId, req));
+        username, slug, request.password(), PostViewerHeaders.from(viewerId, req));
   }
 }

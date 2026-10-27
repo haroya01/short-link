@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.analytics.Utm;
 import com.example.short_link.common.analytics.VisitRequest;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
@@ -145,7 +145,7 @@ class PostReadMilestoneConcurrencyIntegrationTest {
                 views.execute(
                     new RecordPostViewCommand(username, "together"),
                     visitor(visitor, BROWSER),
-                    PostReader.of(null)));
+                    PostViewer.of(null)));
       }
     }
 
@@ -174,11 +174,11 @@ class PostReadMilestoneConcurrencyIntegrationTest {
     views.execute(
         new RecordPostViewCommand(username, "alone", authorId),
         visitor(50, BROWSER),
-        PostReader.of(authorId));
+        PostViewer.of(authorId));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
         visitor(51, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"),
-        PostReader.of(null));
+        PostViewer.of(null));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
         new VisitRequest(
@@ -190,7 +190,7 @@ class PostReadMilestoneConcurrencyIntegrationTest {
             new Utm(null, null, null, null, null),
             true,
             null),
-        PostReader.of(null));
+        PostViewer.of(null));
 
     assertThat(
             jdbc.queryForObject(

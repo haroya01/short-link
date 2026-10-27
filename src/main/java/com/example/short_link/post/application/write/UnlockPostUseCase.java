@@ -6,7 +6,7 @@ import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostGrants;
 import com.example.short_link.post.application.access.PostPasswordAttempts;
 import com.example.short_link.post.application.access.PostPasswords;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -29,7 +29,7 @@ public class UnlockPostUseCase {
   private final PostPasswordAttempts attempts;
   private final PostGrants grants;
 
-  public PostGrants.Grant unlock(String username, String slug, String password, PostReader reader) {
+  public PostGrants.Grant unlock(String username, String slug, String password, PostViewer reader) {
     String handle = Usernames.canonical(username);
     UserSummary author =
         users

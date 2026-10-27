@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
@@ -33,7 +33,7 @@ public class PostHighlightQueryService {
   private final FollowingReader following;
   private final PostAccessPolicy access;
 
-  public PostScoped<List<HighlightView>> listForPost(Long postId, PostReader reader) {
+  public PostScoped<List<HighlightView>> listForPost(Long postId, PostViewer reader) {
     PostEntity post = postRepository.findById(postId).orElse(null);
     if (post == null || !access.readable(post, reader)) {
       return new PostScoped<>(List.of(), false);
@@ -76,7 +76,7 @@ public class PostHighlightQueryService {
         highlightRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds =
         highlights.stream().map(PostHighlightEntity::getPostId).distinct().toList();
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));

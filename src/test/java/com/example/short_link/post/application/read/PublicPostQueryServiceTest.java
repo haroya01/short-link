@@ -20,7 +20,7 @@ import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
 import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -104,7 +104,7 @@ class PublicPostQueryServiceTest {
     p2.publish();
     when(postRepository.findProfilePosts(author.getId(), null)).thenReturn(List.of(p1, p2));
 
-    PublicPostListView response = service.listPublicPosts("john", PostReader.of(null)).body();
+    PublicPostListView response = service.listPublicPosts("john", PostViewer.of(null)).body();
 
     assertThat(response.author().username()).isEqualTo("john");
     assertThat(response.posts()).hasSize(2);
@@ -117,7 +117,7 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     when(postRepository.findProfilePosts(author.getId(), null)).thenReturn(List.of());
 
-    service.listPublicPosts("  JOHN  ", PostReader.of(null)).body();
+    service.listPublicPosts("  JOHN  ", PostViewer.of(null)).body();
 
     org.mockito.Mockito.verify(userRepository).findByUsername("john");
   }
@@ -126,7 +126,7 @@ class PublicPostQueryServiceTest {
   void listUnknownUsernameThrowsProfileNotFound() {
     when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.listPublicPosts("unknown", PostReader.of(null)).body())
+    assertThatThrownBy(() -> service.listPublicPosts("unknown", PostViewer.of(null)).body())
         .isInstanceOf(ProfileException.class)
         .extracting(e -> ((ProfileException) e).errorCode())
         .isEqualTo(ProfileErrorCode.PROFILE_NOT_FOUND);
@@ -138,7 +138,7 @@ class PublicPostQueryServiceTest {
     author.softDelete();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
 
-    assertThatThrownBy(() -> service.listPublicPosts("john", PostReader.of(null)).body())
+    assertThatThrownBy(() -> service.listPublicPosts("john", PostViewer.of(null)).body())
         .isInstanceOf(ProfileException.class)
         .extracting(e -> ((ProfileException) e).errorCode())
         .isEqualTo(ProfileErrorCode.PROFILE_NOT_FOUND);
@@ -150,7 +150,7 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     when(userBlocks.between(9L, author.getId())).thenReturn(new BlockRelation(false, true));
 
-    PublicPostListView response = service.listPublicPosts("john", PostReader.of(9L)).body();
+    PublicPostListView response = service.listPublicPosts("john", PostViewer.of(9L)).body();
 
     assertThat(response.posts()).isEmpty();
     assertThat(response.author().username()).isEqualTo("john");
@@ -172,7 +172,7 @@ class PublicPostQueryServiceTest {
         .thenReturn(List.of(b1));
 
     PublicPostDetail detail =
-        service.findPublicPost("john", "first-post", PostReader.of(null), null).body();
+        service.findPublicPost("john", "first-post", PostViewer.of(null), null).body();
 
     assertThat(detail.author().username()).isEqualTo("john");
     assertThat(detail.post().slug()).isEqualTo("first-post");
@@ -207,7 +207,7 @@ class PublicPostQueryServiceTest {
                 new SeriesEntry(SeriesItemType.NOTE, 41L, null, "another note", null, null)));
 
     PublicPostSeriesNav nav =
-        service.findPublicPost("john", "part-2", PostReader.of(null), null).body().series();
+        service.findPublicPost("john", "part-2", PostViewer.of(null), null).body().series();
 
     assertThat(nav.slug()).isEqualTo("guide");
     assertThat(nav.position()).isEqualTo(2);
@@ -234,7 +234,7 @@ class PublicPostQueryServiceTest {
                 new SeriesEntry(SeriesItemType.POST, 3L, "part-3", "Part 3", null, null)));
 
     PublicPostSeriesNav nav =
-        service.findPublicPost("john", "part-2", PostReader.of(null), null).body().series();
+        service.findPublicPost("john", "part-2", PostViewer.of(null), null).body().series();
 
     assertThat(nav.position()).isEqualTo(1);
     assertThat(nav.prev()).isNull();
@@ -249,7 +249,7 @@ class PublicPostQueryServiceTest {
     when(seriesItemReader.readableEntries(5L))
         .thenReturn(List.of(new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note", null, null)));
 
-    assertThat(service.findPublicPost("john", "part-2", PostReader.of(null), null).body().series())
+    assertThat(service.findPublicPost("john", "part-2", PostViewer.of(null), null).body().series())
         .isNull();
   }
 
@@ -262,7 +262,7 @@ class PublicPostQueryServiceTest {
         .thenReturn(Optional.of(post));
 
     assertThatThrownBy(
-            () -> service.findPublicPost("john", "draft-post", PostReader.of(null), null).body())
+            () -> service.findPublicPost("john", "draft-post", PostViewer.of(null), null).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -279,7 +279,7 @@ class PublicPostQueryServiceTest {
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
         .thenReturn(List.of(b1));
 
-    PublicPostDetail detail = service.findPreviewPost("tok-123", PostReader.of(null)).body();
+    PublicPostDetail detail = service.findPreviewPost("tok-123", PostViewer.of(null)).body();
 
     assertThat(detail.author().username()).isEqualTo("john");
     assertThat(detail.post().slug()).isEqualTo("draft-post");
@@ -290,7 +290,7 @@ class PublicPostQueryServiceTest {
   void previewUnknownTokenReturnsNotFound() {
     when(postRepository.findByPreviewToken("nope")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.findPreviewPost("nope", PostReader.of(null)).body())
+    assertThatThrownBy(() -> service.findPreviewPost("nope", PostViewer.of(null)).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -298,7 +298,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void previewBlankTokenReturnsNotFound() {
-    assertThatThrownBy(() -> service.findPreviewPost("  ", PostReader.of(null)).body())
+    assertThatThrownBy(() -> service.findPreviewPost("  ", PostViewer.of(null)).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -313,7 +313,7 @@ class PublicPostQueryServiceTest {
     when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
     when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
 
-    assertThatThrownBy(() -> service.findPreviewPost("tok-123", PostReader.of(null)).body())
+    assertThatThrownBy(() -> service.findPreviewPost("tok-123", PostViewer.of(null)).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -330,10 +330,10 @@ class PublicPostQueryServiceTest {
     if (state.suspendsAuthor) lenient().when(moderation.canWrite(author.getId())).thenReturn(false);
 
     if (state.served) {
-      assertThat(service.findPreviewPost("tok-123", PostReader.of(null)).body().post().slug())
+      assertThat(service.findPreviewPost("tok-123", PostViewer.of(null)).body().post().slug())
           .isEqualTo("preview-post");
     } else {
-      assertThatThrownBy(() -> service.findPreviewPost("tok-123", PostReader.of(null)).body())
+      assertThatThrownBy(() -> service.findPreviewPost("tok-123", PostViewer.of(null)).body())
           .isInstanceOf(PostException.class)
           .extracting(e -> ((PostException) e).errorCode())
           .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -388,7 +388,7 @@ class PublicPostQueryServiceTest {
         .thenReturn(Optional.of(post));
 
     assertThatThrownBy(
-            () -> service.findPublicPost("john", "gone-post", PostReader.of(null), null).body())
+            () -> service.findPublicPost("john", "gone-post", PostViewer.of(null), null).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_GONE);
@@ -415,7 +415,7 @@ class PublicPostQueryServiceTest {
             CtaPurpose.BOOKING);
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks()).hasSize(1);
     PublicPostBlockView block = detail.blocks().get(0);
@@ -450,7 +450,7 @@ class PublicPostQueryServiceTest {
     cta.trackVia("xy12ab");
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     // Public response serves the tracked short link (not the raw external url) so clicks are
     // measured.
@@ -474,7 +474,7 @@ class PublicPostQueryServiceTest {
     cta.softDelete();
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks().get(0).cta()).isNotNull();
     assertThat(detail.blocks().get(0).cta().deleted()).isTrue();
@@ -497,7 +497,7 @@ class PublicPostQueryServiceTest {
     someoneElses.trackVia("th31rs");
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(someoneElses));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks())
         .singleElement()
@@ -523,7 +523,7 @@ class PublicPostQueryServiceTest {
         .thenReturn(List.of(ctaBlock));
     when(ctaRepository.findById(99L)).thenReturn(Optional.empty());
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
@@ -549,7 +549,7 @@ class PublicPostQueryServiceTest {
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(own));
     when(ctaRepository.findById(99L)).thenReturn(Optional.empty());
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks())
         .extracting(block -> block.cta() == null ? null : block.cta().label())
@@ -571,7 +571,7 @@ class PublicPostQueryServiceTest {
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
         .thenReturn(List.of(ctaBlock));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostViewer.of(null), null).body();
 
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
@@ -585,7 +585,7 @@ class PublicPostQueryServiceTest {
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> service.findPublicPost("john", "nope", PostReader.of(null), null).body())
+            () -> service.findPublicPost("john", "nope", PostViewer.of(null), null).body())
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -605,7 +605,7 @@ class PublicPostQueryServiceTest {
     when(postRepository.findProfilePosts(author.getId(), null))
         .thenReturn(List.of(newest, pinned, oldest));
 
-    PublicPostListView response = service.listPublicPosts("john", PostReader.of(null)).body();
+    PublicPostListView response = service.listPublicPosts("john", PostViewer.of(null)).body();
 
     assertThat(response.posts())
         .extracting(PublicPostListItem::slug)
@@ -639,7 +639,7 @@ class PublicPostQueryServiceTest {
     protectedPost(john(), "f", PostAudience.FOLLOWERS);
 
     PostScoped<PublicPostDetail> scoped =
-        service.findPublicPost("john", "f", PostReader.of(9L), "en-US,en;q=0.8");
+        service.findPublicPost("john", "f", PostViewer.of(9L), "en-US,en;q=0.8");
 
     PublicPostListItem post = scoped.body().post();
     assertThat(scoped.restricted()).isTrue();
@@ -683,7 +683,7 @@ class PublicPostQueryServiceTest {
     PublicPostDetail detail =
         fromJapan
             .findPublicPost(
-                "john", "u", new PostReader(null, "the-key-of-u", null, "1.2.3.4", false), null)
+                "john", "u", new PostViewer(null, "the-key-of-u", null, "1.2.3.4", false), null)
             .body();
 
     assertThat(detail.post().locked().reason()).isEqualTo(PostLock.REGION);
@@ -696,19 +696,19 @@ class PublicPostQueryServiceTest {
   void anUnlistedPostWithoutItsKeyIsNotFoundEvenOnceUnpublished() {
     PostEntity post = protectedPost(john(), "u", PostAudience.UNLISTED);
 
-    assertThatThrownBy(() -> service.findPublicPost("john", "u", PostReader.of(9L), null))
+    assertThatThrownBy(() -> service.findPublicPost("john", "u", PostViewer.of(9L), null))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND));
     post.unpublish();
-    assertThatThrownBy(() -> service.findPublicPost("john", "u", PostReader.of(9L), null))
+    assertThatThrownBy(() -> service.findPublicPost("john", "u", PostViewer.of(9L), null))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND));
     assertThatThrownBy(
             () ->
                 service.findPublicPost(
-                    "john", "u", new PostReader(null, "the-key-of-u", null, null, false), null))
+                    "john", "u", new PostViewer(null, "the-key-of-u", null, null, false), null))
         .isInstanceOfSatisfying(
             PostException.class, e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_GONE));
   }
@@ -718,7 +718,7 @@ class PublicPostQueryServiceTest {
     protectedPost(john(), "u", PostAudience.UNLISTED);
 
     PublicPostListItem post =
-        service.findPublicPost("john", "u", PostReader.of(7L), null).body().post();
+        service.findPublicPost("john", "u", PostViewer.of(7L), null).body().post();
 
     assertThat(post.locked()).isNull();
     assertThat(post.excerpt()).isEqualTo("the excerpt");
@@ -731,7 +731,7 @@ class PublicPostQueryServiceTest {
   void markdownOfALockedPostIsRefusedWithItsReason() {
     protectedPost(john(), "p", PostAudience.PASSWORD);
 
-    assertThatThrownBy(() -> service.findReadablePost("john", "p", PostReader.of(9L)))
+    assertThatThrownBy(() -> service.findReadablePost("john", "p", PostViewer.of(9L)))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> {
@@ -749,7 +749,7 @@ class PublicPostQueryServiceTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(author));
 
     PostScoped<PublicPostDetail> preview =
-        service.findPreviewPost("tok-protected", PostReader.of(7L));
+        service.findPreviewPost("tok-protected", PostViewer.of(7L));
 
     assertThat(preview.body().post().locked().reason()).isEqualTo(PostLock.FOLLOWERS);
     assertThat(preview.restricted()).isTrue();

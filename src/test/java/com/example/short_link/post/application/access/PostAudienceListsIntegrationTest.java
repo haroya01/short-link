@@ -147,7 +147,7 @@ class PostAudienceListsIntegrationTest {
   @Test
   void theProfileListShowsTitlesPerReaderAndTheUnlistedOnlyToItsAuthor() {
     Map<String, PublicPostListItem> anonymousInGb =
-        profileList(new PostReader(null, null, null, IN_GB, false));
+        profileList(new PostViewer(null, null, null, IN_GB, false));
     assertThat(anonymousInGb.keySet())
         .containsExactlyInAnyOrder(
             "public", "public-gb", "followers", "followers-gb", "password", "password-gb");
@@ -158,18 +158,18 @@ class PostAudienceListsIntegrationTest {
     assertThat(anonymousInGb.get("followers").tags()).isEmpty();
     assertThat(anonymousInGb.get("public").excerpt()).isNotNull();
 
-    Map<String, PublicPostListItem> followerElsewhere = profileList(PostReader.of(follower));
+    Map<String, PublicPostListItem> followerElsewhere = profileList(PostViewer.of(follower));
     assertThat(lock(followerElsewhere.get("followers"))).isNull();
     assertThat(lock(followerElsewhere.get("followers-gb"))).isNull();
     assertThat(lock(followerElsewhere.get("password"))).isEqualTo(PostLock.PASSWORD);
     assertThat(followerElsewhere.get("public-gb").regionRestricted()).isTrue();
     assertThat(followerElsewhere.get("public-gb").blockedCountries()).isNull();
 
-    Map<String, PublicPostListItem> owner = profileList(PostReader.of(author.getId()));
+    Map<String, PublicPostListItem> owner = profileList(PostViewer.of(author.getId()));
     assertThat(owner.keySet())
         .contains("unlisted", "unlisted-gb")
         .doesNotContain("draft", "room", "room-gb");
-    assertThat(profileList(PostReader.of(member)).keySet()).doesNotContain("room", "room-gb");
+    assertThat(profileList(PostViewer.of(member)).keySet()).doesNotContain("room", "room-gb");
     assertThat(owner.values()).allSatisfy(item -> assertThat(item.locked()).isNull());
     assertThat(owner.get("unlisted").unlistedUrl())
         .isEqualTo(
@@ -290,7 +290,7 @@ class PostAudienceListsIntegrationTest {
     assertThat(card.locked() == null ? null : card.locked().reason()).isEqualTo(lock);
   }
 
-  private Map<String, PublicPostListItem> profileList(PostReader viewer) {
+  private Map<String, PublicPostListItem> profileList(PostViewer viewer) {
     return profile.listPublicPosts("aud-author", viewer).body().posts().stream()
         .collect(Collectors.toMap(PublicPostListItem::slug, item -> item));
   }

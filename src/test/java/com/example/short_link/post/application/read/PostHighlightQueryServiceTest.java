@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
@@ -99,7 +99,7 @@ class PostHighlightQueryServiceTest {
         .thenReturn(List.of(highlightWithNote(10L, 5L, 1L, "여백의 메모"), highlight(11L, 5L, 999L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightView> views = service.listForPost(5L, PostReader.of(null)).body();
+    List<HighlightView> views = service.listForPost(5L, PostViewer.of(null)).body();
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -115,7 +115,7 @@ class PostHighlightQueryServiceTest {
         .thenReturn(List.of(highlight(10L, 5L, 1L), multiBlockHighlight(11L, 5L, 1L, 2, 5)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightView> views = service.listForPost(5L, PostReader.of(null)).body();
+    List<HighlightView> views = service.listForPost(5L, PostViewer.of(null)).body();
 
     assertThat(views.get(0).blockOrder()).isEqualTo(0);
     assertThat(views.get(0).endBlockOrder()).isEqualTo(0);
@@ -131,7 +131,7 @@ class PostHighlightQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
     when(replyRepository.countByHighlightIds(anyCollection())).thenReturn(Map.of(10L, 3L));
 
-    List<HighlightView> views = service.listForPost(5L, PostReader.of(null)).body();
+    List<HighlightView> views = service.listForPost(5L, PostViewer.of(null)).body();
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).replyCount()).isEqualTo(3L);
@@ -144,7 +144,7 @@ class PostHighlightQueryServiceTest {
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
-    assertThat(service.listForPost(5L, PostReader.of(null)).body()).isEmpty();
+    assertThat(service.listForPost(5L, PostViewer.of(null)).body()).isEmpty();
   }
 
   @Test

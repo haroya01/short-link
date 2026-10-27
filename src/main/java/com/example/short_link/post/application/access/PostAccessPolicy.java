@@ -33,7 +33,7 @@ public class PostAccessPolicy {
   private final ReaderCountryResolver countries;
   private final PostRoomReader rooms;
 
-  public PostAccess decide(PostEntity post, PostReader reader) {
+  public PostAccess decide(PostEntity post, PostViewer reader) {
     return decide(
         post,
         isOwner(post, reader),
@@ -44,7 +44,7 @@ public class PostAccessPolicy {
         () -> rooms.isMember(post.getRoomId(), reader.viewerId()));
   }
 
-  public boolean readable(PostEntity post, PostReader reader) {
+  public boolean readable(PostEntity post, PostViewer reader) {
     PostAccess decided = decide(post, reader);
     if (decided.redacted()) {
       throw new PostException(PostErrorCode.POST_LOCKED, post.getId())
@@ -53,18 +53,18 @@ public class PostAccessPolicy {
     return decided.full();
   }
 
-  public PostEntity requireReadable(PostEntity post, PostReader reader) {
+  public PostEntity requireReadable(PostEntity post, PostViewer reader) {
     if (!readable(post, reader)) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, post.getId());
     }
     return post;
   }
 
-  public Lists forLists(PostReader reader) {
+  public Lists forLists(PostViewer reader) {
     return new Lists(reader.withoutCredentials());
   }
 
-  public boolean revealsExistence(PostEntity post, PostReader reader) {
+  public boolean revealsExistence(PostEntity post, PostViewer reader) {
     return post.getAudience().shownAsCard()
         || isOwner(post, reader)
         || keyMatches(post, reader.postKey())
@@ -144,7 +144,7 @@ public class PostAccessPolicy {
     return post.isPublished() && post.getAudience().shownAsCard();
   }
 
-  private static boolean isOwner(PostEntity post, PostReader reader) {
+  private static boolean isOwner(PostEntity post, PostViewer reader) {
     return reader.viewerId() != null && post.isOwnedBy(reader.viewerId());
   }
 
@@ -162,12 +162,12 @@ public class PostAccessPolicy {
 
   public final class Lists {
 
-    private final PostReader reader;
+    private final PostViewer reader;
     private final Map<Long, Boolean> followed = new HashMap<>();
     private ReaderCountry resolved;
     private Set<Long> memberOf;
 
-    private Lists(PostReader reader) {
+    private Lists(PostViewer reader) {
       this.reader = reader;
     }
 

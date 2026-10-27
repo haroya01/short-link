@@ -18,7 +18,7 @@ import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostGrants;
 import com.example.short_link.post.application.access.PostPasswordAttempts;
 import com.example.short_link.post.application.access.PostPasswords;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -145,8 +145,8 @@ class UnlockPostUseCaseTest {
     assertThat(useCase.unlock("john", "secret", PASSWORD, reader(7L)).grant()).isNotBlank();
   }
 
-  private static PostReader reader(Long viewerId) {
-    return new PostReader(viewerId, null, "ignored-grant", IP, false);
+  private static PostViewer reader(Long viewerId) {
+    return new PostViewer(viewerId, null, "ignored-grant", IP, false);
   }
 
   private static void assertCode(
