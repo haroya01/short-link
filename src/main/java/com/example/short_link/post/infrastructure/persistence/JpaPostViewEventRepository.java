@@ -42,29 +42,35 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
               + "LIMIT 1 FOR SHARE")
   List<Long> findHumanVisit(@Param("postId") Long postId, @Param("visitorHash") String visitorHash);
 
-  // Group by UTC date; viewed_at is stored as an Instant.
+  // viewed_at is a UTC DATETIME; :tz is the author's offset throughout [from, until).
   @Query(
       nativeQuery = true,
       value =
-          "SELECT DATE(e.viewed_at) AS viewDate, COUNT(*) AS views "
+          "SELECT DATE(CONVERT_TZ(e.viewed_at, '+00:00', :tz)) AS viewDate, COUNT(*) AS views "
               + "FROM post_view_event e "
-              + "WHERE e.post_id = :postId AND e.viewed_at >= :since "
-              + "GROUP BY DATE(e.viewed_at) "
+              + "WHERE e.post_id = :postId AND e.viewed_at >= :from AND e.viewed_at < :until "
+              + "GROUP BY viewDate "
               + "ORDER BY viewDate")
   List<DailyViewRow> countDailyByPostId(
-      @Param("postId") Long postId, @Param("since") Instant since);
+      @Param("postId") Long postId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       nativeQuery = true,
       value =
-          "SELECT DATE(e.viewed_at) AS viewDate, COUNT(*) AS views "
+          "SELECT DATE(CONVERT_TZ(e.viewed_at, '+00:00', :tz)) AS viewDate, COUNT(*) AS views "
               + "FROM post_view_event e "
               + "JOIN posts p ON p.id = e.post_id "
-              + "WHERE p.user_id = :userId AND e.viewed_at >= :since "
-              + "GROUP BY DATE(e.viewed_at) "
+              + "WHERE p.user_id = :userId AND e.viewed_at >= :from AND e.viewed_at < :until "
+              + "GROUP BY viewDate "
               + "ORDER BY viewDate")
   List<DailyViewRow> countDailyByUserId(
-      @Param("userId") Long userId, @Param("since") Instant since);
+      @Param("userId") Long userId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   interface ReferrerRow {
     String getHost();
