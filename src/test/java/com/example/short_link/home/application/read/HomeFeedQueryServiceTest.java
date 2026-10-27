@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -120,19 +121,6 @@ class HomeFeedQueryServiceTest {
   }
 
   @Test
-  void aBlogMarkerIsThePublishedMicrosAndIdAndAnythingElseIsNone() {
-    Instant at = Instant.parse("2026-10-20T10:00:00.123456Z");
-    HomeFeedQueryService.Marker marker = new HomeFeedQueryService.Marker(at, 9L);
-
-    assertThat(HomeFeedQueryService.Marker.parse(marker.toString())).isEqualTo(marker);
-    for (String bad :
-        List.of("b1.0", "b-1.2", "b1", "1.2", "bx.2", "b1.2.3", "b99999999999999999999.1", "")) {
-      assertThat(HomeFeedQueryService.Marker.parse(bad)).as(bad).isNull();
-    }
-    assertThat(HomeFeedQueryService.Marker.parse(null)).isNull();
-  }
-
-  @Test
   void latestRunsNewestFirstAcrossNotesAndPostsAndTheCursorPicksUpWhereEachLeftOff() {
     NoteSlice.At n0 = note(0, "2026-10-20T10:00:00Z");
     NoteSlice.At n2 = note(2, "2026-10-20T08:00:00Z");
@@ -234,6 +222,21 @@ class HomeFeedQueryServiceTest {
         .extracting(HomeFeedQueryService.Item::note)
         .containsExactly(other.note());
     assertThat(page.newest()).isEqualTo("99.0");
+  }
+
+  @Test
+  void aSinceThatIsNotANoteAndAPostIdIsAGap() {
+    NoteSlice window = new NoteSlice(List.of(note(0, "2026-10-20T12:00:00Z", 99L)), true);
+    when(notes.everyoneAt(null, 0, 21, null)).thenReturn(window);
+    when(posts.recentAt(null, 0, 21, null)).thenReturn(new PostSlice(List.of(), true));
+
+    for (String since : List.of("x.7", "20", "20.7.1", "", "b1.2", "h1.2.3")) {
+      HomeFeedQueryService.Page page = home.page(null, null, "latest", null, since, 20, false);
+      assertThat(page.gap()).as(since).isTrue();
+      assertThat(page.newest()).as(since).isEqualTo("99.0");
+      assertThat(page.next()).as(since).isNull();
+    }
+    verify(notes, never()).everyoneAt(null, 0, 51, null);
   }
 
   @Test

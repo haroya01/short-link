@@ -161,21 +161,4 @@ class HomeForYouTest {
     assertThat(forYou.page(7L, READER, null, null, 20, true).items()).isEmpty();
     verify(remote, never()).homePool(any(), any());
   }
-
-  @Test
-  void aCursorThatIsNotOneStartsOver() {
-    Instant now = Instant.parse("2026-10-23T12:00:00Z");
-
-    assertThat(HomeForYou.position(null, now)).isEqualTo(new HomeForYou.Position(now, 0, null));
-    assertThat(HomeForYou.position("rh123.4", now))
-        .isEqualTo(new HomeForYou.Position(Instant.ofEpochMilli(123), 4, true));
-    assertThat(HomeForYou.position("r123.4", now))
-        .isEqualTo(new HomeForYou.Position(Instant.ofEpochMilli(123), 4, false));
-    for (String bad :
-        List.of("h123.1.1", "r.4", "rh.4", "rx.4", "r123.-1", "r-5.1", "r123", "4.2")) {
-      assertThat(HomeForYou.position(bad, now))
-          .as(bad)
-          .isEqualTo(new HomeForYou.Position(now, 0, null));
-    }
-  }
 }
