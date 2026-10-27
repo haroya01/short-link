@@ -1172,6 +1172,18 @@ class NoteWriteActionsTest {
   }
 
   @Test
+  void aMembersNoteLikedOrUnlikedTellsNoOtherServer() {
+    when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
+    when(pages.stats(List.of(1L))).thenReturn(Map.of());
+    when(likes.addIfAbsent(1L, 8L)).thenReturn(true);
+
+    interactions().setLike(8L, 1L, true);
+    interactions().setLike(8L, 1L, false);
+
+    verify(events, never()).publishEvent(any(RemoteNoteLikedEvent.class));
+  }
+
+  @Test
   void mutingAConversationCoversTheWholeThreadFromAnyNoteInIt() {
     NoteEntity reply = note(60L, 8L, "a reply");
     reply.answer(note(50L, 7L, "root"));

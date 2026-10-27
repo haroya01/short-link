@@ -1,7 +1,5 @@
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|html#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/trends/TrendingStatusReader.java|object#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/read/NoteSnapshotProvider.java|find#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/note/application/write/NoteInteractions.java|setLike#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
@@ -140,7 +138,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/link/visit/application
 CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/domain/LinkWebhookEntity.java|validateDeliveryMode(WebhookDeliveryMode, Integer, Integer, Integer)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/domain/WebhookFilter.java|update(Boolean, Integer, Boolean, Integer, String, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=16
-CyclomaticComplexity|src/main/java/com/example/short_link/note/application/read/NoteSnapshotProvider.java|find(Long)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|NoteComposer#1=107
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|check(Long, NoteDraft, List<StoredImage>)#1=25
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|edit(Long, Long, String, String, Boolean)#1=11

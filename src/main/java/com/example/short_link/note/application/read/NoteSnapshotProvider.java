@@ -50,21 +50,7 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
         quote = new Quote(post.title(), post.slug(), post.authorUsername());
       }
     }
-    QuotedNote quotedNote = null;
-    if (note.getQuotedNoteId() != null) {
-      Optional<NoteEntity> quoted = notes.findById(note.getQuotedNoteId());
-      if (quoted.isPresent() && quoted.get().isRemote()) {
-        quotedNote =
-            new QuotedNote(
-                quoted.get().getId(), null, quoted.get().getUri(), quoted.get().getRemoteUrl());
-      } else if (quoted.isPresent()) {
-        NoteAuthor quotedAuthor =
-            people.activeAuthors(Set.of(quoted.get().getUserId())).get(quoted.get().getUserId());
-        if (quotedAuthor != null) {
-          quotedNote = new QuotedNote(quoted.get().getId(), quotedAuthor.username());
-        }
-      }
-    }
+    QuotedNote quotedNote = quotedNote(note);
     List<Image> images =
         media.findByNoteIds(List.of(noteId)).stream()
             .map(
@@ -93,6 +79,22 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             note.getVisibility(),
             poll(note),
             note.getLanguage()));
+  }
+
+  private QuotedNote quotedNote(NoteEntity note) {
+    if (note.getQuotedNoteId() == null) {
+      return null;
+    }
+    NoteEntity quoted = notes.findById(note.getQuotedNoteId()).orElse(null);
+    if (quoted == null) {
+      return null;
+    }
+    if (quoted.isRemote()) {
+      return new QuotedNote(quoted.getId(), null, quoted.getUri(), quoted.getRemoteUrl());
+    }
+    NoteAuthor quotedAuthor =
+        people.activeAuthors(Set.of(quoted.getUserId())).get(quoted.getUserId());
+    return quotedAuthor == null ? null : new QuotedNote(quoted.getId(), quotedAuthor.username());
   }
 
   private Poll poll(NoteEntity note) {
