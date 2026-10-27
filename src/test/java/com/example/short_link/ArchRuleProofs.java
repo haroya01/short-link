@@ -2,6 +2,7 @@ package com.example.short_link;
 
 import archfixtures.CacheFixtures;
 import archfixtures.EntityFixtures;
+import archfixtures.LongConstructorFixtures;
 import archfixtures.NoteVisibilityFixtures;
 import archfixtures.PostAudienceFixtures;
 import archfixtures.PostVisibilityFixtures;
@@ -107,7 +108,12 @@ final class ArchRuleProofs {
               "ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone",
               ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone,
               List.of(ClockFixtures.BuildsTheSystemClock.class),
-              List.of(SystemClockConfig.class, ClockFixtures.TakesTimeFromTheClock.class)));
+              List.of(SystemClockConfig.class, ClockFixtures.TakesTimeFromTheClock.class)),
+          new Proof(
+              "ArchUnitRatchetRulesTest.constructorCallsPassFewerThanTenArguments",
+              ArchUnitRatchetRulesTest.constructorCallsPassFewerThanTenArguments,
+              List.of(LongConstructorFixtures.PassesTenArguments.class),
+              List.of(LongConstructorFixtures.PassesNineArguments.class)));
 
   // 아직 반례로 증명하지 못한 규칙. 새 규칙은 여기 추가할 수 없고, 이 목록은 줄어들기만 한다.
   static final Set<String> RULES_WITHOUT_A_PROOF =

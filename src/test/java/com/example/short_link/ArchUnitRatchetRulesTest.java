@@ -16,6 +16,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import jakarta.persistence.Entity;
 import java.time.Clock;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,8 @@ class ArchUnitRatchetRulesTest {
   static final Map<String, Integer> CEILINGS =
       Map.of(
           "moduleInternalsStayInTheirModule", 89,
-          "theSystemClockIsReadInConfigAlone", 0);
+          "theSystemClockIsReadInConfigAlone", 0,
+          "constructorCallsPassFewerThanTenArguments", 147);
 
   private static final List<String> MODULE_ROOTS =
       List.of("com.example.short_link.", "archfixtures.modules.");
@@ -41,6 +43,8 @@ class ArchUnitRatchetRulesTest {
 
   private static final Set<String> SYSTEM_CLOCKS =
       Set.of("systemUTC", "systemDefaultZone", "system");
+
+  private static final int LONG_PARAMETER_LIST = 10;
 
   static final ArchRule moduleInternalsStayInTheirModule =
       classes()
@@ -54,6 +58,11 @@ class ArchUnitRatchetRulesTest {
           .should(takeTheClockBeanInsteadOfTheSystemClock())
           .as("theSystemClockIsReadInConfigAlone");
 
+  static final ArchRule constructorCallsPassFewerThanTenArguments =
+      classes()
+          .should(callConstructorsThatTakeFewerThanTenParameters())
+          .as("constructorCallsPassFewerThanTenArguments");
+
   @ArchTest
   static void noNewReachIntoAnotherModulesInternals(JavaClasses classes) {
     checkAgainstTheStore(moduleInternalsStayInTheirModule, classes);
@@ -62,6 +71,11 @@ class ArchUnitRatchetRulesTest {
   @ArchTest
   static void noNewSystemClockOutsideConfig(JavaClasses classes) {
     checkAgainstTheStore(theSystemClockIsReadInConfigAlone, classes);
+  }
+
+  @ArchTest
+  static void noNewConstructorCallWithTenOrMoreArguments(JavaClasses classes) {
+    checkAgainstTheStore(constructorCallsPassFewerThanTenArguments, classes);
   }
 
   private static void checkAgainstTheStore(ArchRule rule, JavaClasses classes) {
@@ -122,6 +136,29 @@ class ArchUnitRatchetRulesTest {
                     events.add(
                         SimpleConditionEvent.violated(
                             from, from.getName() + " calls Clock." + method + "()")));
+      }
+    };
+  }
+
+  private static ArchCondition<JavaClass> callConstructorsThatTakeFewerThanTenParameters() {
+    return new ArchCondition<>("call constructors that take fewer than ten parameters") {
+      @Override
+      public void check(JavaClass from, ConditionEvents events) {
+        from.getConstructorCallsFromSelf().stream()
+            .filter(call -> call.getTarget().getRawParameterTypes().size() >= LONG_PARAMETER_LIST)
+            .map(
+                call ->
+                    SimpleConditionEvent.violated(
+                        call,
+                        call.getOriginOwner().getName()
+                            + "."
+                            + call.getOrigin().getName()
+                            + " calls the constructor of "
+                            + call.getTargetOwner().getName()
+                            + " in "
+                            + call.getSourceCodeLocation()))
+            .sorted(Comparator.comparing(event -> event.getDescriptionLines().getFirst()))
+            .forEach(events::add);
       }
     };
   }
