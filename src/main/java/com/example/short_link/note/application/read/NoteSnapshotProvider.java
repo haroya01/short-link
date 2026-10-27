@@ -71,8 +71,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
                 image ->
                     new Image(
                         image.getUrl(),
-                        image.getContentType(),
                         image.getAltText(),
+                        image.getContentType(),
                         image.getWidth(),
                         image.getHeight()))
             .toList();

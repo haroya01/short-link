@@ -44,7 +44,7 @@ public interface NoteSnapshotReader {
     }
   }
 
-  record Image(String url, String contentType, String altText, Integer width, Integer height) {}
+  record Image(String url, String altText, String contentType, Integer width, Integer height) {}
 
   record Poll(
       List<PollOption> options, Instant endTime, boolean multiple, long voters, boolean closed) {}
