@@ -1,0 +1,246 @@
+package com.example.short_link;
+
+import static java.util.Map.entry;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+
+// SQL strings name tables directly, so a module can read another module's schema without
+// importing a single class of it. Each line of the baseline is one file reading one foreign table.
+class CrossModuleSqlRatchetTest {
+
+  static final int CEILING = 149;
+
+  private static final Path MAIN = Path.of("src/main/java");
+  private static final Path MODULES = MAIN.resolve("com/example/short_link");
+  private static final Path JAVA_MIGRATIONS = MAIN.resolve("db/migration");
+  private static final Path SQL_MIGRATIONS = Path.of("src/main/resources/db/migration");
+  private static final Path BASELINE = Path.of("src/test/resources/cross-module-sql.txt");
+  private static final String MODULE_ROOT = "com/example/short_link/";
+
+  private static final Map<String, String> OWNERS_WITHOUT_AN_ENTITY =
+      Map.ofEntries(
+          entry("author_post_number", "post"),
+          entry("click_daily_dim", "link"),
+          entry("click_daily_visitors", "link"),
+          entry("federation_relayed_note", "federation"),
+          entry("follow_suggestion_dismissal", "user"),
+          entry("image_variant", "common"),
+          entry("link_profile_binding", "link"),
+          entry("local_seen", "federation"),
+          entry("note_conversation_mute", "note"),
+          entry("note_feed_preference", "note"),
+          entry("note_list_member", "note"),
+          entry("note_poll_remote_vote", "note"),
+          entry("note_poll_vote", "note"),
+          entry("note_recipient", "note"),
+          entry("note_repost_mute", "note"),
+          entry("note_tag", "note"),
+          entry("notification_permission", "notification"),
+          entry("notification_policy", "notification"),
+          entry("post_note_quote", "post"),
+          entry("post_read_milestone", "post"),
+          entry("post_tag", "post"),
+          entry("remote_dwell", "federation"),
+          entry("remote_note_reach", "federation"),
+          entry("remote_seen", "federation"),
+          entry("room_invitation", "room"),
+          entry("room_join_request", "room"),
+          entry("room_member", "room"),
+          entry("room_note_erasure", "note"),
+          entry("room_post_erasure", "post"),
+          entry("room_removal", "room"),
+          entry("room_suggestion_dismissal", "room"));
+
+  private static final Pattern STRING_LITERAL =
+      Pattern.compile("\"\"\"(.*?)\"\"\"|\"((?:\\\\.|[^\"\\\\])*)\"", Pattern.DOTALL);
+  private static final Pattern CONCATENATION = Pattern.compile("\"\\s*\\+\\s*\"");
+  private static final Pattern TABLE_REFERENCE =
+      Pattern.compile(
+          "\\b(?:FROM|JOIN|INTO|UPDATE)\\s+`?([A-Za-z_][A-Za-z0-9_]*)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CREATE_TABLE =
+      Pattern.compile(
+          "CREATE\\s+TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?\\s+`?([a-z_0-9]+)",
+          Pattern.CASE_INSENSITIVE);
+  private static final Pattern ENTITY = Pattern.compile("^@Entity\\b", Pattern.MULTILINE);
+  private static final Pattern TABLE_NAME =
+      Pattern.compile("@Table\\s*\\(\\s*name\\s*=\\s*\"([a-z_0-9]+)\"");
+
+  record Schema(
+      Set<String> tables, Map<String, String> ownerByTable, Map<String, String> tableByEntity) {}
+
+  @Test
+  void sqlReachesAnotherModulesTablesOnlyWhereItAlreadyDid() throws IOException {
+    Set<String> current = new TreeSet<>(crossModuleReferences(schema(), sources()));
+    Set<String> baseline = new TreeSet<>(Files.readAllLines(BASELINE, StandardCharsets.UTF_8));
+
+    Set<String> added = new TreeSet<>(current);
+    added.removeAll(baseline);
+    Set<String> gone = new TreeSet<>(baseline);
+    gone.removeAll(current);
+
+    assertThat(added)
+        .as(
+            "SQL here reads another module's table. Ask the owning module for a read API instead;"
+                + " a consumer-only report may add the line to %s and raise CEILING in the same PR.",
+            BASELINE)
+        .isEmpty();
+    assertThat(gone)
+        .as("These reads are gone. Delete the lines from %s and lower CEILING.", BASELINE)
+        .isEmpty();
+    assertThat(current).as("CEILING is the number of lines in %s", BASELINE).hasSize(CEILING);
+  }
+
+  @Test
+  void everyTableHasAnOwningModule() throws IOException {
+    Schema schema = schema();
+
+    Set<String> unowned = new TreeSet<>(schema.tables());
+    unowned.removeAll(schema.ownerByTable().keySet());
+    assertThat(unowned)
+        .as("A table without an entity names its owner in OWNERS_WITHOUT_AN_ENTITY")
+        .isEmpty();
+
+    Set<String> listedButMapped = new TreeSet<>(OWNERS_WITHOUT_AN_ENTITY.keySet());
+    listedButMapped.retainAll(entityTables(sources()).keySet());
+    assertThat(listedButMapped)
+        .as("These tables have an entity now; drop them from the list")
+        .isEmpty();
+
+    Set<String> listedButMissing = new TreeSet<>(OWNERS_WITHOUT_AN_ENTITY.keySet());
+    listedButMissing.removeAll(schema.tables());
+    assertThat(listedButMissing).as("No migration creates these tables").isEmpty();
+  }
+
+  @Test
+  void theScannerCatchesAnotherModulesTableAndLeavesItsOwnAlone() {
+    Schema schema =
+        new Schema(
+            Set.of("posts", "note", "users", "room"),
+            Map.of("posts", "post", "note", "note", "users", "user", "room", "room"),
+            Map.of("RoomEntity", "room"));
+    Map<String, String> sources =
+        Map.of(
+            MODULE_ROOT + "post/infrastructure/PostSql.java",
+            """
+            class PostSql {
+              String joined = "SELECT p.id FROM posts p JOIN note n ON n.id = p.note_id";
+              String jpql = "select r from RoomEntity r";
+              String split = "SELECT 1 FROM" + " users u WHERE u.id = :id";
+              String own = "UPDATE posts SET view_count = view_count + 1";
+              String prose = "a reply from another server";
+            }
+            """,
+            MODULE_ROOT + "note/infrastructure/NoteSql.java",
+            """
+            class NoteSql {
+              String own = "DELETE FROM note WHERE id = :id";
+            }
+            """);
+
+    assertThat(crossModuleReferences(schema, sources))
+        .containsExactly(
+            "post -> note\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\tnote",
+            "post -> room\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\troom",
+            "post -> user\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\tusers");
+  }
+
+  static List<String> crossModuleReferences(Schema schema, Map<String, String> sources) {
+    Set<String> found = new TreeSet<>();
+    sources.forEach(
+        (path, source) -> {
+          String module = module(path);
+          Matcher literal = STRING_LITERAL.matcher(CONCATENATION.matcher(source).replaceAll(""));
+          while (literal.find()) {
+            String text = literal.group(1) != null ? literal.group(1) : literal.group(2);
+            Matcher reference = TABLE_REFERENCE.matcher(text);
+            while (reference.find()) {
+              String name = reference.group(1);
+              String table =
+                  schema.tables().contains(name.toLowerCase())
+                      ? name.toLowerCase()
+                      : schema.tableByEntity().get(name);
+              String owner = table == null ? null : schema.ownerByTable().get(table);
+              if (owner != null && !owner.equals(module)) {
+                found.add(module + " -> " + owner + "\t" + path + "\t" + table);
+              }
+            }
+          }
+        });
+    return new ArrayList<>(found);
+  }
+
+  private static String module(String path) {
+    String rest = path.substring(path.indexOf(MODULE_ROOT) + MODULE_ROOT.length());
+    int slash = rest.indexOf('/');
+    return slash < 0 ? "" : rest.substring(0, slash);
+  }
+
+  private static Schema schema() throws IOException {
+    Set<String> tables = new TreeSet<>();
+    for (Path migration : files(SQL_MIGRATIONS, ".sql")) {
+      collectCreatedTables(Files.readString(migration, StandardCharsets.UTF_8), tables);
+    }
+    for (Path migration : files(JAVA_MIGRATIONS, ".java")) {
+      collectCreatedTables(Files.readString(migration, StandardCharsets.UTF_8), tables);
+    }
+    Map<String, String> sources = sources();
+    Map<String, String> ownerByTable = new HashMap<>(OWNERS_WITHOUT_AN_ENTITY);
+    Map<String, String> tableByEntity = new HashMap<>();
+    entityTables(sources)
+        .forEach(
+            (table, path) -> {
+              ownerByTable.put(table, module(path));
+              String file = path.substring(path.lastIndexOf('/') + 1);
+              tableByEntity.put(file.substring(0, file.length() - ".java".length()), table);
+            });
+    return new Schema(tables, ownerByTable, tableByEntity);
+  }
+
+  private static Map<String, String> entityTables(Map<String, String> sources) {
+    Map<String, String> pathByTable = new TreeMap<>();
+    sources.forEach(
+        (path, source) -> {
+          Matcher table = TABLE_NAME.matcher(source);
+          if (ENTITY.matcher(source).find() && table.find()) {
+            pathByTable.put(table.group(1), path);
+          }
+        });
+    return pathByTable;
+  }
+
+  private static void collectCreatedTables(String ddl, Set<String> tables) {
+    Matcher created = CREATE_TABLE.matcher(ddl);
+    while (created.find()) {
+      tables.add(created.group(1).toLowerCase());
+    }
+  }
+
+  private static Map<String, String> sources() throws IOException {
+    Map<String, String> sources = new TreeMap<>();
+    for (Path file : files(MODULES, ".java")) {
+      sources.put(MAIN.relativize(file).toString(), Files.readString(file, StandardCharsets.UTF_8));
+    }
+    return sources;
+  }
+
+  private static List<Path> files(Path root, String suffix) throws IOException {
+    try (Stream<Path> walk = Files.walk(root)) {
+      return walk.filter(p -> p.toString().endsWith(suffix)).sorted().toList();
+    }
+  }
+}
