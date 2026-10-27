@@ -27,6 +27,7 @@ import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.RemoteNoteRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -47,6 +48,7 @@ class RemoteNoteRecorderTest {
   private static final String URI = "https://m.example/users/alice/statuses/9";
 
   @Mock private NoteRepository notes;
+  @Mock private RemoteNoteRepository store;
   @Mock private NoteMediaRepository media;
   @Mock private NoteLinkPreviewRepository previews;
   @Mock private NotePeopleReader people;
@@ -54,7 +56,7 @@ class RemoteNoteRecorderTest {
 
   private RemoteNoteRecorder recorder() {
     return new RemoteNoteRecorder(
-        notes, media, previews, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        notes, store, media, previews, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static RemoteNotes.Received received(
@@ -86,7 +88,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aPublicNoteIsStoredWithItsImagesAndNoOneIsTold() {
-    when(notes.insertRemote(any())).thenReturn(Optional.of(900L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(900L));
 
     Optional<Long> id =
         recorder()
@@ -105,7 +107,7 @@ class RemoteNoteRecorderTest {
 
     assertThat(id).contains(900L);
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().visibility()).isEqualTo(NoteVisibility.PUBLIC);
     assertThat(row.getValue().language()).isEqualTo("en");
     assertThat(row.getValue().createdAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00.123456Z"));
@@ -133,13 +135,13 @@ class RemoteNoteRecorderTest {
     NoteEntity parent = new NoteEntity(7L, "my question", null, null);
     ReflectionTestUtils.setField(parent, "id", 5L);
     when(notes.findById(5L)).thenReturn(Optional.of(parent));
-    when(notes.insertRemote(any())).thenReturn(Optional.of(901L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(901L));
 
     recorder()
         .receive(received(NoteVisibility.DIRECT, null, 5L, null, List.of(7L, 8L), List.of(), "cw"));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
     assertThat(row.getValue().reply()).isTrue();
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
@@ -177,9 +179,9 @@ class RemoteNoteRecorderTest {
     NoteEntity parent = new NoteEntity(null, "theirs", null, null);
     ReflectionTestUtils.setField(parent, "id", 6L);
     ReflectionTestUtils.setField(parent, "remoteActorId", 43L);
-    when(notes.idByUri("https://m.example/s/1")).thenReturn(Optional.of(6L));
+    when(store.idByUri("https://m.example/s/1")).thenReturn(Optional.of(6L));
     when(notes.findById(6L)).thenReturn(Optional.of(parent));
-    when(notes.insertRemote(any())).thenReturn(Optional.of(902L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(902L));
 
     recorder()
         .receive(
@@ -193,7 +195,7 @@ class RemoteNoteRecorderTest {
                 null));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(6L);
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
     verifyNoInteractions(events);
@@ -201,7 +203,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aNoteDeliveredTwiceIsStoredOnce() {
-    when(notes.insertRemote(any())).thenReturn(Optional.empty());
+    when(store.insertRemote(any())).thenReturn(Optional.empty());
 
     assertThat(
             recorder()
@@ -209,7 +211,7 @@ class RemoteNoteRecorderTest {
                     received(NoteVisibility.DIRECT, null, null, null, List.of(), List.of(), null)))
         .isEmpty();
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().visibility()).isEqualTo(NoteVisibility.DIRECT);
     verifyNoInteractions(media, events);
   }
@@ -229,7 +231,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aQuoteIsStoredWithWhatItQuotes() {
-    when(notes.insertRemote(any())).thenReturn(Optional.of(902L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(902L));
     RemoteNotes.Received quote =
         new RemoteNotes.Received(
             42L,
@@ -252,7 +254,7 @@ class RemoteNoteRecorderTest {
     recorder().receive(quote);
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().quotedNoteId()).isEqualTo(77L);
   }
 
@@ -261,7 +263,7 @@ class RemoteNoteRecorderTest {
     NoteEntity linked = kept("the answer\n\nhttps://news.example/@desk/1", null);
     NoteEntity shown = kept("the answer", null);
     ReflectionTestUtils.setField(shown, "quotedNoteId", 77L);
-    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(linked), Optional.of(shown));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(linked), Optional.of(shown));
     RemoteNotes.Revision edit =
         new RemoteNotes.Revision(
             "the answer, edited",
@@ -283,7 +285,7 @@ class RemoteNoteRecorderTest {
   @Test
   void anUpdateRewritesTextWarningLanguageAndMediaAndTellsWhoSharedTheNote() {
     NoteEntity note = kept("hello #cats", null);
-    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
     when(media.findByNoteIds(List.of(900L)))
         .thenReturn(List.of(image("https://m.example/1.png", "a cat")));
 
@@ -324,7 +326,7 @@ class RemoteNoteRecorderTest {
   void anOlderUpdateOrTheSameContentAgainIsNoEditAndTellsNoOne() {
     Instant edited = Instant.parse("2026-10-07T02:00:00Z");
     NoteEntity note = kept("hello #cats", edited);
-    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
     when(media.findByNoteIds(List.of(900L)))
         .thenReturn(List.of(image("https://m.example/1.png", "a cat")));
     List<RemoteNotes.Media> sameImage =
@@ -361,9 +363,9 @@ class RemoteNoteRecorderTest {
 
   @Test
   void editsAndDeletesTouchOnlyTheSendersNote() {
-    when(notes.findRemoteForUpdate(43L, 900L)).thenReturn(Optional.empty());
-    when(notes.deleteRemote(42L, URI)).thenReturn(1, 0);
-    when(notes.idByUri(URI)).thenReturn(Optional.of(900L));
+    when(store.findRemoteForUpdate(43L, 900L)).thenReturn(Optional.empty());
+    when(store.deleteRemote(42L, URI)).thenReturn(1, 0);
+    when(store.idByUri(URI)).thenReturn(Optional.of(900L));
 
     assertThat(
             recorder()
@@ -381,8 +383,8 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aNoteFromElsewhereIsFiledUnderItsTagsAndAReplyToANoteThatNeverArrivedStaysAReply() {
-    when(notes.idByUri("https://m.example/s/404")).thenReturn(Optional.empty());
-    when(notes.insertRemote(any())).thenReturn(Optional.of(903L));
+    when(store.idByUri("https://m.example/s/404")).thenReturn(Optional.empty());
+    when(store.insertRemote(any())).thenReturn(Optional.of(903L));
 
     recorder()
         .receive(
@@ -405,7 +407,7 @@ class RemoteNoteRecorderTest {
                 null));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isNull();
     assertThat(row.getValue().conversationId()).isNull();
     assertThat(row.getValue().reply()).isTrue();
@@ -418,7 +420,7 @@ class RemoteNoteRecorderTest {
     ReflectionTestUtils.setField(root, "id", 5L);
     root.limitReplies(NoteReplyPolicy.MENTIONED);
     when(notes.findById(5L)).thenReturn(Optional.of(root));
-    when(notes.insertRemote(any())).thenReturn(Optional.of(910L), Optional.of(911L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(910L), Optional.of(911L));
     when(people.remoteAuthors(java.util.Set.of(42L), null))
         .thenReturn(
             java.util.Map.of(42L, NoteAuthor.remote(42L, "alice@m.example", null, null, null)),
@@ -430,7 +432,7 @@ class RemoteNoteRecorderTest {
         .receive(received(NoteVisibility.PUBLIC, null, 5L, null, List.of(7L), List.of(), null));
 
     ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes, times(2)).insertRemote(rows.capture());
+    verify(store, times(2)).insertRemote(rows.capture());
     assertThat(rows.getAllValues())
         .extracting(RemoteNoteRow::inReplyToId, RemoteNoteRow::replyPolicy)
         .containsExactly(
@@ -447,14 +449,14 @@ class RemoteNoteRecorderTest {
     ReflectionTestUtils.setField(root, "id", 5L);
     root.limitReplies(NoteReplyPolicy.FOLLOWING);
     when(notes.findById(5L)).thenReturn(Optional.of(root));
-    when(notes.insertRemote(any())).thenReturn(Optional.of(912L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(912L));
     when(people.remoteAuthors(java.util.Set.of(42L), null)).thenReturn(java.util.Map.of());
     when(people.followsRemote(7L, 42L)).thenReturn(true);
 
     recorder().receive(received(NoteVisibility.PUBLIC, null, 5L, null, List.of(), List.of(), null));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
   }
 
@@ -485,7 +487,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aPollKeepsItsServersCountsAndIsClosedHereFromTheStart() {
-    when(notes.insertRemote(any())).thenReturn(Optional.of(920L), Optional.of(921L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(920L), Optional.of(921L));
     Instant ends = Instant.parse("2026-10-08T00:00:00.123456789Z");
 
     recorder()
@@ -510,7 +512,7 @@ class RemoteNoteRecorderTest {
                 true));
 
     ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes, times(2)).insertRemote(rows.capture());
+    verify(store, times(2)).insertRemote(rows.capture());
     RemoteNoteRow open = rows.getAllValues().get(0);
     assertThat(open.kind()).isEqualTo("QUESTION");
     assertThat(open.poll())
@@ -529,7 +531,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void aCardKeepsItsTitleAndCommunityCutToTheirColumns() {
-    when(notes.insertRemote(any())).thenReturn(Optional.of(922L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(922L));
 
     recorder()
         .receive(
@@ -540,7 +542,7 @@ class RemoteNoteRecorderTest {
                 true));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().kind()).isEqualTo("PAGE");
     assertThat(row.getValue().title()).isEqualTo("t".repeat(254) + "…");
     assertThat(row.getValue().community()).isEqualTo("gardening@lemmy.example");
@@ -552,12 +554,12 @@ class RemoteNoteRecorderTest {
     NoteEntity parent = new NoteEntity(7L, "my question", null, null);
     ReflectionTestUtils.setField(parent, "id", 5L);
     when(notes.findById(5L)).thenReturn(Optional.of(parent));
-    when(notes.insertRemote(any())).thenReturn(Optional.of(923L));
+    when(store.insertRemote(any())).thenReturn(Optional.of(923L));
 
     assertThat(recorder().receive(shaped(5L, RemoteNotes.Shape.NOTE, false))).contains(923L);
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
-    verify(notes).insertRemote(row.capture());
+    verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
     verify(notes).tag(923L, List.of());
     verifyNoInteractions(events);
@@ -574,7 +576,7 @@ class RemoteNoteRecorderTest {
   @Test
   void newCountsOrALaterEndOnAPollAreNoEdit() {
     NoteEntity note = keptPoll();
-    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
     when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
     Instant later = Instant.parse("2026-10-09T00:00:00Z");
 
@@ -611,7 +613,7 @@ class RemoteNoteRecorderTest {
     NoteEntity polled = keptPoll();
     NoteEntity article = kept("a summary", null);
     article.describeElsewhere("ARTICLE", "Old title", null);
-    when(notes.findRemoteForUpdate(42L, 900L))
+    when(store.findRemoteForUpdate(42L, 900L))
         .thenReturn(Optional.of(article), Optional.of(polled));
     when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
 
@@ -645,7 +647,7 @@ class RemoteNoteRecorderTest {
   @Test
   void aNoteEditedIntoAPollGetsTheCountsAndIsClosedHere() {
     NoteEntity note = kept("pick one", null);
-    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
     when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
 
     recorder()
@@ -674,7 +676,7 @@ class RemoteNoteRecorderTest {
 
   @Test
   void theListedNotesOfAnAccountAreCountedByTheRepository() {
-    when(notes.countListed(42L, 5)).thenReturn(3);
+    when(store.countListed(42L, 5)).thenReturn(3);
 
     assertThat(recorder().countListed(42L, 5)).isEqualTo(3);
   }

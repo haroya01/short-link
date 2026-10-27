@@ -10,9 +10,12 @@ import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteTrendsReader;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.AccountExportReader;
@@ -37,6 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 class RemoteBlockMuteIntegrationTest {
 
   @Autowired private NoteRepository notes;
+  @Autowired private NoteFeedReader feeds;
+  @Autowired private NotePageReader pages;
+  @Autowired private NoteTrendsReader trends;
   @Autowired private NoteRepostRepository reposts;
   @Autowired private NotePeopleReader people;
   @Autowired private MuteRepository userMutes;
@@ -194,15 +200,15 @@ class RemoteBlockMuteIntegrationTest {
     String url = "https://news-" + tag + ".example/a";
 
     for (Long viewer : List.of(blocker, muter)) {
-      assertThat(ids(notes.federated(viewer, 0, 50))).contains(control).doesNotContain(theirs);
-      assertThat(ids(notes.tagged(tag, viewer, 0, 50))).containsExactly(control);
-      assertThat(ids(notes.linked(url, viewer, 0, 50))).containsExactly(control);
-      assertThat(ids(notes.trending(viewer, 0, 50))).contains(control).doesNotContain(theirs);
+      assertThat(ids(feeds.federated(viewer, 0, 50))).contains(control).doesNotContain(theirs);
+      assertThat(ids(feeds.tagged(tag, viewer, 0, 50))).containsExactly(control);
+      assertThat(ids(feeds.linked(url, viewer, 0, 50))).containsExactly(control);
+      assertThat(ids(trends.trending(viewer, 0, 50))).contains(control).doesNotContain(theirs);
     }
-    assertThat(ids(notes.federated(stranger, 0, 50))).contains(theirs, control);
-    assertThat(ids(notes.tagged(tag, stranger, 0, 50))).containsExactly(control, theirs);
-    assertThat(ids(notes.linked(url, null, 0, 50))).containsExactly(control, theirs);
-    assertThat(ids(notes.trending(stranger, 0, 50))).contains(theirs, control);
+    assertThat(ids(feeds.federated(stranger, 0, 50))).contains(theirs, control);
+    assertThat(ids(feeds.tagged(tag, stranger, 0, 50))).containsExactly(control, theirs);
+    assertThat(ids(feeds.linked(url, null, 0, 50))).containsExactly(control, theirs);
+    assertThat(ids(trends.trending(stranger, 0, 50))).contains(theirs, control);
   }
 
   @Test
@@ -213,8 +219,8 @@ class RemoteBlockMuteIntegrationTest {
 
     assertThat(notes.findUnblocked(theirs, blocker)).isEmpty();
     assertThat(notes.findUnblocked(theirs, muter)).isPresent();
-    assertThat(ids(notes.byRemoteActor(alice, blocker, 0, 50))).isEmpty();
-    assertThat(ids(notes.byRemoteActor(alice, muter, 0, 50))).containsExactly(theirs);
+    assertThat(ids(feeds.byRemoteActor(alice, blocker, 0, 50))).isEmpty();
+    assertThat(ids(feeds.byRemoteActor(alice, muter, 0, 50))).containsExactly(theirs);
     assertThat(people.remoteAuthors(Set.of(alice, bob), blocker)).containsOnlyKeys(bob);
     assertThat(people.remoteAuthors(Set.of(alice, bob), muter)).containsOnlyKeys(alice, bob);
     assertThat(people.remoteAuthors(Set.of(alice, bob), null)).containsOnlyKeys(alice, bob);
@@ -251,18 +257,18 @@ class RemoteBlockMuteIntegrationTest {
     mute(muter, alice, true, null);
 
     for (Long viewer : List.of(blocker, muter)) {
-      assertThat(ids(notes.replies(mine, viewer, 50))).containsExactly(others);
-      assertThat(ids(notes.hiddenReplies(mine, viewer, 50))).isEmpty();
-      assertThat(ids(notes.quotesOf(mine, viewer, 0, 50))).isEmpty();
-      assertThat(ids(notes.quotesOfPost(post, viewer, 0, 50))).isEmpty();
-      assertThat(notes.countQuotesOfPost(post, viewer)).isZero();
-      assertThat(ids(notes.heardAmong(List.of(reply, others), viewer))).containsExactly(others);
+      assertThat(ids(feeds.replies(mine, viewer, 50))).containsExactly(others);
+      assertThat(ids(feeds.hiddenReplies(mine, viewer, 50))).isEmpty();
+      assertThat(ids(feeds.quotesOf(mine, viewer, 0, 50))).isEmpty();
+      assertThat(ids(feeds.quotesOfPost(post, viewer, 0, 50))).isEmpty();
+      assertThat(feeds.countQuotesOfPost(post, viewer)).isZero();
+      assertThat(ids(pages.heardAmong(List.of(reply, others), viewer))).containsExactly(others);
     }
-    assertThat(ids(notes.replies(mine, stranger, 50))).containsExactly(reply, others);
-    assertThat(ids(notes.hiddenReplies(mine, stranger, 50))).containsExactly(hidden);
-    assertThat(ids(notes.quotesOf(mine, stranger, 0, 50))).containsExactly(quote);
-    assertThat(ids(notes.quotesOfPost(post, stranger, 0, 50))).containsExactly(quote);
-    assertThat(notes.countQuotesOfPost(post, stranger)).isEqualTo(1);
+    assertThat(ids(feeds.replies(mine, stranger, 50))).containsExactly(reply, others);
+    assertThat(ids(feeds.hiddenReplies(mine, stranger, 50))).containsExactly(hidden);
+    assertThat(ids(feeds.quotesOf(mine, stranger, 0, 50))).containsExactly(quote);
+    assertThat(ids(feeds.quotesOfPost(post, stranger, 0, 50))).containsExactly(quote);
+    assertThat(feeds.countQuotesOfPost(post, stranger)).isEqualTo(1);
   }
 
   @Test
@@ -296,7 +302,7 @@ class RemoteBlockMuteIntegrationTest {
   }
 
   private List<Long> feed(Long viewer) {
-    return notes.following(List.of(viewer, friend), viewer, 0, 50).stream()
+    return feeds.following(List.of(viewer, friend), viewer, 0, 50).stream()
         .map(NoteFeedRow::note)
         .map(NoteEntity::getId)
         .toList();
@@ -311,8 +317,8 @@ class RemoteBlockMuteIntegrationTest {
     block(blocker, alice);
     mute(muter, alice, true, null);
 
-    assertThat(ids(notes.direct(blocker, 0, 50))).isEmpty();
-    assertThat(ids(notes.direct(muter, 0, 50))).containsExactly(direct);
+    assertThat(ids(feeds.direct(blocker, 0, 50))).isEmpty();
+    assertThat(ids(feeds.direct(muter, 0, 50))).containsExactly(direct);
   }
 
   @Test

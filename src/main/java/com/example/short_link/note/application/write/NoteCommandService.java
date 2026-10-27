@@ -35,11 +35,13 @@ import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -67,6 +69,8 @@ public class NoteCommandService {
   private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
 
   private final NoteRepository notes;
+  private final NotePageReader pages;
+  private final RoomNoteErasureRepository erasures;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
   private final NoteBookmarkRepository bookmarks;
@@ -688,17 +692,17 @@ public class NoteCommandService {
 
   @Transactional
   public void requestRoomNoteErasure(Long userId, Long roomId) {
-    notes.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
+    erasures.requestRoomErasure(userId, roomId, clock.instant().truncatedTo(ChronoUnit.MICROS));
   }
 
   // One chunk of a requested erasure, each note through the usual delete; the request is done once
   // a chunk comes back short. Running it again after a crash only finds what is left.
   @Transactional
   public int eraseRoomNotes(Long userId, Long roomId, int chunk) {
-    List<Long> ids = notes.roomNoteIdsBy(userId, roomId, chunk);
+    List<Long> ids = erasures.roomNoteIdsBy(userId, roomId, chunk);
     notes.findAllByIdIn(ids).forEach(this::remove);
     if (ids.size() < chunk) {
-      notes.finishRoomErasure(userId, roomId);
+      erasures.finishRoomErasure(userId, roomId);
     }
     return ids.size();
   }
@@ -776,7 +780,7 @@ public class NoteCommandService {
   }
 
   private NoteStats statsOf(Long noteId) {
-    return notes.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
+    return pages.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
   }
 
   private static NoteInteractionEvent interaction(

@@ -19,8 +19,10 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.SelfReply;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -43,6 +45,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class NoteViewsTest {
 
   @Mock private NoteRepository notes;
+  @Mock private NotePageReader pages;
+  @Mock private NoteAccessReader lookups;
   @Mock private NoteMediaRepository media;
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
@@ -56,7 +60,8 @@ class NoteViewsTest {
     views =
         new NoteViews(
             notes,
-            new NoteAccess(notes),
+            pages,
+            new NoteAccess(lookups),
             rooms,
             media,
             people,
@@ -96,9 +101,9 @@ class NoteViewsTest {
                     "https://m.example/a.png",
                     "Alice",
                     "https://m.example/@alice")));
-    when(notes.visibleTo(7L, Set.of(2L))).thenReturn(Set.of(2L));
-    when(notes.stats(List.of(1L, 2L))).thenReturn(Map.of());
-    when(notes.viewerMarks(7L, List.of(1L, 2L)))
+    when(lookups.visibleTo(7L, Set.of(2L))).thenReturn(Set.of(2L));
+    when(pages.stats(List.of(1L, 2L))).thenReturn(Map.of());
+    when(pages.viewerMarks(7L, List.of(1L, 2L)))
         .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of()));
 
     List<NoteView> page = views.of(List.of(mine, followersOnly, orphan), 7L);
@@ -115,12 +120,12 @@ class NoteViewsTest {
   @Test
   void aMutedConversationIsMarkedForItsReaderOnly() {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
-    when(notes.stats(List.of(1L))).thenReturn(Map.of());
-    when(notes.viewerMarks(8L, List.of(1L)))
+    when(pages.stats(List.of(1L))).thenReturn(Map.of());
+    when(pages.viewerMarks(8L, List.of(1L)))
         .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of(), Set.of(1L)));
 
     assertThat(views.of(List.of(note(1L, 7L, null)), 8L).get(0).conversationMuted()).isTrue();
-    when(notes.viewerMarks(null, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
+    when(pages.viewerMarks(null, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
     assertThat(views.of(List.of(note(1L, 7L, null)), null).get(0).conversationMuted()).isNull();
   }
 
@@ -144,8 +149,8 @@ class NoteViewsTest {
     when(notes.findAllByIdIn(Set.of(2L))).thenReturn(List.of(followingRoot));
     when(people.activeAuthors(Set.of(9L), Set.of("mina"))).thenReturn(Map.of(9L, owner, 7L, me));
     when(people.followersOf(7L, Set.of(9L))).thenReturn(Set.of(9L));
-    when(notes.stats(List.of(1L, 3L, 4L, 5L))).thenReturn(Map.of());
-    when(notes.viewerMarks(7L, List.of(1L, 3L, 4L, 5L))).thenReturn(NoteViewerMarks.NONE);
+    when(pages.stats(List.of(1L, 3L, 4L, 5L))).thenReturn(Map.of());
+    when(pages.viewerMarks(7L, List.of(1L, 3L, 4L, 5L))).thenReturn(NoteViewerMarks.NONE);
 
     List<NoteView> page = views.of(List.of(named, reply, closed, open), 7L);
 
@@ -167,8 +172,8 @@ class NoteViewsTest {
     limited.limitReplies(NoteReplyPolicy.FOLLOWING);
     limited.hideReply(Instant.EPOCH);
     when(people.activeAuthors(Set.of(9L))).thenReturn(Map.of(9L, new NoteAuthor(9L, "o", null)));
-    when(notes.stats(List.of(3L))).thenReturn(Map.of());
-    when(notes.viewerMarks(null, List.of(3L))).thenReturn(NoteViewerMarks.NONE);
+    when(pages.stats(List.of(3L))).thenReturn(Map.of());
+    when(pages.viewerMarks(null, List.of(3L))).thenReturn(NoteViewerMarks.NONE);
 
     NoteView view = views.of(List.of(limited), null).get(0);
 
@@ -181,8 +186,8 @@ class NoteViewsTest {
   @Test
   void aPageOfMembersNotesNeverAsksForRemoteAccounts() {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
-    when(notes.stats(List.of(1L))).thenReturn(Map.of());
-    when(notes.viewerMarks(7L, List.of(1L)))
+    when(pages.stats(List.of(1L))).thenReturn(Map.of());
+    when(pages.viewerMarks(7L, List.of(1L)))
         .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of()));
 
     assertThat(views.of(List.of(note(1L, 7L, null)), 7L)).hasSize(1);
@@ -192,7 +197,7 @@ class NoteViewsTest {
   @Test
   void anEmptyPageQueriesNothing() {
     assertThat(views.of(List.of(), 7L)).isEmpty();
-    verifyNoInteractions(people, media, notes, quotedPosts);
+    verifyNoInteractions(people, media, notes, pages, lookups, quotedPosts);
   }
 
   @Test
@@ -214,9 +219,9 @@ class NoteViewsTest {
         .thenReturn(List.of(new NoteMediaEntity(2L, 0, "k", "https://cdn/k", "image/png", "alt")));
     when(quotedPosts.publishedByIds(Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me", 1L)));
-    when(notes.stats(List.of(1L, 2L)))
+    when(pages.stats(List.of(1L, 2L)))
         .thenReturn(Map.of(1L, new NoteStats(0, 5, 1, 0), 2L, new NoteStats(4, 2, 0, 0)));
-    when(notes.viewerMarks(7L, List.of(1L, 2L)))
+    when(pages.viewerMarks(7L, List.of(1L, 2L)))
         .thenReturn(new NoteViewerMarks(Set.of(2L), Set.of(), Set.of(1L)));
 
     List<NoteView> page = views.of(List.of(mine, theirs), 7L);
@@ -247,9 +252,9 @@ class NoteViewsTest {
         .thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null), 8L, them));
     when(media.findByNoteIds(List.of(1L, 2L, 50L)))
         .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
-    when(notes.stats(List.of(1L, 2L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 2, 0)));
-    when(notes.viewerMarks(7L, List.of(1L, 2L))).thenReturn(NoteViewerMarks.NONE);
-    when(notes.viewerMarks(8L, List.of(1L, 2L)))
+    when(pages.stats(List.of(1L, 2L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 2, 0)));
+    when(pages.viewerMarks(7L, List.of(1L, 2L))).thenReturn(NoteViewerMarks.NONE);
+    when(pages.viewerMarks(8L, List.of(1L, 2L)))
         .thenReturn(new NoteViewerMarks(Set.of(), Set.of(2L), Set.of()));
 
     List<NoteView> asAuthor = views.of(List.of(quoting, gone), 7L);
@@ -302,7 +307,7 @@ class NoteViewsTest {
     assertThat(view.likedByMe()).isNull();
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isNull();
-    verify(notes).viewerMarks(null, List.of(2L));
+    verify(pages).viewerMarks(null, List.of(2L));
     verify(quotedPosts, never()).publishedByIds(anyCollection());
   }
 
@@ -312,7 +317,8 @@ class NoteViewsTest {
     NoteViews clocked =
         new NoteViews(
             notes,
-            new NoteAccess(notes),
+            pages,
+            new NoteAccess(lookups),
             rooms,
             media,
             people,
@@ -330,7 +336,7 @@ class NoteViewsTest {
             Map.of(7L, new NoteAuthor(7L, "me", null), 8L, new NoteAuthor(8L, "them", null)));
     when(polls.tallies(List.of(1L, 2L), 8L))
         .thenReturn(Map.of(2L, new NotePollTally(2, List.of(2L, 1L, 0L, 0L), 0b11)));
-    when(notes.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
+    when(pages.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
         .thenReturn(NoteViewerMarks.NONE);
 
     List<NoteView> page = clocked.of(List.of(polled, ended, plain), 8L);
@@ -357,7 +363,8 @@ class NoteViewsTest {
     NoteViews clocked =
         new NoteViews(
             notes,
-            new NoteAccess(notes),
+            pages,
+            new NoteAccess(lookups),
             rooms,
             media,
             people,
@@ -380,7 +387,7 @@ class NoteViewsTest {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
     when(people.remoteAuthors(Set.of(42L), 7L))
         .thenReturn(Map.of(42L, NoteAuthor.remote(42L, "a@m.example", null, null, null)));
-    when(notes.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
+    when(pages.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
         .thenReturn(NoteViewerMarks.NONE);
 
     List<NoteView> seen = clocked.of(List.of(question, page, older, mine), 7L);
@@ -405,7 +412,7 @@ class NoteViewsTest {
   @Test
   void aPageWithoutAPollNeverAsksForTallies() {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "them", null)));
-    when(notes.viewerMarks(8L, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
+    when(pages.viewerMarks(8L, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
 
     assertThat(views.of(List.of(note(1L, 8L, null)), 8L).getFirst().poll()).isNull();
     verifyNoInteractions(polls);

@@ -10,12 +10,15 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
+import com.example.short_link.note.domain.repository.NoteTrendsReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -41,6 +44,9 @@ public class NoteQueryService {
   static final int MAX_REPLIES = 200;
 
   private final NoteRepository notes;
+  private final NoteFeedReader feeds;
+  private final NotePageReader pages;
+  private final NoteTrendsReader trends;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
   private final NoteBookmarkRepository bookmarks;
@@ -53,7 +59,7 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView everyone(Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit, null));
+    return page(ask, viewerId, (offset, limit) -> feeds.topLevel(viewerId, offset, limit, null));
   }
 
   @Transactional(readOnly = true)
@@ -61,7 +67,7 @@ public class NoteQueryService {
     return page(
         ask,
         viewerId,
-        (offset, limit) -> notes.byRemoteActor(remoteActorId, viewerId, offset, limit));
+        (offset, limit) -> feeds.byRemoteActor(remoteActorId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -69,29 +75,29 @@ public class NoteQueryService {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
-    return page(ask, viewerId, (offset, limit) -> notes.inRoom(roomId, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.inRoom(roomId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public NoteFeedView rooms(Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.inRoomsOf(viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.inRoomsOf(viewerId, offset, limit));
   }
 
   // The writer's own room notes, from rooms they are in or have left, so they can still delete
   // them.
   @Transactional(readOnly = true)
   public NoteFeedView roomNotesBy(Long userId, PageAsk ask) {
-    return page(ask, userId, (offset, limit) -> notes.roomNotesBy(userId, offset, limit));
+    return page(ask, userId, (offset, limit) -> feeds.roomNotesBy(userId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public NoteFeedView direct(Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.direct(viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.direct(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public NoteFeedView trending(Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.trending(viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> trends.trending(viewerId, offset, limit));
   }
 
   // Mastodon's trending hashtags: a week, used by at least two accounts, the top ten.
@@ -101,7 +107,9 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public List<TrendingTagView> trendingTags() {
-    return notes.trendingTags(clock.instant(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
+    return trends
+        .trendingTags(clock.instant(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT)
+        .stream()
         .map(TrendingTagView::of)
         .toList();
   }
@@ -109,7 +117,7 @@ public class NoteQueryService {
   // Mastodon's trending links: same window and floor as hashtags.
   @Transactional(readOnly = true)
   public List<TrendingLinkView> trendingLinks() {
-    return notes
+    return trends
         .trendingLinks(clock.instant(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT)
         .stream()
         .map(TrendingLinkView::of)
@@ -121,12 +129,12 @@ public class NoteQueryService {
     if (url == null || url.isBlank()) {
       return new NoteFeedView(List.of(), ask.page(), false);
     }
-    return page(ask, viewerId, (offset, limit) -> notes.linked(url, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.linked(url, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public NoteFeedView federated(Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.federated(viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.federated(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -135,7 +143,7 @@ public class NoteQueryService {
     if (name.isBlank() || name.length() > Hashtags.MAX_LENGTH) {
       return new NoteFeedView(List.of(), ask.page(), false);
     }
-    return page(ask, viewerId, (offset, limit) -> notes.tagged(name, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.tagged(name, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -148,7 +156,7 @@ public class NoteQueryService {
     return page(
         ask,
         viewerId,
-        (offset, limit) -> notes.search(terms.match(), terms.like(), viewerId, offset, limit));
+        (offset, limit) -> feeds.search(terms.match(), terms.like(), viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -157,14 +165,14 @@ public class NoteQueryService {
     return page(
         ask,
         viewerId,
-        (offset, limit) -> notes.topLevelByAuthor(author.id(), viewerId, offset, limit));
+        (offset, limit) -> feeds.topLevelByAuthor(author.id(), viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public ProfileRepliesView repliesByAuthor(String username, Long viewerId, PageAsk ask) {
     NoteAuthor author = authorNamed(username);
     PageAsk.Rows<NoteEntity> rows =
-        ask.fetch((offset, limit) -> notes.repliesByAuthor(author.id(), viewerId, offset, limit));
+        ask.fetch((offset, limit) -> feeds.repliesByAuthor(author.id(), viewerId, offset, limit));
     return new ProfileRepliesView(
         views.ofReplies(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
@@ -173,7 +181,7 @@ public class NoteQueryService {
   public ProfileMediaView mediaByAuthor(String username, Long viewerId, PageAsk ask) {
     NoteAuthor author = authorNamed(username);
     PageAsk.Rows<NoteEntity> rows =
-        ask.fetch((offset, limit) -> notes.withMediaByAuthor(author.id(), viewerId, offset, limit));
+        ask.fetch((offset, limit) -> feeds.withMediaByAuthor(author.id(), viewerId, offset, limit));
     return new ProfileMediaView(views.ofMedia(rows.current()), ask.page(), rows.hasNext());
   }
 
@@ -197,15 +205,15 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView quotes(Long noteId, Long viewerId, PageAsk ask) {
-    return page(ask, viewerId, (offset, limit) -> notes.quotesOf(noteId, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> feeds.quotesOf(noteId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
   public PostQuotesView postQuotes(Long postId, Long viewerId, PageAsk ask) {
     NoteFeedView feed =
-        page(ask, viewerId, (offset, limit) -> notes.quotesOfPost(postId, viewerId, offset, limit));
+        page(ask, viewerId, (offset, limit) -> feeds.quotesOfPost(postId, viewerId, offset, limit));
     return new PostQuotesView(
-        feed.items(), feed.page(), feed.hasNext(), notes.countQuotesOfPost(postId, viewerId));
+        feed.items(), feed.page(), feed.hasNext(), feeds.countQuotesOfPost(postId, viewerId));
   }
 
   private NoteAuthor authorNamed(String username) {
@@ -223,18 +231,18 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteSlice everyoneAt(Long viewerId, int offset, int limit, Unseen unseen) {
-    return slice(notes.topLevel(viewerId, offset, limit, unseen), offset, limit, viewerId);
+    return slice(feeds.topLevel(viewerId, offset, limit, unseen), offset, limit, viewerId);
   }
 
   @Transactional(readOnly = true)
   public List<PooledNote> pool(Long viewerId, Instant since, Instant until, int limit) {
-    List<LocalPoolRow> rows = notes.localPool(viewerId, since, until, limit);
+    List<LocalPoolRow> rows = feeds.localPool(viewerId, since, until, limit);
     if (rows.isEmpty()) {
       return List.of();
     }
     List<Long> ids = rows.stream().map(LocalPoolRow::id).toList();
-    Map<Long, NoteStats> stats = notes.stats(ids);
-    Map<Long, List<String>> tags = notes.tagsOf(ids);
+    Map<Long, NoteStats> stats = pages.stats(ids);
+    Map<Long, List<String>> tags = pages.tagsOf(ids);
     return rows.stream()
         .map(
             row -> {
@@ -257,24 +265,24 @@ public class NoteQueryService {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
-    return slice(notes.inRoom(roomId, viewerId, offset, limit), offset, limit, viewerId);
+    return slice(feeds.inRoom(roomId, viewerId, offset, limit), offset, limit, viewerId);
   }
 
   @Transactional(readOnly = true)
   public NoteSlice roomsAt(Long viewerId, int offset, int limit) {
-    return slice(notes.inRoomsOf(viewerId, offset, limit), offset, limit, viewerId);
+    return slice(feeds.inRoomsOf(viewerId, offset, limit), offset, limit, viewerId);
   }
 
   @Transactional(readOnly = true)
   public Map<Long, List<ReplyPreview>> latestReplies(
       Collection<Long> noteIds, Long viewerId, int per) {
-    return notes.latestReplies(noteIds, viewerId, per).stream()
+    return pages.latestReplies(noteIds, viewerId, per).stream()
         .collect(Collectors.groupingBy(ReplyPreview::parentId));
   }
 
   @Transactional(readOnly = true)
   public NoteSlice trendingAt(Long viewerId, int offset, int limit) {
-    return slice(notes.trending(viewerId, offset, limit), offset, limit, viewerId);
+    return slice(trends.trending(viewerId, offset, limit), offset, limit, viewerId);
   }
 
   private NoteSlice slice(List<NoteEntity> rows, int offset, int limit, Long viewerId) {
@@ -295,7 +303,7 @@ public class NoteQueryService {
   public NoteSlice followingAt(Long viewerId, int offset, int limit) {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
     authors.add(viewerId);
-    List<NoteFeedRow> rows = notes.following(authors, viewerId, offset, limit);
+    List<NoteFeedRow> rows = feeds.following(authors, viewerId, offset, limit);
     List<NoteView> shown = followingViews(rows, viewerId);
     List<NoteSlice.At> items = new ArrayList<>(shown.size());
     int next = 0;
@@ -312,7 +320,7 @@ public class NoteQueryService {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
     authors.add(viewerId);
     PageAsk.Rows<NoteFeedRow> rows =
-        ask.fetch((offset, limit) -> notes.following(authors, viewerId, offset, limit));
+        ask.fetch((offset, limit) -> feeds.following(authors, viewerId, offset, limit));
     return new NoteFeedView(followingViews(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
 
@@ -390,12 +398,12 @@ public class NoteQueryService {
     if (parentNote != null) {
       batch.add(parentNote);
     }
-    batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
-    List<NoteEntity> hidden = notes.hiddenReplies(noteId, viewerId, MAX_REPLIES);
+    batch.addAll(feeds.replies(noteId, viewerId, MAX_REPLIES));
+    List<NoteEntity> hidden = feeds.hiddenReplies(noteId, viewerId, MAX_REPLIES);
     batch.addAll(hidden);
     Set<Long> hiddenIds = hidden.stream().map(NoteEntity::getId).collect(Collectors.toSet());
     List<Long> chain =
-        NoteViews.chains(notes.selfReplies(List.of(noteId), NoteEntity.MAX_THREAD_NOTES - 1))
+        NoteViews.chains(pages.selfReplies(List.of(noteId), NoteEntity.MAX_THREAD_NOTES - 1))
             .getOrDefault(noteId, List.of());
     Set<Long> inBatch = batch.stream().map(NoteEntity::getId).collect(Collectors.toSet());
     List<Long> missing = chain.stream().filter(id -> !inBatch.contains(id)).toList();
@@ -459,7 +467,7 @@ public class NoteQueryService {
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
     List<NoteEntity> batch = new ArrayList<>();
     batch.add(note);
-    batch.addAll(notes.hiddenReplies(noteId, viewerId, MAX_REPLIES));
+    batch.addAll(feeds.hiddenReplies(noteId, viewerId, MAX_REPLIES));
     List<NoteView> loaded = views.of(batch, viewerId);
     if (loaded.stream().noneMatch(view -> view.id().equals(noteId))) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
