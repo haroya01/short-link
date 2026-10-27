@@ -3,7 +3,6 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.application.access.NoteAccess;
-import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -16,6 +15,7 @@ import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -46,6 +46,7 @@ import org.springframework.stereotype.Component;
 public class NoteViews {
 
   private final NoteRepository notes;
+  private final NotePageReader pages;
   private final NoteAccess access;
   private final NoteRoomReader rooms;
   private final NoteMediaRepository media;
@@ -112,8 +113,8 @@ public class NoteViews {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     Map<Long, QuotedPost> posts = quoted.isEmpty() ? Map.of() : quotedPosts.publishedByIds(quoted);
-    Map<Long, NoteStats> stats = notes.stats(ids);
-    NoteViewerMarks marks = notes.viewerMarks(viewerId, ids);
+    Map<Long, NoteStats> stats = pages.stats(ids);
+    NoteViewerMarks marks = pages.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
     Map<Long, NoteView.Poll> pollViews = polls(visible, viewerId);
     Set<Long> closedThreads = closedTo(viewerId, limitedRoots, members);
@@ -252,7 +253,7 @@ public class NoteViews {
             .map(NoteEntity::getInReplyToId)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-    List<NoteEntity> heard = notes.heardAmong(parentIds, viewerId);
+    List<NoteEntity> heard = pages.heardAmong(parentIds, viewerId);
     Set<Long> allowed = access.readable(heard, viewerId);
     List<NoteEntity> readable =
         heard.stream().filter(parent -> allowed.contains(parent.getId())).toList();
@@ -309,7 +310,7 @@ public class NoteViews {
     Map<Long, List<Long>> chains =
         roots.isEmpty()
             ? Map.of()
-            : chains(notes.selfReplies(roots, NoteCommandService.MAX_THREAD_NOTES - 1));
+            : chains(pages.selfReplies(roots, NoteEntity.MAX_THREAD_NOTES - 1));
     if (chains.isEmpty()) {
       return of(page, viewerId);
     }

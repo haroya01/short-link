@@ -12,9 +12,9 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.FollowRepository;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -32,17 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscoverFeedQueryService {
 
   private final CollectionConnectionRepository connectionRepository;
-  private final FollowRepository followRepository;
+  private final FollowingReader following;
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
   private final NoteBodyReader noteBodies;
-  private final UserRepository userRepository;
+  private final UserSummaryReader userSummaries;
 
   public DiscoverFeedView feed(Long viewerId, int page, int size, boolean forceGlobal) {
     if (forceGlobal) {
       return globalFeed(viewerId, page, size);
     }
-    List<Long> followingIds = followRepository.findFollowingIds(viewerId);
+    List<Long> followingIds = following.followingIds(viewerId);
     if (followingIds.isEmpty()) {
       return globalFeed(viewerId, page, size);
     }
@@ -87,11 +87,11 @@ public class DiscoverFeedQueryService {
     Set<Long> userIds =
         rows.stream().map(DiscoverConnectionRow::ownerId).collect(Collectors.toSet());
     posts.values().forEach(p -> userIds.add(p.getUserId()));
-    Map<Long, UserEntity> users = bulk(userRepository.findAllByIdIn(userIds), UserEntity::getId);
+    Map<Long, UserSummary> users = bulk(userSummaries.findAll(userIds), UserSummary::id);
 
     List<DiscoverConnectionView> items = new ArrayList<>();
     for (DiscoverConnectionRow row : rows) {
-      UserEntity curator = users.get(row.ownerId());
+      UserSummary curator = users.get(row.ownerId());
       if (curator == null) continue;
       if (!DiscoveryQuality.isMeaningfulLabel(row.collectionTitle())) continue;
       DiscoverConnectionView view = resolve(row, curator, posts, highlights, notes, users);
@@ -103,17 +103,17 @@ public class DiscoverFeedQueryService {
 
   private DiscoverConnectionView resolve(
       DiscoverConnectionRow row,
-      UserEntity curator,
+      UserSummary curator,
       Map<Long, PostEntity> posts,
       Map<Long, PostHighlightEntity> highlights,
       Map<Long, NoteBlock> notes,
-      Map<Long, UserEntity> users) {
+      Map<Long, UserSummary> users) {
     PublicAuthorView curatorView = PublicAuthorView.from(curator);
     return switch (row.blockType()) {
       case POST -> {
         PostEntity post = posts.get(row.refId());
         if (post == null) yield null;
-        UserEntity author = users.get(post.getUserId());
+        UserSummary author = users.get(post.getUserId());
         yield view(
             row,
             curatorView,
@@ -121,7 +121,7 @@ public class DiscoverFeedQueryService {
             post.getTitle(),
             post.getExcerpt(),
             post.getSlug(),
-            author == null ? null : author.getUsername(),
+            author == null ? null : author.username(),
             null,
             null,
             null);
@@ -131,7 +131,7 @@ public class DiscoverFeedQueryService {
         if (hl == null) yield null;
         PostEntity post = posts.get(hl.getPostId());
         if (post == null) yield null;
-        UserEntity author = users.get(post.getUserId());
+        UserSummary author = users.get(post.getUserId());
         yield view(
             row,
             curatorView,
@@ -139,7 +139,7 @@ public class DiscoverFeedQueryService {
             post.getTitle(),
             null,
             post.getSlug(),
-            author == null ? null : author.getUsername(),
+            author == null ? null : author.username(),
             hl.getQuote(),
             null,
             null);

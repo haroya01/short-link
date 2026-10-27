@@ -1,0 +1,75 @@
+[[IgnoredVulns]]
+id = "GHSA-2jwh-9rmr-j4xf"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-3wp9-xfwm-rjjf"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-7grg-jcf7-rpmx"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-cmxv-58fp-fm3g"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-f9m8-cv68-674w"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-fmxf-pm6p-7xgm"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-jmqq-x5g9-9p2w"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-m452-q8c9-rg2f"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-mfj3-87qq-382v"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-mfj5-cf8g-g2fv"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-p2jm-6hj6-9rjg"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-rqf5-2wxv-rjf4"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-v2j5-22fr-j62r"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-x8v2-478q-2hvg"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-xr57-gcx8-52hf"
+reason = "org.asynchttpclient:async-http-client 2.10.4 comes with nl.martijndwars:web-push 5.1.1 and is referenced only by PushAsyncService; WebPushSender uses PushService, which sends through Apache HttpAsyncClient 4, so no AsyncHttpClient code runs."
+
+[[IgnoredVulns]]
+id = "GHSA-3677-xxcr-wjqv"
+reason = "org.bitbucket.b_c:jose4j 0.7.0 comes with nl.martijndwars:web-push 5.1.1, which only signs the VAPID JWT with JsonWebSignature; this advisory is in JWE decryption or key derivation, which nothing here calls."
+
+[[IgnoredVulns]]
+id = "GHSA-6qvw-249j-h44c"
+reason = "org.bitbucket.b_c:jose4j 0.7.0 comes with nl.martijndwars:web-push 5.1.1, which only signs the VAPID JWT with JsonWebSignature; this advisory is in JWE decryption or key derivation, which nothing here calls."
+
+[[IgnoredVulns]]
+id = "GHSA-7g24-qg88-p43q"
+reason = "org.bitbucket.b_c:jose4j 0.7.0 comes with nl.martijndwars:web-push 5.1.1, which only signs the VAPID JWT with JsonWebSignature; this advisory is in JWE decryption or key derivation, which nothing here calls."
+
+[[IgnoredVulns]]
+id = "GHSA-jgvc-jfgh-rjvv"
+reason = "org.bitbucket.b_c:jose4j 0.7.0 comes with nl.martijndwars:web-push 5.1.1, which only signs the VAPID JWT with JsonWebSignature; this advisory is in JWE decryption or key derivation, which nothing here calls."

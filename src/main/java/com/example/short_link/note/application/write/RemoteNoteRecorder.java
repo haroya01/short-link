@@ -20,6 +20,7 @@ import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.RemoteNoteRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -46,6 +47,7 @@ class RemoteNoteRecorder implements RemoteNotes {
   private static final int MAX_CONTENT_TYPE = 32;
 
   private final NoteRepository notes;
+  private final RemoteNoteRepository store;
   private final NoteMediaRepository media;
   private final NoteLinkPreviewRepository previews;
   private final NotePeopleReader people;
@@ -61,7 +63,7 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Override
   @Transactional(readOnly = true)
   public Optional<Long> kept(String uri) {
-    return uri == null ? Optional.empty() : notes.idByUri(uri);
+    return uri == null ? Optional.empty() : store.idByUri(uri);
   }
 
   @Override
@@ -97,7 +99,7 @@ class RemoteNoteRecorder implements RemoteNotes {
   public Optional<Long> receive(Received received) {
     Long parentId = received.inReplyToLocalId();
     if (parentId == null && received.inReplyToUri() != null) {
-      parentId = notes.idByUri(received.inReplyToUri()).orElse(null);
+      parentId = store.idByUri(received.inReplyToUri()).orElse(null);
     }
     NoteEntity parent = parentId == null ? null : notes.findById(parentId).orElse(null);
     if (parent != null && !mayAnswer(received.remoteActorId(), parent)) {
@@ -109,7 +111,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     Poll poll = shape.poll();
     Optional<Long> stored =
-        notes.insertRemote(
+        store.insertRemote(
             new RemoteNoteRow(
                 received.remoteActorId(),
                 received.uri(),
@@ -209,7 +211,7 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Override
   @Transactional
   public boolean revise(Long remoteActorId, Long noteId, Revision revision) {
-    Optional<NoteEntity> found = notes.findRemoteForUpdate(remoteActorId, noteId);
+    Optional<NoteEntity> found = store.findRemoteForUpdate(remoteActorId, noteId);
     if (found.isEmpty()) {
       return false;
     }
@@ -259,13 +261,13 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Override
   @Transactional
   public boolean retract(Long remoteActorId, String uri) {
-    return notes.deleteRemote(remoteActorId, uri) > 0;
+    return store.deleteRemote(remoteActorId, uri) > 0;
   }
 
   @Override
   @Transactional(readOnly = true)
   public int countListed(Long remoteActorId, int atMost) {
-    return notes.countListed(remoteActorId, atMost);
+    return store.countListed(remoteActorId, atMost);
   }
 
   // New counts or a later end are not an edit: Mastodon sends them in an Update as votes come in.

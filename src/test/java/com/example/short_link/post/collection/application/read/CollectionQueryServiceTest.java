@@ -24,6 +24,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -63,8 +64,8 @@ class CollectionQueryServiceTest {
                 postRepository,
                 highlightRepository,
                 noteBodies,
-                userRepository),
-            userRepository);
+                new UserSummaryReader(userRepository)),
+            new UserSummaryReader(userRepository));
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {

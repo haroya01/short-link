@@ -50,10 +50,14 @@ public class RoomInvitationService {
   public void cancel(Long userId, Long roomId, Long inviteeId) {
     RoomEntity room = guard.locked(roomId);
     guard.requireMember(userId, roomId);
-    rooms
-        .inviterOf(roomId, inviteeId)
-        .filter(inviter -> inviter.equals(userId) || room.isOwnedBy(userId))
-        .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId));
+    boolean mayCancel =
+        rooms
+            .inviterOf(roomId, inviteeId)
+            .filter(inviter -> inviter.equals(userId) || room.isOwnedBy(userId))
+            .isPresent();
+    if (!mayCancel) {
+      throw new RoomException(RoomErrorCode.ROOM_INVITATION_NOT_FOUND, roomId);
+    }
     rooms.dropInvitation(roomId, inviteeId);
   }
 

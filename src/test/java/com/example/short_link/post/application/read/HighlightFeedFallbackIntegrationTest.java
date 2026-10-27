@@ -7,6 +7,7 @@ import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -70,7 +71,7 @@ class HighlightFeedFallbackIntegrationTest {
   void quietFollowsFallBackOnFirstPageOnly() {
     Long viewer = user("viewer-hfq", "vhfq");
     Long quiet = user("quiet-hfq", "qhfq");
-    followRepository.save(new FollowEntity(viewer, quiet));
+    followRepository.save(new FollowEntity(FollowEdge.follower(viewer).following(quiet)));
     Long stranger = user("stranger-hfq", "shfq");
     highlight(publishedPost(stranger, "hfq-pub"), stranger, "hfq-uniq-global");
 
@@ -87,7 +88,7 @@ class HighlightFeedFallbackIntegrationTest {
   void activeFollowsStayPersonalizedAndScopeGlobalPins() {
     Long viewer = user("viewer-hfa", "vhfa");
     Long followed = user("followed-hfa", "fhfa");
-    followRepository.save(new FollowEntity(viewer, followed));
+    followRepository.save(new FollowEntity(FollowEdge.follower(viewer).following(followed)));
     highlight(publishedPost(followed, "hfa-followed"), followed, "hfa-uniq-followed");
     Long stranger = user("stranger-hfa", "shfa");
     highlight(publishedPost(stranger, "hfa-global"), stranger, "hfa-uniq-global");

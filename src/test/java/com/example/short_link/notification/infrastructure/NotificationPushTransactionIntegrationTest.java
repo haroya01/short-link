@@ -9,6 +9,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
 import com.example.short_link.notification.application.push.PushSender;
@@ -94,7 +95,7 @@ class NotificationPushTransactionIntegrationTest {
         .when(transport)
         .send(eq(userId), any());
 
-    recordNotification.record(userId, NotificationType.FOLLOW, userId, null);
+    recordNotification.record(userId, NotificationType.FOLLOW, Actor.member(userId), null);
 
     assertThat(notifications.countUnread(userId)).isEqualTo(1L);
     verify(transport).send(eq(userId), any());

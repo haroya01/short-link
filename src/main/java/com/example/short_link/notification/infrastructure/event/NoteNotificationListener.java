@@ -1,13 +1,11 @@
 package com.example.short_link.notification.infrastructure.event;
 
-import com.example.short_link.common.event.FollowRequestedEvent;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
-import com.example.short_link.common.event.RemoteFollowedEvent;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
@@ -26,20 +24,12 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NoteNotificationListener {
 
   private final RecordBlogNotificationUseCase recordUseCase;
-  private final UserBlockChecker blocks;
   private final NotificationFollowerReader followers;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onNoteInteraction(NoteInteractionEvent event) {
     if (event.isSelfAction() || event.recipientUserId() == null) {
-      return;
-    }
-    if (blocks.silences(
-        event.recipientUserId(),
-        event.actorUserId(),
-        event.actorRemoteId(),
-        event.conversationId())) {
       return;
     }
     NotificationType type =
@@ -53,28 +43,24 @@ public class NoteNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         type,
-        event.actorUserId(),
-        event.actorRemoteId(),
+        new Actor(event.actorUserId(), event.actorRemoteId()),
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
-        NotificationGroupKey.of(type, event.noteId()));
+        NotificationGroupKey.of(type, event.noteId()),
+        event.conversationId());
   }
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onPostQuoted(PostQuotedEvent event) {
-    if (event.isSelfAction()
-        || event.recipientUserId() == null
-        || blocks.silences(event.recipientUserId(), event.actorUserId())) {
+    if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
     }
     recordUseCase.record(
         event.recipientUserId(),
         NotificationType.POST_QUOTE,
-        event.actorUserId(),
-        null,
-        new NotificationNoteRef(event.noteId(), event.noteExcerpt(), null, null),
-        null);
+        Actor.member(event.actorUserId()),
+        new NotificationNoteRef(event.noteId(), event.noteExcerpt(), null, null));
   }
 
   @Async("webhookExecutor")
@@ -87,7 +73,7 @@ public class NoteNotificationListener {
     recordUseCase.recordForEach(
         subscribers,
         NotificationType.NOTE_POST,
-        event.authorId(),
+        Actor.member(event.authorId()),
         new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
   }
 
@@ -102,36 +88,8 @@ public class NoteNotificationListener {
     recordUseCase.recordForEach(
         sharers,
         NotificationType.NOTE_EDIT,
-        event.authorUserId(),
-        event.authorRemoteId(),
+        new Actor(event.authorUserId(), event.authorRemoteId()),
         new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
-  }
-
-  @Async("webhookExecutor")
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  public void onRemoteFollowed(RemoteFollowedEvent event) {
-    if (blocks.silences(event.userId(), null, event.remoteActorId(), null)) {
-      return;
-    }
-    recordUseCase.record(
-        event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
-  }
-
-  // Someone asks to follow a locked member, from this server or another.
-  @Async("webhookExecutor")
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  public void onFollowRequested(FollowRequestedEvent event) {
-    if (blocks.silences(
-        event.targetUserId(), event.followerUserId(), event.followerRemoteActorId(), null)) {
-      return;
-    }
-    recordUseCase.record(
-        event.targetUserId(),
-        NotificationType.FOLLOW_REQUEST,
-        event.followerUserId(),
-        event.followerRemoteActorId(),
-        null,
-        null);
   }
 
   @Async("webhookExecutor")
@@ -140,12 +98,10 @@ public class NoteNotificationListener {
     NotificationNoteRef note =
         new NotificationNoteRef(event.noteId(), event.noteExcerpt(), null, null);
     recordUseCase.record(
-        event.authorId(), NotificationType.NOTE_POLL, event.authorId(), null, note, null);
+        event.authorId(), NotificationType.NOTE_POLL, Actor.member(event.authorId()), note);
     List<Long> voters =
-        event.voterIds().stream()
-            .filter(voter -> !voter.equals(event.authorId()))
-            .filter(voter -> !blocks.silences(voter, event.authorId()))
-            .toList();
-    recordUseCase.recordForEach(voters, NotificationType.NOTE_POLL, event.authorId(), note);
+        event.voterIds().stream().filter(voter -> !voter.equals(event.authorId())).toList();
+    recordUseCase.recordForEachWhoHears(
+        voters, NotificationType.NOTE_POLL, Actor.member(event.authorId()), note);
   }
 }

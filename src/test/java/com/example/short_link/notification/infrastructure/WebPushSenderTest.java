@@ -9,6 +9,7 @@ import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
+import com.example.short_link.user.application.push.WebPushTargets;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,7 @@ class WebPushSenderTest {
   private WebPushSender configured() {
     return new WebPushSender(
         new VapidProperties(VAPID_PUB, VAPID_PRIV, "mailto:test@kurl.me"),
-        subscriptions,
+        new WebPushTargets(subscriptions),
         jsonMapper,
         BLOG);
   }
@@ -44,7 +45,11 @@ class WebPushSenderTest {
   @Test
   void noOpWhenVapidUnconfigured() {
     WebPushSender sender =
-        new WebPushSender(new VapidProperties(null, null, null), subscriptions, jsonMapper, BLOG);
+        new WebPushSender(
+            new VapidProperties(null, null, null),
+            new WebPushTargets(subscriptions),
+            jsonMapper,
+            BLOG);
     PushSender.PushMessage message = new PushSender.PushMessage("kurl", "글 제목", "새 글");
 
     sender.send(1L, message);
