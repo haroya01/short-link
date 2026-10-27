@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.common.user.UserBlockChecker;
@@ -85,7 +86,7 @@ final class StoredNotices {
   private final UserBlockChecker blocks =
       new UserBlockChecker() {
         @Override
-        public boolean isBlocked(Long blockerId, Long blockedId) {
+        public boolean isBlocked(BlockEdge edge) {
           throw new UnsupportedOperationException();
         }
 
