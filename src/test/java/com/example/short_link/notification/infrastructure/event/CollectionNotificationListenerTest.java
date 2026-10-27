@@ -58,7 +58,7 @@ class CollectionNotificationListenerTest {
             new Row(5L, NotificationType.CONNECTED, 2L, null, collection, null),
             new Row(7L, NotificationType.PATH_GREW, 2L, null, collection, null),
             new Row(8L, NotificationType.PATH_GREW, 2L, null, collection, null));
-    PushRoute toTheCollection = new PushRoute("curator", null, null, null, 42L, null, null);
+    PushRoute toTheCollection = new PushRoute("curator", null, null, null, 42L, null, null, null);
     assertThat(stored.pushes())
         .containsExactly(
             new Push(List.of(5L), "CONNECTED", toTheCollection),

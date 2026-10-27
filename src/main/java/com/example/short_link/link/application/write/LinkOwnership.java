@@ -1,6 +1,7 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -23,5 +24,9 @@ public class LinkOwnership {
       throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     }
     return link;
+  }
+
+  public LinkId requireOwnedId(Long userId, ShortCode shortCode) {
+    return requireOwned(userId, shortCode).linkId();
   }
 }

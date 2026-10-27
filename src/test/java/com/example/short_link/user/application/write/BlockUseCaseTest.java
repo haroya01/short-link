@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.user.domain.FollowEdge;
@@ -78,8 +79,8 @@ class BlockUseCaseTest {
     useCase.block(9L, "bob");
 
     verify(followRepository).deleteBetween(9L, 2L);
-    verify(events).publishEvent(new FollowRequestSettledEvent(9L, 2L, null));
-    verify(events, never()).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
+    verify(events).publishEvent(new FollowRequestSettledEvent(9L, Actor.member(2L)));
+    verify(events, never()).publishEvent(new FollowRequestSettledEvent(2L, Actor.member(9L)));
   }
 
   @Test

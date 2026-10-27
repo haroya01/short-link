@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.write.IncrementViewCountCommand;
 import com.example.short_link.link.application.write.IncrementViewCountUseCase;
@@ -56,41 +57,21 @@ class LinkRedirectFlowTest {
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   private CachedLink basicLink(String url) {
-    return new CachedLink(new LinkId(7L), url, null, null, null, null);
+    return CachedLinkFixture.link(new LinkId(7L), url).build();
   }
 
   private CachedLink linkWithBlockList(String blocked) {
-    return new CachedLink(
-        new LinkId(7L),
-        null,
-        7L,
-        "https://control",
-        null,
-        null,
-        null,
-        null,
-        blocked,
-        false,
-        null,
-        null,
-        List.of());
+    return CachedLinkFixture.link(new LinkId(7L), "https://control")
+        .userId(7L)
+        .blockedCountries(blocked)
+        .build();
   }
 
   private CachedLink linkWithMaxViewsAndExpired(Integer maxViews, String expiredMessage) {
-    return new CachedLink(
-        new LinkId(7L),
-        null,
-        null,
-        "https://control",
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        maxViews,
-        expiredMessage,
-        List.of());
+    return CachedLinkFixture.link(new LinkId(7L), "https://control")
+        .maxViews(maxViews)
+        .expiredMessage(expiredMessage)
+        .build();
   }
 
   private HttpServletRequest req() {
@@ -126,7 +107,7 @@ class LinkRedirectFlowTest {
     RedirectOutcome outcome =
         flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
 
-    assertThat(outcome).isInstanceOf(RedirectOutcome.Blocked.class);
+    assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
     verify(clickRecorder, never()).record(any());
     assertThat(meterRegistry.find("redirect.blocked").counter().count()).isEqualTo(1.0);
   }
@@ -146,7 +127,7 @@ class LinkRedirectFlowTest {
     RedirectOutcome outcome =
         flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
 
-    assertThat(outcome).isInstanceOf(RedirectOutcome.Blocked.class);
+    assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
   }
 
   @Test
@@ -170,22 +151,12 @@ class LinkRedirectFlowTest {
         .thenReturn(new UserAgentInfo("mobile", "Android 14", "Chrome", false, null));
     when(blockedDomainChecker.isBlocked("https://spam.example/app")).thenReturn(true);
     CachedLink link =
-        new CachedLink(
-            new LinkId(7L),
-            null,
-            null,
-            "https://clean.example",
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            List.of(
-                new CachedLink.Variant(
-                    11L, "https://spam.example/app", 10, true, null, null, "android")));
+        CachedLinkFixture.link(new LinkId(7L), "https://clean.example")
+            .variants(
+                List.of(
+                    new CachedLink.Variant(
+                        11L, "https://spam.example/app", 10, true, null, null, "android")))
+            .build();
 
     RedirectOutcome outcome =
         flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
@@ -345,21 +316,12 @@ class LinkRedirectFlowTest {
     when(uaClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("mobile", "Android 14", "Chrome", false, null));
     CachedLink link =
-        new CachedLink(
-            new LinkId(7L),
-            null,
-            null,
-            "https://generic",
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            List.of(
-                new CachedLink.Variant(11L, "https://android", 10, true, null, null, "android")));
+        CachedLinkFixture.link(new LinkId(7L), "https://generic")
+            .variants(
+                List.of(
+                    new CachedLink.Variant(
+                        11L, "https://android", 10, true, null, null, "android")))
+            .build();
 
     RedirectOutcome outcome =
         flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
@@ -370,21 +332,10 @@ class LinkRedirectFlowTest {
   @Test
   void aLinkThatOpensLaterNeitherCountsNorSpendsAView() {
     CachedLink scheduled =
-        new CachedLink(
-            new LinkId(7L),
-            null,
-            null,
-            "https://control",
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            5,
-            null,
-            List.of(),
-            new CachedLink.VisitOptions(false, null, NOW.plusSeconds(60)));
+        CachedLinkFixture.link(new LinkId(7L), "https://control")
+            .maxViews(5)
+            .visitOptions(new CachedLink.VisitOptions(false, null, NOW.plusSeconds(60)))
+            .build();
 
     RedirectOutcome outcome =
         flow.execute(
@@ -400,21 +351,9 @@ class LinkRedirectFlowTest {
     when(uaClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("mobile", "iOS 17", "Safari", false, null));
     CachedLink opening =
-        new CachedLink(
-            new LinkId(7L),
-            null,
-            null,
-            "https://control",
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            List.of(),
-            new CachedLink.VisitOptions(false, null, NOW));
+        CachedLinkFixture.link(new LinkId(7L), "https://control")
+            .visitOptions(new CachedLink.VisitOptions(false, null, NOW))
+            .build();
 
     RedirectOutcome outcome =
         flow.execute(opening, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
@@ -426,25 +365,16 @@ class LinkRedirectFlowTest {
   void aBlockedCountryIsTurnedAwayBeforeAViewIsSpent() {
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("JP", null, null));
     CachedLink link =
-        new CachedLink(
-            new LinkId(7L),
-            null,
-            7L,
-            "https://control",
-            null,
-            null,
-            null,
-            null,
-            "JP",
-            false,
-            1,
-            null,
-            List.of());
+        CachedLinkFixture.link(new LinkId(7L), "https://control")
+            .userId(7L)
+            .blockedCountries("JP")
+            .maxViews(1)
+            .build();
 
     RedirectOutcome outcome =
         flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
 
-    assertThat(outcome).isInstanceOf(RedirectOutcome.Blocked.class);
+    assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
     verifyNoInteractions(incrementViewCount, clickRecorder);
   }
 
@@ -470,7 +400,7 @@ class LinkRedirectFlowTest {
     CachedLink blocked = linkWithBlockList("JP");
 
     assertThat(flow.refuseCrawler(blocked, null, "203.0.113.1"))
-        .containsInstanceOf(RedirectOutcome.Blocked.class);
+        .containsInstanceOf(RedirectOutcome.CountryBlocked.class);
     assertThat(flow.refuseCrawler(blocked, null, "198.51.100.1")).isEmpty();
 
     LinkEntity spent = new LinkEntity("https://control", "spent01", 7L, null);

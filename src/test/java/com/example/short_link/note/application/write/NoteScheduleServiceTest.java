@@ -3,9 +3,10 @@ package com.example.short_link.note.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.domain.NoteScheduleEntity;
@@ -18,6 +19,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -26,8 +28,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,15 +47,22 @@ class NoteScheduleServiceTest {
           "UNLISTED",
           null);
 
+  private static final List<NoteImages.StoredImage> STORED =
+      List.of(
+          new NoteImages.StoredImage(
+              "note-images/7/a.png", "https://cdn/note-images/7/a.png", "image/png", "alt"));
+
   @Mock private NoteScheduleRepository schedules;
-  @Mock private NoteCommandService command;
+  @Mock private NoteComposer composer;
+  @Mock private NoteImages images;
 
   private NoteScheduleService service() {
     return new NoteScheduleService(
         schedules,
-        command,
+        composer,
+        images,
         JSON,
-        new TransactionTemplate(mock(PlatformTransactionManager.class)),
+        FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -71,9 +78,11 @@ class NoteScheduleServiceTest {
     when(schedules.load(any(), any(), any())).thenReturn(new NoteScheduleRepository.Load(0, 0));
     when(schedules.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
+    when(images.verifyAll(7L, DRAFT.images())).thenReturn(STORED);
+
     NoteScheduleService.View view = service().schedule(7L, DRAFT, at);
 
-    verify(command).validate(7L, DRAFT);
+    verify(composer).validate(7L, DRAFT, STORED);
     ArgumentCaptor<NoteScheduleEntity> saved = ArgumentCaptor.forClass(NoteScheduleEntity.class);
     verify(schedules).save(saved.capture());
     assertThat(JSON.readValue(saved.getValue().getDraft(), NoteDraft.class)).isEqualTo(DRAFT);
@@ -93,7 +102,8 @@ class NoteScheduleServiceTest {
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_SCHEDULE_TOO_SOON));
     assertThatThrownBy(() -> service().schedule(7L, DRAFT, null)).isInstanceOf(NoteException.class);
-    verify(command, never()).validate(any(), any());
+    verify(composer, never()).validate(any(), any(), any());
+    verifyNoInteractions(images);
   }
 
   @Test
@@ -145,7 +155,7 @@ class NoteScheduleServiceTest {
     when(schedules.findById(1L)).thenReturn(Optional.of(ok));
     when(schedules.findById(2L)).thenReturn(Optional.of(orphan));
     when(schedules.findById(3L)).thenReturn(Optional.of(broken));
-    when(command.create(7L, DRAFT))
+    when(composer.write(7L, DRAFT, List.of()))
         .thenReturn(null)
         .thenThrow(new NoteException(NoteErrorCode.NOTE_NOT_FOUND, 9L))
         .thenThrow(new IllegalStateException("storage down"));
@@ -159,11 +169,75 @@ class NoteScheduleServiceTest {
   }
 
   @Test
+  void schedulingAndPublishingAskStorageBeforeTheirTransactionsOpen() {
+    List<String> seen = new ArrayList<>();
+    when(images.verifyAll(7L, DRAFT.images()))
+        .thenAnswer(
+            inv -> {
+              seen.add("storage " + FakeTransactions.where());
+              return STORED;
+            });
+    doAnswer(
+            inv -> {
+              seen.add("check " + FakeTransactions.where());
+              return null;
+            })
+        .when(composer)
+        .validate(7L, DRAFT, STORED);
+    when(composer.write(7L, DRAFT, STORED))
+        .thenAnswer(
+            inv -> {
+              seen.add("write " + FakeTransactions.where());
+              return null;
+            });
+    when(schedules.load(any(), any(), any())).thenReturn(new NoteScheduleRepository.Load(0, 0));
+    when(schedules.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    NoteScheduleEntity due = row(1L, NOW.minusSeconds(30));
+    when(schedules.due(NOW, 50)).thenReturn(List.of(1L));
+    when(schedules.findById(1L)).thenReturn(Optional.of(due));
+
+    service().schedule(7L, DRAFT, NOW.plus(Duration.ofHours(1)));
+    assertThat(service().publishDue()).isEqualTo(1);
+
+    assertThat(seen)
+        .containsExactly("storage outside", "check inside", "storage outside", "write inside");
+    verify(schedules).delete(due);
+  }
+
+  @Test
+  void aDueNoteWhoseImageStorageTurnsAwayKeepsThatReasonAndNothingIsWritten() {
+    NoteScheduleEntity gone = row(1L, NOW.minusSeconds(30));
+    when(schedules.due(NOW, 50)).thenReturn(List.of(1L));
+    when(schedules.findById(1L)).thenReturn(Optional.of(gone));
+    when(images.verifyAll(7L, DRAFT.images()))
+        .thenThrow(new NoteException(NoteErrorCode.NOTE_IMAGE_INVALID, "upload not found"));
+
+    assertThat(service().publishDue()).isZero();
+
+    assertThat(gone.getFailure()).isEqualTo("NOTE_IMAGE_INVALID");
+    verify(composer, never()).write(any(), any(), any());
+    verify(schedules, never()).delete(gone);
+  }
+
+  @Test
+  void aNoteCancelledWhileItsImagesAreCheckedIsNotPosted() {
+    NoteScheduleEntity cancelled = row(1L, NOW.minusSeconds(30));
+    when(schedules.due(NOW, 50)).thenReturn(List.of(1L));
+    when(schedules.findById(1L)).thenReturn(Optional.of(cancelled), Optional.empty());
+
+    assertThat(service().publishDue()).isZero();
+
+    verify(composer, never()).write(any(), any(), any());
+    assertThat(cancelled.getFailure()).isNull();
+  }
+
+  @Test
   void aNoteScheduledByAnAccountSuspendedSinceKeepsThatReasonAndIsNotRetried() {
     NoteScheduleEntity held = row(1L, NOW.minusSeconds(30));
     when(schedules.due(NOW, 50)).thenReturn(List.of(1L));
     when(schedules.findById(1L)).thenReturn(Optional.of(held));
-    when(command.create(7L, DRAFT)).thenThrow(new UserException(UserErrorCode.ACCOUNT_SUSPENDED));
+    when(composer.write(7L, DRAFT, List.of()))
+        .thenThrow(new UserException(UserErrorCode.ACCOUNT_SUSPENDED));
 
     assertThat(service().publishDue()).isZero();
 

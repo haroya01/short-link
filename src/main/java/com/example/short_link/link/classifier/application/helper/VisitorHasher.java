@@ -8,9 +8,9 @@ public final class VisitorHasher {
 
   private VisitorHasher() {}
 
-  public static String hash(Long linkId, String clientIp, String userAgent) {
+  public static String hash(Long scopeId, String clientIp, String userAgent) {
     String input =
-        (linkId == null ? "" : String.valueOf(linkId))
+        (scopeId == null ? "" : String.valueOf(scopeId))
             + "|"
             + (clientIp == null ? "" : clientIp)
             + "|"

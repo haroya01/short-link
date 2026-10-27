@@ -8,6 +8,18 @@ import java.util.List;
 
 public interface AdminMetricsRepository {
 
+  long totalUsers();
+
+  long totalLinks();
+
+  long usersCreatedAfter(Instant since);
+
+  long linksCreatedAfter(Instant since);
+
+  long anonymousLinks();
+
+  long linksExpiredBefore(Instant when);
+
   long totalClicks();
 
   long clicksSince(Instant since);

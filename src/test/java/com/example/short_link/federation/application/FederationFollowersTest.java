@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -248,7 +249,7 @@ class FederationFollowersTest {
     service().drop(7L, Optional.empty(), alice());
 
     verify(followers).delete(7L, 42L);
-    verify(events).publishEvent(new FollowRequestSettledEvent(7L, null, 42L));
+    verify(events).publishEvent(new FollowRequestSettledEvent(7L, Actor.remote(42L)));
     verifyNoInteractions(deliveries);
   }
 
@@ -291,7 +292,7 @@ class FederationFollowersTest {
         ArgumentCaptor.forClass(FederationFollowerEntity.class);
     verify(followers).save(saved.capture());
     assertThat(saved.getValue().isPending()).isTrue();
-    verify(events).publishEvent(new FollowRequestedEvent(7L, null, 42L));
+    verify(events).publishEvent(new FollowRequestedEvent(7L, Actor.remote(42L)));
     verifyNoInteractions(deliveries);
   }
 
@@ -333,7 +334,7 @@ class FederationFollowersTest {
 
     assertThat(waiting.isPending()).isFalse();
     verify(followers).save(waiting);
-    verify(events).publishEvent(new FollowRequestSettledEvent(7L, null, 42L));
+    verify(events).publishEvent(new FollowRequestSettledEvent(7L, Actor.remote(42L)));
     JsonNode accept = enqueuedAccept();
     assertThat(accept.path("type").asString()).isEqualTo("Accept");
     assertThat(accept.path("object").path("id").asString())
@@ -352,7 +353,7 @@ class FederationFollowersTest {
     service().reject(7L, 42L);
 
     verify(followers).delete(7L, 42L);
-    verify(events).publishEvent(new FollowRequestSettledEvent(7L, null, 42L));
+    verify(events).publishEvent(new FollowRequestSettledEvent(7L, Actor.remote(42L)));
     assertThat(enqueuedAccept().path("type").asString()).isEqualTo("Reject");
   }
 

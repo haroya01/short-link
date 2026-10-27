@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.application.dto.LinkStats;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

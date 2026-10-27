@@ -2,6 +2,7 @@ package com.example.short_link.home.presentation;
 
 import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.presentation.RemoteTrendsController;
+import com.example.short_link.home.application.read.HomeAsk;
 import com.example.short_link.home.application.read.HomeFeedQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -28,13 +29,14 @@ public class HomeFeedController {
       @RequestParam(required = false) String since,
       @RequestParam(required = false) String seen) {
     return home.page(
-        viewerId,
-        SeenViewer.of(viewerId, device),
-        languages,
-        tab,
-        cursor,
-        since,
-        limit,
-        RemoteTrendsController.HIDE_SEEN.equals(seen));
+        new HomeAsk(
+            viewerId,
+            SeenViewer.of(viewerId, device),
+            languages,
+            HomeFeedQueryService.Tab.of(tab),
+            cursor,
+            since,
+            limit,
+            RemoteTrendsController.HIDE_SEEN.equals(seen)));
   }
 }

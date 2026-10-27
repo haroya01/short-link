@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
@@ -20,7 +21,7 @@ class ProfileCacheEvictionTest {
   private final CacheManager cacheManager = mock(CacheManager.class);
   private final UserRepository userRepository = mock(UserRepository.class);
   private final ProfileCacheEviction eviction =
-      new ProfileCacheEviction(cacheManager, userRepository);
+      new ProfileCacheEviction(cacheManager, new UserSummaryReader(userRepository));
 
   @Test
   void evictByUsernameNormalizesToLowerCase() {

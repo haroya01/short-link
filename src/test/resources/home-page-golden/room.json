@@ -1,0 +1,86 @@
+[ {
+  "items" : [ {
+    "kind" : "note",
+    "note" : {
+      "id" : 1,
+      "body" : "노트 1",
+      "createdAt" : null,
+      "editedAt" : null,
+      "likeCount" : 3,
+      "likedByMe" : null,
+      "author" : {
+        "id" : 9,
+        "username" : "mina",
+        "avatarUrl" : null,
+        "displayName" : null,
+        "remoteId" : null,
+        "url" : null
+      },
+      "media" : [ ],
+      "quotedPost" : null,
+      "inReplyToId" : null,
+      "replyCount" : 0,
+      "repostCount" : null,
+      "repostedByMe" : null,
+      "quotedNote" : null,
+      "linkPreview" : null,
+      "repostedBy" : null,
+      "quoteCount" : 0,
+      "bookmarkedByMe" : null,
+      "mentions" : [ ],
+      "contentWarning" : null,
+      "sensitive" : false,
+      "pinned" : false,
+      "visibility" : "public",
+      "poll" : null,
+      "conversationMuted" : null,
+      "language" : null,
+      "thread" : null,
+      "replyPolicy" : "everyone",
+      "canReply" : null,
+      "hidden" : false,
+      "remote" : null,
+      "room" : null
+    },
+    "replies" : [ {
+      "id" : 11,
+      "author" : {
+        "id" : 9,
+        "username" : "mina",
+        "displayName" : "Mina",
+        "avatarUrl" : null
+      },
+      "body" : "답글"
+    } ]
+  }, {
+    "kind" : "post",
+    "post" : {
+      "id" : 5,
+      "author" : {
+        "id" : 9,
+        "username" : "mina",
+        "bio" : null,
+        "avatarUrl" : "https://cdn/mina.png",
+        "displayName" : null
+      },
+      "slug" : "slug-5",
+      "title" : "Title 5",
+      "excerpt" : "excerpt 5",
+      "ogImageUrl" : null,
+      "thumbnailUrl" : null,
+      "languageTag" : "ko",
+      "tags" : [ "산책" ],
+      "publishedAt" : "2026-10-20T00:00:00Z",
+      "viewCount" : 3,
+      "likeCount" : 4,
+      "followReason" : null,
+      "series" : null,
+      "audience" : "PUBLIC",
+      "readMinutes" : 2,
+      "commentCount" : 5,
+      "likedByMe" : true
+    },
+    "replies" : [ ]
+  } ],
+  "next" : "1.1"
+} ]

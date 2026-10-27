@@ -23,7 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @QueryAudit
 class CampaignBatchRepositoryTest {
 
-  @Autowired private JpaCampaignBatchRepository batchRepository;
+  @Autowired private CampaignBatchRepository batchRepository;
+  @Autowired private JpaCampaignBatchRepository jpaBatchRepository;
   @Autowired private CampaignRepository campaignRepository;
   @Autowired private LinkRepository linkRepository;
 
@@ -81,7 +82,7 @@ class CampaignBatchRepositoryTest {
     Assertions.assertThrows(
         DataIntegrityViolationException.class,
         () ->
-            batchRepository.saveAndFlush(
+            jpaBatchRepository.saveAndFlush(
                 new CampaignBatchEntity(
                     campaign.getId(), link.linkId(), "b", null, null, 10, null)));
   }

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.signature.SigningKeys;
@@ -20,7 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @KurlWebMvcTest(controllers = InstanceActorController.class)
-@Import({FederationUrls.class, InstanceActorControllerTest.Props.class})
+@Import({FederationUrls.class, ActorDocuments.class, InstanceActorControllerTest.Props.class})
 class InstanceActorControllerTest {
 
   @TestConfiguration

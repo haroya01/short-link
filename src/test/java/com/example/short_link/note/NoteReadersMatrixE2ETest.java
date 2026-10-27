@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.example.short_link.common.note.NoteViewReader;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.federation.application.FederationActorService;
-import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -120,7 +121,8 @@ class NoteReadersMatrixE2ETest {
   @Autowired private FollowRepository follows;
   @Autowired private BlockRepository blocks;
   @Autowired private MuteRepository mutes;
-  @Autowired private NoteCommandService command;
+  @Autowired private NoteComposer composer;
+  @Autowired private NoteThreadControls threads;
   @Autowired private NoteRepository notes;
   @Autowired private NoteMediaRepository media;
   @Autowired private PostRepository posts;
@@ -245,7 +247,7 @@ class NoteReadersMatrixE2ETest {
       }
     }
     for (Vis vis : List.of(Vis.PUBLIC, Vis.UNLISTED, Vis.PRIVATE, Vis.ROOM)) {
-      command.setPin(author, note("top", vis).id(), true);
+      threads.setPin(author, note("top", vis).id(), true);
     }
     notes.findById(note("top", Vis.DIRECT).id()).orElseThrow().pin(Instant.now());
     em.flush();
@@ -781,7 +783,7 @@ class NoteReadersMatrixE2ETest {
             + users.findById(ids.get(Viewer.MENTIONED)).orElseThrow().getUsername()
             + (kind.equals("top") ? " " + link : "");
     long id =
-        command
+        composer
             .create(
                 author,
                 new NoteDraft(

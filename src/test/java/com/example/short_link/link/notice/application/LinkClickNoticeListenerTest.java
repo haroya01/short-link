@@ -17,8 +17,8 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,8 +31,8 @@ class LinkClickNoticeListenerTest {
   private static final Instant AT = Instant.parse("2026-10-27T03:00:00Z");
 
   private final LinkRepository links = mock(LinkRepository.class);
-  private final ClickTotalsReadRepository totals = mock(ClickTotalsReadRepository.class);
-  private final ClickRangeReadRepository ranges = mock(ClickRangeReadRepository.class);
+  private final ClickTotalsReader totals = mock(ClickTotalsReader.class);
+  private final ClickRangeReader ranges = mock(ClickRangeReader.class);
   private final RedisDistributedLock cooldown = mock(RedisDistributedLock.class);
   private final List<LinkNotice> sent = new ArrayList<>();
 

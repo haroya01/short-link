@@ -2,8 +2,8 @@ package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow;
 import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -171,10 +171,10 @@ public class RecordBlogNotificationUseCase {
     if (!(payload instanceof NotificationNoteRef note)) {
       return null;
     }
-    return switch (type) {
-      case NOTE_REPLY, NOTE_QUOTE -> note.sourceExcerpt();
-      case NOTE_MENTION, POST_QUOTE, NOTE_POST, NOTE_EDIT, NOTE_POLL -> note.excerpt();
-      default -> null;
+    return switch (type.keywordText()) {
+      case SOURCE_EXCERPT -> note.sourceExcerpt();
+      case EXCERPT -> note.excerpt();
+      case NONE -> null;
     };
   }
 
@@ -186,7 +186,7 @@ public class RecordBlogNotificationUseCase {
           : NotificationPolicyLevel.DROP;
     }
     Long mentionNoteId =
-        type == NotificationType.NOTE_MENTION && payload instanceof NotificationNoteRef note
+        type.mayBePrivateMention() && payload instanceof NotificationNoteRef note
             ? note.noteId()
             : null;
     return NotificationPolicy.verdict(
@@ -290,41 +290,23 @@ public class RecordBlogNotificationUseCase {
       String actorUsername,
       String recipientUsername,
       NotificationTarget payload) {
+    String owner = type.opensTheActorsWork() ? actorUsername : recipientUsername;
     return switch (payload) {
       case NotificationPostRef post ->
-          new PushRoute(
+          PushRoute.toPost(
               actorUsername,
-              post.authorUsername() != null
-                  ? post.authorUsername()
-                  : type == NotificationType.NEW_POST ? actorUsername : recipientUsername,
+              post.authorUsername() != null ? post.authorUsername() : owner,
               post.slug(),
-              null,
-              null,
               post.commentId(),
               post.highlightId());
-      case NotificationSeriesRef series ->
-          new PushRoute(actorUsername, recipientUsername, null, series.slug(), null, null, null);
+      case NotificationSeriesRef series -> PushRoute.toSeries(actorUsername, owner, series.slug());
       case NotificationCollectionRef collection ->
-          new PushRoute(actorUsername, null, null, null, collection.collectionId(), null, null);
+          PushRoute.toCollection(actorUsername, collection.collectionId());
       case NotificationNoteRef note ->
           note.sourceNoteId() != null
-              ? new PushRoute(
-                  actorUsername, actorUsername, null, null, null, null, null, note.sourceNoteId())
-              : new PushRoute(
-                  actorUsername,
-                  type == NotificationType.NOTE_POLL
-                          || type == NotificationType.NOTE_POST
-                          || type == NotificationType.NOTE_EDIT
-                          || type == NotificationType.POST_QUOTE
-                      ? actorUsername
-                      : recipientUsername,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  note.noteId());
-      case null -> new PushRoute(actorUsername, null, null, null, null, null, null);
+              ? PushRoute.toNote(actorUsername, actorUsername, note.sourceNoteId())
+              : PushRoute.toNote(actorUsername, owner, note.noteId());
+      case null -> PushRoute.toActor(actorUsername);
     };
   }
 }

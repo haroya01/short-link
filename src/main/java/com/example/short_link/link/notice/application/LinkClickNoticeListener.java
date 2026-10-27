@@ -8,8 +8,8 @@ import com.example.short_link.common.notification.LinkNoticeSender;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.OptionalLong;
@@ -32,8 +32,8 @@ public class LinkClickNoticeListener {
   private static final String VELOCITY_COOLDOWN = "notif:velocity:";
 
   private final LinkRepository links;
-  private final ClickTotalsReadRepository totals;
-  private final ClickRangeReadRepository ranges;
+  private final ClickTotalsReader totals;
+  private final ClickRangeReader ranges;
   private final LinkNoticeSender notices;
   private final LinkNoticeProperties props;
   private final RedisDistributedLock cooldown;

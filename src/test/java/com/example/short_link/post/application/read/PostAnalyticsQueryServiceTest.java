@@ -2,8 +2,11 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -28,6 +31,7 @@ class PostAnalyticsQueryServiceTest {
 
   private static final long USER = 7L;
   private static final long OTHER = 99L;
+  private static final Instant CREATED = Instant.parse("2026-05-01T00:00:00Z");
   private final Clock clock = Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC);
 
   @Mock private PostRepository postRepository;
@@ -40,23 +44,30 @@ class PostAnalyticsQueryServiceTest {
   private com.example.short_link.post.domain.repository.SeriesSubscriptionRepository
       subscriptionRepository;
 
+  @Mock private UserAccessLookup users;
+
   private PostAnalyticsQueryService service;
 
   @BeforeEach
   void setUp() {
-    service =
-        new PostAnalyticsQueryService(
-            postRepository,
-            viewEventRepository,
-            linkClickReader,
-            followReader,
-            seriesRepository,
-            subscriptionRepository,
-            clock);
+    service = service(clock);
+  }
+
+  private PostAnalyticsQueryService service(Clock at) {
+    return new PostAnalyticsQueryService(
+        postRepository,
+        viewEventRepository,
+        linkClickReader,
+        followReader,
+        seriesRepository,
+        subscriptionRepository,
+        users,
+        at);
   }
 
   private static PostEntity post(long owner, String slug, int views, int likes) {
     PostEntity p = new PostEntity(owner, slug, "Title " + slug, "ko");
+    org.springframework.test.util.ReflectionTestUtils.setField(p, "createdAt", CREATED);
     for (int i = 0; i < views; i++) {
       p.incrementViewCount();
     }
@@ -70,7 +81,7 @@ class PostAnalyticsQueryServiceTest {
   void postAnalytics_fillsWindowAndSumsViews() {
     PostEntity p = post(USER, "hello", 12, 4);
     when(postRepository.findById(1L)).thenReturn(Optional.of(p));
-    when(viewEventRepository.countDailyByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
+    when(viewEventRepository.countDailyByPostIdBetween(eqId(1L), any(), any(), any()))
         .thenReturn(
             List.of(
                 new DailyViewCount(LocalDate.parse("2026-05-30"), 2),
@@ -115,7 +126,8 @@ class PostAnalyticsQueryServiceTest {
     PostEntity p = post(USER, "hello", 0, 0);
     when(postRepository.findById(1L)).thenReturn(Optional.of(p));
     // days <= 0 = 전체(all-time): the window spans from the earliest recorded day, not a fixed 30.
-    when(viewEventRepository.countDailyByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
+    when(viewEventRepository.countDailyByPostIdBetween(
+            1L, CREATED, Instant.parse("2026-06-01T10:00:01Z"), "+09:00"))
         .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-05-25"), 4)));
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 0);
@@ -124,6 +136,69 @@ class PostAnalyticsQueryServiceTest {
     assertThat(view.windowDays()).isEqualTo(8);
     assertThat(view.daily()).hasSize(8);
     assertThat(view.windowViews()).isEqualTo(4);
+    verify(viewEventRepository).countDailyByPostIdBetween(any(), any(), any(), any());
+  }
+
+  @Test
+  void postAnalytics_countsDaysInTheAuthorsZoneUpToItsLocalToday() {
+    when(users.timezone(USER)).thenReturn(Optional.of("Asia/Seoul"));
+    when(postRepository.findById(1L)).thenReturn(Optional.of(post(USER, "hello", 0, 0)));
+    when(viewEventRepository.countDailyByPostIdBetween(
+            1L,
+            Instant.parse("2026-05-26T15:00:00Z"),
+            Instant.parse("2026-06-01T16:00:01Z"),
+            "+09:00"))
+        .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-06-02"), 3)));
+
+    PostAnalyticsView view =
+        service(Clock.fixed(Instant.parse("2026-06-01T16:00:00Z"), ZoneOffset.UTC))
+            .postAnalytics(USER, 1L, 7);
+
+    assertThat(view.daily().get(0).date()).isEqualTo(LocalDate.parse("2026-05-27"));
+    assertThat(view.daily().get(6)).isEqualTo(new DailyPoint(LocalDate.parse("2026-06-02"), 3));
+    assertThat(view.windowViews()).isEqualTo(3);
+  }
+
+  @Test
+  void overview_splitsTheWindowWhereTheAuthorsOffsetChangesAndAddsUpTheDays() {
+    Instant springForward = Instant.parse("2026-03-29T01:00:00Z");
+    when(users.timezone(USER)).thenReturn(Optional.of("Europe/Berlin"));
+    when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER))
+        .thenReturn(List.of(post(USER, "a", 0, 0)));
+    when(viewEventRepository.countDailyByUserIdBetween(
+            USER, Instant.parse("2026-03-03T23:00:00Z"), springForward, "+01:00"))
+        .thenReturn(
+            List.of(
+                new DailyViewCount(LocalDate.parse("2026-03-04"), 1),
+                new DailyViewCount(LocalDate.parse("2026-03-29"), 2)));
+    when(viewEventRepository.countDailyByUserIdBetween(
+            USER, springForward, Instant.parse("2026-06-01T10:00:01Z"), "+02:00"))
+        .thenReturn(
+            List.of(
+                new DailyViewCount(LocalDate.parse("2026-03-29"), 5),
+                new DailyViewCount(LocalDate.parse("2026-06-01"), 4)));
+
+    AuthorAnalyticsOverview o = service.overview(USER, 90);
+
+    assertThat(o.daily()).hasSize(90);
+    assertThat(o.daily().get(0)).isEqualTo(new DailyPoint(LocalDate.parse("2026-03-04"), 1));
+    assertThat(o.daily()).contains(new DailyPoint(LocalDate.parse("2026-03-29"), 7));
+    assertThat(o.daily().get(89)).isEqualTo(new DailyPoint(LocalDate.parse("2026-06-01"), 4));
+    assertThat(o.windowViews()).isEqualTo(12);
+  }
+
+  @Test
+  void anUnknownZoneFallsBackToSeoul() {
+    when(users.timezone(USER)).thenReturn(Optional.of("Mars/Olympus"));
+    when(postRepository.findById(1L)).thenReturn(Optional.of(post(USER, "hello", 0, 0)));
+    when(viewEventRepository.countDailyByPostIdBetween(
+            1L,
+            Instant.parse("2026-05-25T15:00:00Z"),
+            Instant.parse("2026-06-01T10:00:01Z"),
+            "+09:00"))
+        .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-06-01"), 2)));
+
+    assertThat(service.postAnalytics(USER, 1L, 7).windowViews()).isEqualTo(2);
   }
 
   @Test
@@ -154,8 +229,8 @@ class PostAnalyticsQueryServiceTest {
     PostEntity c = post(USER, "c", 50, 3);
     c.publish();
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a, b, c));
-    when(viewEventRepository.countDailyByUserIdSince(
-            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+    when(viewEventRepository.countDailyByUserIdBetween(
+            org.mockito.ArgumentMatchers.eq(USER), any(), any(), any()))
         .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-06-01"), 9)));
     when(linkClickReader.countByUserId(USER)).thenReturn(40L);
     when(linkClickReader.countByUserIdSince(
@@ -234,8 +309,8 @@ class PostAnalyticsQueryServiceTest {
     PostEntity a = post(USER, "a", 10, 1);
     a.publish();
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a));
-    when(viewEventRepository.countDailyByUserIdSince(
-            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+    when(viewEventRepository.countDailyByUserIdBetween(
+            org.mockito.ArgumentMatchers.eq(USER), any(), any(), any()))
         .thenReturn(
             List.of(
                 new DailyViewCount(LocalDate.parse("2026-05-20"), 3),

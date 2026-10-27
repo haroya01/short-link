@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.write.LinkOwnership;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.destination.exception.DestinationException;
@@ -22,7 +23,7 @@ class LinkDestinationOwnershipTest {
   private final LinkRepository linkRepository = mock(LinkRepository.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
   private final LinkDestinationOwnership ownership =
-      new LinkDestinationOwnership(linkRepository, repository);
+      new LinkDestinationOwnership(new LinkOwnership(linkRepository), repository);
 
   @Test
   void ownedLinkReturnsLinkWhenOwned() {

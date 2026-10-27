@@ -40,29 +40,40 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) AS day, "
           + "COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
-          + "AND e.viewedAt >= :from "
+          + "AND e.viewedAt >= :from AND e.viewedAt < :until "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) "
           + "ORDER BY day")
   List<VisitProjections.DailyVisitRow> daily(
-      @Param("ids") Collection<Long> ids, @Param("from") Instant from, @Param("tz") String tz);
+      @Param("ids") Collection<Long> ids,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) AS hour, "
           + "COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
+          + "AND e.viewedAt >= :from AND e.viewedAt < :until "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) "
           + "ORDER BY hour")
   List<VisitProjections.HourVisitRow> hourly(
-      @Param("ids") Collection<Long> ids, @Param("tz") String tz);
+      @Param("ids") Collection<Long> ids,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) AS dow, "
           + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) AS hour, "
           + "COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
+          + "AND e.viewedAt >= :from AND e.viewedAt < :until "
           + "GROUP BY dow, hour ORDER BY dow, hour")
   List<VisitProjections.HeatmapVisitRow> heatmap(
-      @Param("ids") Collection<Long> ids, @Param("tz") String tz);
+      @Param("ids") Collection<Long> ids,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT e.countryCode AS country, COUNT(e) AS count "

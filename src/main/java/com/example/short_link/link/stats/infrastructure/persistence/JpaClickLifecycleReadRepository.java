@@ -2,8 +2,8 @@ package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.ClickRollup;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReturnRateRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DayClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.ReturnRateRow;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -84,9 +84,7 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
               + "           GROUP BY referrer_host) v ON v.referrer_host = h.referrer_host "
               + "ORDER BY h.clicks DESC LIMIT :limit",
       nativeQuery = true)
-  List<
-          com.example.short_link.link.stats.domain.repository.projection.ClickProjections
-              .ChannelDepthRow>
+  List<com.example.short_link.link.stats.domain.projection.ClickProjections.ChannelDepthRow>
       findChannelDepth(@Param("linkId") Long linkId, @Param("limit") int limit);
 
   @Query(
@@ -103,8 +101,6 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
               + " AND is_bot = 0 AND value <> '' GROUP BY value) r "
               + "GROUP BY referrer_host ORDER BY firstSeenEpoch",
       nativeQuery = true)
-  List<
-          com.example.short_link.link.stats.domain.repository.projection.ClickProjections
-              .HostFirstSeenRow>
+  List<com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow>
       findFirstSeenByReferrerHost(@Param("linkId") Long linkId);
 }

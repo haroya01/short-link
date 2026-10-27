@@ -9,8 +9,8 @@ import com.example.short_link.admin.infrastructure.persistence.JpaAdminMetricsRe
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;

@@ -10,12 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import java.util.List;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,13 +36,12 @@ class OgCardControllerTest {
 
   @MockitoBean private LinkLookupQueryService lookup;
   @MockitoBean private OgCardImageRenderer renderer;
-  @MockitoBean private ClickTotalsReadRepository clickRepository;
+  @MockitoBean private ClickTotalsReader clickRepository;
 
   @Test
   void servesPngWithCacheHeaders() throws Exception {
     CachedLink cached =
-        new CachedLink(
-            new LinkId(1L), 7L, "https://example.com", null, null, null, null, null, List.of());
+        CachedLinkFixture.link(new LinkId(1L), "https://example.com").userId(7L).build();
     when(lookup.findActiveLink(eq(new ShortCode("abc1234")))).thenReturn(cached);
     when(clickRepository.countHumanByLinkId(eq(1L))).thenReturn(42L);
     byte[] png = new byte[] {(byte) 0x89, 'P', 'N', 'G'};

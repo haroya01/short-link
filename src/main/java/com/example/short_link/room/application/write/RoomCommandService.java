@@ -25,6 +25,7 @@ public class RoomCommandService {
   static final int MAX_PINNED = 5;
 
   private final RoomRepository rooms;
+  private final RoomWriteGuard guard;
   private final RoomQueryService query;
   private final RoomNoteRemover notes;
   private final RoomPostRemover posts;
@@ -34,19 +35,19 @@ public class RoomCommandService {
   public RoomView create(Long userId, String rawName) {
     RoomEntity room = rooms.save(new RoomEntity(userId, name(rawName)));
     rooms.addMember(room.getId(), userId, now());
-    return query.detail(room.getId(), userId);
+    return query.detail(userId, room.getId());
   }
 
   @Transactional
   public RoomView update(Long userId, Long roomId, String rawName, Boolean approvalRequired) {
-    RoomEntity room = owned(roomId, userId);
+    RoomEntity room = guard.owned(userId, roomId);
     if (rawName != null) {
       room.rename(name(rawName));
     }
     if (approvalRequired != null) {
       room.askForApproval(approvalRequired);
     }
-    return query.detail(roomId, userId);
+    return query.detail(userId, roomId);
   }
 
   // Leaving keeps the member's notes and room posts unless they ask otherwise; their invites and
@@ -54,8 +55,8 @@ public class RoomCommandService {
   // longest.
   @Transactional
   public void leave(Long userId, Long roomId, boolean deleteMyNotes) {
-    RoomEntity room = locked(roomId);
-    requireMember(roomId, userId);
+    RoomEntity room = guard.locked(roomId);
+    guard.requireMember(userId, roomId);
     rooms.removeMember(roomId, userId);
     rooms.disableInvitesBy(roomId, userId, now());
     rooms.dropInvitationsBy(roomId, userId);
@@ -71,11 +72,11 @@ public class RoomCommandService {
   // The removed member's notes stay; no invite lets them back in, and no one gets in by theirs.
   @Transactional
   public void remove(Long ownerId, Long roomId, Long memberId) {
-    owned(roomId, ownerId);
+    guard.owned(ownerId, roomId);
     if (ownerId.equals(memberId)) {
       throw new RoomException(RoomErrorCode.ROOM_OWNER_ONLY);
     }
-    requireMember(roomId, memberId);
+    guard.requireMember(memberId, roomId);
     Instant now = now();
     rooms.removeMember(roomId, memberId);
     rooms.disableInvitesBy(roomId, memberId, now);
@@ -85,26 +86,30 @@ public class RoomCommandService {
 
   @Transactional
   public boolean hideFromFeed(Long userId, Long roomId, boolean hidden) {
-    requireMember(roomId, userId);
+    guard.requireMember(userId, roomId);
     rooms.hideFromFeed(roomId, userId, hidden);
     return hidden;
   }
 
   @Transactional
   public void pin(Long userId, Long roomId, boolean pinned) {
-    requireMember(roomId, userId);
+    guard.requireMember(userId, roomId);
     if (pinned == rooms.isPinned(roomId, userId)) {
       return;
     }
     if (pinned && rooms.countPinned(userId) >= MAX_PINNED) {
       throw new RoomException(RoomErrorCode.ROOM_PINS_FULL, MAX_PINNED);
     }
-    rooms.pin(roomId, userId, pinned ? now() : null);
+    if (pinned) {
+      rooms.pin(roomId, userId, now());
+    } else {
+      rooms.unpin(roomId, userId);
+    }
   }
 
   @Transactional
   public long read(Long userId, Long roomId, Long noteId) {
-    requireMember(roomId, userId);
+    guard.requireMember(userId, roomId);
     rooms.readUpTo(roomId, userId, noteId);
     return rooms.unread(roomId, userId);
   }
@@ -116,27 +121,6 @@ public class RoomCommandService {
       throw new RoomException(RoomErrorCode.ROOM_SUGGESTION_INVALID, MAX_DISMISSED_AT_ONCE);
     }
     rooms.dismissSuggestions(userId, friends, now());
-  }
-
-  private RoomEntity owned(Long roomId, Long userId) {
-    RoomEntity room = locked(roomId);
-    requireMember(roomId, userId);
-    if (!room.isOwnedBy(userId)) {
-      throw new RoomException(RoomErrorCode.ROOM_OWNER_ONLY);
-    }
-    return room;
-  }
-
-  private RoomEntity locked(Long roomId) {
-    return rooms
-        .lock(roomId)
-        .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId));
-  }
-
-  private void requireMember(Long roomId, Long userId) {
-    if (!rooms.isMember(roomId, userId)) {
-      throw new RoomException(RoomErrorCode.ROOM_NOT_FOUND, roomId);
-    }
   }
 
   private static String name(String raw) {

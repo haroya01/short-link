@@ -9,7 +9,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,10 +29,7 @@ class ToggleLinkOnProfileUseCaseTest {
   void setUp() {
     useCase =
         new ToggleLinkOnProfileUseCase(
-            linkRepository,
-            mock(LinkProfileBindingRepository.class),
-            profileOrdering,
-            mock(ProfileCacheEviction.class));
+            linkRepository, profileOrdering, mock(ProfileCacheEviction.class));
   }
 
   @Test

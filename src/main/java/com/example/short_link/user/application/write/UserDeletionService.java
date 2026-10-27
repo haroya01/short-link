@@ -5,10 +5,7 @@ import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.user.UserDataEraser;
-import com.example.short_link.link.application.LinkCacheEviction;
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.application.LinkAccountData;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
@@ -33,8 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserDeletionService {
 
   private final UserRepository userRepository;
-  private final LinkRepository linkRepository;
-  private final ClickEventRepository clickEventRepository;
+  private final LinkAccountData linkAccountData;
   private final FollowRepository followRepository;
   private final BlockRepository blockRepository;
   private final MuteRepository muteRepository;
@@ -45,7 +41,6 @@ public class UserDeletionService {
   private final MeterRegistry meterRegistry;
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher events;
-  private final LinkCacheEviction linkCacheEviction;
   private final ProfileCacheInvalidator profileCache;
 
   @Transactional
@@ -64,7 +59,7 @@ public class UserDeletionService {
     deviceTokens.deleteByUserId(userId);
     events.publishEvent(new AccountDeletedEvent(userId));
 
-    long ownedLinks = linkRepository.countByUserId(userId);
+    long ownedLinks = linkAccountData.countOwned(userId);
     meterRegistry.counter("user.soft_deleted").increment();
     auditLogService.record(
         AuditAction.USER_DELETED,
@@ -87,14 +82,7 @@ public class UserDeletionService {
     // Web-push subscriptions have no users FK, so delete their endpoint and keys explicitly.
     webPushSubscriptionRepository.deleteByUserId(userId);
 
-    List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
-    if (!links.isEmpty()) {
-      List<Long> linkIds = links.stream().map(LinkEntity::getId).toList();
-      int deletedClicks = clickEventRepository.deleteByLinkIds(linkIds);
-      log.info("user {} hard-delete: {} click events removed", userId, deletedClicks);
-    }
-    int deletedLinks = linkRepository.deleteByUserId(userId);
-    linkCacheEviction.evictAllAfterCommit(links.stream().map(LinkEntity::getShortCode).toList());
+    int deletedLinks = linkAccountData.eraseOwned(userId);
     refreshTokenStore.deleteAllForUser(userId);
     userRepository.deleteById(userId);
     meterRegistry

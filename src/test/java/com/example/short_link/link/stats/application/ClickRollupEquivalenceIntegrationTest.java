@@ -19,10 +19,10 @@ import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRollupRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostLinkClickReader;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -68,7 +68,7 @@ class ClickRollupEquivalenceIntegrationTest {
   @Autowired private CampaignStatsService campaignStats;
   @Autowired private CampaignBatchService batchService;
   @Autowired private CreateCampaignUseCase createCampaign;
-  @Autowired private ClickTotalsReadRepository totals;
+  @Autowired private ClickTotalsReader totals;
   @Autowired private ClickEventRepository clickEvents;
   @Autowired private PostLinkClickReader postClicks;
   @Autowired private AdminMetricsRepository adminMetrics;
@@ -250,7 +250,7 @@ class ClickRollupEquivalenceIntegrationTest {
     s.put(
         "apps",
         rows(
-            clickEvents.humanClientAppCountsByLinkIds(linkIds).entrySet(),
+            totals.humanClientAppCountsByLinkIds(linkIds).entrySet(),
             e ->
                 e.getKey()
                     + "="
@@ -415,9 +415,9 @@ class ClickRollupEquivalenceIntegrationTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", "A", "East", 100, null, null).toCommand());
-    Long linkId = batch.link().getId();
+    Long linkId = batch.link().linkId().value();
     backdate(linkId, created);
-    track(linkId, owner, batch.link().getShortCode());
+    track(linkId, owner, batch.link().shortCode());
     return linkId;
   }
 

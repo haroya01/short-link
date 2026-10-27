@@ -1,0 +1,43 @@
+package com.example.short_link.federation.application;
+
+import com.example.short_link.federation.domain.RemoteActorEntity;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public record Addressing(
+    RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
+
+  public static final Addressing NONE = new Addressing(null, List.of(), null);
+
+  public Addressing naming(List<RemoteActorEntity> people) {
+    return new Addressing(parent, people, quoted);
+  }
+
+  public boolean isEmpty() {
+    return parent == null && named.isEmpty() && quoted == null;
+  }
+
+  public List<NoteDocuments.Addressee> addressees() {
+    return named.stream()
+        .map(
+            person ->
+                new NoteDocuments.Addressee(
+                    person.getActorUri(),
+                    "@" + person.getUsername() + "@" + person.getDomain(),
+                    person.getProfileUrl() == null ? person.getActorUri() : person.getProfileUrl()))
+        .toList();
+  }
+
+  public List<String> inboxes(List<String> followerInboxes) {
+    Set<String> inboxes = new LinkedHashSet<>(followerInboxes);
+    if (parent != null) {
+      inboxes.add(parent.inbox());
+    }
+    if (quoted != null) {
+      inboxes.add(quoted.inbox());
+    }
+    named.forEach(person -> inboxes.add(person.deliveryInbox()));
+    return List.copyOf(inboxes);
+  }
+}

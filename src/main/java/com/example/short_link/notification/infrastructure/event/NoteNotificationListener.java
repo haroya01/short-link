@@ -43,7 +43,7 @@ public class NoteNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         type,
-        new Actor(event.actorUserId(), event.actorRemoteId()),
+        event.actor(),
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
         NotificationGroupKey.of(type, event.noteId()),
@@ -81,14 +81,14 @@ public class NoteNotificationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onNoteRevised(NoteRevisedEvent event) {
     List<Long> sharers =
-        followers.noteSharersOf(event.noteId(), event.authorUserId(), event.authorRemoteId());
+        followers.noteSharersOf(event.noteId(), event.author().userId(), event.author().remoteId());
     if (sharers.isEmpty()) {
       return;
     }
     recordUseCase.recordForEach(
         sharers,
         NotificationType.NOTE_EDIT,
-        new Actor(event.authorUserId(), event.authorRemoteId()),
+        event.author(),
         new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
   }
 

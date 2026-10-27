@@ -12,12 +12,12 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.CountryClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DeviceClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.SourceChannelClickRow;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.SourceChannelClickRow;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 class DailySummaryAssemblerTest {
 
-  private final ClickRangeReadRepository ranges = mock(ClickRangeReadRepository.class);
+  private final ClickRangeReader ranges = mock(ClickRangeReader.class);
   private final ClickAlertReadRepository alerts = mock(ClickAlertReadRepository.class);
   private final DailySummaryAssembler assembler = new DailySummaryAssembler(ranges, alerts);
   private final ZoneId tz = ZoneId.of("Asia/Seoul");

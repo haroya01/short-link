@@ -77,12 +77,6 @@ public interface JpaLinkRepository
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  long countByCreatedAtAfter(Instant since);
-
-  long countByUserIdIsNull();
-
-  long countByExpiresAtBefore(Instant when);
-
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
   @Query("select distinct l.userId from LinkEntity l")

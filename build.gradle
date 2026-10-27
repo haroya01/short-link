@@ -294,7 +294,8 @@ def pmdSizeFindings = {
 			def message = v.text().trim()
 			def quoted = message =~ /'([^']*)'/
 			def scope = quoted.find() ? quoted.group(1) : (v.@method.toString() ?: v.@class.toString())
-			def value = (message.replaceAll(/'[^']*'/, '') =~ /\d+/)[0] as long
+			def measured = message.replaceAll(/'[^']*'/, '') =~ /\d+/
+			def value = measured.find() ? measured.group() as long : 1L
 			def key = "${v.@rule}|${path}|${scope}"
 			def n = 1
 			while (found.containsKey("${key}#${n}".toString())) n++
@@ -339,8 +340,96 @@ tasks.register('pmdSizeBaselineWrite') {
 	}
 }
 
+def commentBaseline = file('config/comments/comment-baseline.txt')
+
+def lineCommentsIn = { String source ->
+	char slash = '/' as char
+	char star = '*' as char
+	char quote = '"' as char
+	char apostrophe = '\'' as char
+	char backslash = '\\' as char
+	char newline = '\n' as char
+	int n = source.length()
+	int count = 0
+	int i = 0
+	while (i < n) {
+		char c = source.charAt(i)
+		char next = i + 1 < n ? source.charAt(i + 1) : (char) 0
+		if (c == slash && next == slash) {
+			count++
+			int end = source.indexOf('\n', i)
+			i = end < 0 ? n : end + 1
+		} else if (c == slash && next == star) {
+			int end = source.indexOf('*/', i + 2)
+			i = end < 0 ? n : end + 2
+		} else if (c == quote && source.startsWith('"""', i)) {
+			int j = i + 3
+			while (j < n && !source.startsWith('"""', j)) {
+				j += source.charAt(j) == backslash ? 2 : 1
+			}
+			i = j + 3
+		} else if (c == quote || c == apostrophe) {
+			int j = i + 1
+			while (j < n && source.charAt(j) != c && source.charAt(j) != newline) {
+				j += source.charAt(j) == backslash ? 2 : 1
+			}
+			i = j + 1
+		} else {
+			i++
+		}
+	}
+	count
+}
+
+def commentLines = {
+	def root = projectDir.toPath()
+	def found = [:]
+	fileTree('src/main/java') {
+		include '**/*.java'
+		exclude 'db/migration/**'
+	}.each { f ->
+		def count = lineCommentsIn(f.getText('UTF-8'))
+		if (count > 0) {
+			found[root.relativize(f.toPath()).toString()] = count
+		}
+	}
+	found
+}
+
+tasks.register('commentRatchet') {
+	group = 'verification'
+	description = 'Fail when a file under src/main/java has more or fewer // comment lines than config/comments/comment-baseline.txt.'
+	inputs.file(commentBaseline)
+	doLast {
+		def current = commentLines()
+		def baseline = [:]
+		commentBaseline.eachLine { line ->
+			def cut = line.lastIndexOf('=')
+			baseline[line.substring(0, cut)] = line.substring(cut + 1) as int
+		}
+		def grew = current.findAll { k, v -> v > (baseline[k] ?: 0) }
+		def shrank = baseline.findAll { k, v -> (current[k] ?: 0) < v }
+		logger.lifecycle("Comment ratchet: lines=${current.values().sum() ?: 0} files=${current.size()} baseline=${baseline.values().sum() ?: 0} grew=${grew.size()} shrank=${shrank.size()}")
+		if (grew) {
+			throw new GradleException("// comment lines grew. Explanatory comments are not allowed: a comment may only state an invariant or an external contract the code cannot show, and the reasoning goes in the commit message or PR body. To add such a constraint comment, raise that file's count in config/comments/comment-baseline.txt in the same PR so the comment shows up in review.\n" + grew.collect { k, v -> "  ${k}: ${baseline[k] ?: 0} -> ${v}" }.join('\n'))
+		}
+		if (shrank) {
+			throw new GradleException("// comment lines went down; shrink the baseline: run ./gradlew commentBaselineWrite and commit config/comments/comment-baseline.txt.\n" + shrank.collect { k, v -> "  ${k}: ${v} -> ${current[k] ?: 0}" }.join('\n'))
+		}
+	}
+}
+
+tasks.register('commentBaselineWrite') {
+	group = 'verification'
+	description = 'Rewrite config/comments/comment-baseline.txt from the current // comment lines per file.'
+	doLast {
+		commentBaseline.parentFile.mkdirs()
+		commentBaseline.text = commentLines().collect { k, v -> "${k}=${v}" }.sort().join('\n') + '\n'
+	}
+}
+
 tasks.named('check') {
-	dependsOn 'pmdSizeRatchet'
+	dependsOn 'pmdSizeRatchet', 'commentRatchet'
 }
 
 pitest {

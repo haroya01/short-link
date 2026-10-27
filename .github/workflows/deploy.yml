@@ -1,19 +1,23 @@
 name: Deploy
 
 on:
-  # push 는 PR 에서 CI 가 통과한 트리와 같을 때만 내보내고, 나머지는 main CI 가 끝난 workflow_run 이 내보낸다.
-  # workflow_run 은 판정을 다시 하지 않고 그 커밋의 sha 이미지가 GHCR 에 있는지만 본다. 같은 concurrency
-  # 그룹이라 push 실행이 끝난 뒤에 보므로, push 가 판정·API 실패·취소로 못 내보낸 커밋만 한 번 나간다.
+  # main 머지는 배포가 아니다. v* 태그를 푸시할 때만 내보낸다.
+  # 버전: vYYYY.MM.DD, 같은 날 두 번째부터 vYYYY.MM.DD.N (N = 2, 3, …).
+  # workflow_dispatch 는 이미 있는 태그를 다시 내보낸다(되돌리기).
+  # 태그 커밋이 origin/main 에 있고, 그 커밋(main CI)이나 트리가 같은 PR head 에 build 체크 성공이 있어야
+  # 내보낸다. main CI 가 아직 돌고 있으면 40분까지 기다리고, 그래도 검증이 안 되면 내보내지 않는다.
   push:
-    branches: [main]
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag to deploy (vYYYY.MM.DD or vYYYY.MM.DD.N)
+        required: true
+        type: string
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  # 태그마다 ref 가 달라서 ref 로 묶으면 두 태그가 동시에 나갈 수 있다. 배포는 하나씩.
+  group: deploy
   cancel-in-progress: false
 
 env:
@@ -28,26 +32,23 @@ permissions:
 
 jobs:
   release:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     outputs:
       sha: ${{ steps.pick.outputs.sha }}
-      ships: ${{ steps.pick.outputs.ships }}
+      tag: ${{ steps.pick.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Pick the verified commit and decide whether it ships
+      - name: Resolve the tag and verify its commit
         id: pick
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          EVENT: ${{ github.event_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          sha="${{ github.event.workflow_run.head_sha || github.sha }}"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
           api() {
             for _ in 1 2 3 4 5; do
               gh api "$@" && return 0
@@ -55,54 +56,66 @@ jobs:
             done
             return 1
           }
-          if [ "$EVENT" = "push" ]; then
-            pr_verified=false
-            head=""
-            pr=$(git log -1 --format=%s "$sha" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')
-            if [ -n "$pr" ]; then
-              head=$(api "repos/$REPO/pulls/$pr" -q "select(.merge_commit_sha == \"$sha\") | .head.sha") || head=""
+          if ! [[ "$TAG" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?$ ]]; then
+            echo "::error::$TAG is not a release tag. Use vYYYY.MM.DD, or vYYYY.MM.DD.N for another release the same day."
+            exit 1
+          fi
+          if ! sha=$(git rev-parse --verify -q "refs/tags/$TAG^{commit}"); then
+            echo "::error::Tag $TAG does not exist."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$TAG points at $sha, which is not on origin/main. Only commits on main ship."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "$TAG -> $sha"
+
+          head=""
+          passed=0
+          pr=$(git log -1 --format=%s "$sha" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')
+          if [ -n "$pr" ]; then
+            head=$(api "repos/$REPO/pulls/$pr" -q "select(.merge_commit_sha == \"$sha\") | .head.sha") || head=""
+          fi
+          if [ -n "$head" ]; then
+            head_tree=$(api "repos/$REPO/git/commits/$head" -q .tree.sha) || head_tree=""
+            passed=$(api "repos/$REPO/commits/$head/check-runs?check_name=build" -q '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length') || passed=0
+            if [ "$head_tree" = "$(git rev-parse "$sha^{tree}")" ] && [ "${passed:-0}" -gt 0 ]; then
+              echo "Verified: PR #$pr head $head has the same tree and a successful build."
+              exit 0
             fi
-            if [ -n "$head" ]; then
-              head_tree=$(api "repos/$REPO/git/commits/$head" -q .tree.sha) || head_tree=""
-              passed=$(api "repos/$REPO/commits/$head/check-runs?check_name=build" -q '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length') || passed=0
-              if [ "$head_tree" = "$(git rev-parse "$sha^{tree}")" ] && [ "${passed:-0}" -gt 0 ]; then
-                pr_verified=true
+          fi
+          echo "PR #${pr:-none} head ${head:-none} (passed ${passed:-0}) does not verify $sha; checking main CI on $sha."
+
+          deadline=$(( $(date +%s) + 40 * 60 ))
+          while :; do
+            runs=$(api "repos/$REPO/commits/$sha/check-runs?check_name=build" -q '[.check_runs[] | select(.app.slug == "github-actions")]') || runs=""
+            if [ -n "$runs" ]; then
+              total=$(jq 'length' <<< "$runs")
+              succeeded=$(jq '[.[] | select(.conclusion == "success")] | length' <<< "$runs")
+              running=$(jq '[.[] | select(.status != "completed")] | length' <<< "$runs")
+              if [ "$succeeded" -gt 0 ]; then
+                echo "Verified: build succeeded on $sha."
+                exit 0
               fi
+              if [ "$total" -gt 0 ] && [ "$running" -eq 0 ]; then
+                echo "::error::build on $sha finished without success ($(jq -r 'map(.conclusion) | join(", ")' <<< "$runs")). Not deploying unverified. Re-run CI on $sha or tag a verified commit."
+                exit 1
+              fi
+              echo "build on $sha: $total run(s), $running still running."
+            else
+              echo "build on $sha: no check-run yet."
             fi
-            echo "pr_verified=$pr_verified (pr #${pr:-none} head ${head:-none}, passed ${passed:-none})"
-            if [ "$pr_verified" = "false" ]; then
-              echo "ships=false" >> "$GITHUB_OUTPUT"
-              exit 0
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::No successful build on $sha, or on a PR head with the same tree, within 40 minutes. Not deploying unverified."
+              exit 1
             fi
-          fi
-          if [ "$EVENT" = "workflow_run" ]; then
-            token=$(curl -fsS -u "x:$GH_TOKEN" "https://$REGISTRY/token?scope=repository:$IMAGE_NAME:pull" | jq -r .token) || token=""
-            image=$(curl -sS -o /dev/null -w '%{http_code}' -I \
-              -H "Authorization: Bearer $token" \
-              -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
-              "https://$REGISTRY/v2/$IMAGE_NAME/manifests/sha-$sha") || image=000
-            echo "image sha-$sha: HTTP $image"
-            if [ "$image" = "200" ]; then
-              echo "ships=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
-          # 트리거가 CI 로 바뀌면서 paths 필터를 잃었다. main 은 스쿼시 머지라
-          # HEAD^..HEAD 가 그 머지의 변경 전부다.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git rev-parse --verify -q HEAD^ >/dev/null; then
-            echo "ships=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if git diff --name-only HEAD^ HEAD \
-            | grep -qE '^(src/|build\.gradle$|Dockerfile$|deploy/|\.github/workflows/deploy\.yml$)'; then
-            echo "ships=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ships=false" >> "$GITHUB_OUTPUT"
-          fi
+            sleep 30
+          done
 
   build-and-deploy:
     needs: release
-    if: needs.release.outputs.ships == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,6 +147,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ needs.release.outputs.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.release.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -222,12 +236,13 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
           RELEASE_SHA: ${{ needs.release.outputs.sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
         run: |
           MSG=$(jq -nc \
-            --arg sha "${RELEASE_SHA:0:7}" \
+            --arg release "$RELEASE_TAG ${RELEASE_SHA:0:7}" \
             --arg msg "$(git log -1 --pretty=%s)" \
             --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{ content: "✅ **BE deploy success** · \($sha) — \($msg)\n<\($run)>" }')
+            '{ content: "✅ **BE deploy success** · \($release) — \($msg)\n<\($run)>" }')
           curl -fsS -X POST -H "Content-Type: application/json" -d "$MSG" "$WEBHOOK"
 
       - name: Notify Discord — deploy failure
@@ -235,10 +250,11 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
           RELEASE_SHA: ${{ needs.release.outputs.sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
         run: |
           MSG=$(jq -nc \
-            --arg sha "${RELEASE_SHA:0:7}" \
+            --arg release "$RELEASE_TAG ${RELEASE_SHA:0:7}" \
             --arg msg "$(git log -1 --pretty=%s)" \
             --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{ content: "🚨 **BE deploy FAILED** · \($sha) — \($msg)\n<\($run)>" }')
+            '{ content: "🚨 **BE deploy FAILED** · \($release) — \($msg)\n<\($run)>" }')
           curl -fsS -X POST -H "Content-Type: application/json" -d "$MSG" "$WEBHOOK" || true

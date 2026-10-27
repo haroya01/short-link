@@ -1,11 +1,9 @@
 package com.example.short_link.tag.application.write;
 
 import com.example.short_link.link.application.LinkCacheEviction;
-import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.application.write.LinkOwnership;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkErrorCode;
-import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.tag.application.helper.TagSanitizer;
 import com.example.short_link.tag.domain.LinkTagEntity;
 import com.example.short_link.tag.domain.TagEntity;
@@ -25,18 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ReplaceLinkTagsUseCase {
 
-  private final LinkRepository linkRepository;
+  private final LinkOwnership ownership;
   private final TagRepository tagRepository;
   private final LinkTagRepository linkTagRepository;
   private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
   public List<String> execute(Long userId, ShortCode shortCode, List<String> rawNames) {
-    LinkEntity link =
-        linkRepository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-    if (!link.isOwnedBy(userId)) throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
+    LinkId linkId = ownership.requireOwnedId(userId, shortCode);
 
     List<String> normalized = normalize(rawNames);
     if (normalized.size() > TagSanitizer.MAX_TAGS_PER_LINK) {
@@ -44,7 +38,7 @@ public class ReplaceLinkTagsUseCase {
           "too many tags (max " + TagSanitizer.MAX_TAGS_PER_LINK + ")");
     }
 
-    linkTagRepository.deleteByLinkId(link.linkId().value());
+    linkTagRepository.deleteByLinkId(linkId.value());
     linkCacheEviction.evictAfterCommit(shortCode);
     if (normalized.isEmpty()) return List.of();
 
@@ -58,7 +52,7 @@ public class ReplaceLinkTagsUseCase {
         tag = tagRepository.save(new TagEntity(userId, name, null));
         existing.put(name, tag);
       }
-      linkTagRepository.save(new LinkTagEntity(link.linkId(), tag.getId()));
+      linkTagRepository.save(new LinkTagEntity(linkId, tag.getId()));
     }
     return normalized;
   }

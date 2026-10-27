@@ -14,7 +14,9 @@ import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.application.NoteAddressing;
 import com.example.short_link.federation.application.NoteDocuments;
+import com.example.short_link.federation.application.RemoteAccountFinder;
 import com.example.short_link.federation.application.RemoteParents;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.testsupport.KurlWebMvcTest;
@@ -30,7 +32,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @KurlWebMvcTest(controllers = NoteObjectController.class)
-@Import({FederationUrls.class, NoteDocuments.class, NoteObjectControllerTest.Props.class})
+@Import({
+  FederationUrls.class,
+  NoteDocuments.class,
+  NoteAddressing.class,
+  NoteObjectControllerTest.Props.class
+})
 class NoteObjectControllerTest {
 
   @TestConfiguration
@@ -57,6 +64,7 @@ class NoteObjectControllerTest {
   @MockitoBean private NoteSnapshotReader notes;
   @MockitoBean private FederationActorService actors;
   @MockitoBean private RemoteParents remoteParents;
+  @MockitoBean private RemoteAccountFinder finder;
 
   @Test
   void remoteServersGetTheNoteAndBrowsersGoToItsPage() throws Exception {

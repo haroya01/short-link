@@ -39,29 +39,40 @@ public interface JpaProfileVisitRepository extends JpaRepository<ProfileVisitEnt
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) AS day, "
           + "COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
-          + "AND p.visitedAt >= :from "
+          + "AND p.visitedAt >= :from AND p.visitedAt < :until "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) "
           + "ORDER BY day")
   List<VisitProjections.DailyVisitRow> findDailyVisits(
-      @Param("uid") Long uid, @Param("from") Instant from, @Param("tz") String tz);
+      @Param("uid") Long uid,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) AS hour, "
           + "COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
+          + "AND p.visitedAt >= :from AND p.visitedAt < :until "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) "
           + "ORDER BY hour")
   List<VisitProjections.HourVisitRow> findHourlyVisits(
-      @Param("uid") Long uid, @Param("tz") String tz);
+      @Param("uid") Long uid,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) AS dow, "
           + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) AS hour, "
           + "COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
+          + "AND p.visitedAt >= :from AND p.visitedAt < :until "
           + "GROUP BY dow, hour ORDER BY dow, hour")
   List<VisitProjections.HeatmapVisitRow> findHeatmap(
-      @Param("uid") Long uid, @Param("tz") String tz);
+      @Param("uid") Long uid,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String tz);
 
   @Query(
       "SELECT p.countryCode AS country, COUNT(p) AS count "

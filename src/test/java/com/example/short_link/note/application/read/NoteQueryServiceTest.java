@@ -251,7 +251,7 @@ class NoteQueryServiceTest {
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
 
-    NoteThreadView thread = service.thread(2L, 9L);
+    NoteThreadView thread = service.thread(9L, 2L);
 
     assertThat(thread.note().id()).isEqualTo(2L);
     assertThat(thread.parent().id()).isEqualTo(1L);
@@ -280,7 +280,7 @@ class NoteQueryServiceTest {
                         new NoteSeries.Entry("NOTE", 2L, null, "n2"),
                         new NoteSeries.Entry("NOTE", 3L, null, "n3")))));
 
-    assertThat(service.thread(2L, 9L).series())
+    assertThat(service.thread(9L, 2L).series())
         .isEqualTo(
             new NoteSeriesNavView(
                 "guide",
@@ -295,11 +295,11 @@ class NoteQueryServiceTest {
   void aNoteOutsideAnySeriesOrHiddenFromItsReadersHasNoSeries() {
     threadOf(note(2L, null));
     when(noteSeries.containing(2L)).thenReturn(Optional.empty());
-    assertThat(service.thread(2L, 9L).series()).isNull();
+    assertThat(service.thread(9L, 2L).series()).isNull();
 
     NoteEntity unreadable = threadOf(note(4L, null));
     unreadable.showTo(NoteVisibility.PRIVATE);
-    assertThat(service.thread(4L, 9L).series()).isNull();
+    assertThat(service.thread(9L, 4L).series()).isNull();
     verify(noteSeries, never()).containing(4L);
 
     assertThat(
@@ -325,13 +325,13 @@ class NoteQueryServiceTest {
             org.mockito.ArgumentMatchers.eq(NoteQueryService.MAX_REPLIES)))
         .thenReturn(List.of());
     when(views.of(List.of(orphan), null)).thenReturn(List.of(view(2L, 1L, null)));
-    assertThat(service.thread(2L, null).parent()).isNull();
+    assertThat(service.thread(null, 2L).parent()).isNull();
 
     when(views.of(List.of(orphan), 5L)).thenReturn(List.of());
-    assertThatThrownBy(() -> service.thread(2L, 5L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.thread(5L, 2L)).isInstanceOf(NoteException.class);
 
     when(notes.findUnblocked(4L, null)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.thread(4L, null)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.thread(null, 4L)).isInstanceOf(NoteException.class);
   }
 
   @Test
@@ -343,15 +343,15 @@ class NoteQueryServiceTest {
     when(views.of(List.of(root, hidden), 9L))
         .thenReturn(List.of(view(1L, null, 0L), view(2L, 1L, 0L)));
 
-    assertThat(service.hiddenReplies(1L, 9L)).extracting(NoteView::id).containsExactly(2L);
+    assertThat(service.hiddenReplies(9L, 1L)).extracting(NoteView::id).containsExactly(2L);
 
     when(notes.findUnblocked(3L, 9L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.hiddenReplies(3L, 9L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.hiddenReplies(9L, 3L)).isInstanceOf(NoteException.class);
     NoteEntity unreadable = note(4L, null);
     when(notes.findUnblocked(4L, 9L)).thenReturn(Optional.of(unreadable));
     when(feeds.hiddenReplies(4L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
     when(views.of(List.of(unreadable), 9L)).thenReturn(List.of());
-    assertThatThrownBy(() -> service.hiddenReplies(4L, 9L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.hiddenReplies(9L, 4L)).isInstanceOf(NoteException.class);
   }
 
   @Test
@@ -367,7 +367,7 @@ class NoteQueryServiceTest {
     when(views.of(List.of(root, reply, hidden, unreadable), 9L))
         .thenReturn(List.of(view(1L, null, null), view(2L, 1L, null), view(3L, 1L, null)));
 
-    NoteThreadView thread = service.thread(1L, 9L);
+    NoteThreadView thread = service.thread(9L, 1L);
 
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(2L);
     assertThat(thread.hiddenReplyCount()).isEqualTo(1);
@@ -393,31 +393,31 @@ class NoteQueryServiceTest {
   void onlyTheWriterOfTheThreadsFirstNoteMayModerateItAtAnyDepth() {
     NoteEntity first = note(1L, null);
     open(first, null, 7L);
-    assertThat(service.thread(1L, 7L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 1L).viewerCanModerate()).isTrue();
     open(first, null, 9L);
-    assertThat(service.thread(1L, 9L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(9L, 1L).viewerCanModerate()).isFalse();
     open(first, null, null);
-    assertThat(service.thread(1L, null).viewerCanModerate()).isFalse();
+    assertThat(service.thread(null, 1L).viewerCanModerate()).isFalse();
 
     NoteEntity answer = reply(2L, 8L, 1L, 1L);
     open(answer, first, 7L);
-    assertThat(service.thread(2L, 7L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 2L).viewerCanModerate()).isTrue();
     verify(notes, never()).findById(1L);
 
     NoteEntity deep = reply(3L, 8L, 2L, 1L);
     open(deep, answer, 7L);
     when(notes.findById(1L)).thenReturn(Optional.of(first));
-    assertThat(service.thread(3L, 7L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 3L).viewerCanModerate()).isTrue();
     open(deep, answer, 8L);
-    assertThat(service.thread(3L, 8L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(8L, 3L).viewerCanModerate()).isFalse();
     when(notes.findById(1L)).thenReturn(Optional.empty());
-    assertThat(service.thread(3L, 7L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(7L, 3L).viewerCanModerate()).isFalse();
   }
 
   @Test
   void historyOpensOnlyWhereTheThreadWould() {
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.history(1L, 9L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.history(9L, 1L)).isInstanceOf(NoteException.class);
     verify(notes, never()).versions(1L);
 
     NoteEntity remote = new NoteEntity(null, "from afar", null, null);
@@ -425,16 +425,16 @@ class NoteQueryServiceTest {
     ReflectionTestUtils.setField(remote, "remoteActorId", 40L);
     when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(remote));
     when(people.remoteAuthors(Set.of(40L), 9L)).thenReturn(Map.of());
-    assertThatThrownBy(() -> service.history(2L, 9L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.history(9L, 2L)).isInstanceOf(NoteException.class);
 
     NoteEntity forFollowers = note(3L, null);
     forFollowers.showTo(NoteVisibility.PRIVATE);
     when(notes.findUnblocked(3L, 9L)).thenReturn(Optional.of(forFollowers));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, ME));
     when(lookups.visibleTo(9L, Set.of(3L))).thenReturn(Set.of(), Set.of(3L));
-    assertThatThrownBy(() -> service.history(3L, 9L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.history(9L, 3L)).isInstanceOf(NoteException.class);
     when(notes.versions(3L)).thenReturn(List.of());
-    assertThat(service.history(3L, 9L).versions()).hasSize(1);
+    assertThat(service.history(9L, 3L).versions()).hasSize(1);
   }
 
   @Test
@@ -459,7 +459,7 @@ class NoteQueryServiceTest {
 
     when(feeds.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
     when(views.ofFeed(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
-    assertThat(service.quotes(7L, null, new PageAsk(0, 20)).items())
+    assertThat(service.quotes(null, 7L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(2L);
   }
@@ -471,7 +471,7 @@ class NoteQueryServiceTest {
     when(feeds.countQuotesOfPost(40L, 9L)).thenReturn(1L);
     when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
 
-    PostQuotesView quotes = service.postQuotes(40L, 9L, new PageAsk(0, 20));
+    PostQuotesView quotes = service.postQuotes(9L, 40L, new PageAsk(0, 20));
 
     assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
     assertThat(quotes.total()).isEqualTo(1L);

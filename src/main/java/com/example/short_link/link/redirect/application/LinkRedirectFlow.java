@@ -38,7 +38,7 @@ public class LinkRedirectFlow {
     String clientCountry = geoIpResolver.resolve(visit.clientIp()).countryCode();
     if (link.isBlockedFor(clientCountry)) {
       countBlocked(clientCountry);
-      return new RedirectOutcome.Blocked();
+      return new RedirectOutcome.CountryBlocked();
     }
     // Prefetch headers come from the client, so a prefetch that skips the count gets no
     // destination.
@@ -91,7 +91,7 @@ public class LinkRedirectFlow {
       String clientCountry = geoIpResolver.resolve(clientIp).countryCode();
       if (link.isBlockedFor(clientCountry)) {
         countBlocked(clientCountry);
-        return Optional.of(new RedirectOutcome.Blocked());
+        return Optional.of(new RedirectOutcome.CountryBlocked());
       }
     }
     if (entity != null && entity.isViewLimitReached()) {

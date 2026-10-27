@@ -16,6 +16,7 @@ import com.example.short_link.link.access.application.write.PasswordUnlockUseCas
 import com.example.short_link.link.access.infrastructure.CloudflareTurnstileVerifier;
 import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.domain.LinkEntity;
@@ -75,7 +76,7 @@ class PasswordUnlockControllerTest {
   }
 
   private CachedLink cachedLink() {
-    return new CachedLink(new LinkId(1L), "https://dst", null, null, null, null);
+    return CachedLinkFixture.link(new LinkId(1L), "https://dst").build();
   }
 
   @Test
@@ -141,7 +142,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any())).thenReturn(new RedirectOutcome.Blocked());
+    when(flow.execute(any(), any(), any())).thenReturn(new RedirectOutcome.CountryBlocked());
 
     MockHttpServletRequest req = request();
     ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);

@@ -228,7 +228,7 @@ class ApnsPushSenderTest {
                     "LIKE",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", null, "my-post", null, null, null, null)));
+                    new PushRoute("yuki", null, "my-post", null, null, null, null, null)));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("type").asString()).isEqualTo("LIKE");
@@ -254,7 +254,7 @@ class ApnsPushSenderTest {
                     "COMMENT",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", "me", "my-post", null, null, 77L, null)));
+                    new PushRoute("yuki", "me", "my-post", null, null, 77L, null, null)));
     String highlight =
         sender()
             .payloadJson(
@@ -265,7 +265,7 @@ class ApnsPushSenderTest {
                     "REPLY",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", "me", "my-post", null, null, null, 41L)));
+                    new PushRoute("yuki", "me", "my-post", null, null, null, 41L, null)));
 
     JsonNode commentRoot = jsonMapper.readTree(comment);
     assertThat(commentRoot.get("commentId").isNumber()).isTrue();
@@ -288,7 +288,7 @@ class ApnsPushSenderTest {
                     "CONNECTED",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", null, null, null, 42L, null, null)));
+                    new PushRoute("yuki", null, null, null, 42L, null, null, null)));
 
     assertThat(jsonMapper.readTree(payload).get("collectionId").asLong()).isEqualTo(42L);
   }

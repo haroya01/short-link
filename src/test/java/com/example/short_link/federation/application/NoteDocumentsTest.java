@@ -33,7 +33,8 @@ class NoteDocumentsTest {
                 "<b>hi</b> & see https://example.com/a?b=1&c=2.\nnext line\n\nsecond <script>",
                 null,
                 List.of(),
-                null));
+                null),
+            List.of());
 
     assertThat(html)
         .isEqualTo(
@@ -76,10 +77,10 @@ class NoteDocumentsTest {
             false,
             NoteVisibility.PRIVATE);
 
-    Map<String, Object> quiet = documents.create(unlisted, "pid");
+    Map<String, Object> quiet = documents.create(unlisted, "pid", Addressing.NONE);
     assertThat(quiet.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
     assertThat(quiet.get("cc")).isEqualTo(List.of("https://www.w3.org/ns/activitystreams#Public"));
-    Map<String, Object> close = documents.note(followersOnly, "pid");
+    Map<String, Object> close = documents.note(followersOnly, "pid", Addressing.NONE);
     assertThat(close.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
     assertThat(close.get("cc")).isEqualTo(List.of());
   }
@@ -104,9 +105,9 @@ class NoteDocumentsTest {
 
     for (Map<String, Object> document :
         List.of(
-            documents.create(direct, "pid"),
-            documents.update(direct, "pid"),
-            documents.note(direct, "pid"))) {
+            documents.create(direct, "pid", Addressing.NONE),
+            documents.update(direct, "pid", Addressing.NONE),
+            documents.note(direct, "pid", Addressing.NONE))) {
       assertThat(document.get("to")).isEqualTo(List.of());
       assertThat(document.get("cc")).isEqualTo(List.of());
     }
@@ -132,10 +133,10 @@ class NoteDocumentsTest {
             null,
             "ko");
 
-    Map<String, Object> note = documents.note(korean, "pid");
+    Map<String, Object> note = documents.note(korean, "pid", Addressing.NONE);
 
     assertThat(note.get("contentMap")).isEqualTo(Map.of("ko", note.get("content")));
-    assertThat(documents.note(note("plain", null, List.of(), null), "pid"))
+    assertThat(documents.note(note("plain", null, List.of(), null), "pid", Addressing.NONE))
         .doesNotContainKey("contentMap");
   }
 
@@ -145,11 +146,11 @@ class NoteDocumentsTest {
         NoteSnapshotFixtures.note(
             42L, 7L, "yuki", "spoilers", CREATED, null, null, null, List.of(), null, "결말 포함", true);
 
-    Map<String, Object> note = documents.note(warned, "pid");
+    Map<String, Object> note = documents.note(warned, "pid", Addressing.NONE);
 
     assertThat(note.get("summary")).isEqualTo("결말 포함");
     assertThat(note.get("sensitive")).isEqualTo(true);
-    assertThat(documents.note(note("plain", null, List.of(), null), "pid"))
+    assertThat(documents.note(note("plain", null, List.of(), null), "pid", Addressing.NONE))
         .containsEntry("summary", null)
         .containsEntry("sensitive", false);
   }
@@ -164,7 +165,8 @@ class NoteDocumentsTest {
                 null,
                 List.of(),
                 null),
-            "pid");
+            "pid",
+            Addressing.NONE);
 
     assertThat((String) object.get("content"))
         .isEqualTo(
@@ -195,7 +197,8 @@ class NoteDocumentsTest {
   @Test
   void aQuotedBlogPostIsLinkedAndAnImageOnlyNoteHasNoTextParagraph() {
     String html =
-        documents.content(note("", new Quote("Essay <1>", "my-essay", "yuki"), List.of(), null));
+        documents.content(
+            note("", new Quote("Essay <1>", "my-essay", "yuki"), List.of(), null), List.of());
 
     assertThat(html)
         .isEqualTo("<p><a href=\"https://blog.kurl.me/@yuki/my-essay\">Essay &lt;1&gt;</a></p>");
@@ -218,7 +221,7 @@ class NoteDocumentsTest {
             null,
             false);
 
-    Map<String, Object> note = documents.note(quoting, "pid");
+    Map<String, Object> note = documents.note(quoting, "pid", Addressing.NONE);
 
     assertThat(note.get("quoteUrl")).isEqualTo("https://kurl.me/ap/notes/9");
     assertThat(note.get("quoteUri")).isEqualTo("https://kurl.me/ap/notes/9");
@@ -227,7 +230,7 @@ class NoteDocumentsTest {
         .isEqualTo(
             "<p>agreed</p><p class=\"quote-inline\">RE: <a href=\"https://blog.kurl.me/@mio/notes/9\">"
                 + "https://blog.kurl.me/@mio/notes/9</a></p>");
-    assertThat(documents.note(note("x", null, List.of(), null), "pid"))
+    assertThat(documents.note(note("x", null, List.of(), null), "pid", Addressing.NONE))
         .doesNotContainKeys("quoteUrl", "quoteUri", "_misskey_quote");
   }
 
@@ -249,7 +252,7 @@ class NoteDocumentsTest {
             null,
             false);
 
-    Map<String, Object> note = documents.note(quoting, "pid");
+    Map<String, Object> note = documents.note(quoting, "pid", Addressing.NONE);
 
     assertThat(note.get("quoteUri")).isEqualTo("https://m.example/users/alice/statuses/1");
     assertThat(note.get("quoteUrl")).isEqualTo("https://m.example/users/alice/statuses/1");
@@ -273,7 +276,7 @@ class NoteDocumentsTest {
             new QuotedNote(9L, null, "https://m.example/users/alice/statuses/1", "javascript:x"),
             null,
             false);
-    assertThat(documents.note(withoutPage, "pid").get("content").toString())
+    assertThat(documents.note(withoutPage, "pid", Addressing.NONE).get("content").toString())
         .contains("RE: <a href=\"https://m.example/users/alice/statuses/1\">");
   }
 
@@ -315,10 +318,11 @@ class NoteDocumentsTest {
                 "hello",
                 null,
                 List.of(
-                    new Image("https://cdn/a.png", "image/png", "cat", 1200, 900),
-                    new Image("https://cdn/b.png", "image/png", null, null, null)),
+                    new Image("https://cdn/a.png", "cat", "image/png", 1200, 900),
+                    new Image("https://cdn/b.png", null, "image/png", null, null)),
                 null),
-            "pid");
+            "pid",
+            Addressing.NONE);
 
     List<Map<String, Object>> attachments =
         (List<Map<String, Object>>) ((Map<String, Object>) create.get("object")).get("attachment");
@@ -334,9 +338,10 @@ class NoteDocumentsTest {
             note(
                 "hello",
                 null,
-                List.of(new Image("https://cdn/a.png", "image/png", "cat", null, null)),
+                List.of(new Image("https://cdn/a.png", "cat", "image/png", null, null)),
                 41L),
-            "pid");
+            "pid",
+            Addressing.NONE);
 
     assertThat(create.get("id")).isEqualTo("https://kurl.me/ap/notes/42/activity");
     assertThat(create.get("type")).isEqualTo("Create");
@@ -366,12 +371,12 @@ class NoteDocumentsTest {
         NoteSnapshotFixtures.note(
             42L, 7L, "yuki", "x", CREATED, Instant.ofEpochMilli(1_000), null, null, List.of());
 
-    Map<String, Object> update = documents.update(edited, "pid");
+    Map<String, Object> update = documents.update(edited, "pid", Addressing.NONE);
     assertThat(update.get("id")).isEqualTo("https://kurl.me/ap/notes/42#updates/1000");
     assertThat(((Map<String, Object>) update.get("object")).get("updated"))
         .isEqualTo("1970-01-01T00:00:01Z");
     assertThat(((Map<String, Object>) update.get("object")).get("inReplyTo")).isNull();
-    assertThat(documents.update(note("x", null, List.of(), null), "pid").get("id"))
+    assertThat(documents.update(note("x", null, List.of(), null), "pid", Addressing.NONE).get("id"))
         .isEqualTo("https://kurl.me/ap/notes/42#updates/0");
 
     Map<String, Object> delete = documents.delete(42L, "pid");
@@ -408,7 +413,7 @@ class NoteDocumentsTest {
 
   @Test
   void aPollIsAQuestionWhoseOptionsCountTheirVotesAsReplies() {
-    Map<String, Object> single = documents.note(polled(false, false), "abc");
+    Map<String, Object> single = documents.note(polled(false, false), "abc", Addressing.NONE);
 
     assertThat(single.get("type")).isEqualTo("Question");
     assertThat(single.get("oneOf"))
@@ -432,10 +437,13 @@ class NoteDocumentsTest {
     assertThat(single.get("endTime")).isEqualTo("2026-10-08T01:02:03Z");
     assertThat(single.get("votersCount")).isEqualTo(4L);
 
-    Map<String, Object> multiple = documents.note(polled(true, true), "abc");
+    Map<String, Object> multiple = documents.note(polled(true, true), "abc", Addressing.NONE);
     assertThat(multiple).containsKey("anyOf").doesNotContainKey("oneOf");
     assertThat(multiple.get("closed")).isEqualTo("2026-10-08T01:02:03Z");
-    assertThat(documents.note(note("plain", null, List.of(), null), "abc").get("type"))
+    assertThat(
+            documents
+                .note(note("plain", null, List.of(), null), "abc", Addressing.NONE)
+                .get("type"))
         .isEqualTo("Note");
   }
 

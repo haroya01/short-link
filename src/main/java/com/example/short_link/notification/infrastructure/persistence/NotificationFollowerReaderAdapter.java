@@ -20,13 +20,7 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
   // new writing; a block does not end the follow itself. The time is bound from Java so a mute's
   // end is compared in UTC.
   private static final String HEARS_AUTHOR =
-      " AND NOT EXISTS (SELECT 1 FROM user_block b"
-          + " WHERE b.blocker_id = f.follower_id AND b.blocked_id = :id)"
-          + " AND NOT EXISTS (SELECT 1 FROM user_block b"
-          + " WHERE b.blocker_id = :id AND b.blocked_id = f.follower_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM user_mute m"
-          + " WHERE m.user_id = f.follower_id AND m.muted_user_id = :id"
-          + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))";
+      " AND NOT " + HeardSql.memberSilencedEitherWay("f.follower_id", ":id");
 
   @Override
   public List<Long> followerIdsOf(Long authorUserId) {
@@ -53,8 +47,6 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
   }
 
-  // Members who reposted or quoted the note. A member author is silenced by blocks and notice
-  // mutes, an author elsewhere by those and a blocked server; a muted conversation silences either.
   @Override
   public List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId) {
     String server =
@@ -68,12 +60,8 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     String silenced =
         authorUserId == null
             ? server
-            : " AND s.user_id <> :author"
-                + " AND NOT EXISTS (SELECT 1 FROM user_block b"
-                + " WHERE b.blocker_id = s.user_id AND b.blocked_id = :author)"
-                + " AND NOT EXISTS (SELECT 1 FROM user_mute m"
-                + " WHERE m.user_id = s.user_id AND m.muted_user_id = :author"
-                + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))";
+            : " AND s.user_id <> :author AND NOT "
+                + HeardSql.memberSilencedEitherWay("s.user_id", ":author");
     var query =
         em.createNativeQuery(
                 "SELECT s.user_id FROM (SELECT r.user_id FROM note_repost r WHERE r.note_id = :note"

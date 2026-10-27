@@ -1,14 +1,15 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -22,17 +23,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class WeeklyInsightsService {
 
   private static final Duration WINDOW = Duration.ofDays(7);
-  private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
   private static final int TOP_ONE = 1;
 
-  private final ClickRangeReadRepository clickRanges;
+  private final ClickRangeReader clickRanges;
   private final ClickRangeTopReader clickRangeTops;
   private final LinkRepository linkRepository;
   private final UserAccessLookup users;
+  private final Clock clock;
 
   @Transactional(readOnly = true)
   public WeeklyInsights compute(Long userId) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     Instant from = now.minus(WINDOW);
     Instant prevFrom = from.minus(WINDOW);
 
@@ -76,7 +77,7 @@ public class WeeklyInsightsService {
 
   private WeeklyInsights.Peak resolvePeak(Long userId, Instant from, Instant to) {
     ZoneId zone = ownerZone(userId);
-    String tz = LinkStatsQueryService.currentOffset(zone);
+    String tz = ReportZones.sqlOffset(zone, to);
     List<HeatmapRow> rows = clickRangeTops.topHeatmapByUser(userId, from, to, tz, TOP_ONE);
     if (rows.isEmpty()) return null;
     HeatmapRow best = rows.get(0);
@@ -84,6 +85,6 @@ public class WeeklyInsightsService {
   }
 
   private ZoneId ownerZone(Long userId) {
-    return users.timezone(userId).map(LinkStatsQueryService::safeZone).orElse(DEFAULT_ZONE);
+    return users.timezone(userId).map(ReportZones::zoneOf).orElse(ReportZones.DEFAULT_ZONE);
   }
 }

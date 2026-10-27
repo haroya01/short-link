@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.write;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
@@ -57,7 +58,7 @@ public class FollowUseCase {
     if (target.isLocked()) {
       if (!followRequests.exists(edge)) {
         followRequests.save(new FollowRequestEntity(edge));
-        events.publishEvent(new FollowRequestedEvent(target.getId(), followerId, null));
+        events.publishEvent(new FollowRequestedEvent(target.getId(), Actor.member(followerId)));
       }
       return statusOf(false, target, blocks).requesting(true, true);
     }
@@ -91,7 +92,7 @@ public class FollowUseCase {
     if (follow.isPresent()) {
       followRepository.delete(follow.get());
     } else if (target.isLocked() && followRequests.delete(edge) > 0) {
-      events.publishEvent(new FollowRequestSettledEvent(target.getId(), followerId, null));
+      events.publishEvent(new FollowRequestSettledEvent(target.getId(), Actor.member(followerId)));
     }
     return statusOf(false, target, userBlocks.between(followerId, target.getId()));
   }

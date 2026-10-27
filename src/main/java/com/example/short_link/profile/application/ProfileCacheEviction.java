@@ -2,8 +2,8 @@ package com.example.short_link.profile.application;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.transaction.AfterCommit;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ public class ProfileCacheEviction implements ProfileCacheInvalidator {
   public static final String CACHE_NAME = "public-profile-snapshot";
 
   private final CacheManager cacheManager;
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
 
   @Override
   public void evictByUsername(String username) {
@@ -42,6 +42,6 @@ public class ProfileCacheEviction implements ProfileCacheInvalidator {
   @Override
   public void evictByUserId(Long userId) {
     if (userId == null) return;
-    userRepository.findById(userId).map(UserEntity::getUsername).ifPresent(this::evictByUsername);
+    users.find(userId).map(UserSummary::username).ifPresent(this::evictByUsername);
   }
 }

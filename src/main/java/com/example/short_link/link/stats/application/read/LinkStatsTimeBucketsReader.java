@@ -1,13 +1,13 @@
 package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,7 +27,7 @@ class LinkStatsTimeBucketsReader {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
 
-  private final ClickTimeReadRepository clickTime;
+  private final ClickTimeReader clickTime;
 
   TimeBuckets read(LinkId linkId, Instant linkCreatedAt, ZoneId zone, Instant reportTime) {
     Long id = linkId.value();

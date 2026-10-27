@@ -2,12 +2,12 @@ package com.example.short_link.admin.application.write;
 
 import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
 import com.example.short_link.admin.application.helper.WarningCopy;
-import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.application.dto.LinkRef;
+import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.domain.LinkNotificationType;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,26 +21,26 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BlockedDomainWarningFanout {
 
-  private final LinkRepository links;
-  private final UserRepository users;
+  private final LinkRefReader links;
+  private final UserSummaryReader users;
   private final LinkNotificationDispatcher dispatcher;
 
   public int execute(String domain) {
-    Map<Long, List<LinkEntity>> byOwner =
-        links.findByOriginalUrlContaining(domain).stream()
-            .filter(l -> l.getUserId() != null)
-            .filter(l -> isCovered(BlockedDomainNormalizer.hostOf(l.getOriginalUrl()), domain))
-            .collect(Collectors.groupingBy(LinkEntity::getUserId));
+    Map<Long, List<LinkRef>> byOwner =
+        links.findWithUrlContaining(domain).stream()
+            .filter(l -> l.userId() != null)
+            .filter(l -> isCovered(BlockedDomainNormalizer.hostOf(l.originalUrl()), domain))
+            .collect(Collectors.groupingBy(LinkRef::userId));
     if (byOwner.isEmpty()) {
       return 0;
     }
     Map<Long, String> locales =
-        users.findAllByIdIn(byOwner.keySet()).stream()
-            .collect(Collectors.toMap(UserEntity::getId, UserEntity::getLocale));
+        users.findAll(byOwner.keySet()).stream()
+            .collect(Collectors.toMap(UserSummary::id, UserSummary::locale));
     byOwner.forEach(
         (userId, owned) -> {
           WarningCopy.Copy copy = WarningCopy.domainBlocked(locales.get(userId), domain);
-          String shortCode = owned.size() == 1 ? owned.get(0).getShortCode().value() : null;
+          String shortCode = owned.size() == 1 ? owned.get(0).shortCode().value() : null;
           try {
             dispatcher.dispatch(
                 userId, LinkNotificationType.WARNING, shortCode, copy.subtitle(), copy.body());

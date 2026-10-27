@@ -267,8 +267,7 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
     call("profile-link-show", "PUT", path, Map.of("show", true), token, 200);
     assertThat(
             count(
-                "select count(*) from link_profile_binding where link_id=? and profile_order is not null",
-                link.getId()))
+                "select count(*) from link where id=? and profile_order is not null", link.getId()))
         .isEqualTo(1);
     call(
         "profile-link-highlight",
@@ -279,8 +278,7 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
         200);
     assertThat(
             count(
-                "select count(*) from link_profile_binding where link_id=? and profile_highlighted=true",
-                link.getId()))
+                "select count(*) from link where id=? and profile_highlighted=true", link.getId()))
         .isEqualTo(1);
     call(
         "profile-link-cross-user-highlight-rejected",
@@ -307,9 +305,7 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(visible.body()).contains(link.getShortCode().value(), "https://example.com/profile");
     call("profile-link-hide", "PUT", path, Map.of("show", false), token, 200);
     assertThat(
-            count(
-                "select count(*) from link_profile_binding where link_id=? and profile_order is null",
-                link.getId()))
+            count("select count(*) from link where id=? and profile_order is null", link.getId()))
         .isEqualTo(1);
   }
 
@@ -353,8 +349,7 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
         .isEqualTo(1);
     assertThat(
             count(
-                "select count(*) from link_profile_binding where link_id=? and profile_highlighted=true",
-                link.getId()))
+                "select count(*) from link where id=? and profile_highlighted=true", link.getId()))
         .isZero();
 
     call(

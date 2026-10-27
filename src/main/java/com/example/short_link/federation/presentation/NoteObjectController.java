@@ -3,8 +3,8 @@ package com.example.short_link.federation.presentation;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.federation.application.NoteAddressing;
 import com.example.short_link.federation.application.NoteDocuments;
-import com.example.short_link.federation.application.RemoteParents;
 import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -25,7 +25,7 @@ public class NoteObjectController {
   private final NoteSnapshotReader notes;
   private final FederationActorService actors;
   private final NoteDocuments documents;
-  private final RemoteParents remoteParents;
+  private final NoteAddressing addressing;
   private final FederationUrls urls;
 
   @GetMapping("/ap/notes/{id}")
@@ -49,12 +49,7 @@ public class NoteObjectController {
                           Map<String, Object> body = new LinkedHashMap<>();
                           body.put("@context", ActivityPubMedia.CONTEXT);
                           body.putAll(
-                              documents.note(
-                                  note,
-                                  actor.publicId(),
-                                  note.inReplyToId() == null
-                                      ? null
-                                      : remoteParents.of(note.inReplyToId()).orElse(null)));
+                              documents.note(note, actor.publicId(), addressing.stored(note)));
                           return ResponseEntity.ok()
                               .contentType(ActivityPubMedia.ACTIVITY_JSON)
                               .cacheControl(

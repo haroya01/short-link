@@ -18,17 +18,21 @@ import com.example.short_link.common.note.NoteSnapshotReader.PollOption;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationSettings;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.application.NoteAddressing;
 import com.example.short_link.federation.application.NoteDocuments;
 import com.example.short_link.federation.application.NoteFederation;
 import com.example.short_link.federation.application.RemoteAccountFinder;
 import com.example.short_link.federation.application.RemoteParents;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
+import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.FederationInstanceActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
@@ -42,6 +46,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,12 +60,25 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-@KurlWebMvcTest(controllers = {NoteObjectController.class, ActorController.class})
-@Import({FederationUrls.class, NoteDocuments.class, OutgoingDocumentsGoldenTest.Props.class})
+@KurlWebMvcTest(
+    controllers = {
+      NoteObjectController.class,
+      ActorController.class,
+      InstanceActorController.class
+    })
+@Import({
+  FederationUrls.class,
+  ActorDocuments.class,
+  NoteDocuments.class,
+  NoteAddressing.class,
+  OutgoingDocumentsGoldenTest.Props.class
+})
 class OutgoingDocumentsGoldenTest {
 
   @TestConfiguration
@@ -153,8 +171,8 @@ class OutgoingDocumentsGoldenTest {
   private static final NoteSnapshot IMAGES =
       draft(53L, "사진 두 장")
           .images(
-              new Image("https://cdn.kurl.me/n/53/a.webp", "image/webp", "창가의 고양이", 1200, 800),
-              new Image("https://cdn.kurl.me/n/53/b.png", "image/png", null, null, null))
+              new Image("https://cdn.kurl.me/n/53/a.webp", "창가의 고양이", "image/webp", 1200, 800),
+              new Image("https://cdn.kurl.me/n/53/b.png", null, "image/png", null, null))
           .sensitive()
           .snapshot();
   private static final NoteSnapshot EDITED_NOTE = draft(54L, "고친 글").edited(EDITED).snapshot();
@@ -167,8 +185,10 @@ class OutgoingDocumentsGoldenTest {
   @MockitoBean private NoteSnapshotReader notes;
   @MockitoBean private FederationActorService localActors;
   @MockitoBean private RemoteParents remoteParents;
+  @MockitoBean private RemoteAccountFinder finder;
+  @MockitoBean private SigningKeys signingKeys;
+  @Autowired private NoteAddressing addressing;
 
-  private final RemoteAccountFinder finder = mock(RemoteAccountFinder.class);
   private final FederationSettings settings = mock(FederationSettings.class);
   private final FederationActorRepository actors = mock(FederationActorRepository.class);
   private final FederationFollowerRepository followers = mock(FederationFollowerRepository.class);
@@ -182,7 +202,7 @@ class OutgoingDocumentsGoldenTest {
         new NoteFederation(
             notes,
             remoteParents,
-            finder,
+            addressing,
             localActors,
             settings,
             actors,
@@ -190,7 +210,8 @@ class OutgoingDocumentsGoldenTest {
             documents,
             deliveries,
             json,
-            Clock.fixed(Instant.parse("2026-10-06T02:00:00.789Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-10-06T02:00:00.789Z"), ZoneOffset.UTC),
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
     for (LocalActor actor : List.of(YUKI, MINA)) {
       Long userId = actor.user().id();
       when(localActors.byUserId(userId)).thenReturn(Optional.of(actor));
@@ -204,18 +225,18 @@ class OutgoingDocumentsGoldenTest {
     when(remoteParents.of(900L)).thenReturn(Optional.of(ALICE_POST));
     when(remoteParents.of(77L)).thenReturn(Optional.of(CAROL_POST));
     when(remoteParents.of(42L)).thenReturn(Optional.empty());
-    when(finder.find("alice@mastodon.example"))
-        .thenReturn(
-            Optional.of(
-                remote(
-                    "https://mastodon.example/users/alice",
-                    "alice",
-                    "mastodon.example",
-                    "https://mastodon.example/@alice")));
-    when(finder.find("bob@misskey.example"))
-        .thenReturn(
-            Optional.of(
-                remote("https://misskey.example/users/9bob", "bob", "misskey.example", null)));
+    RemoteActorEntity alice =
+        remote(
+            "https://mastodon.example/users/alice",
+            "alice",
+            "mastodon.example",
+            "https://mastodon.example/@alice");
+    RemoteActorEntity bob =
+        remote("https://misskey.example/users/9bob", "bob", "misskey.example", null);
+    when(finder.find("alice@mastodon.example")).thenReturn(Optional.of(alice));
+    when(finder.find("bob@misskey.example")).thenReturn(Optional.of(bob));
+    when(finder.known("alice@mastodon.example")).thenReturn(Optional.of(alice));
+    when(finder.known("bob@misskey.example")).thenReturn(Optional.of(bob));
     for (NoteSnapshot note :
         List.of(
             PUBLIC,
@@ -354,23 +375,30 @@ class OutgoingDocumentsGoldenTest {
   }
 
   @Test
-  void aNoteNamingSomeoneElsewhereIsFetchedWithoutWhatItsDeliveryCarried() throws Exception {
-    JsonNode delivered =
-        json.readTree(
-                delivered(
-                    List.of(
-                        "https://a.example/inbox",
-                        "https://b.example/inbox",
-                        "https://misskey.example/inbox"),
-                    () -> federation.createdElsewhere(52L, 7L)))
-            .get("object");
-    JsonNode fetched = json.readTree(fetched("/ap/notes/52"));
+  void aNoteIsFetchedAsItWasDeliveredEvenWhenItAddressesSomeoneElsewhere() throws Exception {
+    List<String> followersAndMastodon =
+        List.of(
+            "https://a.example/inbox", "https://b.example/inbox", "https://mastodon.example/inbox");
+    List<String> followersAndMisskey =
+        List.of(
+            "https://a.example/inbox", "https://b.example/inbox", "https://misskey.example/inbox");
+    Map<Long, String> sent = new LinkedHashMap<>();
+    for (long id : List.of(42L, 43L, 47L, 48L, 50L, 53L)) {
+      sent.put(id, delivered(FOLLOWER_INBOXES, () -> federation.created(id, 7L)));
+    }
+    sent.put(46L, delivered(followersAndMastodon, () -> federation.createdElsewhere(46L, 7L)));
+    sent.put(51L, delivered(followersAndMastodon, () -> federation.createdElsewhere(51L, 7L)));
+    sent.put(52L, delivered(followersAndMisskey, () -> federation.createdElsewhere(52L, 7L)));
+    sent.put(54L, delivered(FOLLOWER_INBOXES, () -> federation.edited(54L, 7L, false)));
+    sent.put(55L, delivered(followersAndMisskey, () -> federation.edited(55L, 7L, true)));
 
-    assertThat(delivered.get("tag").get(0).get("type").asString()).isEqualTo("Mention");
-    assertThat(fetched.get("tag").get(0).get("type").asString()).isEqualTo("Hashtag");
-    assertThat(delivered.get("content").asString()).contains("h-card");
-    assertThat(fetched.get("content").asString()).doesNotContain("h-card");
-    assertThat(delivered.get("cc").size()).isEqualTo(fetched.get("cc").size() + 1);
+    for (var delivery : sent.entrySet()) {
+      ObjectNode fetched = (ObjectNode) json.readTree(fetched("/ap/notes/" + delivery.getKey()));
+      fetched.remove("@context");
+      assertThat(fetched)
+          .as("note %d", delivery.getKey())
+          .isEqualTo(json.readTree(delivery.getValue()).get("object"));
+    }
   }
 
   @Test
@@ -394,6 +422,13 @@ class OutgoingDocumentsGoldenTest {
 
     assertGolden("actor-full", fetched("/ap/actors/full"), "@context/2", "@context/2/featured");
     assertGolden("actor-plain", fetched("/ap/actors/pid"), "@context/2", "@context/2/featured");
+  }
+
+  @Test
+  void theInstanceActorDocumentIsByteForByteAsRecorded() throws Exception {
+    when(signingKeys.instanceActor()).thenReturn(new FederationInstanceActorEntity(PEM, "enc"));
+
+    assertGolden("actor-instance", fetched("/ap/instance"));
   }
 
   private String delivered(List<String> inboxes, Runnable send) {

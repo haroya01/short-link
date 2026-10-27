@@ -47,18 +47,20 @@ class PostReadStatsReaderAdapter implements PostReadStatsReader {
 
   @Override
   public List<VisitProjections.DailyVisitRow> daily(
-      Collection<Long> postIds, Instant from, String tz) {
-    return jpa.daily(postIds, from, tz);
+      Collection<Long> postIds, Instant from, Instant until, String tz) {
+    return jpa.daily(postIds, from, until, tz);
   }
 
   @Override
-  public List<VisitProjections.HourVisitRow> hourly(Collection<Long> postIds, String tz) {
-    return jpa.hourly(postIds, tz);
+  public List<VisitProjections.HourVisitRow> hourly(
+      Collection<Long> postIds, Instant from, Instant until, String tz) {
+    return jpa.hourly(postIds, from, until, tz);
   }
 
   @Override
-  public List<VisitProjections.HeatmapVisitRow> heatmap(Collection<Long> postIds, String tz) {
-    return jpa.heatmap(postIds, tz);
+  public List<VisitProjections.HeatmapVisitRow> heatmap(
+      Collection<Long> postIds, Instant from, Instant until, String tz) {
+    return jpa.heatmap(postIds, from, until, tz);
   }
 
   @Override

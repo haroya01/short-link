@@ -14,6 +14,7 @@ import com.example.short_link.common.post.PostLock;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.cta.application.read.CtaCards;
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
@@ -75,8 +76,9 @@ class PublicPostQueryServiceTest {
             postBlockRepository,
             seriesRepository,
             seriesItemReader,
-            ctaRepository,
-            new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"),
+            new CtaCards(
+                ctaRepository,
+                new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me")),
             userBlocks,
             PostAccessFixtures.policy(),
             PostAccessFixtures.unlistedUrls(),
@@ -394,7 +396,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void findHydratesCtaBlocks() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -428,7 +430,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void servesTrackedShortLinkUrlWhenCtaHasTracking() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -457,7 +459,7 @@ class PublicPostQueryServiceTest {
 
   @Test
   void findHandlesDeletedCta() {
-    UserEntity author = authorWithUsername("john");
+    UserEntity author = john();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -479,6 +481,35 @@ class PublicPostQueryServiceTest {
   }
 
   @Test
+  void anotherAuthorsCtaComesBackAsAnEmptyReference() {
+    UserEntity author = john();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    CtaEntity someoneElses =
+        new CtaEntity(8L, "Theirs", "https://their.site", CtaStyle.PRIMARY, CtaPurpose.CUSTOM);
+    someoneElses.trackVia("th31rs");
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(someoneElses));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+
+    assertThat(detail.blocks())
+        .singleElement()
+        .satisfies(
+            block -> {
+              assertThat(block.type()).isEqualTo("CTA_REF");
+              assertThat(block.content()).isEqualTo("{\"ctaId\":42}");
+              assertThat(block.cta()).isNull();
+            });
+  }
+
+  @Test
   void findHandlesMissingCtaGracefully() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
@@ -496,6 +527,35 @@ class PublicPostQueryServiceTest {
 
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
+  }
+
+  @Test
+  void repeatedCtaBlocksShareACardWhileAMissingOneIsAskedForEachTime() {
+    UserEntity author = john();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(
+            List.of(
+                new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0),
+                new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":99}", 1),
+                new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 2),
+                new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":99}", 3)));
+    CtaEntity own =
+        new CtaEntity(author.getId(), "Mine", "https://mine", CtaStyle.PRIMARY, CtaPurpose.CUSTOM);
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(own));
+    when(ctaRepository.findById(99L)).thenReturn(Optional.empty());
+
+    PublicPostDetail detail = service.findPublicPost("john", "p", PostReader.of(null), null).body();
+
+    assertThat(detail.blocks())
+        .extracting(block -> block.cta() == null ? null : block.cta().label())
+        .containsExactly("Mine", null, "Mine", null);
+    org.mockito.Mockito.verify(ctaRepository, org.mockito.Mockito.times(1)).findById(42L);
+    org.mockito.Mockito.verify(ctaRepository, org.mockito.Mockito.times(2)).findById(99L);
   }
 
   @Test
@@ -609,8 +669,9 @@ class PublicPostQueryServiceTest {
             postBlockRepository,
             seriesRepository,
             seriesItemReader,
-            ctaRepository,
-            new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"),
+            new CtaCards(
+                ctaRepository,
+                new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me")),
             userBlocks,
             PostAccessFixtures.policy(mock(FollowRepository.class), "JP"),
             PostAccessFixtures.unlistedUrls(),
