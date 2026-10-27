@@ -1,17 +1,13 @@
 package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
-import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
-import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
-import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
-import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
@@ -33,6 +29,7 @@ import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.ReplyGate;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
@@ -131,11 +128,7 @@ public class NoteCommandService {
     if (draft.inReplyToId() != null) {
       parent = find(draft.inReplyToId());
       requireReadable(userId, parent);
-      if (!parent.isRemote()
-          && (blocks.isBlocked(parent.getUserId(), userId)
-              || blocks.isBlocked(userId, parent.getUserId()))) {
-        throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
-      }
+      requireNoBlockBetween(userId, parent, NoteErrorCode.NOTE_REPLY_BLOCKED);
     }
     if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
@@ -153,7 +146,7 @@ public class NoteCommandService {
       if (!quotedNote.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
-      requireNotBlocked(userId, quotedNote);
+      requireNoBlockBetween(userId, quotedNote, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     }
     QuotedPost quoted = null;
     if (draft.quotedPostId() != null) {
@@ -226,9 +219,6 @@ public class NoteCommandService {
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_INVALID, raw));
   }
 
-  // The thread's writer may always answer. Under a limited policy anyone else must be named in the
-  // first note or, under following, be followed by its writer. A thread whose first note is gone,
-  // or that started elsewhere, takes answers from anyone.
   private void requireMayAnswer(Long userId, NoteEntity parent, NoteAuthor replier) {
     if (!parent.getReplyPolicy().limited()) {
       return;
@@ -237,17 +227,14 @@ public class NoteCommandService {
         parent.conversation().equals(parent.getId())
             ? parent
             : notes.findById(parent.conversation()).orElse(null);
-    if (root == null || root.isRemote() || root.isOwnedBy(userId)) {
-      return;
+    boolean admitted =
+        ReplyGate.admits(
+            root,
+            new ReplyGate.Member(userId, replier == null ? null : replier.username()),
+            () -> !people.followersOf(userId, Set.of(root.getUserId())).isEmpty());
+    if (!admitted) {
+      throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
     }
-    if (replier != null && Mentions.of(root.getBody()).contains(replier.username())) {
-      return;
-    }
-    if (root.getReplyPolicy() == NoteReplyPolicy.FOLLOWING
-        && !people.followersOf(userId, Set.of(root.getUserId())).isEmpty()) {
-      return;
-    }
-    throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
   }
 
   // A thread posts as one: each note answers the one before it, and all of them land or none does.
@@ -332,18 +319,7 @@ public class NoteCommandService {
               image.height()));
     }
     media.saveAll(rows);
-    if (!rows.isEmpty()) {
-      events.publishEvent(
-          new ImageVariantsRequested(rows.stream().map(NoteMediaEntity::getStorageKey).toList()));
-    }
     notes.tag(note.getId(), Hashtags.of(body));
-    events.publishEvent(
-        new NotePublishedEvent(
-            note.getId(),
-            userId,
-            (parent != null && parent.isRemote())
-                || (quotedNote != null && quotedNote.isRemote())
-                || !Mentions.remote(body).isEmpty()));
     List<NoteAuthor> mentioned = members(authors, handles);
     if (note.getVisibility().namesReaders()) {
       Set<Long> recipients = new LinkedHashSet<>(recipients(mentioned, userId));
@@ -353,42 +329,22 @@ public class NoteCommandService {
       notes.addRecipients(note.getId(), recipients);
     }
     Set<Long> readers = unnamedReaders(note, mentioned, parent);
-    if (parent != null && (readers == null || readers.contains(parent.getUserId()))) {
-      events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
-    }
-    if (note.getVisibility().followersRead()
-        && (parent == null || userId.equals(parent.getUserId()))) {
-      events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
-    }
     boolean quoteSeen =
         quotedNote != null
             && !quotedNote.isRemote()
             && access.readable(note, quotedNote.getUserId());
-    if (quoteSeen) {
-      events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
-    }
-    boolean quotesPostPublicly = quoted != null && note.getVisibility().shareable();
-    if (quotesPostPublicly) {
-      events.publishEvent(
-          new PostQuotedEvent(quoted.authorId(), userId, note.getId(), note.excerpt()));
-    }
-    Set<Long> toldOtherwise = new HashSet<>(Set.of(userId));
-    if (parent != null) {
-      toldOtherwise.add(parent.getUserId());
-    }
-    if (quoteSeen) {
-      toldOtherwise.add(quotedNote.getUserId());
-    }
-    if (quotesPostPublicly) {
-      toldOtherwise.add(quoted.authorId());
-    }
-    mention(note, userId, readersOf(mentioned, readers), toldOtherwise);
-    String previewUrl =
-        NoteLinks.previewUrl(
-            body, !stored.isEmpty() || note.hasPoll(), quoted != null || quotedNote != null);
-    if (previewUrl != null) {
-      events.publishEvent(new NoteLinkPreviewRequested(note.getId(), previewUrl));
-    }
+    NotePublication.events(
+            new NotePublication.Posted(
+                note,
+                userId,
+                parent,
+                quotedNote,
+                quoted,
+                mentioned,
+                readers,
+                quoteSeen,
+                rows.stream().map(NoteMediaEntity::getStorageKey).toList()))
+        .forEach(events::publishEvent);
     Map<Long, List<NoteView.Media>> images = new HashMap<>();
     images.put(note.getId(), rows.stream().map(NoteView.Media::of).toList());
     if (quotedNote != null) {
@@ -462,12 +418,6 @@ public class NoteCommandService {
     return access.readersAmong(note, candidates);
   }
 
-  private static List<NoteAuthor> readersOf(List<NoteAuthor> named, Set<Long> readers) {
-    return readers == null
-        ? named
-        : named.stream().filter(member -> readers.contains(member.id())).toList();
-  }
-
   private static List<Long> recipients(List<NoteAuthor> mentioned, Long authorId) {
     return mentioned.stream().map(NoteAuthor::id).filter(id -> !id.equals(authorId)).toList();
   }
@@ -476,26 +426,6 @@ public class NoteCommandService {
     Map<String, NoteAuthor> byName = new HashMap<>();
     found.values().forEach(author -> byName.put(author.username(), author));
     return handles.stream().map(byName::get).filter(Objects::nonNull).toList();
-  }
-
-  // Whoever already hears about this note as the replied-to or quoted author is not told twice.
-  private void mention(
-      NoteEntity note, Long actorId, List<NoteAuthor> mentioned, Set<Long> toldOtherwise) {
-    for (NoteAuthor member : mentioned) {
-      if (!toldOtherwise.contains(member.id())) {
-        events.publishEvent(
-            new NoteInteractionEvent(
-                NoteInteractionEvent.Type.MENTION,
-                member.id(),
-                actorId,
-                null,
-                note.getId(),
-                note.excerpt(),
-                null,
-                null,
-                note.conversation()));
-      }
-    }
   }
 
   @Transactional
@@ -535,11 +465,12 @@ public class NoteCommandService {
       if (note.getVisibility().namesReaders()) {
         notes.addRecipients(noteId, recipients(newlyMentioned, userId));
       }
-      mention(
-          note,
-          userId,
-          readersOf(newlyMentioned, unnamedReaders(note, newlyMentioned, null)),
-          Set.of(userId));
+      NotePublication.mentions(
+              note,
+              userId,
+              NotePublication.readersOf(newlyMentioned, unnamedReaders(note, newlyMentioned, null)),
+              Set.of(userId))
+          .forEach(events::publishEvent);
     }
     events.publishEvent(
         new NoteEditedEvent(
@@ -636,7 +567,7 @@ public class NoteCommandService {
   }
 
   private boolean writesThreadOf(Long userId, NoteEntity reply) {
-    return notes.findById(reply.conversation()).filter(root -> root.isOwnedBy(userId)).isPresent();
+    return reply.threadWrittenBy(userId, notes::findById);
   }
 
   // An admin takes a reported note down as if its author deleted it: a member's note also leaves
@@ -714,7 +645,7 @@ public class NoteCommandService {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
       moderation.requireCanWrite(userId);
-      requireNotBlocked(userId, note);
+      requireNoBlockBetween(userId, note, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
       reposts
           .addIfAbsent(noteId, userId)
           .ifPresent(
@@ -763,7 +694,7 @@ public class NoteCommandService {
     return pages.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
   }
 
-  private static NoteInteractionEvent interaction(
+  static NoteInteractionEvent interaction(
       NoteInteractionEvent.Type type, NoteEntity target, Long actorId, NoteEntity source) {
     return new NoteInteractionEvent(
         type,
@@ -777,12 +708,12 @@ public class NoteCommandService {
         target.conversation());
   }
 
-  private void requireNotBlocked(Long userId, NoteEntity note) {
+  private void requireNoBlockBetween(Long userId, NoteEntity note, NoteErrorCode code) {
     if (note.isRemote()) {
       return;
     }
     if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
-      throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
+      throw new NoteException(code);
     }
   }
 

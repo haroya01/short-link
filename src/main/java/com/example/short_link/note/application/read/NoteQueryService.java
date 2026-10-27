@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -447,14 +448,12 @@ public class NoteQueryService {
   }
 
   private boolean writesThread(Long viewerId, NoteEntity note, NoteEntity parent) {
-    Long root = note.conversation();
-    if (root.equals(note.getId())) {
-      return note.isOwnedBy(viewerId);
-    }
-    if (parent != null && root.equals(parent.getId())) {
-      return parent.isOwnedBy(viewerId);
-    }
-    return notes.findById(root).filter(first -> first.isOwnedBy(viewerId)).isPresent();
+    return note.threadWrittenBy(
+        viewerId,
+        root ->
+            parent != null && root.equals(parent.getId())
+                ? Optional.of(parent)
+                : notes.findById(root));
   }
 
   // Threads' hidden replies: the replies the thread's writer moved out of the thread under this

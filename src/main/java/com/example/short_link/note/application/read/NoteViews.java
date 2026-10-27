@@ -12,6 +12,7 @@ import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.ReplyGate;
 import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
@@ -235,22 +236,19 @@ public class NoteViews {
     return roots;
   }
 
-  // Of those threads, the ones closed to this viewer: not their own, their first note does not name
-  // them, and under following its writer does not follow them (one lookup for every such writer).
+  // Of those threads, the ones ReplyGate closes to this viewer. Whether their writers follow the
+  // viewer is one lookup for every writer of a thread still closed without it.
   private Set<Long> closedTo(
       Long viewerId, Map<Long, NoteEntity> roots, Map<Long, NoteAuthor> members) {
     if (roots.isEmpty()) {
       return Set.of();
     }
     NoteAuthor viewer = members.get(viewerId);
+    ReplyGate.Member replier =
+        new ReplyGate.Member(viewerId, viewer == null ? null : viewer.username());
     List<NoteEntity> closed = new ArrayList<>();
     for (NoteEntity root : roots.values()) {
-      boolean open =
-          !root.getReplyPolicy().limited()
-              || root.isRemote()
-              || root.isOwnedBy(viewerId)
-              || (viewer != null && Mentions.of(root.getBody()).contains(viewer.username()));
-      if (!open) {
+      if (root.getReplyPolicy().limited() && !ReplyGate.admits(root, replier, () -> false)) {
         closed.add(root);
       }
     }
@@ -262,9 +260,7 @@ public class NoteViews {
     Set<Long> following = writers.isEmpty() ? Set.of() : people.followersOf(viewerId, writers);
     return closed.stream()
         .filter(
-            root ->
-                root.getReplyPolicy() != NoteReplyPolicy.FOLLOWING
-                    || !following.contains(root.getUserId()))
+            root -> !ReplyGate.admits(root, replier, () -> following.contains(root.getUserId())))
         .map(NoteEntity::getId)
         .collect(Collectors.toSet());
   }

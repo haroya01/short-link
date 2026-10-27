@@ -16,7 +16,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -168,6 +170,15 @@ public class NoteEntity extends BaseCreatedEntity {
   // A top-level note is its own conversation; a reply carries its thread's root.
   public Long conversation() {
     return conversationId != null ? conversationId : id;
+  }
+
+  // firstNote finds the thread's first note by id; it is not asked when this note is that note.
+  public boolean threadWrittenBy(Long userId, Function<Long, Optional<NoteEntity>> firstNote) {
+    Long root = conversation();
+    if (root.equals(id)) {
+      return isOwnedBy(userId);
+    }
+    return firstNote.apply(root).filter(first -> first.isOwnedBy(userId)).isPresent();
   }
 
   public void answer(NoteEntity parent) {
