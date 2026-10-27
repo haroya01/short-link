@@ -10,8 +10,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Who may read a note in hand; NoteAccessSql.readable answers the same for lists. A batch costs at
-// most one lookup, and none when the visibility or authorship already settles every note.
+// NoteAccessSql.readable answers the same for lists.
 @Component
 @RequiredArgsConstructor
 public class NoteAccess {

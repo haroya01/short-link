@@ -33,8 +33,6 @@ public class NoteThreadControls {
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
-  // As on Mastodon: only the author pins, only their own top-level notes, at most five; the
-  // newest pin shows first.
   @Transactional
   public PinStatus setPin(Long userId, Long noteId, boolean on) {
     NoteEntity note = guard.owned(userId, noteId);
@@ -58,9 +56,8 @@ public class NoteThreadControls {
     return new PinStatus(true);
   }
 
-  // The writer deletes their own note. The writer of a thread also removes someone else's reply in
-  // it, as a post's owner removes comments: a member's reply is deleted, one from elsewhere is only
-  // unhooked here, since its server keeps it.
+  // A reply from elsewhere that the thread's writer removes is only unhooked here: its server keeps
+  // it.
   @Transactional
   public void delete(Long userId, Long noteId) {
     NoteEntity note = guard.find(noteId);
@@ -78,8 +75,7 @@ public class NoteThreadControls {
     }
   }
 
-  // As Threads' hidden replies: the thread's writer moves a reply out of the thread, where anyone
-  // who can read the thread still finds it under its hidden replies. The replier is not told.
+  // The replier is not told.
   @Transactional
   public ReplyHiddenStatus setReplyHidden(Long userId, Long noteId, boolean on) {
     NoteEntity reply = guard.find(noteId);
@@ -116,8 +112,6 @@ public class NoteThreadControls {
     return reply.threadWrittenBy(userId, notes::findById);
   }
 
-  // An admin takes a reported note down as if its author deleted it: a member's note also leaves
-  // their followers' servers; a note from elsewhere only leaves this one.
   @Transactional
   public void takeDown(Long noteId) {
     notes.findById(noteId).ifPresent(this::remove);

@@ -65,8 +65,6 @@ class RoomRepositoryAdapter implements RoomRepository {
         .longValue();
   }
 
-  // The watermark starts at the room's newest note, so a newcomer does not find its whole history
-  // unread.
   @Override
   public void addMember(Long roomId, Long userId, Instant at) {
     em.createNativeQuery(
@@ -203,7 +201,6 @@ class RoomRepositoryAdapter implements RoomRepository {
         .longValue();
   }
 
-  // A few faces per room for the room list, besides the viewer, in one statement.
   @Override
   @SuppressWarnings("unchecked")
   public Map<Long, List<RoomPerson>> faces(
@@ -231,8 +228,6 @@ class RoomRepositoryAdapter implements RoomRepository {
     return faces;
   }
 
-  // Every room of the member in one statement: its newest note (a warned one by its warning),
-  // what came after the member's watermark from others, and how many are in it.
   @Override
   @SuppressWarnings("unchecked")
   public List<RoomSummary> summaries(Long userId) {
@@ -443,8 +438,6 @@ class RoomRepositoryAdapter implements RoomRepository {
         .findFirst();
   }
 
-  // Mutual follows, newest first, that the member has not waved off, who share no room with them
-  // yet, and with no block between them either way.
   @Override
   public List<RoomPerson> friendsWithoutARoom(Long userId, int limit) {
     return people(
@@ -482,8 +475,6 @@ class RoomRepositoryAdapter implements RoomRepository {
     }
   }
 
-  // One statement whatever the count: whoever is gone, already in, removed, already asked or
-  // declined, or blocked either way with the inviter is left out without a word.
   @Override
   public int addInvitations(Long roomId, Long inviterId, Collection<Long> userIds, Instant at) {
     return em.createNativeQuery(
@@ -588,8 +579,6 @@ class RoomRepositoryAdapter implements RoomRepository {
         > 0;
   }
 
-  // An invitation from someone the invitee has since blocked, or into a room they reached by link
-  // meanwhile, is not shown.
   @Override
   @SuppressWarnings("unchecked")
   public List<RoomInvitation> invitationsFor(Long userId, int limit) {

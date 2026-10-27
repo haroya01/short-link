@@ -23,11 +23,6 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-// One feed of notes and blog posts. Following and latest run newest first across both by a note's
-// writing time and a post's publishing time (a repost stands at its note's time); trending takes
-// the two trending orders in turn. Latest can leave out what the reader already had on screen. For
-// you is one ranked list of notes, posts and posts from elsewhere, which HomeForYou makes. Blog is
-// the posts alone, newest published first at any age.
 @Service
 @RequiredArgsConstructor
 public class HomeFeedQueryService {
@@ -165,11 +160,10 @@ public class HomeFeedQueryService {
     return clock.instant().truncatedTo(ChronoUnit.MILLIS);
   }
 
-  // What came in above the newest note and post the reader already has, at most SINCE_LIMIT. A
-  // marker no longer within reach (deleted, or more arrived than fit) is a gap: the reader gets a
-  // fresh first page to replace the list with. Trending has no "above", so it always starts over.
-  // With a viewer to hide for, the marker is looked for in the list as it is, since the reader saw
-  // it, and only what came above it leaves out the seen.
+  // A marker no longer within reach (deleted, or more than SINCE_LIMIT above it) is a gap: a fresh
+  // first page replaces the list. Trending has no "above", so it always starts over. When hiding,
+  // the marker is looked for in the list as it is, since the reader saw it; only what came above it
+  // leaves out the seen.
   private Page newer(HomeAsk ask, SeenViewer hideFor) {
     Tab chosen = ask.tab();
     Long viewerId = ask.viewerId();
@@ -223,7 +217,7 @@ public class HomeFeedQueryService {
     return new Page(first.items(), first.next(), first.newest(), true);
   }
 
-  // The index of the marker in the list, which is how many came above it; -1 when it is not there.
+  // -1 when the marker is not in the list.
   private static int above(List<Long> ids, long marker) {
     if (marker == 0) {
       return -1;

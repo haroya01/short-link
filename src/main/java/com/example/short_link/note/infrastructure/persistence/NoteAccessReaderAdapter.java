@@ -15,8 +15,6 @@ class NoteAccessReaderAdapter implements NoteAccessReader {
 
   @PersistenceContext private EntityManager em;
 
-  // Of the given notes, those this viewer may read. Only restricted notes cost a lookup, so a page
-  // of public notes asks nothing.
   @Override
   @SuppressWarnings("unchecked")
   public Set<Long> visibleTo(Long viewerId, Collection<Long> restrictedIds) {
@@ -36,7 +34,6 @@ class NoteAccessReaderAdapter implements NoteAccessReader {
     return visible;
   }
 
-  // Of the given members, those who may read the note, in one statement whatever its visibility.
   @Override
   public Set<Long> readersAmong(Long noteId, Collection<Long> userIds) {
     if (userIds.isEmpty()) {

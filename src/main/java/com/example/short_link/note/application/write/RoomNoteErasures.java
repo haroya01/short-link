@@ -11,9 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// Each tick takes the oldest requests and one chunk of each, every chunk in its own transaction, so
-// a
-// member with thousands of room notes never holds one long transaction or starves the others.
+// Every chunk runs in its own transaction, so no erasure holds one long transaction or starves
+// the others.
 @Service
 @RequiredArgsConstructor
 public class RoomNoteErasures {
@@ -40,8 +39,7 @@ public class RoomNoteErasures {
     return erased;
   }
 
-  // One chunk of a requested erasure, each note through the usual delete; the request is done once
-  // a chunk comes back short. Running it again after a crash only finds what is left.
+  // Running it again after a crash only finds what is left.
   int erase(Long userId, Long roomId, int chunk) {
     List<Long> ids = erasures.roomNoteIdsBy(userId, roomId, chunk);
     notes.findAllByIdIn(ids).forEach(threads::remove);

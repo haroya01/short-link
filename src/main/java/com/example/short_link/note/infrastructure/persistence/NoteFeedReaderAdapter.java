@@ -70,8 +70,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .getResultList();
   }
 
-  // Mastodon's live feed of other servers: public notes this server received, newest first. A
-  // limited server stays out unless the viewer follows the account, as on Mastodon.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> federated(Long viewerId, int offset, int limit) {
@@ -246,7 +244,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .getResultList();
   }
 
-  // A reply to the author's own note is a part of their thread and shows under its root instead.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> repliesByAuthor(Long authorId, Long viewerId, int offset, int limit) {
@@ -335,8 +332,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .getResultList();
   }
 
-  // Private mentions (Mastodon's direct column): direct notes the viewer wrote or was named in,
-  // replies included, newest first.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> direct(Long viewerId, int offset, int limit) {
@@ -354,15 +349,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .getResultList();
   }
 
-  // Top-level notes by the authors and their reposts, one row per note at its newest activity; the
-  // original wins a tie with a repost. A repost of someone the viewer blocked, or who blocked the
-  // viewer, is left out, as are reposts by people whose reposts the viewer hid and every repost
-  // when the viewer turned reposts off. Top-level public notes carrying a tag the viewer follows
-  // (the blog's tag follows) join in as originals, again never from someone on either side of a
-  // block. A followed author's direct note shows only to its recipients, and direct notes naming
-  // the viewer join from anyone, as Mastodon's home timeline carries them. The notes of a series
-  // the viewer subscribes to join as originals where the series page shows them, unless the
-  // viewer does not hear their writer.
   @Override
   public List<NoteFeedRow> following(
       Collection<Long> authorIds, Long viewerId, int offset, int limit) {
@@ -476,8 +462,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .getResultList();
   }
 
-  // An account elsewhere, as this viewer may read it: public and unlisted to anyone, followers-only
-  // to members whose follow it accepted, direct to the members it named.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> byRemoteActor(Long remoteActorId, Long viewerId, int offset, int limit) {
@@ -547,7 +531,6 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
         .longValue();
   }
 
-  // Public notes that carried the link's card, newest first, as the viewer may read them.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> linked(String url, Long viewerId, int offset, int limit) {

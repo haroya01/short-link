@@ -177,7 +177,6 @@ public class NoteComposer {
         roomId);
   }
 
-  // A reply stays in its parent's room; a room note is posted by a member and is a room note only.
   private Long room(Long userId, Long asked, NoteVisibility requested, NoteEntity parent) {
     Long roomId = parent != null ? parent.getRoomId() : asked;
     if (asked != null && !asked.equals(roomId)) {
@@ -217,7 +216,7 @@ public class NoteComposer {
     }
   }
 
-  // A thread posts as one: each note answers the one before it, and all of them land or none does.
+  // All notes of a thread land or none does.
   public List<NoteView> createThread(Long userId, List<NoteDraft> drafts) {
     if (drafts == null || drafts.size() < 2 || drafts.size() > NoteEntity.MAX_THREAD_NOTES) {
       throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, NoteEntity.MAX_THREAD_NOTES);
@@ -389,8 +388,7 @@ public class NoteComposer {
     return options;
   }
 
-  // Where naming someone does not make them a reader (a room), who of the named and the answered
-  // may read the note; null where it does, since they all may.
+  // null when everyone named or answered may read the note.
   private Set<Long> unnamedReaders(NoteEntity note, List<NoteAuthor> named, NoteEntity parent) {
     if (note.getVisibility().readBy(Reader.NAMED)) {
       return null;

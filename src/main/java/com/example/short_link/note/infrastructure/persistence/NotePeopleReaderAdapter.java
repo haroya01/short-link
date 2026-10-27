@@ -68,9 +68,6 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
     return rows.stream().findFirst().map(row -> author((Object[]) row));
   }
 
-  // Keyed by the remote actor id. An account without a username shows as its server. An account on
-  // a suspended server, or one the viewer blocked, is left out, and a note without its author is
-  // shown nowhere.
   @Override
   public Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds, Long viewerId) {
     Map<Long, NoteAuthor> authors = new HashMap<>();
