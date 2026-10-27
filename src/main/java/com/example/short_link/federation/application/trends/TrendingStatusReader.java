@@ -19,10 +19,6 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-// A status from Mastodon's REST API is rewritten as the ActivityPub object its server would
-// publish and read by RemoteNoteParser, so its text, warning, media and poll come out exactly as a
-// kept remote note's do. Only a public post that is not a reply or a boost, by an account that
-// lets itself be found and indexed and whose profile does not say #nobot, is taken.
 @Component
 @RequiredArgsConstructor
 class TrendingStatusReader {
@@ -140,27 +136,31 @@ class TrendingStatusReader {
       attachment.set("height", media.path("meta").path("original").get("height"));
     }
     if (question) {
-      ArrayNode choices =
-          object.putArray(poll.path("multiple").asBoolean(false) ? "anyOf" : "oneOf");
-      for (JsonNode option : poll.path("options")) {
-        ObjectNode choice = choices.addObject();
-        choice.set("name", option.get("title"));
-        choice.putObject("replies").set("totalItems", option.get("votes_count"));
-      }
-      if (poll.hasNonNull("voters_count")) {
-        object.set("votersCount", poll.get("voters_count"));
-      }
-      object.set("endTime", poll.get("expires_at"));
-      if (poll.path("expired").asBoolean(false)) {
-        JsonNode endsAt = poll.get("expires_at");
-        if (text(endsAt) != null) {
-          object.set("closed", endsAt);
-        } else {
-          object.put("closed", true);
-        }
-      }
+      question(object, poll);
     }
     return object;
+  }
+
+  private static void question(ObjectNode object, JsonNode poll) {
+    ArrayNode choices = object.putArray(poll.path("multiple").asBoolean(false) ? "anyOf" : "oneOf");
+    for (JsonNode option : poll.path("options")) {
+      ObjectNode choice = choices.addObject();
+      choice.set("name", option.get("title"));
+      choice.putObject("replies").set("totalItems", option.get("votes_count"));
+    }
+    if (poll.hasNonNull("voters_count")) {
+      object.set("votersCount", poll.get("voters_count"));
+    }
+    object.set("endTime", poll.get("expires_at"));
+    if (!poll.path("expired").asBoolean(false)) {
+      return;
+    }
+    JsonNode endsAt = poll.get("expires_at");
+    if (text(endsAt) != null) {
+      object.set("closed", endsAt);
+    } else {
+      object.put("closed", true);
+    }
   }
 
   private static String mediaType(String type) {
