@@ -66,6 +66,7 @@ public class LinkManagementController {
   public BulkDeleteResponse bulkDelete(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BulkDeleteRequest request) {
     int removed = bulkDeleteLinks.execute(BulkDeleteLinksCommand.of(userId, request.shortCodes()));
-    return new BulkDeleteResponse(removed, request.shortCodes().size() - removed);
+    return new BulkDeleteResponse(
+        removed, request.shortCodes().size() - removed, request.shortCodes().size());
   }
 }
