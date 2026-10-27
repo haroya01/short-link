@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,9 +23,9 @@ class FollowingReaderTest {
 
   @Test
   void asksTheEdgeInTheFollowersDirection() {
-    when(follows.existsByFollowerIdAndFollowingId(1L, 2L)).thenReturn(true);
+    when(follows.exists(FollowEdge.follower(1L).following(2L))).thenReturn(true);
 
-    assertThat(reader.follows(1L, 2L)).isTrue();
-    assertThat(reader.follows(2L, 1L)).isFalse();
+    assertThat(reader.follows(FollowEdge.follower(1L).following(2L))).isTrue();
+    assertThat(reader.follows(FollowEdge.follower(2L).following(1L))).isFalse();
   }
 }

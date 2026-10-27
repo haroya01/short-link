@@ -17,6 +17,7 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -98,7 +99,7 @@ class PostAccessPolicyTest {
   void everyReaderGetsWhatTheTableSays(
       PostAudience audience, boolean countryBlocked, Viewer viewer, String expected) {
     when(geo.resolve(any())).thenReturn(new GeoLocation(BLOCKED_HERE, null, null));
-    when(follows.existsByFollowerIdAndFollowingId(FOLLOWER, AUTHOR)).thenReturn(true);
+    when(follows.exists(FollowEdge.follower(FOLLOWER).following(AUTHOR))).thenReturn(true);
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
     PostEntity post = post(audience, countryBlocked ? List.of(BLOCKED_HERE) : List.of());
 
@@ -110,7 +111,7 @@ class PostAccessPolicyTest {
   void aListNeverTakesKeysOrGrants(
       PostAudience audience, boolean countryBlocked, Viewer viewer, String ignored) {
     when(geo.resolve(any())).thenReturn(new GeoLocation(BLOCKED_HERE, null, null));
-    when(follows.existsByFollowerIdAndFollowingId(FOLLOWER, AUTHOR)).thenReturn(true);
+    when(follows.exists(FollowEdge.follower(FOLLOWER).following(AUTHOR))).thenReturn(true);
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
     when(rooms.roomsOf(MEMBER)).thenReturn(Set.of(ROOM));
     PostEntity post = post(audience, countryBlocked ? List.of(BLOCKED_HERE) : List.of());
@@ -132,7 +133,7 @@ class PostAccessPolicyTest {
   void anUnknownCountryPassesAsItDoesForLinks() {
     when(geo.resolve(any())).thenReturn(GeoLocation.empty());
     PostEntity post = post(PostAudience.FOLLOWERS, List.of(BLOCKED_HERE));
-    when(follows.existsByFollowerIdAndFollowingId(FOLLOWER, AUTHOR)).thenReturn(true);
+    when(follows.exists(FollowEdge.follower(FOLLOWER).following(AUTHOR))).thenReturn(true);
 
     assertThat(policy.decide(post, reader(Viewer.FOLLOWER, post)).full()).isTrue();
   }
@@ -290,9 +291,9 @@ class PostAccessPolicyTest {
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
 
     assertThat(policy.hears(null, null)).isTrue();
-    assertThat(policy.hears(ROOM, MEMBER)).isTrue();
-    assertThat(policy.hears(ROOM, STRANGER)).isFalse();
-    assertThat(policy.hears(ROOM, null)).isFalse();
+    assertThat(policy.hears(MEMBER, ROOM)).isTrue();
+    assertThat(policy.hears(STRANGER, ROOM)).isFalse();
+    assertThat(policy.hears(null, ROOM)).isFalse();
   }
 
   private PostEntity post(PostAudience audience, List<String> blocked) {

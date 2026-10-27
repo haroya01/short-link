@@ -55,7 +55,7 @@ public class LinkSafetyRescanner {
     int disabled = 0;
     for (Map.Entry<Long, Set<String>> link : urlsByLink.entrySet()) {
       if (link.getValue().stream().anyMatch(unsafe::contains)
-          && moderation.disable(link.getKey(), LinkDisableReason.SAFE_BROWSING, null)) {
+          && moderation.disable(null, link.getKey(), LinkDisableReason.SAFE_BROWSING)) {
         disabled++;
       }
     }

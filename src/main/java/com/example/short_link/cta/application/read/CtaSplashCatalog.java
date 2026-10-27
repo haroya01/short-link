@@ -17,7 +17,7 @@ class CtaSplashCatalog implements SplashCtaCatalog {
   private final ShortLinkUrlBuilder urls;
 
   @Override
-  public Optional<SplashCta> findOwned(Long ctaId, Long ownerId) {
+  public Optional<SplashCta> findOwned(Long ownerId, Long ctaId) {
     return ctas.findById(ctaId)
         .filter(cta -> cta.isOwnedBy(ownerId) && !cta.isDeleted())
         .map(

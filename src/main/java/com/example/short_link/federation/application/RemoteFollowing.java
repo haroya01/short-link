@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,33 +43,7 @@ public class RemoteFollowing {
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
-  @Autowired
   public RemoteFollowing(
-      FederationFollowingRepository followings,
-      RemoteAccountStandingReader standings,
-      RemoteActorRepository remoteActors,
-      RemoteAccountFinder finder,
-      FederationActorService localActors,
-      FederationActorRepository actorRows,
-      DeliveryQueue deliveries,
-      FederationUrls urls,
-      JsonMapper json,
-      ApplicationEventPublisher events) {
-    this(
-        followings,
-        standings,
-        remoteActors,
-        finder,
-        localActors,
-        actorRows,
-        deliveries,
-        urls,
-        json,
-        events,
-        Clock.systemUTC());
-  }
-
-  RemoteFollowing(
       FederationFollowingRepository followings,
       RemoteAccountStandingReader standings,
       RemoteActorRepository remoteActors,

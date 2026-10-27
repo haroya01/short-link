@@ -25,6 +25,7 @@ import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -80,8 +81,8 @@ class PostAudienceListsIntegrationTest {
     author = user("aud-author");
     reader = user("aud-reader").getId();
     follower = user("aud-follower").getId();
-    follows.save(new FollowEntity(follower, author.getId()));
-    follows.save(new FollowEntity(reader, author.getId()));
+    follows.save(new FollowEntity(FollowEdge.follower(follower).following(author.getId())));
+    follows.save(new FollowEntity(FollowEdge.follower(reader).following(author.getId())));
     member = user("aud-member").getId();
     room = room(author.getId(), member);
     for (PostAudience audience : PostAudience.values()) {

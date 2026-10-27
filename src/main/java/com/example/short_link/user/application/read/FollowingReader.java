@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.read;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ public class FollowingReader {
     return follows.findFollowingIds(followerId);
   }
 
-  public boolean follows(Long followerId, Long followingId) {
-    return follows.existsByFollowerIdAndFollowingId(followerId, followingId);
+  public boolean follows(FollowEdge edge) {
+    return follows.exists(edge);
   }
 }
