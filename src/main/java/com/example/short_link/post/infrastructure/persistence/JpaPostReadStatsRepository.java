@@ -1,6 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
+import com.example.short_link.common.analytics.VisitProjections;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import java.time.Instant;
 import java.util.Collection;
@@ -43,7 +43,7 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "AND e.viewedAt >= :from "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) "
           + "ORDER BY day")
-  List<ClickProjections.DailyClickRow> daily(
+  List<VisitProjections.DailyVisitRow> daily(
       @Param("ids") Collection<Long> ids, @Param("from") Instant from, @Param("tz") String tz);
 
   @Query(
@@ -52,7 +52,7 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', e.viewedAt, '+00:00', :tz)) "
           + "ORDER BY hour")
-  List<ClickProjections.HourClickRow> hourly(
+  List<VisitProjections.HourVisitRow> hourly(
       @Param("ids") Collection<Long> ids, @Param("tz") String tz);
 
   @Query(
@@ -61,28 +61,28 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "GROUP BY dow, hour ORDER BY dow, hour")
-  List<ClickProjections.HeatmapRow> heatmap(
+  List<VisitProjections.HeatmapVisitRow> heatmap(
       @Param("ids") Collection<Long> ids, @Param("tz") String tz);
 
   @Query(
       "SELECT e.countryCode AS country, COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "GROUP BY e.countryCode ORDER BY count DESC")
-  List<ClickProjections.CountryClickRow> topCountries(
+  List<VisitProjections.CountryVisitRow> topCountries(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
       "SELECT e.deviceClass AS device, COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "GROUP BY e.deviceClass ORDER BY count DESC")
-  List<ClickProjections.DeviceClickRow> topDevices(
+  List<VisitProjections.DeviceVisitRow> topDevices(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
       "SELECT e.browserName AS browser, COUNT(e) AS count "
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "GROUP BY e.browserName ORDER BY count DESC")
-  List<ClickProjections.BrowserClickRow> topBrowsers(
+  List<VisitProjections.BrowserVisitRow> topBrowsers(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
@@ -90,7 +90,7 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "AND e.referrerHost IS NOT NULL "
           + "GROUP BY e.referrerHost ORDER BY count DESC")
-  List<ClickProjections.ReferrerHostClickRow> topReferrerHosts(
+  List<VisitProjections.ReferrerHostVisitRow> topReferrerHosts(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
@@ -98,7 +98,7 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "AND e.sourceChannel IS NOT NULL "
           + "GROUP BY e.sourceChannel ORDER BY count DESC")
-  List<ClickProjections.SourceChannelClickRow> topSourceChannels(
+  List<VisitProjections.SourceChannelVisitRow> topSourceChannels(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
@@ -106,7 +106,7 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "AND e.utmCampaign IS NOT NULL "
           + "GROUP BY e.utmCampaign ORDER BY count DESC")
-  List<ClickProjections.UtmCampaignClickRow> topUtmCampaigns(
+  List<VisitProjections.UtmCampaignVisitRow> topUtmCampaigns(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 
   @Query(
@@ -114,6 +114,6 @@ public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventE
           + "FROM PostViewEventEntity e WHERE e.postId IN :ids AND e.bot = false "
           + "AND e.utmSource IS NOT NULL "
           + "GROUP BY e.utmSource ORDER BY count DESC")
-  List<ClickProjections.UtmSourceClickRow> topUtmSources(
+  List<VisitProjections.UtmSourceVisitRow> topUtmSources(
       @Param("ids") Collection<Long> ids, Pageable pageable);
 }

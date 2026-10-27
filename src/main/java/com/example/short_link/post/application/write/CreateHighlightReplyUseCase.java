@@ -7,8 +7,8 @@ import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,7 @@ public class CreateHighlightReplyUseCase {
 
   private final PostInteractionAccess access;
   private final PostHighlightReplyRepository replyRepository;
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
   private final CommentNotifications notifications;
   private final CommentMentions mentions;
 
@@ -33,7 +33,7 @@ public class CreateHighlightReplyUseCase {
 
     notifications.highlightReplyCreated(highlight, saved, cmd.body());
 
-    UserEntity author = userRepository.findById(cmd.userId()).orElse(null);
+    UserSummary author = users.find(cmd.userId()).orElse(null);
     return new HighlightReplyView(
         saved.getId(),
         author == null ? null : PublicAuthorView.from(author),

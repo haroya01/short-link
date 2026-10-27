@@ -21,7 +21,7 @@ public class AdminLinkModerationController {
   @PostMapping("/disable")
   public LinkModerationResponse disable(
       @AuthenticationPrincipal Long adminUserId, @PathVariable ShortCode code) {
-    boolean changed = linkModerationService.disable(code, LinkDisableReason.ADMIN, adminUserId);
+    boolean changed = linkModerationService.disable(adminUserId, code, LinkDisableReason.ADMIN);
     return new LinkModerationResponse(code.value(), true, changed);
   }
 

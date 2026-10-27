@@ -1,42 +1,40 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
-import com.example.short_link.common.event.RemoteFollowedEvent;
-import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
-import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
+import com.example.short_link.notification.infrastructure.event.StoredNotices.Push;
+import com.example.short_link.notification.infrastructure.event.StoredNotices.Row;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class NoteNotificationListenerTest {
 
-  @Mock private RecordBlogNotificationUseCase recordUseCase;
-  @Mock private UserBlockChecker blocks;
   @Mock private NotificationFollowerReader followers;
 
+  private final StoredNotices stored = new StoredNotices();
+
   private NoteNotificationListener listener() {
-    return new NoteNotificationListener(recordUseCase, blocks, followers);
+    return new NoteNotificationListener(stored.useCase(), followers);
+  }
+
+  private static String today(NotificationType type, long noteId) {
+    return type.name() + ":" + noteId + ":" + LocalDate.now(ZoneOffset.UTC);
   }
 
   private static NoteInteractionEvent event(
@@ -49,104 +47,104 @@ class NoteNotificationListenerTest {
         5L,
         "hi",
         type == NoteInteractionEvent.Type.REPLY ? 12L : null,
-        type == NoteInteractionEvent.Type.REPLY ? "me too" : null);
+        type == NoteInteractionEvent.Type.REPLY ? "me too" : null,
+        null);
   }
 
   @Test
   void likesAndRepostsGroupByNoteAndDayWhileRepliesStandAlone() {
-    String today = LocalDate.now(ZoneOffset.UTC).toString();
-
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.LIKE, null, 7L));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.LIKE, null, 7L));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.REPOST, 2L, null));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.REPLY, 2L, null));
 
-    verify(recordUseCase)
-        .record(
-            9L,
-            NotificationType.NOTE_LIKE,
-            null,
-            7L,
-            new NotificationNoteRef(5L, "hi", null, null),
-            "NOTE_LIKE:5:" + today);
-    verify(recordUseCase)
-        .record(
-            9L,
-            NotificationType.NOTE_REPOST,
-            2L,
-            null,
-            new NotificationNoteRef(5L, "hi", null, null),
-            "NOTE_REPOST:5:" + today);
-    verify(recordUseCase)
-        .record(
-            9L,
-            NotificationType.NOTE_REPLY,
-            2L,
-            null,
-            new NotificationNoteRef(5L, "hi", 12L, "me too"),
-            null);
+    NotificationNoteRef note = new NotificationNoteRef(5L, "hi", null, null);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(
+                9L,
+                NotificationType.NOTE_LIKE,
+                null,
+                7L,
+                note,
+                today(NotificationType.NOTE_LIKE, 5L)),
+            new Row(
+                9L,
+                NotificationType.NOTE_REPOST,
+                2L,
+                null,
+                note,
+                today(NotificationType.NOTE_REPOST, 5L)),
+            new Row(
+                9L,
+                NotificationType.NOTE_REPLY,
+                2L,
+                null,
+                new NotificationNoteRef(5L, "hi", 12L, "me too"),
+                null));
   }
 
   @Test
   void yourOwnActionsAndPeopleYouBlockedOrMutedNeverNotify() {
-    when(blocks.silences(9L, 3L, null, null)).thenReturn(true);
+    stored.silence(9L, 3L);
 
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null));
+                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null, null));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.QUOTE, 3L, null));
 
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.pushes()).isEmpty();
+    assertThat(stored.silenceChecks()).isEqualTo(1);
+    assertThat(stored.userLookups()).isZero();
+  }
+
+  @Test
+  void anAccountElsewhereTheRecipientSilencedIsNotHeard() {
+    stored.silenceRemote(9L, 7L);
+
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.LIKE, null, 7L));
+
+    assertThat(stored.rows()).isEmpty();
   }
 
   @Test
   void aMutedConversationIsQuietEvenForAccountsElsewhere() {
-    when(blocks.silences(9L, null, 7L, 40L)).thenReturn(true);
+    stored.muteConversation(9L, 40L);
 
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.LIKE, 9L, null, 7L, 5L, "hi", null, null, 40L));
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.LIKE, 9L, null, 7L, 6L, "other", null, null, 41L));
 
-    verifyNoInteractions(recordUseCase);
-  }
-
-  @Test
-  void aFollowFromAnotherServerIsItsOwnNotice() {
-    listener().onRemoteFollowed(new RemoteFollowedEvent(9L, 7L));
-
-    ArgumentCaptor<String> group = ArgumentCaptor.forClass(String.class);
-    verify(recordUseCase)
-        .record(
-            eq(9L),
-            eq(NotificationType.REMOTE_FOLLOW),
-            isNull(),
-            eq(7L),
-            isNull(),
-            group.capture());
-    assertThat(group.getValue()).isNull();
-    verify(blocks).silences(9L, null, 7L, null);
-  }
-
-  @Test
-  void aFollowFromAnAccountTheMemberSilencedIsNoNotice() {
-    when(blocks.silences(9L, null, 7L, null)).thenReturn(true);
-
-    listener().onRemoteFollowed(new RemoteFollowedEvent(9L, 7L));
-
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows())
+        .extracting(Row::payload)
+        .containsExactly(new NotificationNoteRef(6L, "other", null, null));
   }
 
   @Test
   void anEndedPollTellsItsAuthorAndEveryVoterWhoHasNotSilencedThem() {
-    when(blocks.silences(10L, 7L)).thenReturn(false);
-    when(blocks.silences(11L, 7L)).thenReturn(true);
+    stored.user(7L, "pollster").user(10L, "voter").user(11L, "quiet");
+    stored.silence(11L, 7L);
 
     listener().onPollEnded(new NotePollEndedEvent(5L, 7L, "어디서 볼까?", List.of(7L, 10L, 11L)));
 
     NotificationNoteRef note = new NotificationNoteRef(5L, "어디서 볼까?", null, null);
-    verify(recordUseCase).record(7L, NotificationType.NOTE_POLL, 7L, null, note, null);
-    verify(recordUseCase).recordForEach(List.of(10L), NotificationType.NOTE_POLL, 7L, note);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(7L, NotificationType.NOTE_POLL, 7L, null, note, null),
+            new Row(10L, NotificationType.NOTE_POLL, 7L, null, note, null));
+    PushRoute toThePoll = new PushRoute("pollster", "pollster", null, null, null, null, null, 5L);
+    assertThat(stored.pushes())
+        .containsExactly(
+            new Push(List.of(7L), "NOTE_POLL", toThePoll),
+            new Push(List.of(10L), "NOTE_POLL", toThePoll));
+    assertThat(stored.silenceChecks()).isEqualTo(2);
   }
 
   @Test
@@ -155,12 +153,12 @@ class NoteNotificationListenerTest {
 
     listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
 
-    verify(recordUseCase)
-        .recordForEach(
-            List.of(10L, 11L),
-            NotificationType.NOTE_POST,
-            7L,
-            new NotificationNoteRef(5L, "hello", null, null));
+    NotificationNoteRef note = new NotificationNoteRef(5L, "hello", null, null);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(10L, NotificationType.NOTE_POST, 7L, null, note, null),
+            new Row(11L, NotificationType.NOTE_POST, 7L, null, note, null));
+    assertThat(stored.silenceChecks()).isZero();
   }
 
   @Test
@@ -169,7 +167,8 @@ class NoteNotificationListenerTest {
 
     listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
 
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.userLookups()).isZero();
   }
 
   @Test
@@ -180,20 +179,14 @@ class NoteNotificationListenerTest {
     listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "고친 문장"));
     listener().onNoteRevised(new NoteRevisedEvent(6L, null, 40L, "fixed"));
 
-    verify(recordUseCase)
-        .recordForEach(
-            List.of(10L),
-            NotificationType.NOTE_EDIT,
-            7L,
-            null,
-            new NotificationNoteRef(5L, "고친 문장", null, null));
-    verify(recordUseCase)
-        .recordForEach(
-            List.of(11L, 12L),
-            NotificationType.NOTE_EDIT,
-            null,
-            40L,
-            new NotificationNoteRef(6L, "fixed", null, null));
+    NotificationNoteRef here = new NotificationNoteRef(5L, "고친 문장", null, null);
+    NotificationNoteRef elsewhere = new NotificationNoteRef(6L, "fixed", null, null);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(10L, NotificationType.NOTE_EDIT, 7L, null, here, null),
+            new Row(11L, NotificationType.NOTE_EDIT, null, 40L, elsewhere, null),
+            new Row(12L, NotificationType.NOTE_EDIT, null, 40L, elsewhere, null));
+    assertThat(stored.silenceChecks()).isZero();
   }
 
   @Test
@@ -202,42 +195,40 @@ class NoteNotificationListenerTest {
 
     listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "x"));
 
-    verifyNoInteractions(recordUseCase);
-  }
-
-  @Test
-  void aFollowRequestNotifiesTheLockedMemberUnlessTheyMutedTheAsker() {
-    when(blocks.silences(2L, null, 7L, null)).thenReturn(false);
-    when(blocks.silences(2L, 3L, null, null)).thenReturn(true);
-
-    listener().onFollowRequested(new FollowRequestedEvent(2L, null, 7L));
-    listener().onFollowRequested(new FollowRequestedEvent(2L, 3L, null));
-
-    verify(recordUseCase).record(2L, NotificationType.FOLLOW_REQUEST, null, 7L, null, null);
-    org.mockito.Mockito.verifyNoMoreInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
   }
 
   @Test
   void aNoteQuotingAPostTellsThePostsAuthorAndOpensTheQuotingNote() {
+    stored.user(2L, "quoter").user(9L, "writer");
+
     listener().onPostQuoted(new PostQuotedEvent(9L, 2L, 300L, "이 글 좋다"));
 
-    verify(recordUseCase)
-        .record(
-            9L,
-            NotificationType.POST_QUOTE,
-            2L,
-            null,
-            new NotificationNoteRef(300L, "이 글 좋다", null, null),
-            null);
+    assertThat(stored.rows())
+        .containsExactly(
+            new Row(
+                9L,
+                NotificationType.POST_QUOTE,
+                2L,
+                null,
+                new NotificationNoteRef(300L, "이 글 좋다", null, null),
+                null));
+    assertThat(stored.pushes())
+        .containsExactly(
+            new Push(
+                List.of(9L),
+                "POST_QUOTE",
+                new PushRoute("quoter", "quoter", null, null, null, null, null, 300L)));
   }
 
   @Test
   void selfAndMutedPostQuotesAreSkipped() {
-    when(blocks.silences(9L, 3L)).thenReturn(true);
+    stored.silence(9L, 3L);
 
     listener().onPostQuoted(new PostQuotedEvent(9L, 9L, 300L, "x"));
     listener().onPostQuoted(new PostQuotedEvent(9L, 3L, 300L, "x"));
 
-    verifyNoInteractions(recordUseCase);
+    assertThat(stored.rows()).isEmpty();
+    assertThat(stored.silenceChecks()).isEqualTo(1);
   }
 }

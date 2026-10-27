@@ -11,8 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotFixtures;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.note.RemoteNoteFixtures;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
@@ -82,12 +84,19 @@ class InboxServiceTest {
 
   private InboxService service() {
     return new InboxService(
+        new InboxClassifier(
+            URLS,
+            localActors,
+            notes,
+            remoteNotes,
+            followingRows,
+            relays,
+            new RemoteNoteParser(URLS)),
         verifier,
         localActors,
         actorRows,
         followers,
         following,
-        notes,
         reactions,
         votes,
         remoteNotes,
@@ -103,7 +112,6 @@ class InboxServiceTest {
             earlyDeletes,
             URLS,
             mock(RemoteDocuments.class)),
-        followingRows,
         URLS,
         JsonMapper.builder().build(),
         meters,
@@ -141,7 +149,7 @@ class InboxServiceTest {
     when(notes.find(1L))
         .thenReturn(
             Optional.of(
-                new NoteSnapshotReader.NoteSnapshot(
+                NoteSnapshotFixtures.note(
                     1L,
                     7L,
                     "haroya",
@@ -449,7 +457,7 @@ class InboxServiceTest {
   private static Optional<NoteSnapshotReader.NoteSnapshot> noteOne(
       NoteVisibility visibility, String body) {
     return Optional.of(
-        new NoteSnapshotReader.NoteSnapshot(
+        NoteSnapshotFixtures.note(
             1L,
             7L,
             "haroya",
@@ -569,7 +577,7 @@ class InboxServiceTest {
     when(notes.find(3L))
         .thenReturn(
             Optional.of(
-                new NoteSnapshotReader.NoteSnapshot(
+                NoteSnapshotFixtures.note(
                     3L, 8L, "quiet", "x", Instant.EPOCH, null, null, null, List.of())));
     when(localActors.byUsername("quiet")).thenReturn(Optional.empty());
 
@@ -985,7 +993,7 @@ class InboxServiceTest {
     when(remoteNotes.revise(
             42L,
             900L,
-            new RemoteNotes.Revision(
+            RemoteNoteFixtures.revision(
                 "edited",
                 null,
                 false,

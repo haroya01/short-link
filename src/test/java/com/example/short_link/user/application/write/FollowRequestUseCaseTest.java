@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.AccountUnlockedEvent;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.user.application.read.FollowRequestView;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.PendingFollowRequest;
 import com.example.short_link.user.domain.UserEntity;
@@ -75,8 +76,8 @@ class FollowRequestUseCaseTest {
   @Test
   void approvingARequestMakesItAFollow() {
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L, "alice")));
-    when(followRequests.delete(9L, 2L)).thenReturn(1);
-    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(false);
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(1);
+    when(followRepository.exists(FollowEdge.follower(9L).following(2L))).thenReturn(false);
 
     useCase.authorize(2L, "alice");
 
@@ -91,8 +92,8 @@ class FollowRequestUseCaseTest {
   @Test
   void approvingSomeoneAlreadyFollowingAddsNoSecondFollow() {
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L, "alice")));
-    when(followRequests.delete(9L, 2L)).thenReturn(1);
-    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(true);
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(1);
+    when(followRepository.exists(FollowEdge.follower(9L).following(2L))).thenReturn(true);
 
     useCase.authorize(2L, "alice");
 
@@ -102,7 +103,7 @@ class FollowRequestUseCaseTest {
   @Test
   void turningARequestDownOnlyRemovesIt() {
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L, "alice")));
-    when(followRequests.delete(9L, 2L)).thenReturn(1);
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(1);
 
     useCase.reject(2L, "alice");
 
@@ -113,7 +114,7 @@ class FollowRequestUseCaseTest {
   @Test
   void aRequestThatIsNotThereIsNotFound() {
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L, "alice")));
-    when(followRequests.delete(9L, 2L)).thenReturn(0);
+    when(followRequests.delete(FollowEdge.follower(9L).following(2L))).thenReturn(0);
 
     assertThatThrownBy(() -> useCase.authorize(2L, "alice"))
         .isInstanceOfSatisfying(

@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Predicate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,12 +32,7 @@ public class SignedFederationHttp implements FederationHttp {
   private final String userAgent;
   private final Clock clock;
 
-  @Autowired
-  public SignedFederationHttp(HttpFetcher fetcher, FederationProperties props) {
-    this(fetcher, props, Clock.systemUTC());
-  }
-
-  SignedFederationHttp(HttpFetcher fetcher, FederationProperties props, Clock clock) {
+  public SignedFederationHttp(HttpFetcher fetcher, FederationProperties props, Clock clock) {
     this.fetcher = fetcher;
     this.allowPlainHttp = props.baseUrl().startsWith("http://");
     this.userAgent = "kurl (+" + props.baseUrl() + "/)";
