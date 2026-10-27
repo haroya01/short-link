@@ -4,11 +4,11 @@ import static org.mockito.ArgumentMatchers.argThat;
 
 import java.util.Objects;
 
-public final class PostReaderMatchers {
+public final class PostViewerMatchers {
 
-  private PostReaderMatchers() {}
+  private PostViewerMatchers() {}
 
-  public static PostReader viewer(Long viewerId) {
+  public static PostViewer viewer(Long viewerId) {
     return argThat(reader -> reader != null && Objects.equals(reader.viewerId(), viewerId));
   }
 }
