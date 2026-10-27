@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.Test;
 // importing a single class of it. Each line of the baseline is one file reading one foreign table.
 class CrossModuleSqlRatchetTest {
 
-  static final int CEILING = 149;
+  static final int CEILING = 238;
 
   private static final Path MAIN = Path.of("src/main/java");
   private static final Path MODULES = MAIN.resolve("com/example/short_link");
@@ -66,9 +67,6 @@ class CrossModuleSqlRatchetTest {
           entry("room_removal", "room"),
           entry("room_suggestion_dismissal", "room"));
 
-  private static final Pattern STRING_LITERAL =
-      Pattern.compile("\"\"\"(.*?)\"\"\"|\"((?:\\\\.|[^\"\\\\])*)\"", Pattern.DOTALL);
-  private static final Pattern CONCATENATION = Pattern.compile("\"\\s*\\+\\s*\"");
   private static final Pattern TABLE_REFERENCE =
       Pattern.compile(
           "\\b(?:FROM|JOIN|INTO|UPDATE)\\s+`?([A-Za-z_][A-Za-z0-9_]*)", Pattern.CASE_INSENSITIVE);
@@ -77,6 +75,15 @@ class CrossModuleSqlRatchetTest {
           "CREATE\\s+TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?\\s+`?([a-z_0-9]+)",
           Pattern.CASE_INSENSITIVE);
   private static final Pattern ENTITY = Pattern.compile("^@Entity\\b", Pattern.MULTILINE);
+  private static final Pattern STRING_CONSTANT =
+      Pattern.compile("\\bString\\s+([A-Z][A-Z0-9_]*)\\s*=");
+  private static final Pattern STATIC_METHOD =
+      Pattern.compile("\\bstatic\\s+[\\w<>\\[\\],.?\\s]+?\\s([a-z]\\w*)\\s*\\(");
+  private static final Pattern QUALIFIED_MEMBER =
+      Pattern.compile("\\b([A-Z]\\w*)\\.([A-Za-z_]\\w*)\\b");
+  private static final Pattern IDENTIFIER = Pattern.compile("\\b[A-Za-z_]\\w*\\b");
+  private static final Pattern SPLICE =
+      Pattern.compile("\\b(?:FROM|JOIN|INTO|UPDATE)\\s*$", Pattern.CASE_INSENSITIVE);
   private static final Pattern TABLE_NAME =
       Pattern.compile("@Table\\s*\\(\\s*name\\s*=\\s*\"([a-z_0-9]+)\"");
 
@@ -130,19 +137,57 @@ class CrossModuleSqlRatchetTest {
   void theScannerCatchesAnotherModulesTableAndLeavesItsOwnAlone() {
     Schema schema =
         new Schema(
-            Set.of("posts", "note", "users", "room"),
-            Map.of("posts", "post", "note", "note", "users", "user", "room", "room"),
+            Set.of(
+                "posts",
+                "note",
+                "users",
+                "room",
+                "federation_follower",
+                "user_block",
+                "user_mute",
+                "room_member"),
+            Map.of(
+                "posts", "post",
+                "note", "note",
+                "users", "user",
+                "room", "room",
+                "federation_follower", "federation",
+                "user_block", "user",
+                "user_mute", "user",
+                "room_member", "room"),
             Map.of("RoomEntity", "room"));
+    String post = MODULE_ROOT + "post/infrastructure/PostSql.java";
+    String fragment = MODULE_ROOT + "common/user/HeardFixture.java";
     Map<String, String> sources =
         Map.of(
-            MODULE_ROOT + "post/infrastructure/PostSql.java",
+            post,
             """
             class PostSql {
               String joined = "SELECT p.id FROM posts p JOIN note n ON n.id = p.note_id";
               String jpql = "select r from RoomEntity r";
               String split = "SELECT 1 FROM" + " users u WHERE u.id = :id";
+              String table = "federation_follower";
+              String spliced = "SELECT COUNT(*) FROM " + table + " r";
+              String heard = "WHERE NOT " + HeardFixture.blocked(":viewer");
               String own = "UPDATE posts SET view_count = view_count + 1";
               String prose = "a reply from another server";
+            }
+            """,
+            fragment,
+            """
+            final class HeardFixture {
+              static String blocked(String viewer) {
+                return "EXISTS (SELECT 1 FROM user_block b WHERE b.blocker_id = " + viewer + ")"
+                    + muted(viewer);
+              }
+
+              static String muted(String viewer) {
+                return " OR EXISTS (SELECT 1 FROM user_mute m WHERE m.user_id = " + viewer + ")";
+              }
+
+              static String unused() {
+                return "SELECT 1 FROM room_member";
+              }
             }
             """,
             MODULE_ROOT + "note/infrastructure/NoteSql.java",
@@ -150,38 +195,225 @@ class CrossModuleSqlRatchetTest {
             class NoteSql {
               String own = "DELETE FROM note WHERE id = :id";
             }
+            """,
+            MODULE_ROOT + "link/application/LinkMetrics.java",
+            """
+            class LinkMetrics {
+              void blocked(MeterRegistry meters) {
+                meters.counter("short_link.created", "result", "user_block").increment();
+              }
+            }
             """);
 
     assertThat(crossModuleReferences(schema, sources))
         .containsExactly(
-            "post -> note\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\tnote",
-            "post -> room\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\troom",
-            "post -> user\t" + MODULE_ROOT + "post/infrastructure/PostSql.java\tusers");
+            "common -> room\t" + fragment + "\troom_member",
+            "common -> user\t" + fragment + "\tuser_block",
+            "common -> user\t" + fragment + "\tuser_mute",
+            "post -> federation\t" + post + "\tfederation_follower",
+            "post -> note\t" + post + "\tnote",
+            "post -> room\t" + post + "\troom",
+            "post -> user\t" + post + "\tuser_block",
+            "post -> user\t" + post + "\tuser_mute",
+            "post -> user\t" + post + "\tusers");
   }
 
   static List<String> crossModuleReferences(Schema schema, Map<String, String> sources) {
-    Set<String> found = new TreeSet<>();
+    Map<String, Parsed> byClass = new HashMap<>();
+    List<Parsed> parsed = new ArrayList<>();
     sources.forEach(
         (path, source) -> {
-          String module = module(path);
-          Matcher literal = STRING_LITERAL.matcher(CONCATENATION.matcher(source).replaceAll(""));
-          while (literal.find()) {
-            String text = literal.group(1) != null ? literal.group(1) : literal.group(2);
-            Matcher reference = TABLE_REFERENCE.matcher(text);
-            while (reference.find()) {
-              String name = reference.group(1);
-              String table =
-                  schema.tables().contains(name.toLowerCase())
-                      ? name.toLowerCase()
-                      : schema.tableByEntity().get(name);
-              String owner = table == null ? null : schema.ownerByTable().get(table);
-              if (owner != null && !owner.equals(module)) {
-                found.add(module + " -> " + owner + "\t" + path + "\t" + table);
-              }
-            }
-          }
+          Parsed file = parse(path, source);
+          parsed.add(file);
+          byClass.put(file.className(), file);
         });
+    Map<String, Set<String>> resolved = new HashMap<>();
+    Set<String> found = new TreeSet<>();
+    for (Parsed file : parsed) {
+      Set<String> tables = tablesIn(schema, file, 0, file.code().length());
+      Matcher qualified = QUALIFIED_MEMBER.matcher(file.code());
+      while (qualified.find()) {
+        Parsed owner = byClass.get(qualified.group(1));
+        if (owner != null && owner.members().containsKey(qualified.group(2))) {
+          tables.addAll(
+              memberTables(schema, byClass, owner, qualified.group(2), resolved, new HashSet<>()));
+        }
+      }
+      for (String table : tables) {
+        String owner = schema.ownerByTable().get(table);
+        if (owner != null && !owner.equals(file.module())) {
+          found.add(file.module() + " -> " + owner + "\t" + file.path() + "\t" + table);
+        }
+      }
+    }
     return new ArrayList<>(found);
+  }
+
+  record Literal(int start, int end, String text) {}
+
+  record Parsed(
+      String path,
+      String module,
+      String className,
+      String code,
+      List<Literal> literals,
+      Map<String, int[]> members,
+      boolean splicesTableNames) {}
+
+  private static Set<String> memberTables(
+      Schema schema,
+      Map<String, Parsed> byClass,
+      Parsed file,
+      String member,
+      Map<String, Set<String>> resolved,
+      Set<String> visiting) {
+    String key = file.className() + "." + member;
+    if (resolved.containsKey(key)) {
+      return resolved.get(key);
+    }
+    if (!visiting.add(key)) {
+      return Set.of();
+    }
+    int[] span = file.members().get(member);
+    Set<String> tables = tablesIn(schema, file, span[0], span[1]);
+    String body = file.code().substring(span[0], span[1]);
+    Matcher word = IDENTIFIER.matcher(body);
+    while (word.find()) {
+      String name = word.group();
+      if (!name.equals(member) && file.members().containsKey(name)) {
+        tables.addAll(memberTables(schema, byClass, file, name, resolved, visiting));
+      }
+    }
+    Matcher qualified = QUALIFIED_MEMBER.matcher(body);
+    while (qualified.find()) {
+      Parsed owner = byClass.get(qualified.group(1));
+      if (owner != null && owner.members().containsKey(qualified.group(2))) {
+        tables.addAll(memberTables(schema, byClass, owner, qualified.group(2), resolved, visiting));
+      }
+    }
+    resolved.put(key, tables);
+    return tables;
+  }
+
+  private static Set<String> tablesIn(Schema schema, Parsed file, int from, int to) {
+    Set<String> tables = new TreeSet<>();
+    for (Literal literal : file.literals()) {
+      if (literal.start() < from || literal.end() > to) {
+        continue;
+      }
+      if (file.splicesTableNames()
+          && literal.text().indexOf('_') > 0
+          && schema.tables().contains(literal.text())) {
+        tables.add(literal.text());
+      }
+      Matcher reference = TABLE_REFERENCE.matcher(literal.text());
+      while (reference.find()) {
+        String name = reference.group(1);
+        String table =
+            schema.tables().contains(name.toLowerCase())
+                ? name.toLowerCase()
+                : schema.tableByEntity().get(name);
+        if (table != null) {
+          tables.add(table);
+        }
+      }
+    }
+    return tables;
+  }
+
+  private static Parsed parse(String path, String source) {
+    StringBuilder code = new StringBuilder(source.length());
+    List<Literal> pieces = new ArrayList<>();
+    int n = source.length();
+    int i = 0;
+    while (i < n) {
+      char c = source.charAt(i);
+      int end;
+      if (source.startsWith("//", i)) {
+        end = source.indexOf('\n', i) < 0 ? n : source.indexOf('\n', i);
+      } else if (source.startsWith("/*", i)) {
+        end = source.indexOf("*/", i + 2) < 0 ? n : source.indexOf("*/", i + 2) + 2;
+      } else if (source.startsWith("\"\"\"", i)) {
+        int j = i + 3;
+        while (j < n && !source.startsWith("\"\"\"", j)) {
+          j += source.charAt(j) == '\\' ? 2 : 1;
+        }
+        end = Math.min(n, j + 3);
+        pieces.add(new Literal(i, end, source.substring(i + 3, Math.min(j, n))));
+      } else if (c == '"' || c == '\'') {
+        int j = i + 1;
+        while (j < n && source.charAt(j) != c && source.charAt(j) != '\n') {
+          j += source.charAt(j) == '\\' ? 2 : 1;
+        }
+        end = Math.min(n, j + 1);
+        if (c == '"') {
+          pieces.add(new Literal(i, end, source.substring(i + 1, Math.min(j, n))));
+        }
+      } else {
+        code.append(c);
+        i++;
+        continue;
+      }
+      for (int k = i; k < end; k++) {
+        code.append(source.charAt(k) == '\n' ? '\n' : ' ');
+      }
+      i = end;
+    }
+    String masked = code.toString();
+    List<Literal> literals = new ArrayList<>();
+    for (Literal piece : pieces) {
+      Literal last = literals.isEmpty() ? null : literals.getLast();
+      if (last != null && masked.substring(last.end(), piece.start()).matches("[\\s+]*")) {
+        literals.set(
+            literals.size() - 1,
+            new Literal(last.start(), piece.end(), last.text() + piece.text()));
+      } else {
+        literals.add(piece);
+      }
+    }
+    String file = path.substring(path.lastIndexOf('/') + 1);
+    return new Parsed(
+        path,
+        module(path),
+        file.substring(0, file.length() - ".java".length()),
+        masked,
+        literals,
+        members(masked),
+        literals.stream().anyMatch(literal -> SPLICE.matcher(literal.text()).find()));
+  }
+
+  private static Map<String, int[]> members(String code) {
+    Map<String, int[]> members = new HashMap<>();
+    Matcher field = STRING_CONSTANT.matcher(code);
+    while (field.find()) {
+      members.put(field.group(1), new int[] {field.start(), endOf(code, field.end(), ';')});
+    }
+    Matcher method = STATIC_METHOD.matcher(code);
+    while (method.find()) {
+      int close = endOf(code, method.end(), ')');
+      int open = code.indexOf('{', close);
+      int semicolon = code.indexOf(';', close);
+      if (open >= 0 && (semicolon < 0 || open < semicolon)) {
+        members.put(method.group(1), new int[] {method.start(), endOf(code, open + 1, '}')});
+      }
+    }
+    return members;
+  }
+
+  private static int endOf(String code, int from, char closing) {
+    int depth = 0;
+    for (int i = from; i < code.length(); i++) {
+      char c = code.charAt(i);
+      if (depth == 0 && c == closing) {
+        return i + 1;
+      }
+      if (c == '(' || c == '{' || c == '[') {
+        depth++;
+      } else if (c == ')' || c == '}' || c == ']') {
+        depth--;
+      }
+    }
+    return code.length();
   }
 
   private static String module(String path) {
