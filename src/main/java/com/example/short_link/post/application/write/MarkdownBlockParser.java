@@ -169,36 +169,38 @@ final class MarkdownBlockParser {
     while (img.find()) {
       images.add(new Image(img.group(1), img.group(2), img.group(3)));
     }
-    if (!images.isEmpty() && IMAGE.matcher(line).replaceAll("").trim().isEmpty()) {
-      for (Image im : images) {
-        ObjectNode node = json.createObjectNode();
-        node.put("url", im.url());
-        String alt = im.alt();
-        String width = null;
-        for (String w : WIDTHS) {
-          String mark = "«" + w + "» ";
-          if (alt.startsWith(mark)) {
-            width = w;
-            alt = alt.substring(mark.length());
-            break;
-          }
-        }
-        node.put("alt", alt);
-        if (width != null) {
-          node.put("width", width);
-        }
-        if (im.caption() != null) {
-          String caption = unescapeTitle(im.caption()).trim();
-          if (!caption.isEmpty()) {
-            node.put("caption", caption);
-          }
-        }
-        blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
-      }
-      i++;
-      return true;
+    if (images.isEmpty() || !IMAGE.matcher(line).replaceAll("").trim().isEmpty()) {
+      return false;
     }
-    return false;
+    for (Image im : images) {
+      blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(imageNode(im))));
+    }
+    i++;
+    return true;
+  }
+
+  private ObjectNode imageNode(Image im) {
+    ObjectNode node = json.createObjectNode();
+    node.put("url", im.url());
+    String alt = im.alt();
+    String width = null;
+    for (String w : WIDTHS) {
+      String mark = "«" + w + "» ";
+      if (alt.startsWith(mark)) {
+        width = w;
+        alt = alt.substring(mark.length());
+        break;
+      }
+    }
+    node.put("alt", alt);
+    if (width != null) {
+      node.put("width", width);
+    }
+    String caption = im.caption() == null ? "" : unescapeTitle(im.caption()).trim();
+    if (!caption.isEmpty()) {
+      node.put("caption", caption);
+    }
+    return node;
   }
 
   private boolean readImageUrl() {
@@ -229,31 +231,33 @@ final class MarkdownBlockParser {
   private boolean readList() {
     String line = lines[i];
     // Keep the complete list as markdown to preserve nesting; its first line sets the block type.
-    if (LIST_START.matcher(line).matches()) {
-      boolean ordered = Character.isDigit(line.charAt(0));
-      List<String> listLines = new ArrayList<>();
-      while (i < lines.length) {
-        if (lines[i].trim().isEmpty()) {
-          int j = i;
-          while (j < lines.length && lines[j].trim().isEmpty()) j++;
-          if (j < lines.length && INDENTED.matcher(lines[j]).matches() && !listLines.isEmpty()) {
-            listLines.addAll(Arrays.asList(lines).subList(i, j));
-            i = j;
-            continue;
-          }
-          break;
-        }
-        if (!LIST_CONT.matcher(lines[i]).matches() && !INDENTED.matcher(lines[i]).matches()) break;
-        listLines.add(lines[i]);
-        i++;
-      }
-      blocks.add(
-          block(
-              ordered ? PostBlockType.LIST_NUMBERED : PostBlockType.LIST_BULLET,
-              String.join("\n", listLines)));
-      return true;
+    if (!LIST_START.matcher(line).matches()) {
+      return false;
     }
-    return false;
+    boolean ordered = Character.isDigit(line.charAt(0));
+    List<String> listLines = new ArrayList<>();
+    while (i < lines.length) {
+      if (lines[i].trim().isEmpty()) {
+        int next = i;
+        while (next < lines.length && lines[next].trim().isEmpty()) next++;
+        if (!continuesList(next, listLines)) break;
+        listLines.addAll(Arrays.asList(lines).subList(i, next));
+        i = next;
+        continue;
+      }
+      if (!LIST_CONT.matcher(lines[i]).matches() && !INDENTED.matcher(lines[i]).matches()) break;
+      listLines.add(lines[i]);
+      i++;
+    }
+    blocks.add(
+        block(
+            ordered ? PostBlockType.LIST_NUMBERED : PostBlockType.LIST_BULLET,
+            String.join("\n", listLines)));
+    return true;
+  }
+
+  private boolean continuesList(int next, List<String> listLines) {
+    return next < lines.length && INDENTED.matcher(lines[next]).matches() && !listLines.isEmpty();
   }
 
   private void readParagraph() {

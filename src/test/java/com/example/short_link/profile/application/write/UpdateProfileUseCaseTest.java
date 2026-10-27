@@ -17,7 +17,9 @@ import com.example.short_link.user.application.write.UserProfileEditor;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,8 @@ import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateProfileUseCaseTest {
+
+  private static final Instant NOW = Instant.parse("2026-10-27T00:00:00Z");
 
   @Mock private UserRepository userRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
@@ -48,7 +52,39 @@ class UpdateProfileUseCaseTest {
             meterRegistry,
             cacheEviction,
             events,
+            Clock.fixed(NOW, ZoneOffset.UTC),
             "https://kurl.app/u/");
+  }
+
+  @Test
+  void sendingTheCurrentUsernameAgainLeavesNoHistoryBehind() {
+    UserEntity me = userWithId(7L);
+    me.claimUsername("alice");
+    when(userRepository.findById(7L)).thenReturn(Optional.of(me));
+
+    useCase.execute(new UpdateProfileCommand(7L, "  ALICE ", null, null, null, null));
+
+    org.mockito.Mockito.verifyNoInteractions(usernameHistoryRepository);
+    org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).findByUsername(any());
+    assertThat(me.getUsername()).isEqualTo("alice");
+  }
+
+  @Test
+  void aRenameKeepsTheOldNameReservedForThirtyDaysFromTheClock() {
+    UserEntity me = userWithId(7L);
+    me.claimUsername("old");
+    when(userRepository.findById(7L)).thenReturn(Optional.of(me));
+    when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
+    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter("alice", NOW))
+        .thenReturn(Optional.empty());
+
+    useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null, null));
+
+    org.mockito.ArgumentCaptor<UsernameHistoryEntity> saved =
+        org.mockito.ArgumentCaptor.forClass(UsernameHistoryEntity.class);
+    verify(usernameHistoryRepository).save(saved.capture());
+    assertThat(saved.getValue().getOldUsername()).isEqualTo("old");
+    assertThat(saved.getValue().getExpiresAt()).isEqualTo(NOW.plus(java.time.Duration.ofDays(30)));
   }
 
   private UserEntity userWithId(long id) {

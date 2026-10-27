@@ -16,8 +16,8 @@ import com.example.short_link.user.application.write.UserProfileEditor;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +38,7 @@ public class UpdateProfileUseCase {
   private final MeterRegistry meterRegistry;
   private final ProfileCacheEviction cacheEviction;
   private final ApplicationEventPublisher events;
+  private final Clock clock;
   private final String publicProfileBaseUrl;
 
   public UpdateProfileUseCase(
@@ -47,6 +48,7 @@ public class UpdateProfileUseCase {
       MeterRegistry meterRegistry,
       ProfileCacheEviction cacheEviction,
       ApplicationEventPublisher events,
+      Clock clock,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
     this.users = users;
@@ -55,6 +57,7 @@ public class UpdateProfileUseCase {
     this.meterRegistry = meterRegistry;
     this.cacheEviction = cacheEviction;
     this.events = events;
+    this.clock = clock;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
   }
 
@@ -77,35 +80,37 @@ public class UpdateProfileUseCase {
   }
 
   private void updateUsername(UserProfile user, String requestedUsername, Long userId) {
-    if (requestedUsername != null) {
-      String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
-      validateUsername(normalized);
-      if (!normalized.equals(user.username())) {
-        if (ReservedUsernames.ALL.contains(normalized)) {
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "reserved");
-        }
-        users
-            .findByUsername(normalized)
-            .filter(other -> !other.id().equals(userId))
-            .ifPresent(
-                other -> {
-                  throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
-                });
-        usernameHistoryRepository
-            .findFirstByOldUsernameAndExpiresAtAfter(normalized, Instant.now())
-            .filter(history -> !history.getUserId().equals(userId))
-            .ifPresent(
-                history -> {
-                  throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
-                });
-        String previous = user.username();
-        if (previous != null && !previous.isBlank()) {
-          usernameHistoryRepository.save(
-              new UsernameHistoryEntity(userId, previous, Instant.now().plus(USERNAME_GRACE)));
-        }
-        editor.claimUsername(userId, normalized);
-      }
+    if (requestedUsername == null) {
+      return;
     }
+    String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
+    validateUsername(normalized);
+    if (normalized.equals(user.username())) {
+      return;
+    }
+    if (ReservedUsernames.ALL.contains(normalized)) {
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "reserved");
+    }
+    users
+        .findByUsername(normalized)
+        .filter(other -> !other.id().equals(userId))
+        .ifPresent(
+            other -> {
+              throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
+            });
+    usernameHistoryRepository
+        .findFirstByOldUsernameAndExpiresAtAfter(normalized, clock.instant())
+        .filter(history -> !history.getUserId().equals(userId))
+        .ifPresent(
+            history -> {
+              throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
+            });
+    String previous = user.username();
+    if (previous != null && !previous.isBlank()) {
+      usernameHistoryRepository.save(
+          new UsernameHistoryEntity(userId, previous, clock.instant().plus(USERNAME_GRACE)));
+    }
+    editor.claimUsername(userId, normalized);
   }
 
   private void updateAppearance(UpdateProfileCommand cmd) {
@@ -135,7 +140,6 @@ public class UpdateProfileUseCase {
     }
   }
 
-  // Unlocking lets everyone still waiting in, as on Mastodon.
   private void updateLocked(UserProfile user, Boolean locked) {
     if (locked == null || locked == user.locked()) {
       return;

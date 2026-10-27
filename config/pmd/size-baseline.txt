@@ -1,7 +1,3 @@
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#2=1
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=19
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|raw(RawQuery)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=24
@@ -43,8 +39,7 @@ CognitiveComplexity|src/main/java/com/example/short_link/note/application/write/
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|payloadJson(PushMessage)#1=21
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|post(String, String, boolean, String, PushMessage)#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/notification/presentation/response/NotificationResponse.java|from(NotificationView)#1=20
-CognitiveComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages()#1=22
-CognitiveComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList()#1=22
+CognitiveComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList()#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlocksConverter.java|convertCalloutContainers(String)#1=27
 CognitiveComplexity|src/main/java/com/example/short_link/profile/application/BlockContentValidator.java|validate(ProfileBlockType, String)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/profile/application/Socials.java|normalize(String)#1=23
@@ -156,8 +151,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostQueryService.java|findPreviewPost(String, PostReader)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|MarkdownBlockParser#1=85
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|parse()#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages()#1=10
-CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList()#1=12
+CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList()#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readParagraph()#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlocksConverter.java|convertCalloutContainers(String)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/MarkdownBlocksConverter.java|serialize(PostBlockContent)#1=13
@@ -173,7 +167,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/post/domain/PostEntity
 CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|fetchFollowingRedirects(Resolved, Map<String, String>, int, String, Long)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|read(String, long, Long)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|sniffImageType(byte[])#1=28
-CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/persistence/PostRepositoryAdapter.java|PostRepositoryAdapter#1=109
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/BlockContentValidator.java|validate(ProfileBlockType, String)#1=27
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/BlockContentValidator.java|validateImageUrl(String)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/Socials.java|normalize(String)#1=22
