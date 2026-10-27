@@ -73,7 +73,9 @@
 @junit | account-web-logged-out-refresh-rejected | 0 | 0 | 0 | 0 | 0
 @junit | account-web-logout | 0 | 0 | 0 | 1 | 1
 @junit | account-web-refresh | 1 | 0 | 1 | 0 | 2
-@junit | author-analytics-overview | 7 | 0 | 0 | 0 | 7
+# Overview: posts, the author's timezone row, one daily count per offset period (one in Seoul),
+# link clicks and follows for life and for the window, top referrers.
+@junit | author-analytics-overview | 8 | 0 | 0 | 0 | 8
 @junit | author-analytics-post-table | 3 | 0 | 0 | 0 | 3
 @junit | author-block-reader | 2 | 1 | 0 | 3 | 6
 @junit | author-blocked-users-list | 2 | 0 | 0 | 0 | 2
@@ -104,7 +106,9 @@
 @junit | author-note-like-idempotent | 3 | 0 | 0 | 0 | 3
 @junit | author-note-liked-ids | 1 | 0 | 0 | 0 | 1
 @junit | author-note-unlike | 3 | 0 | 0 | 1 | 4
-@junit | author-post-analytics-detail | 7 | 0 | 0 | 0 | 7
+# Post detail: the post, the author's timezone row, one daily count per offset period (one in
+# Seoul), link clicks and follows for life and for the window, the link breakdown.
+@junit | author-post-analytics-detail | 8 | 0 | 0 | 0 | 8
 @junit | author-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | author-post-pin | 1 | 0 | 1 | 0 | 2
 @junit | author-post-reader-stats | 18 | 0 | 0 | 0 | 18
