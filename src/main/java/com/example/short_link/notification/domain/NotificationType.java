@@ -49,8 +49,6 @@ public enum NotificationType {
     };
   }
 
-  // Which words of a note notice someone else wrote, for the recipient's keyword filters: the reply
-  // or quote that caused it, the note itself, or none (the note is the recipient's own).
   public KeywordText keywordText() {
     return switch (this) {
       case NOTE_REPLY, NOTE_QUOTE -> KeywordText.SOURCE_EXCERPT;
@@ -65,8 +63,6 @@ public enum NotificationType {
     NONE
   }
 
-  // Whether the post or note the push opens is the actor's rather than the recipient's, when the
-  // payload names no owner of its own.
   public boolean opensTheActorsWork() {
     return switch (this) {
       case NEW_POST, NOTE_POLL, NOTE_POST, NOTE_EDIT, POST_QUOTE -> true;
@@ -74,8 +70,6 @@ public enum NotificationType {
     };
   }
 
-  // A mention the notification policy may treat as a private mention, judged by the mentioning
-  // note's visibility.
   public boolean mayBePrivateMention() {
     return this == NOTE_MENTION;
   }
