@@ -14,27 +14,6 @@ public record NoteInteractionEvent(
     String sourceExcerpt,
     Long conversationId) {
 
-  public NoteInteractionEvent(
-      Type type,
-      Long recipientUserId,
-      Long actorUserId,
-      Long actorRemoteId,
-      Long noteId,
-      String noteExcerpt,
-      Long sourceNoteId,
-      String sourceExcerpt) {
-    this(
-        type,
-        recipientUserId,
-        actorUserId,
-        actorRemoteId,
-        noteId,
-        noteExcerpt,
-        sourceNoteId,
-        sourceExcerpt,
-        null);
-  }
-
   public enum Type {
     LIKE,
     REPOST,

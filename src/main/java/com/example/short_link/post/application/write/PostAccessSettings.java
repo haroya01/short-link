@@ -64,10 +64,10 @@ public class PostAccessSettings {
       throw new PostException(PostErrorCode.POST_ROOM_MOVE, post.getRoomId())
           .with("roomId", post.getRoomId());
     }
-    requireMember(roomId, post.getUserId());
+    requireMember(post.getUserId(), roomId);
   }
 
-  public void requireMember(Long roomId, Long userId) {
+  public void requireMember(Long userId, Long roomId) {
     if (!rooms.isMember(roomId, userId)) {
       throw new PostException(PostErrorCode.POST_ROOM_NOT_FOUND, roomId);
     }
@@ -75,7 +75,7 @@ public class PostAccessSettings {
 
   public void requireStillInRoom(PostEntity post) {
     if (post.isInRoom()) {
-      requireMember(post.getRoomId(), post.getUserId());
+      requireMember(post.getUserId(), post.getRoomId());
     }
   }
 

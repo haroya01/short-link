@@ -18,6 +18,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,9 @@ class CollectionContentReaderTest {
 
   @BeforeEach
   void setUp() {
-    reader = new CollectionContentReader(connections, posts, highlights, noteBodies, users);
+    reader =
+        new CollectionContentReader(
+            connections, posts, highlights, noteBodies, new UserSummaryReader(users));
   }
 
   @Test

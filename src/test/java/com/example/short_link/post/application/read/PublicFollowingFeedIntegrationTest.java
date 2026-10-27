@@ -10,6 +10,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.domain.repository.UserTagPrefRepository;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -72,7 +73,7 @@ class PublicFollowingFeedIntegrationTest {
     long followed = user("followee");
     long stranger = user("stranger");
 
-    followRepository.save(new FollowEntity(me, followed));
+    followRepository.save(new FollowEntity(FollowEdge.follower(me).following(followed)));
     long series = seriesRepository.save(new SeriesEntity(stranger, "guide", "Guide")).getId();
     subscriptionRepository.insertIgnore(me, series);
 
@@ -124,8 +125,8 @@ class PublicFollowingFeedIntegrationTest {
     long second = user("secondauthor");
     long stranger = user("notfollowed");
 
-    followRepository.save(new FollowEntity(me, first));
-    followRepository.save(new FollowEntity(me, second));
+    followRepository.save(new FollowEntity(FollowEdge.follower(me).following(first)));
+    followRepository.save(new FollowEntity(FollowEdge.follower(me).following(second)));
 
     Instant base = Instant.parse("2026-10-01T00:00:00Z");
     publishAt(first, "first-old", base);

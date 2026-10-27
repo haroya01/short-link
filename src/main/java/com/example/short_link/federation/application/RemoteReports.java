@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
+import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,27 +29,23 @@ public class RemoteReports {
   public void forward(Long noteId, String comment) {
     remoteNotes
         .target(noteId)
-        .flatMap(
+        .ifPresent(
             note ->
                 remoteActors
                     .findById(note.remoteActorId())
                     .filter(actor -> !actor.onSuspendedServer())
-                    .map(
-                        actor -> {
-                          String id = urls.instance() + "#flags/" + UUID.randomUUID();
-                          Map<String, Object> flag = new LinkedHashMap<>();
-                          flag.put("@context", ActivityStreams.CONTEXT);
-                          flag.put("id", id);
-                          flag.put("type", "Flag");
-                          flag.put("actor", urls.instance());
-                          flag.put("content", comment == null ? "" : comment);
-                          flag.put("object", List.of(actor.getActorUri(), note.uri()));
-                          deliveries.enqueue(
-                              null,
-                              id,
-                              json.writeValueAsString(flag),
-                              List.of(actor.deliveryInbox()));
-                          return id;
-                        }));
+                    .ifPresent(actor -> enqueueFlag(note, actor, comment)));
+  }
+
+  private void enqueueFlag(RemoteNotes.Target note, RemoteActorEntity actor, String comment) {
+    String id = urls.instance() + "#flags/" + UUID.randomUUID();
+    Map<String, Object> flag = new LinkedHashMap<>();
+    flag.put("@context", ActivityStreams.CONTEXT);
+    flag.put("id", id);
+    flag.put("type", "Flag");
+    flag.put("actor", urls.instance());
+    flag.put("content", comment == null ? "" : comment);
+    flag.put("object", List.of(actor.getActorUri(), note.uri()));
+    deliveries.enqueue(null, id, json.writeValueAsString(flag), List.of(actor.deliveryInbox()));
   }
 }

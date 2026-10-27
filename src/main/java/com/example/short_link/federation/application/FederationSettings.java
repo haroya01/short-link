@@ -7,7 +7,6 @@ import com.example.short_link.federation.domain.repository.FederationUserReader;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +19,7 @@ public class FederationSettings {
   private final FederationUrls urls;
   private final Clock clock;
 
-  @Autowired
   public FederationSettings(
-      FederationPreferenceRepository preferences,
-      FederationUserReader users,
-      FederationLeaving leaving,
-      FederationUrls urls) {
-    this(preferences, users, leaving, urls, Clock.systemUTC());
-  }
-
-  FederationSettings(
       FederationPreferenceRepository preferences,
       FederationUserReader users,
       FederationLeaving leaving,

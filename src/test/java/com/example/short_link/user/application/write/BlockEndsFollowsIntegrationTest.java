@@ -2,6 +2,7 @@ package com.example.short_link.user.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
@@ -67,11 +68,11 @@ class BlockEndsFollowsIntegrationTest {
     blocks.block(carol, "bef-bob");
     blocks.block(alice, "bef-bob");
 
-    assertThat(follows.existsByFollowerIdAndFollowingId(alice, bob)).isFalse();
-    assertThat(follows.existsByFollowerIdAndFollowingId(bob, alice)).isFalse();
-    assertThat(follows.existsByFollowerIdAndFollowingId(carol, alice)).isTrue();
-    assertThat(followRequests.exists(bob, carol)).isFalse();
-    assertThat(followRequests.exists(alice, carol)).isTrue();
+    assertThat(follows.exists(FollowEdge.follower(alice).following(bob))).isFalse();
+    assertThat(follows.exists(FollowEdge.follower(bob).following(alice))).isFalse();
+    assertThat(follows.exists(FollowEdge.follower(carol).following(alice))).isTrue();
+    assertThat(followRequests.exists(FollowEdge.follower(bob).following(carol))).isFalse();
+    assertThat(followRequests.exists(FollowEdge.follower(alice).following(carol))).isTrue();
   }
 
   @Test
@@ -88,9 +89,9 @@ class BlockEndsFollowsIntegrationTest {
 
     followRequests.approveAll(carol);
 
-    assertThat(follows.existsByFollowerIdAndFollowingId(alice, carol)).isTrue();
-    assertThat(follows.existsByFollowerIdAndFollowingId(bob, carol)).isFalse();
-    assertThat(follows.existsByFollowerIdAndFollowingId(gone, carol)).isFalse();
-    assertThat(followRequests.exists(bob, carol)).isFalse();
+    assertThat(follows.exists(FollowEdge.follower(alice).following(carol))).isTrue();
+    assertThat(follows.exists(FollowEdge.follower(bob).following(carol))).isFalse();
+    assertThat(follows.exists(FollowEdge.follower(gone).following(carol))).isFalse();
+    assertThat(followRequests.exists(FollowEdge.follower(bob).following(carol))).isFalse();
   }
 }
