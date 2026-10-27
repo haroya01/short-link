@@ -41,14 +41,17 @@ import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePageReader;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -79,6 +82,9 @@ class NoteCommandServiceTest {
   private static final NoteAuthor WRITER = new NoteAuthor(7L, "writer", null);
 
   @Mock private NoteRepository notes;
+  @Mock private NotePageReader pages;
+  @Mock private RoomNoteErasureRepository erasures;
+  @Mock private NoteAccessReader lookups;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
   @Mock private NoteBookmarkRepository bookmarks;
@@ -97,6 +103,8 @@ class NoteCommandServiceTest {
   private NoteCommandService service() {
     return new NoteCommandService(
         notes,
+        pages,
+        erasures,
         likes,
         reposts,
         bookmarks,
@@ -105,7 +113,7 @@ class NoteCommandServiceTest {
         people,
         images,
         views,
-        new NoteAccess(notes),
+        new NoteAccess(lookups),
         rooms,
         moderation,
         blocks,
@@ -214,7 +222,7 @@ class NoteCommandServiceTest {
   void aThreadHoldsTwoToTenNotes() {
     NoteDraft one = new NoteDraft("하나", List.of(), null, null);
     for (List<NoteDraft> drafts :
-        List.of(List.of(one), Collections.nCopies(NoteCommandService.MAX_THREAD_NOTES + 1, one))) {
+        List.of(List.of(one), Collections.nCopies(NoteEntity.MAX_THREAD_NOTES + 1, one))) {
       assertThatThrownBy(() -> service().createThread(7L, drafts))
           .isInstanceOfSatisfying(
               NoteException.class,
@@ -429,7 +437,7 @@ class NoteCommandServiceTest {
     assertThat(view.quotedNote().body()).isEqualTo("original");
     assertThat(view.quotedNote().author()).isEqualTo(other);
     assertThat(view.quotedNote().media())
-        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png", null, null));
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isFalse();
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L));
@@ -486,7 +494,7 @@ class NoteCommandServiceTest {
     ReflectionTestUtils.setField(repost, "id", 900L);
     when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
     when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
-    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3, 0)));
+    when(pages.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3, 0)));
 
     assertThat(service().setRepost(8L, 1L, true))
         .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
@@ -522,7 +530,7 @@ class NoteCommandServiceTest {
     ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
     when(notes.findById(1L)).thenReturn(Optional.of(remote));
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true);
-    when(notes.stats(List.of(1L))).thenReturn(Map.of());
+    when(pages.stats(List.of(1L))).thenReturn(Map.of());
     NoteRepostEntity repost = new NoteRepostEntity(1L, 8L);
     ReflectionTestUtils.setField(repost, "id", 77L);
     when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost));
@@ -824,7 +832,7 @@ class NoteCommandServiceTest {
     NoteAuthor other = new NoteAuthor(8L, "other", null);
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
-    when(notes.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
+    when(lookups.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
 
     service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
 
@@ -837,7 +845,7 @@ class NoteCommandServiceTest {
     NoteEntity parent = note(5L, 9L, "followers only");
     parent.showTo(NoteVisibility.PRIVATE);
     when(notes.findById(5L)).thenReturn(Optional.of(parent));
-    when(notes.visibleTo(7L, Set.of(5L))).thenReturn(Set.of(5L));
+    when(lookups.visibleTo(7L, Set.of(5L))).thenReturn(Set.of(5L));
     NoteAuthor mina = new NoteAuthor(11L, "mina", null);
     when(people.activeAuthors(Set.of(7L), List.of("mina")))
         .thenReturn(Map.of(7L, WRITER, 11L, mina));
@@ -997,7 +1005,7 @@ class NoteCommandServiceTest {
     NoteEntity followersOnly = note(6L, 9L, "followers");
     followersOnly.showTo(NoteVisibility.PRIVATE);
     when(notes.findById(6L)).thenReturn(Optional.of(followersOnly));
-    when(notes.visibleTo(7L, Set.of(6L))).thenReturn(Set.of(6L));
+    when(lookups.visibleTo(7L, Set.of(6L))).thenReturn(Set.of(6L));
     assertThatThrownBy(() -> service().setRepost(7L, 6L, true))
         .isInstanceOfSatisfying(
             NoteException.class,
@@ -1082,7 +1090,7 @@ class NoteCommandServiceTest {
   @Test
   void likeCountsAreReturnedToEveryone() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
-    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 5, 0, 0)));
+    when(pages.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 5, 0, 0)));
     when(likes.addIfAbsent(1L, 7L)).thenReturn(false);
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true, false);
 

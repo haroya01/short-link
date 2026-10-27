@@ -2,7 +2,7 @@ package com.example.short_link.note.application.access;
 
 import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteAccessReader;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NoteAccess {
 
-  private final NoteRepository notes;
+  private final NoteAccessReader lookups;
 
   public Set<Long> readable(Collection<NoteEntity> candidates, Long viewerId) {
     Set<Long> readable = new HashSet<>();
@@ -30,7 +30,7 @@ public class NoteAccess {
       }
     }
     if (!unsettled.isEmpty()) {
-      readable.addAll(notes.visibleTo(viewerId, unsettled));
+      readable.addAll(lookups.visibleTo(viewerId, unsettled));
     }
     return readable;
   }
@@ -47,7 +47,7 @@ public class NoteAccess {
     if (userIds.isEmpty() || note.getVisibility().shareable()) {
       return Set.copyOf(userIds);
     }
-    return notes.readersAmong(note.getId(), userIds);
+    return lookups.readersAmong(note.getId(), userIds);
   }
 
   public boolean readable(NoteEntity note, Long viewerId) {

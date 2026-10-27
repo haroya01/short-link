@@ -2,6 +2,7 @@ package com.example.short_link.note.application.write;
 
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteViews;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteListEntity;
@@ -19,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class NoteListService {
-
-  private static final int MAX_PAGE_SIZE = 50;
 
   private final NoteListRepository lists;
   private final NotePeopleReader people;
@@ -88,14 +87,11 @@ public class NoteListService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView feed(Long userId, Long listId, int page, int size) {
+  public NoteFeedView feed(Long userId, Long listId, PageAsk ask) {
     owned(userId, listId);
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    List<NoteEntity> rows = lists.feed(listId, userId, safePage * safeSize, safeSize + 1);
-    boolean hasNext = rows.size() > safeSize;
-    List<NoteEntity> current = hasNext ? rows.subList(0, safeSize) : rows;
-    return new NoteFeedView(views.ofFeed(current, userId), safePage, hasNext);
+    PageAsk.Rows<NoteEntity> rows =
+        ask.fetch((offset, limit) -> lists.feed(listId, userId, offset, limit));
+    return new NoteFeedView(views.ofFeed(rows.current(), userId), ask.page(), rows.hasNext());
   }
 
   private NoteListEntity owned(Long userId, Long listId) {
