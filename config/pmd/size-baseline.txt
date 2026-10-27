@@ -2,7 +2,6 @@ AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/w
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#2=1
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/user/presentation/security/ApiKeyAuthenticationFilter.java|doFilterInternal#1=1
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=19
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|raw(RawQuery)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=24
