@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application.relay;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
@@ -46,5 +47,29 @@ class RelayTallyTest {
 
     assertThat(tally.today()).isEqualTo(Map.of("queued", 1L));
     assertThat(meters.counter("federation.relay", "outcome", "queued").count()).isEqualTo(3);
+  }
+
+  @Test
+  void buildingTheTallyDoesNotReadTheClock() {
+    Clock unreadable =
+        new Clock() {
+          @Override
+          public ZoneId getZone() {
+            throw new AssertionError("read at construction");
+          }
+
+          @Override
+          public Clock withZone(ZoneId zone) {
+            throw new AssertionError("read at construction");
+          }
+
+          @Override
+          public Instant instant() {
+            throw new AssertionError("read at construction");
+          }
+        };
+
+    assertThatCode(() -> new RelayTally(new SimpleMeterRegistry(), unreadable))
+        .doesNotThrowAnyException();
   }
 }
