@@ -17,18 +17,18 @@ public class AdminRequestMetricsService {
 
   private static final int RAW_MAX_LIMIT = 500;
 
-  private final RequestMetricJpaRepository repository;
+  private final RequestMetricReader metrics;
   private final Clock clock;
 
-  public AdminRequestMetricsService(RequestMetricJpaRepository repository, Clock clock) {
-    this.repository = repository;
+  public AdminRequestMetricsService(RequestMetricReader metrics, Clock clock) {
+    this.metrics = metrics;
     this.clock = clock;
   }
 
   public List<RouteAggregate> routes(Window window) {
     Instant now = clock.instant();
     Instant from = now.minus(window.duration());
-    List<RequestMetricEntity> rows = repository.findWindow(from, now);
+    List<RequestMetric> rows = metrics.between(from, now);
     List<RouteAggregate> out = new ArrayList<>();
     for (RequestRouteMetrics.Summary summary : RequestRouteMetrics.summarizeWithOutcomes(rows)) {
       out.add(
@@ -52,10 +52,10 @@ public class AdminRequestMetricsService {
     }
     Instant now = clock.instant();
     Instant from = now.minus(window.duration());
-    List<RequestMetricEntity> rows = repository.findShortCodeWindow(shortCode, from, now);
+    List<RequestMetric> rows = metrics.forShortCodeBetween(shortCode, from, now);
     Map<String, Long> dist = new LinkedHashMap<>();
-    for (RequestMetricEntity row : rows) {
-      dist.merge(row.getOutcome(), 1L, Long::sum);
+    for (RequestMetric row : rows) {
+      dist.merge(row.outcome(), 1L, Long::sum);
     }
     return new OutcomeDistribution(shortCode, rows.size(), dist);
   }
@@ -64,24 +64,24 @@ public class AdminRequestMetricsService {
     Instant to = query.to() != null ? query.to() : clock.instant();
     Instant from = query.from() != null ? query.from() : to.minus(Duration.ofHours(1));
     int limit = query.limit() == null ? 100 : Math.min(query.limit(), RAW_MAX_LIMIT);
-    List<RequestMetricEntity> rows = repository.findWindow(from, to);
+    List<RequestMetric> rows = metrics.between(from, to);
     List<RawRow> out = new ArrayList<>();
-    for (RequestMetricEntity row : rows) {
-      if (query.route() != null && !query.route().equals(row.getRoute())) continue;
-      if (query.outcome() != null && !query.outcome().equals(row.getOutcome())) continue;
-      if (query.shortCode() != null && !query.shortCode().equals(row.getShortCode())) continue;
-      if (query.userId() != null && !query.userId().equals(row.getUserId())) continue;
+    for (RequestMetric row : rows) {
+      if (query.route() != null && !query.route().equals(row.route())) continue;
+      if (query.outcome() != null && !query.outcome().equals(row.outcome())) continue;
+      if (query.shortCode() != null && !query.shortCode().equals(row.shortCode())) continue;
+      if (query.userId() != null && !query.userId().equals(row.userId())) continue;
       out.add(
           new RawRow(
-              row.getOccurredAt(),
-              row.getRoute(),
-              row.getMethod(),
-              row.getStatus(),
-              row.getOutcome(),
-              row.getLatencyMs(),
-              row.getShortCode(),
-              row.getUserId(),
-              row.getTraceId()));
+              row.occurredAt(),
+              row.route(),
+              row.method(),
+              row.status(),
+              row.outcome(),
+              row.latencyMs(),
+              row.shortCode(),
+              row.userId(),
+              row.traceId()));
       if (out.size() >= limit) break;
     }
     return out;

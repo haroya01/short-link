@@ -1,8 +1,8 @@
 package com.example.short_link.admin.application.read;
 
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
-import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricJpaRepository;
+import com.example.short_link.common.observability.RequestMetric;
+import com.example.short_link.common.observability.RequestMetricReader;
 import com.example.short_link.common.observability.RequestRouteMetrics;
 import java.time.Clock;
 import java.time.Duration;
@@ -19,11 +19,11 @@ public class AdminRouteMetricsService {
   // 전체 요청을 메모리에서 정렬하므로 집계 기간을 제한한다.
   private static final Duration LIFETIME_CAP = Duration.ofDays(7);
 
-  private final RequestMetricJpaRepository repository;
+  private final RequestMetricReader metrics;
   private final Clock clock;
 
-  public AdminRouteMetricsService(RequestMetricJpaRepository repository, Clock clock) {
-    this.repository = repository;
+  public AdminRouteMetricsService(RequestMetricReader metrics, Clock clock) {
+    this.metrics = metrics;
     this.clock = clock;
   }
 
@@ -38,7 +38,7 @@ public class AdminRouteMetricsService {
   private List<AdminRouteMetric> aggregate(Duration window) {
     Instant now = clock.instant();
     Instant from = now.minus(window);
-    List<RequestMetricEntity> rows = repository.findWindow(from, now);
+    List<RequestMetric> rows = metrics.between(from, now);
     List<AdminRouteMetric> out = new ArrayList<>();
     for (RequestRouteMetrics.Summary summary : RequestRouteMetrics.summarize(rows)) {
       out.add(

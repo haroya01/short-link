@@ -5,8 +5,8 @@ import static com.example.short_link.common.observability.LatencyPercentiles.per
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
-import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricJpaRepository;
+import com.example.short_link.common.observability.RequestMetric;
+import com.example.short_link.common.observability.RequestMetricReader;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Clock;
 import java.time.Duration;
@@ -26,15 +26,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AdminLinkMetricsQueryService {
 
-  private final RequestMetricJpaRepository requestMetricRepository;
+  private final RequestMetricReader requestMetrics;
   private final AdminMetricsRepository metricsRepository;
   private final Clock clock;
 
   public AdminLinkMetricsQueryService(
-      RequestMetricJpaRepository requestMetricRepository,
-      AdminMetricsRepository metricsRepository,
-      Clock clock) {
-    this.requestMetricRepository = requestMetricRepository;
+      RequestMetricReader requestMetrics, AdminMetricsRepository metricsRepository, Clock clock) {
+    this.requestMetrics = requestMetrics;
     this.metricsRepository = metricsRepository;
     this.clock = clock;
   }
@@ -42,9 +40,9 @@ public class AdminLinkMetricsQueryService {
   public List<AdminLinkMetric> linkMetrics(Window window, Sort sort) {
     Instant now = clock.instant();
     Instant from = now.minus(window.duration());
-    Map<String, List<RequestMetricEntity>> byShortCode = new HashMap<>();
-    for (RequestMetricEntity row : requestMetricRepository.findWindow(from, now)) {
-      String code = row.getShortCode();
+    Map<String, List<RequestMetric>> byShortCode = new HashMap<>();
+    for (RequestMetric row : requestMetrics.between(from, now)) {
+      String code = row.shortCode();
       if (code == null || code.isBlank()) continue;
       byShortCode.computeIfAbsent(code, k -> new ArrayList<>()).add(row);
     }
@@ -58,9 +56,9 @@ public class AdminLinkMetricsQueryService {
     }
 
     List<AdminLinkMetric> out = new ArrayList<>(byShortCode.size());
-    for (Map.Entry<String, List<RequestMetricEntity>> entry : byShortCode.entrySet()) {
+    for (Map.Entry<String, List<RequestMetric>> entry : byShortCode.entrySet()) {
       String shortCode = entry.getKey();
-      List<RequestMetricEntity> group = entry.getValue();
+      List<RequestMetric> group = entry.getValue();
       Aggregate agg = aggregate(group);
       LinkMetricRow row = rowByCode.get(shortCode);
       String originalUrl = row == null ? null : row.getOriginalUrl();
@@ -88,19 +86,19 @@ public class AdminLinkMetricsQueryService {
     return out;
   }
 
-  private static Aggregate aggregate(List<RequestMetricEntity> rows) {
+  private static Aggregate aggregate(List<RequestMetric> rows) {
     long count = rows.size();
     long errors = 0;
     long[] latencies = new long[rows.size()];
     Instant lastAt = null;
     Map<String, Long> outcomes = new LinkedHashMap<>();
     for (int i = 0; i < rows.size(); i++) {
-      RequestMetricEntity row = rows.get(i);
-      latencies[i] = row.getLatencyMs();
-      if (row.getStatus() >= 500) errors++;
-      outcomes.merge(row.getOutcome(), 1L, Long::sum);
-      if (lastAt == null || row.getOccurredAt().isAfter(lastAt)) {
-        lastAt = row.getOccurredAt();
+      RequestMetric row = rows.get(i);
+      latencies[i] = row.latencyMs();
+      if (row.status() >= 500) errors++;
+      outcomes.merge(row.outcome(), 1L, Long::sum);
+      if (lastAt == null || row.occurredAt().isAfter(lastAt)) {
+        lastAt = row.occurredAt();
       }
     }
     Arrays.sort(latencies);

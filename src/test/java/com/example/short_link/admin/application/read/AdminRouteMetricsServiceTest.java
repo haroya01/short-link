@@ -9,8 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetric;
-import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricJpaRepository;
+import com.example.short_link.common.observability.RequestMetricReader;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,8 +24,8 @@ class AdminRouteMetricsServiceTest {
 
   @Test
   void aggregatesPerMethodAndUriWithPercentilesAndErrorRate() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any()))
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any()))
         .thenReturn(
             List.of(
                 row("/r/{shortCode}", "GET", 302, "redirect", 5),
@@ -54,14 +53,14 @@ class AdminRouteMetricsServiceTest {
 
   @Test
   void lifetimeSummaryKeepsSevenDayWindowAndDoesNotRequireOutcomes() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any()))
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any()))
         .thenReturn(
             List.of(row("/same", "GET", 500, null, 10), row("/same", "POST", 200, null, 20)));
 
     List<AdminRouteMetric> metrics = new AdminRouteMetricsService(repo, fixedClock).routeMetrics();
 
-    verify(repo).findWindow(NOW.minus(Duration.ofDays(7)), NOW);
+    verify(repo).between(NOW.minus(Duration.ofDays(7)), NOW);
     assertThat(metrics)
         .extracting(AdminRouteMetric::method)
         .containsExactlyInAnyOrder("GET", "POST");
@@ -70,8 +69,8 @@ class AdminRouteMetricsServiceTest {
 
   @Test
   void emptyWindowReturnsEmpty() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any())).thenReturn(List.of());
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any())).thenReturn(List.of());
     AdminRouteMetricsService service = new AdminRouteMetricsService(repo, fixedClock);
 
     assertThat(service.routeMetrics()).isEmpty();
@@ -92,9 +91,8 @@ class AdminRouteMetricsServiceTest {
         .isEqualTo(AdminRouteMetricsService.Window.H1);
   }
 
-  private static RequestMetricEntity row(
+  private static RequestMetric row(
       String route, String method, int status, String outcome, long latency) {
-    return new RequestMetricEntity(
-        new RequestMetric(NOW, route, method, status, outcome, latency, null, null, null));
+    return new RequestMetric(NOW, route, method, status, outcome, latency, null, null, null);
   }
 }

@@ -22,8 +22,8 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void routesAggregatesPercentilesAndErrorRatePerRoute() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any()))
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any()))
         .thenReturn(
             List.of(
                 row("/r/{shortCode}", "GET", 302, "redirect", 5),
@@ -53,19 +53,19 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void rawKeepsOneHourDefaultWindow() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any())).thenReturn(List.of());
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any())).thenReturn(List.of());
 
     new AdminRequestMetricsService(repo, fixedClock)
         .raw(new AdminRequestMetricsService.RawQuery(null, null, null, null, null, null, null));
 
-    verify(repo).findWindow(NOW.minus(Duration.ofHours(1)), NOW);
+    verify(repo).between(NOW.minus(Duration.ofHours(1)), NOW);
   }
 
   @Test
   void outcomesGroupsByOutcomeForShortCode() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findShortCodeWindow(any(), any(), any()))
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.forShortCodeBetween(any(), any(), any()))
         .thenReturn(
             List.of(
                 row("/r/{shortCode}", "GET", 302, "redirect", 5),
@@ -88,7 +88,7 @@ class AdminRequestMetricsServiceTest {
   @Test
   void outcomesRejectsBlankShortCode() {
     AdminRequestMetricsService service =
-        new AdminRequestMetricsService(mock(RequestMetricJpaRepository.class), fixedClock);
+        new AdminRequestMetricsService(mock(RequestMetricReader.class), fixedClock);
     assertThatThrownBy(() -> service.outcomes("  ", AdminRequestMetricsService.Window.H1))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> service.outcomes(null, AdminRequestMetricsService.Window.H1))
@@ -97,8 +97,8 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void rawFiltersComposeAndRespectLimit() {
-    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
-    when(repo.findWindow(any(), any()))
+    RequestMetricReader repo = mock(RequestMetricReader.class);
+    when(repo.between(any(), any()))
         .thenReturn(
             List.of(
                 row("/api/links", "GET", 200, "ok", 10),
@@ -119,9 +119,8 @@ class AdminRequestMetricsServiceTest {
     assertThat(limited).hasSize(2);
   }
 
-  private static RequestMetricEntity row(
+  private static RequestMetric row(
       String route, String method, int status, String outcome, long latency) {
-    return new RequestMetricEntity(
-        new RequestMetric(NOW, route, method, status, outcome, latency, null, null, null));
+    return new RequestMetric(NOW, route, method, status, outcome, latency, null, null, null);
   }
 }
