@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 // The Worker and nginx rewrite Host to the origin, so "host" is checked against the canonical
@@ -37,13 +36,7 @@ public class InboxVerifier {
   private final String canonicalHost;
   private final Clock clock;
 
-  @Autowired
   public InboxVerifier(
-      RemoteActorResolver resolver, RemoteActorRepository actors, FederationProperties props) {
-    this(resolver, actors, props, Clock.systemUTC());
-  }
-
-  InboxVerifier(
       RemoteActorResolver resolver,
       RemoteActorRepository actors,
       FederationProperties props,

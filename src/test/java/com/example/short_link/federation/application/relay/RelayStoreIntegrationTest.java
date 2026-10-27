@@ -17,6 +17,7 @@ import com.example.short_link.federation.domain.RelayMode;
 import com.example.short_link.federation.scheduler.RelayWorker;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.net.URI;
@@ -172,7 +173,7 @@ class RelayStoreIntegrationTest {
   }
 
   private List<Long> federated(Long viewer) {
-    return query.federated(viewer, 0, 50).items().stream().map(NoteView::id).toList();
+    return query.federated(viewer, new PageAsk(0, 50)).items().stream().map(NoteView::id).toList();
   }
 
   private InboxOutcome fromAlice(Map<String, Object> activity) {

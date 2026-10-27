@@ -21,7 +21,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,29 +45,7 @@ public class FederationFollowers {
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
-  @Autowired
   public FederationFollowers(
-      FederationFollowerRepository followers,
-      RemoteAccountStandingReader standings,
-      FederationActorRepository actorRows,
-      RemoteActorRepository remoteActors,
-      DeliveryQueue deliveries,
-      FederationUrls urls,
-      JsonMapper json,
-      ApplicationEventPublisher events) {
-    this(
-        followers,
-        standings,
-        actorRows,
-        remoteActors,
-        deliveries,
-        urls,
-        json,
-        events,
-        Clock.systemUTC());
-  }
-
-  FederationFollowers(
       FederationFollowerRepository followers,
       RemoteAccountStandingReader standings,
       FederationActorRepository actorRows,
