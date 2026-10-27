@@ -1,4 +1,4 @@
-package com.example.short_link.common.observability;
+package com.example.short_link.admin.application.read;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;

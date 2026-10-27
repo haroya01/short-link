@@ -1,7 +1,8 @@
-package com.example.short_link.common.observability;
+package com.example.short_link.admin.application.read;
 
-import static com.example.short_link.common.observability.LatencyPercentiles.percentile;
+import static com.example.short_link.admin.application.read.LatencyPercentiles.percentile;
 
+import com.example.short_link.common.observability.RequestMetric;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;

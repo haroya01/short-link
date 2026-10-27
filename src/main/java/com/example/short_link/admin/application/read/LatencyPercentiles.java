@@ -1,4 +1,4 @@
-package com.example.short_link.common.observability;
+package com.example.short_link.admin.application.read;
 
 public final class LatencyPercentiles {
   private LatencyPercentiles() {}

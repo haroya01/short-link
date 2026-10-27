@@ -3,7 +3,6 @@ package com.example.short_link.admin.application.read;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricReader;
-import com.example.short_link.common.observability.RequestRouteMetrics;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

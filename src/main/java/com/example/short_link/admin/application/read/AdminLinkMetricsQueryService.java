@@ -1,6 +1,6 @@
 package com.example.short_link.admin.application.read;
 
-import static com.example.short_link.common.observability.LatencyPercentiles.percentile;
+import static com.example.short_link.admin.application.read.LatencyPercentiles.percentile;
 
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository;

@@ -1,4 +1,4 @@
-package com.example.short_link.common.web;
+package com.example.short_link.post.application.read;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

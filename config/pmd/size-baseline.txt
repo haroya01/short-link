@@ -8,10 +8,10 @@ AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/applicatio
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#2=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/user/presentation/security/ApiKeyAuthenticationFilter.java|doFilterInternal#1=1
 CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=19
+CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|raw(RawQuery)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=24
 CognitiveComplexity|src/main/java/com/example/short_link/common/csv/CsvRows.java|parse(String)#1=22
 CognitiveComplexity|src/main/java/com/example/short_link/common/image/ExifOrientation.java|read(byte[])#1=17
-CognitiveComplexity|src/main/java/com/example/short_link/common/observability/AdminRequestMetricsService.java|raw(RawQuery)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/common/web/RateLimitFilter.java|doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateAndSerializeAnswers(List<EventQuestionEntity>, Map<Long, String>)#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateSpecs(List<QuestionSpec>)#1=20
@@ -58,9 +58,12 @@ CognitiveComplexity|src/main/java/com/example/short_link/profile/application/Soc
 CognitiveComplexity|src/main/java/com/example/short_link/profile/domain/contact/Gallery.java|normalize(String)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/profile/domain/contact/Place.java|normalize(String)#1=15
 CyclomaticComplexity|src/main/java/com/example/short_link/abuse/application/write/ResolveAbuseReportUseCase.java|enforce(ResolveAbuseReportCommand, AbuseReportEntity)#1=12
+CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminFunnelService.java|parse(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminHealthService.java|redirect()#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|parse(String)#1=12
+CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|parse(String)#1=11
+CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|raw(RawQuery)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRouteMetricsService.java|parse(String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=22
 CyclomaticComplexity|src/main/java/com/example/short_link/common/config/ProdConfigGuard.java|run(ApplicationArguments)#1=13
@@ -68,9 +71,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/common/csv/CsvRows.jav
 CyclomaticComplexity|src/main/java/com/example/short_link/common/image/ExifOrientation.java|read(byte[])#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/common/net/PublicHttpUrlGuard.java|resolve(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/common/note/NoteVisibility.java|readBy(Reader)#1=31
-CyclomaticComplexity|src/main/java/com/example/short_link/common/observability/AdminFunnelService.java|parse(String)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/common/observability/AdminRequestMetricsService.java|parse(String)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/common/observability/AdminRequestMetricsService.java|raw(RawQuery)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/common/observability/OutcomeResolver.java|fromStatus(int)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/common/post/PostAudience.java|readBy(Reader)#1=31
 CyclomaticComplexity|src/main/java/com/example/short_link/common/web/RateLimitFilter.java|doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)#1=15
@@ -247,7 +247,7 @@ ExcessiveParameterList|src/main/java/com/example/short_link/profile/application/
 ExcessiveParameterList|src/main/java/com/example/short_link/profile/domain/visit/ProfileVisitEntity.java|ProfileVisitEntity#1=23
 ExcessiveParameterList|src/main/java/com/example/short_link/profile/presentation/visit/PublicProfileVisitController.java|visit#1=11
 NPathComplexity|src/main/java/com/example/short_link/admin/application/read/AdminLinkMetricsQueryService.java|linkMetrics(Window, Sort)#1=524
-NPathComplexity|src/main/java/com/example/short_link/common/observability/AdminRequestMetricsService.java|raw(RawQuery)#1=384
+NPathComplexity|src/main/java/com/example/short_link/admin/application/read/AdminRequestMetricsService.java|raw(RawQuery)#1=384
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|parse(JsonNode, JsonNode)#1=384
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|plain(String)#1=268
 NPathComplexity|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|poll(JsonNode)#1=212

@@ -11,7 +11,7 @@ import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.LinkSub
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.NoteSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
-import com.example.short_link.common.web.PostPublicUrlBuilder;
+import com.example.short_link.post.application.read.PostPublicUrlBuilder;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;

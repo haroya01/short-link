@@ -1,4 +1,4 @@
-package com.example.short_link.common.observability;
+package com.example.short_link.admin.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
