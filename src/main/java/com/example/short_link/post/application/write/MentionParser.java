@@ -12,10 +12,9 @@ import java.util.regex.Pattern;
 // first-seen order, capped to prevent unbounded notification fan-out.
 public final class MentionParser {
 
-  static final int MAX_MENTIONS = 10;
+  static final int MAX_MENTIONS = Mentions.MAX_MENTIONS;
 
-  private static final Pattern MENTION =
-      Pattern.compile("(?<![A-Za-z0-9_])@([a-z0-9][a-z0-9_]{2,15})(?![A-Za-z0-9_@])");
+  private static final Pattern MENTION = Pattern.compile(Mentions.LOCAL_HANDLE);
 
   private MentionParser() {}
 

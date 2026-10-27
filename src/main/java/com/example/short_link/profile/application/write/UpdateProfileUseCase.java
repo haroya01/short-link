@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.common.event.AccountUnlockedEvent;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.ProfileCacheEviction;
@@ -18,7 +19,6 @@ import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UpdateProfileUseCase {
 
-  private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9_]{2,15}$");
+  private static final Pattern USERNAME = Pattern.compile("^" + Usernames.GRAMMAR + "$");
 
   private static final Duration USERNAME_GRACE = Duration.ofDays(30);
 
@@ -83,7 +83,7 @@ public class UpdateProfileUseCase {
     if (requestedUsername == null) {
       return;
     }
-    String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(requestedUsername);
     validateUsername(normalized);
     if (normalized.equals(user.username())) {
       return;

@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.analytics.VisitRequest;
+import com.example.short_link.common.user.Usernames;
 import com.example.short_link.link.classifier.application.ClassifiedVisit;
 import com.example.short_link.link.classifier.application.VisitClassifier;
 import com.example.short_link.post.application.access.PostAccessPolicy;
@@ -12,7 +13,6 @@ import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
 import java.time.Clock;
-import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +49,7 @@ public class RecordPostViewUseCase {
 
   @Transactional
   public void execute(RecordPostViewCommand cmd, VisitRequest ctx, PostReader reader) {
-    String normalized = cmd.username().trim().toLowerCase(Locale.ROOT);
+    String normalized = Usernames.canonical(cmd.username());
     UserSummary author = users.findActiveByUsername(normalized).orElse(null);
     if (author == null) return;
     PostEntity post =

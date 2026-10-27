@@ -157,7 +157,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/PostAccessSettings.java|apply(PostEntity, PostAccessChange)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/PostSearchTextFlattener.java|blockText(PostBlockType, String)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/SetSeriesItemsUseCase.java|write(SeriesEntity, Long, List<Item>)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/UnlockPostUseCase.java|unlock(String, String, String, PostReader)#1=12
+CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/UnlockPostUseCase.java|unlock(String, String, String, PostReader)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/write/UpdatePostMetadataUseCase.java|execute(UpdatePostMetadataCommand)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/collection/application/read/CurationGraphQueryService.java|resolve(CooccurrenceRow, Map<Long, PostEntity>, Map<Long, PostHighlightEntity>, Map<Long, NoteBlock>, Map<Long, UserSummary>)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/collection/application/read/DiscoverFeedQueryService.java|resolve(DiscoverConnectionRow, UserSummary, Map<Long, PostEntity>, Map<Long, PostHighlightEntity>, Map<Long, NoteBlock>, Map<Long, UserSummary>)#1=11
