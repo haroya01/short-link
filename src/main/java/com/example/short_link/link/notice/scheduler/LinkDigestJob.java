@@ -1,13 +1,15 @@
-package com.example.short_link.notification.scheduler;
+package com.example.short_link.link.notice.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
+import com.example.short_link.common.notification.LinkNotice;
+import com.example.short_link.common.notification.LinkNoticeBody;
+import com.example.short_link.common.notification.LinkNoticeKind;
+import com.example.short_link.common.notification.LinkNoticeSender;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.notice.application.LinkNoticeProperties;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
-import com.example.short_link.notification.application.link.LinkNotificationProperties;
-import com.example.short_link.notification.domain.LinkNotificationType;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -30,8 +32,8 @@ public class LinkDigestJob {
 
   private final LinkRepository links;
   private final ClickRangeReadRepository ranges;
-  private final LinkNotificationDispatcher dispatcher;
-  private final LinkNotificationProperties props;
+  private final LinkNoticeSender notices;
+  private final LinkNoticeProperties props;
   private final RedisDistributedLock lock;
 
   @Scheduled(cron = "${short-link.link-notification.digest-cron:0 0 8 * * *}", zone = "Asia/Seoul")
@@ -55,8 +57,13 @@ public class LinkDigestJob {
         if (human == 0) {
           continue;
         }
-        dispatcher.dispatch(
-            userId, LinkNotificationType.DIGEST, null, "어제 요약", body(userId, human, from, to));
+        notices.send(
+            new LinkNotice(
+                userId,
+                LinkNoticeKind.DIGEST,
+                null,
+                "어제 요약",
+                new LinkNoticeBody.Written(body(userId, human, from, to))));
         sent++;
       }
       log.info("link digest: sent {} notifications", sent);

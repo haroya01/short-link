@@ -18,13 +18,6 @@ com.example.short_link.event.application.write.EventLinkIssuer reaches com.examp
 com.example.short_link.event.infrastructure.EventOrganizerLookupAdapter reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.notification.infrastructure.ApnsPushSender reaches com.example.short_link.user.domain.repository.DeviceTokenRepository
 com.example.short_link.notification.infrastructure.WebPushSender reaches com.example.short_link.user.domain.repository.WebPushSubscriptionRepository
-com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository
-com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository
-com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.domain.repository.LinkRepository
-com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository
-com.example.short_link.notification.scheduler.LinkDigestJob reaches com.example.short_link.link.stats.domain.repository.projection.ClickProjections$LinkClickCount
-com.example.short_link.notification.scheduler.LinkExpiryNotificationJob reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.post.application.access.PostAccessPolicy reaches com.example.short_link.user.domain.repository.FollowRepository
 com.example.short_link.post.application.access.PostUnlistedUrls reaches com.example.short_link.user.domain.repository.UserRepository
 com.example.short_link.post.application.read.CommentMentions reaches com.example.short_link.user.domain.repository.UserRepository
