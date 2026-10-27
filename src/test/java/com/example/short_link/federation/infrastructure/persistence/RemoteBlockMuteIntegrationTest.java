@@ -2,6 +2,8 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteAccountView;
 import com.example.short_link.federation.application.RemoteBlocks;
@@ -341,11 +343,11 @@ class RemoteBlockMuteIntegrationTest {
     mute(expired, alice, true, past());
     Instant now = Instant.now();
 
-    assertThat(userMutes.silences(blocker, null, alice, null, now)).isTrue();
-    assertThat(userMutes.silences(muter, null, alice, null, now)).isTrue();
-    assertThat(userMutes.silences(quiet, null, alice, null, now)).isFalse();
-    assertThat(userMutes.silences(expired, null, alice, null, now)).isFalse();
-    assertThat(userMutes.silences(blocker, null, bob, null, now)).isFalse();
+    assertThat(userMutes.silences(SilenceCheck.of(blocker, Actor.remote(alice)), now)).isTrue();
+    assertThat(userMutes.silences(SilenceCheck.of(muter, Actor.remote(alice)), now)).isTrue();
+    assertThat(userMutes.silences(SilenceCheck.of(quiet, Actor.remote(alice)), now)).isFalse();
+    assertThat(userMutes.silences(SilenceCheck.of(expired, Actor.remote(alice)), now)).isFalse();
+    assertThat(userMutes.silences(SilenceCheck.of(blocker, Actor.remote(bob)), now)).isFalse();
 
     Long theirs = remoteNote(alice, "PUBLIC");
     for (Long sharer : List.of(blocker, muter, quiet, expired, stranger)) {

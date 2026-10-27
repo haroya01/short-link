@@ -1,5 +1,7 @@
 package com.example.short_link.notification.application.write;
 
+import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
@@ -62,9 +64,9 @@ public class RecordBlogNotificationUseCase {
   // A recipient who silences the actor, their server or the conversation hears nothing of it.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
-      Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
-    if (!silenced(recipientUserId, actorUserId, null, null)) {
-      write(recipientUserId, type, actorUserId, null, payload, null);
+      Long recipientUserId, NotificationType type, Actor actor, NotificationTarget payload) {
+    if (!silenced(SilenceCheck.of(recipientUserId, actor))) {
+      write(recipientUserId, type, actor, payload, null);
     }
   }
 
@@ -72,12 +74,11 @@ public class RecordBlogNotificationUseCase {
   public void record(
       Long recipientUserId,
       NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
+      Actor actor,
       NotificationTarget payload,
       String groupKey) {
-    if (!silenced(recipientUserId, actorUserId, actorRemoteId, null)) {
-      write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+    if (!silenced(SilenceCheck.of(recipientUserId, actor))) {
+      write(recipientUserId, type, actor, payload, groupKey);
     }
   }
 
@@ -85,20 +86,17 @@ public class RecordBlogNotificationUseCase {
   public void record(
       Long recipientUserId,
       NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
+      Actor actor,
       NotificationTarget payload,
       String groupKey,
       Long conversationId) {
-    if (!silenced(recipientUserId, actorUserId, actorRemoteId, conversationId)) {
-      write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+    if (!silenced(SilenceCheck.of(recipientUserId, actor).inConversation(conversationId))) {
+      write(recipientUserId, type, actor, payload, groupKey);
     }
   }
 
-  private boolean silenced(
-      Long recipientUserId, Long actorUserId, Long actorRemoteId, Long conversationId) {
-    return !recipientUserId.equals(actorUserId)
-        && blocks.silences(recipientUserId, actorUserId, actorRemoteId, conversationId);
+  private boolean silenced(SilenceCheck check) {
+    return !check.recipientId().equals(check.actor().userId()) && blocks.silences(check);
   }
 
   // A grouped notification is written once per actor: liking, unliking and liking again adds no
@@ -108,31 +106,29 @@ public class RecordBlogNotificationUseCase {
   private void write(
       Long recipientUserId,
       NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
+      Actor actor,
       NotificationTarget payload,
       String groupKey) {
-    NotificationPolicyLevel verdict =
-        verdict(recipientUserId, type, actorUserId, actorRemoteId, payload);
+    NotificationPolicyLevel verdict = verdict(recipientUserId, type, actor, payload);
     if (verdict == NotificationPolicyLevel.DROP) {
       return;
     }
     if (groupKey != null
-        && repository.existsInGroup(recipientUserId, groupKey, actorUserId, actorRemoteId)) {
+        && repository.existsInGroup(recipientUserId, groupKey, actor.userId(), actor.remoteId())) {
       return;
     }
     String json = targetCodec.encode(payload);
     boolean filtered = verdict == NotificationPolicyLevel.FILTER;
     KeywordVerdict keywords =
-        keywords(List.of(recipientUserId), type, actorUserId, payload)
+        keywords(List.of(recipientUserId), type, actor, payload)
             .getOrDefault(recipientUserId, KeywordVerdict.CLEAN);
     boolean hidden = keywords == KeywordVerdict.HIDE;
     NotificationEntity notice =
         new NotificationEntity(
             recipientUserId,
             type,
-            actorUserId,
-            actorRemoteId,
+            actor.userId(),
+            actor.remoteId(),
             json,
             hidden ? null : groupKey,
             filtered);
@@ -148,8 +144,7 @@ public class RecordBlogNotificationUseCase {
         recipientUserId,
         pushMessage(
             type,
-            actorUserId,
-            actorRemoteId,
+            actor,
             payload,
             keywords == KeywordVerdict.CLEAN,
             Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
@@ -157,12 +152,9 @@ public class RecordBlogNotificationUseCase {
   }
 
   private Map<Long, KeywordVerdict> keywords(
-      List<Long> recipientUserIds,
-      NotificationType type,
-      Long actorUserId,
-      NotificationTarget payload) {
+      List<Long> recipientUserIds, NotificationType type, Actor actor, NotificationTarget payload) {
     String text = othersText(type, payload);
-    List<Long> others = recipientUserIds.stream().filter(id -> !id.equals(actorUserId)).toList();
+    List<Long> others = recipientUserIds.stream().filter(id -> !id.equals(actor.userId())).toList();
     if (text == null || text.isBlank() || others.isEmpty()) {
       return Map.of();
     }
@@ -187,12 +179,8 @@ public class RecordBlogNotificationUseCase {
   }
 
   private NotificationPolicyLevel verdict(
-      Long recipientUserId,
-      NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
-      NotificationTarget payload) {
-    if (!type.filterable() || (actorUserId == null && actorRemoteId == null)) {
+      Long recipientUserId, NotificationType type, Actor actor, NotificationTarget payload) {
+    if (!type.filterable() || actor.isNone()) {
       return preferenceService.isEnabled(recipientUserId, type)
           ? NotificationPolicyLevel.ACCEPT
           : NotificationPolicyLevel.DROP;
@@ -202,39 +190,24 @@ public class RecordBlogNotificationUseCase {
             ? note.noteId()
             : null;
     return NotificationPolicy.verdict(
-        policies.sender(recipientUserId, type, actorUserId, actorRemoteId, mentionNoteId));
+        policies.sender(recipientUserId, type, actor.userId(), actor.remoteId(), mentionNoteId));
   }
 
   public void recordForEachWhoHears(
-      List<Long> candidateUserIds,
-      NotificationType type,
-      Long actorUserId,
-      NotificationTarget payload) {
+      List<Long> candidateUserIds, NotificationType type, Actor actor, NotificationTarget payload) {
     recordForEach(
         candidateUserIds.stream()
-            .filter(candidate -> !silenced(candidate, actorUserId, null, null))
+            .filter(candidate -> !silenced(SilenceCheck.of(candidate, actor)))
             .toList(),
         type,
-        actorUserId,
+        actor,
         payload);
   }
 
   // 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다. 수신자는 이미 행위자를 침묵하지 않은
   // 사람들이다(SQL이 고른 팔로워·구독자·공유자).
   public void recordForEach(
-      List<Long> recipientUserIds,
-      NotificationType type,
-      Long actorUserId,
-      NotificationTarget payload) {
-    recordForEach(recipientUserIds, type, actorUserId, null, payload);
-  }
-
-  public void recordForEach(
-      List<Long> recipientUserIds,
-      NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
-      NotificationTarget payload) {
+      List<Long> recipientUserIds, NotificationType type, Actor actor, NotificationTarget payload) {
     if (recipientUserIds.isEmpty()) {
       return;
     }
@@ -243,7 +216,7 @@ public class RecordBlogNotificationUseCase {
       return;
     }
     String json = targetCodec.encode(payload);
-    Map<Long, KeywordVerdict> keywords = keywords(enabledRecipients, type, actorUserId, payload);
+    Map<Long, KeywordVerdict> keywords = keywords(enabledRecipients, type, actor, payload);
     Set<Long> hidden =
         keywords.entrySet().stream()
             .filter(entry -> entry.getValue() == KeywordVerdict.HIDE)
@@ -253,7 +226,7 @@ public class RecordBlogNotificationUseCase {
     for (int i = 0; i < enabledRecipients.size(); i += FANOUT_CHUNK) {
       List<Long> chunk =
           enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
-      fanoutWriter.persistChunk(chunk, type, actorUserId, actorRemoteId, json, hidden, now);
+      fanoutWriter.persistChunk(chunk, type, actor.userId(), actor.remoteId(), json, hidden, now);
     }
     Map<String, Map<Boolean, List<Long>>> byLocale =
         userReader.findAllByIdIn(enabledRecipients).stream()
@@ -272,43 +245,36 @@ public class RecordBlogNotificationUseCase {
                     pushDelivery.sendToAll(
                         ids,
                         pushMessage(
-                            type,
-                            actorUserId,
-                            actorRemoteId,
-                            payload,
-                            quoted,
-                            Locale.forLanguageTag(tag),
-                            null));
+                            type, actor, payload, quoted, Locale.forLanguageTag(tag), null));
                   }
                 }));
   }
 
   private PushSender.PushMessage pushMessage(
       NotificationType type,
-      Long actorUserId,
-      Long actorRemoteId,
+      Actor actor,
       NotificationTarget payload,
       boolean quoted,
       Locale locale,
       String recipientUsername) {
     String actorUsername =
-        actorUserId == null
+        actor.userId() == null
             ? null
-            : userReader.findById(actorUserId).map(NotificationUser::username).orElse(null);
+            : userReader.findById(actor.userId()).map(NotificationUser::username).orElse(null);
     String remoteHandle =
-        actorRemoteId == null
+        actor.remoteId() == null
             ? null
             : Optional.ofNullable(
-                    actorReader.resolveRemote(Set.of(actorRemoteId)).get(actorRemoteId))
+                    actorReader.resolveRemote(Set.of(actor.remoteId())).get(actor.remoteId()))
                 .map(NotificationActor::username)
                 .orElse(null);
-    String actor =
+    String actorName =
         actorUsername != null ? actorUsername : remoteHandle != null ? remoteHandle : "kurl";
     String subtitle = payload == null || !quoted ? null : payload.pushSubtitle();
     Integer milestone = payload instanceof NotificationPostRef post ? post.milestone() : null;
     String body =
         messageSource.getMessage(
-            "notification.push." + type.name(), new Object[] {actor, milestone}, locale);
+            "notification.push." + type.name(), new Object[] {actorName, milestone}, locale);
     return new PushSender.PushMessage(
         "kurl",
         subtitle,

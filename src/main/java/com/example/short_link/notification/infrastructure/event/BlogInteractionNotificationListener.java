@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
@@ -31,8 +32,7 @@ public class BlogInteractionNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         type,
-        event.actorUserId(),
-        null,
+        Actor.member(event.actorUserId()),
         payloadOf(event),
         groupKey(type, event));
   }

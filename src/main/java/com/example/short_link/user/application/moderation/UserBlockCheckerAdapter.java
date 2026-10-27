@@ -1,6 +1,7 @@
 package com.example.short_link.user.application.moderation;
 
 import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
@@ -47,21 +48,10 @@ class UserBlockCheckerAdapter implements UserBlockChecker {
 
   @Override
   @Transactional(readOnly = true)
-  public boolean silences(Long recipientId, Long actorId) {
-    if (recipientId == null || actorId == null) {
+  public boolean silences(SilenceCheck check) {
+    if (check.recipientId() == null || (check.actor().isNone() && check.conversationId() == null)) {
       return false;
     }
-    return muteRepository.silences(recipientId, actorId, clock.instant());
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public boolean silences(Long recipientId, Long actorId, Long remoteActorId, Long conversationId) {
-    if (recipientId == null
-        || (actorId == null && remoteActorId == null && conversationId == null)) {
-      return false;
-    }
-    return muteRepository.silences(
-        recipientId, actorId, remoteActorId, conversationId, clock.instant());
+    return muteRepository.silences(check, clock.instant());
   }
 }

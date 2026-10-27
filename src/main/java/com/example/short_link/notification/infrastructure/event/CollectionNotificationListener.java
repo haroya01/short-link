@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
@@ -31,7 +32,7 @@ public class CollectionNotificationListener {
       recordUseCase.record(
           event.connectedAuthorUserId(),
           NotificationType.CONNECTED,
-          event.actorUserId(),
+          Actor.member(event.actorUserId()),
           collection);
     }
 
@@ -39,7 +40,7 @@ public class CollectionNotificationListener {
     recordUseCase.recordForEachWhoHears(
         event.priorContributorUserIds(),
         NotificationType.PATH_GREW,
-        event.actorUserId(),
+        Actor.member(event.actorUserId()),
         collection);
   }
 }

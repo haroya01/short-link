@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.CommentLikedEvent;
 import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
@@ -46,7 +47,7 @@ public class PostNotificationListener {
             event.commentId(),
             null);
     recordUseCase.record(
-        event.recipientUserId(), NotificationType.REPLY, event.actorUserId(), post);
+        event.recipientUserId(), NotificationType.REPLY, Actor.member(event.actorUserId()), post);
   }
 
   @Async("webhookExecutor")
@@ -64,7 +65,7 @@ public class PostNotificationListener {
             event.commentId(),
             null);
     recordUseCase.record(
-        event.recipientUserId(), NotificationType.MENTION, event.actorUserId(), post);
+        event.recipientUserId(), NotificationType.MENTION, Actor.member(event.actorUserId()), post);
   }
 
   @Async("webhookExecutor")
@@ -82,7 +83,7 @@ public class PostNotificationListener {
             null,
             event.highlightId());
     recordUseCase.record(
-        event.recipientUserId(), NotificationType.REPLY, event.actorUserId(), post);
+        event.recipientUserId(), NotificationType.REPLY, Actor.member(event.actorUserId()), post);
   }
 
   @Async("webhookExecutor")
@@ -100,7 +101,7 @@ public class PostNotificationListener {
             null,
             event.highlightId());
     recordUseCase.record(
-        event.recipientUserId(), NotificationType.MENTION, event.actorUserId(), post);
+        event.recipientUserId(), NotificationType.MENTION, Actor.member(event.actorUserId()), post);
   }
 
   @Async("webhookExecutor")
@@ -119,8 +120,7 @@ public class PostNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         NotificationType.COMMENT_LIKE,
-        event.actorUserId(),
-        null,
+        Actor.member(event.actorUserId()),
         new NotificationPostRef(
             event.postId(),
             event.postSlug(),
@@ -147,8 +147,7 @@ public class PostNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         NotificationType.COMMENT_LIKE,
-        event.actorUserId(),
-        null,
+        Actor.member(event.actorUserId()),
         new NotificationPostRef(
             event.postId(),
             event.postSlug(),
@@ -168,8 +167,7 @@ public class PostNotificationListener {
     recordUseCase.record(
         event.recipientUserId(),
         NotificationType.HIGHLIGHT,
-        event.actorUserId(),
-        null,
+        Actor.member(event.actorUserId()),
         new NotificationPostRef(
             event.postId(), event.postSlug(), event.postTitle(), null, null, event.highlightId()),
         NotificationGroupKey.of(NotificationType.HIGHLIGHT, event.postId()));
@@ -197,8 +195,7 @@ public class PostNotificationListener {
       recordUseCase.record(
           author,
           NotificationType.NOTE_EMBED,
-          event.actorUserId(),
-          null,
+          Actor.member(event.actorUserId()),
           post,
           NotificationGroupKey.of(NotificationType.NOTE_EMBED, event.postId()));
     }
@@ -214,7 +211,8 @@ public class PostNotificationListener {
     // NEW_POST links use the actor username resolved at read time, so no handle is snapshotted.
     NotificationPostRef post =
         new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle(), null);
-    recordUseCase.recordForEach(followers, NotificationType.NEW_POST, event.authorUserId(), post);
+    recordUseCase.recordForEach(
+        followers, NotificationType.NEW_POST, Actor.member(event.authorUserId()), post);
   }
 
   // Readers are anonymous, so these notices carry no actor.
@@ -225,7 +223,7 @@ public class PostNotificationListener {
     recordUseCase.record(
         event.authorUserId(),
         first ? NotificationType.POST_FIRST_READER : NotificationType.POST_READ_MILESTONE,
-        null,
+        Actor.NONE,
         new NotificationPostRef(
             event.postId(),
             event.postSlug(),

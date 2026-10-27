@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationTarget;
@@ -94,22 +95,18 @@ final class StoredNotices {
         }
 
         @Override
-        public boolean silences(Long recipientId, Long actorId) {
-          return silences(recipientId, actorId, null, null);
-        }
-
-        @Override
-        public boolean silences(
-            Long recipientId, Long actorId, Long remoteActorId, Long conversationId) {
-          if (recipientId == null
-              || (actorId == null && remoteActorId == null && conversationId == null)) {
+        public boolean silences(SilenceCheck check) {
+          Long recipientId = check.recipientId();
+          if (recipientId == null || (check.actor().isNone() && check.conversationId() == null)) {
             return false;
           }
           silenceChecks++;
-          return silenced.contains(List.of(recipientId, "member", Objects.toString(actorId)))
-              || silenced.contains(List.of(recipientId, "remote", Objects.toString(remoteActorId)))
+          return silenced.contains(
+                  List.of(recipientId, "member", Objects.toString(check.actor().userId())))
               || silenced.contains(
-                  List.of(recipientId, "conversation", Objects.toString(conversationId)));
+                  List.of(recipientId, "remote", Objects.toString(check.actor().remoteId())))
+              || silenced.contains(
+                  List.of(recipientId, "conversation", Objects.toString(check.conversationId())));
         }
       };
 

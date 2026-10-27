@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import com.example.short_link.common.event.AccountUnlockedEvent;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -26,7 +27,7 @@ public class FollowNotificationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onRemoteFollowed(RemoteFollowedEvent event) {
     recordUseCase.record(
-        event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
+        event.userId(), NotificationType.REMOTE_FOLLOW, Actor.remote(event.remoteActorId()), null);
   }
 
   // Someone asks to follow a locked member, from this server or another.
@@ -36,9 +37,7 @@ public class FollowNotificationListener {
     recordUseCase.record(
         event.targetUserId(),
         NotificationType.FOLLOW_REQUEST,
-        event.followerUserId(),
-        event.followerRemoteActorId(),
-        null,
+        new Actor(event.followerUserId(), event.followerRemoteActorId()),
         null);
   }
 
