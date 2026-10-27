@@ -22,8 +22,8 @@ class FollowNotificationListenerTest {
 
   private final StoredNotices stored = new StoredNotices();
 
-  private NoteNotificationListener listener() {
-    return new NoteNotificationListener(stored.useCase(), stored.blocks, null);
+  private FollowNotificationListener listener() {
+    return new FollowNotificationListener(notifications, stored.useCase(), stored.blocks);
   }
 
   @Test
@@ -58,15 +58,14 @@ class FollowNotificationListenerTest {
 
   @Test
   void aSettledRequestTakesItsNotificationWithIt() {
-    new FollowNotificationListener(notifications)
-        .onSettled(new FollowRequestSettledEvent(2L, null, 7L));
+    listener().onSettled(new FollowRequestSettledEvent(2L, null, 7L));
 
     verify(notifications).deleteFollowRequest(2L, null, 7L);
   }
 
   @Test
   void unlockingClearsEveryRequestNotification() {
-    new FollowNotificationListener(notifications).onUnlocked(new AccountUnlockedEvent(2L));
+    listener().onUnlocked(new AccountUnlockedEvent(2L));
 
     verify(notifications).deleteFollowRequests(2L);
   }
