@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.application.read.FollowingReader;
+import com.example.short_link.user.domain.FollowEdge;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collection;
@@ -160,7 +161,7 @@ public class PostAccessPolicy {
   }
 
   private boolean follows(Long viewerId, Long authorId) {
-    return viewerId != null && follows.follows(viewerId, authorId);
+    return viewerId != null && follows.follows(FollowEdge.follower(viewerId).following(authorId));
   }
 
   public final class Lists {

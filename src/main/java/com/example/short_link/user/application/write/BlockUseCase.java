@@ -1,6 +1,8 @@
 package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.event.FollowRequestSettledEvent;
+import com.example.short_link.common.user.BlockEdge;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
@@ -30,17 +32,19 @@ public class BlockUseCase {
     if (target.getId().equals(blockerId)) {
       throw new UserException(UserErrorCode.CANNOT_BLOCK_SELF);
     }
-    if (!blockRepository.existsByBlockerIdAndBlockedId(blockerId, target.getId())) {
-      blockRepository.save(new UserBlockEntity(blockerId, target.getId()));
+    BlockEdge block = BlockEdge.blocker(blockerId).blocked(target.getId());
+    if (!blockRepository.exists(block)) {
+      blockRepository.save(new UserBlockEntity(block));
     }
     followRepository.deleteBetween(blockerId, target.getId());
-    withdrawRequest(blockerId, target.getId());
-    withdrawRequest(target.getId(), blockerId);
+    withdrawRequest(FollowEdge.follower(blockerId).following(target.getId()));
+    withdrawRequest(FollowEdge.follower(target.getId()).following(blockerId));
   }
 
-  private void withdrawRequest(Long followerId, Long followingId) {
-    if (followRequests.delete(followerId, followingId) > 0) {
-      events.publishEvent(new FollowRequestSettledEvent(followingId, followerId, null));
+  private void withdrawRequest(FollowEdge request) {
+    if (followRequests.delete(request) > 0) {
+      events.publishEvent(
+          new FollowRequestSettledEvent(request.following(), request.follower(), null));
     }
   }
 
@@ -48,7 +52,7 @@ public class BlockUseCase {
   public void unblock(Long blockerId, String targetUsername) {
     UserEntity target = resolve(targetUsername);
     blockRepository
-        .findByBlockerIdAndBlockedId(blockerId, target.getId())
+        .find(BlockEdge.blocker(blockerId).blocked(target.getId()))
         .ifPresent(blockRepository::delete);
   }
 

@@ -17,6 +17,7 @@ import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.NoteVisibility.Reader;
 import com.example.short_link.common.post.SeriesItemCleaner;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -129,8 +130,8 @@ public class NoteCommandService {
       parent = find(draft.inReplyToId());
       requireReadable(userId, parent);
       if (!parent.isRemote()
-          && (blocks.isBlocked(parent.getUserId(), userId)
-              || blocks.isBlocked(userId, parent.getUserId()))) {
+          && (blocks.isBlocked(BlockEdge.blocker(parent.getUserId()).blocked(userId))
+              || blocks.isBlocked(BlockEdge.blocker(userId).blocked(parent.getUserId())))) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
       }
     }
@@ -799,7 +800,8 @@ public class NoteCommandService {
     if (note.isRemote()) {
       return;
     }
-    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
       throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     }
   }

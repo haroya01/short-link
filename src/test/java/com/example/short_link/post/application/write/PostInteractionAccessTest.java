@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.PostLock;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
@@ -25,6 +26,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
@@ -96,7 +98,7 @@ class PostInteractionAccessTest {
     PostEntity post = new PostEntity(7L, "published", "Published", "ko");
     post.publish();
     preparePost(interaction, post);
-    when(blocks.isBlocked(7L, 9L)).thenReturn(true);
+    when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(9L))).thenReturn(true);
     PostErrorCode expected =
         switch (interaction) {
           case COMMENT, HIGHLIGHT_REPLY -> PostErrorCode.COMMENT_BLOCKED;
@@ -108,7 +110,7 @@ class PostInteractionAccessTest {
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(expected);
-    verify(blocks).isBlocked(7L, 9L);
+    verify(blocks).isBlocked(BlockEdge.blocker(7L).blocked(9L));
   }
 
   @ParameterizedTest
@@ -133,7 +135,7 @@ class PostInteractionAccessTest {
   @EnumSource(Interaction.class)
   void aBlockedCountryRefusesEveryNewInteractionEvenFromAFollower(Interaction interaction) {
     FollowRepository follows = mock(FollowRepository.class);
-    lenient().when(follows.existsByFollowerIdAndFollowingId(9L, 7L)).thenReturn(true);
+    lenient().when(follows.exists(FollowEdge.follower(9L).following(7L))).thenReturn(true);
     access =
         new PostInteractionAccess(
             posts,

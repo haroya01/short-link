@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.PendingFollowRequest;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
@@ -18,8 +19,8 @@ class FollowRequestRepositoryAdapter implements FollowRequestRepository {
   private final EntityManager em;
 
   @Override
-  public boolean exists(Long followerId, Long followingId) {
-    return jpa.existsByFollowerIdAndFollowingId(followerId, followingId);
+  public boolean exists(FollowEdge edge) {
+    return jpa.existsByFollowerIdAndFollowingId(edge.follower(), edge.following());
   }
 
   @Override
@@ -28,8 +29,8 @@ class FollowRequestRepositoryAdapter implements FollowRequestRepository {
   }
 
   @Override
-  public int delete(Long followerId, Long followingId) {
-    return jpa.deleteRequest(followerId, followingId);
+  public int delete(FollowEdge edge) {
+    return jpa.deleteRequest(edge.follower(), edge.following());
   }
 
   // Requests from accounts that are gone or that this member blocked stay out of the list.

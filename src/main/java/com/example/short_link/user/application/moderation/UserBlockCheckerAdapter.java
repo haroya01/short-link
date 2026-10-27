@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.moderation;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.UserBlockEntity;
@@ -20,11 +21,11 @@ class UserBlockCheckerAdapter implements UserBlockChecker {
 
   @Override
   @Transactional(readOnly = true)
-  public boolean isBlocked(Long blockerId, Long blockedId) {
-    if (blockerId == null || blockedId == null) {
+  public boolean isBlocked(BlockEdge edge) {
+    if (edge.blocker() == null || edge.blocked() == null) {
       return false;
     }
-    return blockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+    return blockRepository.exists(edge);
   }
 
   @Override
