@@ -20,6 +20,7 @@ import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.access.NoteAccess;
+import com.example.short_link.note.application.read.NoteBatch;
 import com.example.short_link.note.application.read.NotePolls;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
@@ -388,42 +389,27 @@ public class NoteCommandService {
     if (previewUrl != null) {
       events.publishEvent(new NoteLinkPreviewRequested(note.getId(), previewUrl));
     }
-    return new NoteView(
-        note.getId(),
-        note.getBody(),
-        note.getCreatedAt(),
-        null,
-        0L,
-        false,
-        authors.get(userId),
-        rows.stream().map(NoteView.Media::of).toList(),
-        quoted,
-        parentId,
-        0L,
-        0L,
-        false,
-        quotedNote == null ? null : quotedView(quotedNote, checked.quotedAuthor()),
-        null,
-        null,
-        0,
-        false,
-        mentioned.stream().map(NoteAuthor::username).toList(),
-        note.getContentWarning(),
-        note.isSensitive(),
-        false,
-        note.getVisibility().apiName(),
-        note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
-        null,
-        note.getLanguage(),
-        null,
-        note.getReplyPolicy().apiName(),
-        true,
-        false,
-        null,
-        note.getRoomId() == null
-            ? null
-            : new NoteView.Room(
-                note.getRoomId(), rooms.names(Set.of(note.getRoomId())).get(note.getRoomId())));
+    Map<Long, List<NoteView.Media>> images = new HashMap<>();
+    images.put(note.getId(), rows.stream().map(NoteView.Media::of).toList());
+    if (quotedNote != null) {
+      images.put(
+          quotedNote.getId(),
+          media.findByNoteIds(List.of(quotedNote.getId())).stream()
+              .map(NoteView.Media::of)
+              .toList());
+    }
+    return NoteViews.assemble(
+        note,
+        NoteBatch.justWritten(
+            note,
+            authors,
+            quotedNote,
+            checked.quotedAuthor(),
+            quoted,
+            images,
+            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
+            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
+        userId);
   }
 
   static String language(String raw) {
@@ -510,17 +496,6 @@ public class NoteCommandService {
                 note.conversation()));
       }
     }
-  }
-
-  private NoteView.QuotedNote quotedView(NoteEntity quoted, NoteAuthor author) {
-    return new NoteView.QuotedNote(
-        quoted.getId(),
-        quoted.getBody(),
-        quoted.getCreatedAt(),
-        author,
-        media.findByNoteIds(List.of(quoted.getId())).stream().map(NoteView.Media::of).toList(),
-        quoted.getContentWarning(),
-        quoted.isSensitive());
   }
 
   @Transactional

@@ -57,8 +57,17 @@ public class NoteViews {
   private final Clock clock;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
+    NoteBatch loaded = load(page, viewerId);
+    List<NoteView> views = new ArrayList<>(loaded.visible().size());
+    for (NoteEntity note : loaded.visible()) {
+      views.add(assemble(note, loaded, viewerId));
+    }
+    return views;
+  }
+
+  private NoteBatch load(List<NoteEntity> page, Long viewerId) {
     if (page.isEmpty()) {
-      return List.of();
+      return NoteBatch.EMPTY;
     }
     Set<Long> quotedNoteIds =
         page.stream()
@@ -82,8 +91,7 @@ public class NoteViews {
         handles.isEmpty()
             ? people.activeAuthors(authorIds)
             : people.activeAuthors(authorIds, handles);
-    Set<String> memberNames =
-        members.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
+    Set<String> memberNames = NoteBatch.names(members);
     Authors authors =
         new Authors(
             members, remoteIds.isEmpty() ? Map.of() : people.remoteAuthors(remoteIds, viewerId));
@@ -96,7 +104,7 @@ public class NoteViews {
             .filter(note -> readable.contains(note.getId()))
             .toList();
     if (visible.isEmpty()) {
-      return List.of();
+      return NoteBatch.EMPTY;
     }
     List<Long> ids = visible.stream().map(NoteEntity::getId).toList();
     Map<Long, NoteEntity> quotedById =
@@ -124,48 +132,63 @@ public class NoteViews {
                 .map(NoteEntity::getRoomId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
+    return new NoteBatch(
+        visible,
+        members,
+        authors.remote(),
+        memberNames,
+        images,
+        quotedById,
+        posts,
+        stats,
+        marks,
+        true,
+        cards,
+        pollViews,
+        closedThreads,
+        roomNames);
+  }
 
-    List<NoteView> views = new ArrayList<>(visible.size());
-    for (NoteEntity note : visible) {
-      NoteStats counts = stats.getOrDefault(note.getId(), NoteStats.NONE);
-      views.add(
-          new NoteView(
-              note.getId(),
-              note.getBody(),
-              note.getCreatedAt(),
-              note.getEditedAt(),
-              counts.likes(),
-              viewerId == null ? null : marks.liked().contains(note.getId()),
-              authors.of(note),
-              images.getOrDefault(note.getId(), List.of()),
-              note.getQuotedPostId() == null ? null : posts.get(note.getQuotedPostId()),
-              note.getInReplyToId(),
-              counts.replies(),
-              counts.reposts(),
-              viewerId == null ? null : marks.reposted().contains(note.getId()),
-              quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images),
-              cards.get(note.getId()),
-              null,
-              counts.quotes(),
-              viewerId == null ? null : marks.bookmarked().contains(note.getId()),
-              Mentions.of(note.getBody()).stream().filter(memberNames::contains).toList(),
-              note.getContentWarning(),
-              note.isSensitive(),
-              note.isPinned(),
-              note.getVisibility().apiName(),
-              pollViews.get(note.getId()),
-              viewerId == null ? null : marks.muted().contains(note.getId()),
-              note.getLanguage(),
-              null,
-              note.getReplyPolicy().apiName(),
-              viewerId == null ? null : !closedThreads.contains(note.conversation()),
-              note.isReplyHidden(),
-              remote(note),
-              note.getRoomId() == null
-                  ? null
-                  : new NoteView.Room(note.getRoomId(), roomNames.get(note.getRoomId()))));
-    }
-    return views;
+  public static NoteView assemble(NoteEntity note, NoteBatch batch, Long viewerId) {
+    NoteStats counts = batch.stats().getOrDefault(note.getId(), NoteStats.NONE);
+    NoteViewerMarks marks = batch.marks();
+    return new NoteView(
+        note.getId(),
+        note.getBody(),
+        note.getCreatedAt(),
+        note.getEditedAt(),
+        counts.likes(),
+        viewerId == null ? null : marks.liked().contains(note.getId()),
+        batch.authorOf(note),
+        batch.images().getOrDefault(note.getId(), List.of()),
+        note.getQuotedPostId() == null ? null : batch.quotedPosts().get(note.getQuotedPostId()),
+        note.getInReplyToId(),
+        counts.replies(),
+        counts.reposts(),
+        viewerId == null ? null : marks.reposted().contains(note.getId()),
+        note.getQuotedNoteId() == null
+            ? null
+            : quotedNote(batch.quotedNotes().get(note.getQuotedNoteId()), batch),
+        batch.cards().get(note.getId()),
+        null,
+        counts.quotes(),
+        viewerId == null ? null : marks.bookmarked().contains(note.getId()),
+        Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
+        note.getContentWarning(),
+        note.isSensitive(),
+        note.isPinned(),
+        note.getVisibility().apiName(),
+        batch.polls().get(note.getId()),
+        viewerId == null || !batch.mutesRead() ? null : marks.muted().contains(note.getId()),
+        note.getLanguage(),
+        null,
+        note.getReplyPolicy().apiName(),
+        viewerId == null ? null : !batch.closedThreads().contains(note.conversation()),
+        note.isReplyHidden(),
+        remote(note),
+        note.getRoomId() == null
+            ? null
+            : new NoteView.Room(note.getRoomId(), batch.roomNames().get(note.getRoomId())));
   }
 
   private static NoteView.Remote remote(NoteEntity note) {
@@ -414,8 +437,7 @@ public class NoteViews {
     }
   }
 
-  private static NoteView.QuotedNote quotedNote(
-      NoteEntity quoted, Authors authors, Map<Long, List<NoteView.Media>> images) {
+  private static NoteView.QuotedNote quotedNote(NoteEntity quoted, NoteBatch batch) {
     if (quoted == null) {
       return null;
     }
@@ -423,8 +445,8 @@ public class NoteViews {
         quoted.getId(),
         quoted.getBody(),
         quoted.getCreatedAt(),
-        authors.of(quoted),
-        images.getOrDefault(quoted.getId(), List.of()),
+        batch.authorOf(quoted),
+        batch.images().getOrDefault(quoted.getId(), List.of()),
         quoted.getContentWarning(),
         quoted.isSensitive());
   }
