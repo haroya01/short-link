@@ -71,7 +71,8 @@ public class PostAccessPolicy {
         || (post.isInRoom() && rooms.isMember(post.getRoomId(), reader.viewerId()));
   }
 
-  // Only a room narrows this: every other audience shows anyone at least the post's card.
+  // Of the people a post would tell about something said on it, those who may read it. Only a room
+  // narrows this: every other audience shows anyone at least its card.
   public Set<Long> readersAmong(PostEntity post, Collection<Long> userIds) {
     if (!post.isInRoom()) {
       return Set.copyOf(userIds);

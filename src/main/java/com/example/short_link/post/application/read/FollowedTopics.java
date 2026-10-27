@@ -46,8 +46,7 @@ class FollowedTopics {
     return new Following(followingIds, subscribedSeriesIds, followedTags);
   }
 
-  // Keyed by post id because the assembler may drop posts and shift positions. Collectors.toMap
-  // rejects null values.
+  // Keyed by post id because the assembler drops posts by inactive authors and shifts positions.
   List<PublicFeedItem> annotate(List<PostEntity> posts, Following following) {
     Set<Long> authors = following.authors();
     Set<Long> series = following.series();

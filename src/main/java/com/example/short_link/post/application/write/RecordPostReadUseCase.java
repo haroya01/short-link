@@ -11,7 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Missing or unpublished posts are silently ignored because recording is a beacon.
+// A missing post or one the reader cannot fully read is ignored silently because recording is a
+// beacon.
 @Service
 @RequiredArgsConstructor
 public class RecordPostReadUseCase {

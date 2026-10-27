@@ -253,7 +253,7 @@ public class PublicPostQueryService {
     }
     CtaCard cta = ctaMap.get(ctaId);
     if (cta == null) {
-      // 삭제됐거나 다른 작성자의 CTA는 빈 참조로 반환한다.
+      // 없거나 다른 작성자의 CTA는 빈 참조로 반환한다. 지운 내 CTA는 deleted로 채운다.
       return PublicPostBlockView.from(entity);
     }
     return PublicPostBlockView.fromWithCta(
