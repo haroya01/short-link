@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
@@ -18,7 +19,8 @@ import org.junit.jupiter.api.Test;
 class PostUnlistedUrlsTest {
 
   private final UserRepository users = mock(UserRepository.class);
-  private final PostUnlistedUrls urls = new PostUnlistedUrls("https://blog.kurl.me/", users);
+  private final PostUnlistedUrls urls =
+      new PostUnlistedUrls("https://blog.kurl.me/", new UserSummaryReader(users));
 
   @Test
   void anUnlistedPostLinksToItsPageWithItsKey() {

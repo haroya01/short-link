@@ -15,6 +15,8 @@ class UserMutationLockAdapter implements UserMutationLock {
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
   public void lock(Long userId) {
-    users.findByIdForUpdate(userId).orElseThrow(() -> new IllegalArgumentException("unknown user"));
+    if (users.findByIdForUpdate(userId).isEmpty()) {
+      throw new IllegalArgumentException("unknown user");
+    }
   }
 }

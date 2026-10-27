@@ -25,7 +25,7 @@ class CachedLinkLoaderTest {
     LinkDestinationRepository destinations = mock(LinkDestinationRepository.class);
     SplashCtaCatalog ctaCatalog = mock(SplashCtaCatalog.class);
     CachedLinkLoader loader = new CachedLinkLoader(repository, destinations, ctaCatalog);
-    when(ctaCatalog.findOwned(9L, 42L))
+    when(ctaCatalog.findOwned(42L, 9L))
         .thenReturn(Optional.of(new SplashCta(9L, "Get the app", "https://kurl.me/app1")));
     ShortCode shortCode = new ShortCode("abc1234");
     Instant expiresAt = Instant.parse("2099-01-01T00:00:00Z");

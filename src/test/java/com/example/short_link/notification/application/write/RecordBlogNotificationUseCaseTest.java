@@ -3,6 +3,8 @@ package com.example.short_link.notification.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -68,6 +70,8 @@ class RecordBlogNotificationUseCaseTest {
   @Mock(strictness = Mock.Strictness.LENIENT)
   private NotificationKeywordFilterReader keywordFilters;
 
+  @Mock private UserBlockChecker blocks;
+
   private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -124,6 +128,7 @@ class RecordBlogNotificationUseCaseTest {
         actorReader,
         policies,
         keywordFilters,
+        blocks,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -150,7 +155,12 @@ class RecordBlogNotificationUseCaseTest {
         .thenAnswer(inv -> inv.getArgument(0));
     keepAsideStrangers();
 
-    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "t", null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "p", "t", null));
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
@@ -175,7 +185,7 @@ class RecordBlogNotificationUseCaseTest {
                 false,
                 false));
 
-    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+    useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
@@ -189,10 +199,8 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_MENTION,
-            2L,
-            null,
-            new NotificationNoteRef(77L, "hey", null, null),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(77L, "hey", null, null));
 
     org.mockito.Mockito.verify(policies).sender(9L, NotificationType.NOTE_MENTION, 2L, null, 77L);
   }
@@ -206,10 +214,8 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_POST,
-            2L,
-            null,
-            new NotificationNoteRef(77L, "new", null, null),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(77L, "new", null, null));
 
     org.mockito.Mockito.verifyNoInteractions(policies);
     org.mockito.Mockito.verify(preferenceService).isEnabled(9L, NotificationType.NOTE_POST);
@@ -223,8 +229,7 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_LIKE,
-            2L,
-            null,
+            Actor.member(2L),
             new NotificationNoteRef(5L, "hi", null, null),
             "NOTE_LIKE:5:2026-10-07");
 
@@ -249,8 +254,7 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_LIKE,
-            null,
-            7L,
+            Actor.remote(7L),
             new NotificationNoteRef(5L, "hi", null, null),
             "NOTE_LIKE:5:2026-10-07");
 
@@ -280,10 +284,8 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_REPLY,
-            2L,
-            null,
-            new NotificationNoteRef(5L, "hi", 12L, "me too"),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(5L, "hi", 12L, "me too"));
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -306,7 +308,11 @@ class RecordBlogNotificationUseCaseTest {
         .thenAnswer(inv -> inv.getArgument(0));
 
     useCase()
-        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi", null));
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "my-post", "Hi", null));
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
@@ -322,7 +328,7 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
-    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+    useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
@@ -368,7 +374,7 @@ class RecordBlogNotificationUseCaseTest {
     NotificationPostRef ref =
         new NotificationPostRef(10L, "my-post", "글 제목", null, null, null, 1000);
     for (NotificationType type : NotificationType.values()) {
-      useCase().record(9L, type, 2L, ref);
+      useCase().record(9L, type, Actor.member(2L), ref);
     }
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
@@ -395,23 +401,30 @@ class RecordBlogNotificationUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
-        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi", null));
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "my-post", "Hi", null));
     useCase()
         .record(
             9L,
             NotificationType.MENTION,
-            2L,
+            Actor.member(2L),
             new NotificationPostRef(11L, "their-post", "Yo", "mika", 77L, null));
     useCase()
         .record(
             9L,
             NotificationType.SERIES_SUBSCRIBE,
-            2L,
+            Actor.member(2L),
             new NotificationSeriesRef(5L, "tokyo-walks", "도쿄 산책"));
     useCase()
         .record(
-            9L, NotificationType.CONNECTED, 2L, new NotificationCollectionRef(42L, "산책 모음", 10L));
-    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+            9L,
+            NotificationType.CONNECTED,
+            Actor.member(2L),
+            new NotificationCollectionRef(42L, "산책 모음", 10L));
+    useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -447,7 +460,7 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.REPLY,
-            2L,
+            Actor.member(2L),
             new NotificationPostRef(11L, "their-post", "Yo", "mika", null, 41L));
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
@@ -470,16 +483,13 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.POST_QUOTE,
-            2L,
-            null,
-            new NotificationNoteRef(300L, "이 글 좋다", null, null),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(300L, "이 글 좋다", null, null));
     useCase()
         .record(
             9L,
             NotificationType.NOTE_EMBED,
-            2L,
-            null,
+            Actor.member(2L),
             new NotificationPostRef(10L, "their-post", "Yo", "yuki", null, null),
             "NOTE_EMBED:10:2026-10-08");
 
@@ -505,7 +515,7 @@ class RecordBlogNotificationUseCaseTest {
         .recordForEach(
             List.of(7L, 8L),
             NotificationType.NEW_POST,
-            2L,
+            Actor.member(2L),
             new NotificationPostRef(10L, "fresh", "새 글", null));
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
@@ -523,9 +533,9 @@ class RecordBlogNotificationUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ja")));
     NotificationPostRef read = new NotificationPostRef(10L, "3", "글 제목", null, null, null, 100);
 
-    useCase().record(9L, NotificationType.POST_READ_MILESTONE, null, read);
+    useCase().record(9L, NotificationType.POST_READ_MILESTONE, Actor.NONE, read);
     when(preferenceService.isEnabled(9L, NotificationType.POST_FIRST_READER)).thenReturn(false);
-    useCase().record(9L, NotificationType.POST_FIRST_READER, null, read);
+    useCase().record(9L, NotificationType.POST_FIRST_READER, Actor.NONE, read);
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
@@ -560,7 +570,7 @@ class RecordBlogNotificationUseCaseTest {
     when(recipient.locale()).thenReturn("ja");
     when(userRepository.findById(9L)).thenReturn(Optional.of(recipient));
 
-    useCase().record(9L, NotificationType.LIKE, 2L, null);
+    useCase().record(9L, NotificationType.LIKE, Actor.member(2L), null);
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -575,13 +585,13 @@ class RecordBlogNotificationUseCaseTest {
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
-    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+    useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
     NotificationUser nameless = org.mockito.Mockito.mock(NotificationUser.class);
     when(nameless.username()).thenReturn(null);
     when(userRepository.findById(3L)).thenReturn(Optional.of(nameless));
 
-    useCase().record(9L, NotificationType.FOLLOW, 3L, null);
+    useCase().record(9L, NotificationType.FOLLOW, Actor.member(3L), null);
 
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -603,7 +613,7 @@ class RecordBlogNotificationUseCaseTest {
         .thenReturn(List.of(r7, r8, r9));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
-    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
+    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, Actor.member(2L), ref);
 
     ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
     org.mockito.Mockito.verify(fanoutWriter)
@@ -626,7 +636,7 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void fanOutWithNoRecipientsIsSilent() {
-    useCase().recordForEach(List.of(), NotificationType.NEW_POST, 2L, null);
+    useCase().recordForEach(List.of(), NotificationType.NEW_POST, Actor.member(2L), null);
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
@@ -640,8 +650,13 @@ class RecordBlogNotificationUseCaseTest {
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7));
 
-    useCase().recordForEach(List.of(7L), NotificationType.NEW_POST, 2L, null);
-    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", null, null));
+    useCase().recordForEach(List.of(7L), NotificationType.NEW_POST, Actor.member(2L), null);
+    useCase()
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "p", null, null));
 
     ArgumentCaptor<PushSender.PushMessage> fanned =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -660,7 +675,12 @@ class RecordBlogNotificationUseCaseTest {
   void mutedRecipientGetsNoBellRowAndNoPush() {
     when(preferenceService.isEnabled(9L, NotificationType.LIKE)).thenReturn(false);
 
-    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "t", null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "p", "t", null));
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
@@ -673,8 +693,8 @@ class RecordBlogNotificationUseCaseTest {
     when(preferenceService.isEnabled(9L, NotificationType.FOLLOW)).thenReturn(false);
 
     RecordBlogNotificationUseCase useCase = useCase();
-    useCase.record(9L, NotificationType.FOLLOW, 2L, null);
-    useCase.record(9L, NotificationType.COMMENT, 2L, null);
+    useCase.record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
+    useCase.record(9L, NotificationType.COMMENT, Actor.member(2L), null);
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
@@ -694,7 +714,7 @@ class RecordBlogNotificationUseCaseTest {
         .thenReturn(List.of(7L, 9L));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
-    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
+    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, Actor.member(2L), ref);
 
     org.mockito.Mockito.verify(fanoutWriter)
         .persistChunk(
@@ -716,7 +736,7 @@ class RecordBlogNotificationUseCaseTest {
     when(preferenceService.filterEnabled(List.of(7L, 8L), NotificationType.NEW_POST))
         .thenReturn(List.of());
 
-    useCase().recordForEach(List.of(7L, 8L), NotificationType.NEW_POST, 2L, null);
+    useCase().recordForEach(List.of(7L, 8L), NotificationType.NEW_POST, Actor.member(2L), null);
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
@@ -733,7 +753,7 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.CONNECTED,
-            2L,
+            Actor.member(2L),
             new NotificationCollectionRef(42L, "긴 여름의 독서", 10L));
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
@@ -764,7 +784,7 @@ class RecordBlogNotificationUseCaseTest {
         .recordForEach(
             List.of(7L, 9L),
             NotificationType.PATH_GREW,
-            2L,
+            Actor.member(2L),
             new NotificationCollectionRef(42L, "긴 여름의 독서", null));
 
     ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
@@ -793,7 +813,11 @@ class RecordBlogNotificationUseCaseTest {
     when(preferenceService.isEnabled(9L, NotificationType.CONNECTED)).thenReturn(false);
 
     useCase()
-        .record(9L, NotificationType.CONNECTED, 2L, new NotificationCollectionRef(42L, "c", 10L));
+        .record(
+            9L,
+            NotificationType.CONNECTED,
+            Actor.member(2L),
+            new NotificationCollectionRef(42L, "c", 10L));
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
@@ -811,7 +835,7 @@ class RecordBlogNotificationUseCaseTest {
         .recordForEach(
             List.of(7L, 9L),
             NotificationType.PATH_GREW,
-            2L,
+            Actor.member(2L),
             new NotificationCollectionRef(42L, "c", null));
 
     org.mockito.Mockito.verify(fanoutWriter)
@@ -839,8 +863,7 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             9L,
             NotificationType.NOTE_REPLY,
-            2L,
-            null,
+            Actor.member(2L),
             new NotificationNoteRef(5L, "내 노트", 12L, replyText),
             "NOTE_REPLY:5:2026-10-09");
   }
@@ -897,20 +920,20 @@ class RecordBlogNotificationUseCaseTest {
         .record(
             2L,
             NotificationType.NOTE_POLL,
-            2L,
-            null,
-            new NotificationNoteRef(5L, "스포일러 투표", null, null),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(5L, "스포일러 투표", null, null));
     useCase()
         .record(
             9L,
             NotificationType.NOTE_LIKE,
-            2L,
-            null,
-            new NotificationNoteRef(5L, "스포일러", null, null),
-            null);
+            Actor.member(2L),
+            new NotificationNoteRef(5L, "스포일러", null, null));
     useCase()
-        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "스포일러", null));
+        .record(
+            9L,
+            NotificationType.LIKE,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "p", "스포일러", null));
 
     org.mockito.Mockito.verifyNoInteractions(keywordFilters);
     org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(3))
@@ -933,7 +956,7 @@ class RecordBlogNotificationUseCaseTest {
         .recordForEach(
             List.of(7L, 8L, 9L),
             NotificationType.NOTE_POST,
-            2L,
+            Actor.member(2L),
             new NotificationNoteRef(5L, "결말 스포일러", null, null));
 
     org.mockito.Mockito.verify(fanoutWriter)

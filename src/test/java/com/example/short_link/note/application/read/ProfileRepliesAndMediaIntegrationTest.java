@@ -3,10 +3,12 @@ package com.example.short_link.note.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -57,7 +59,7 @@ class ProfileRepliesAndMediaIntegrationTest {
     muted = member("pr_muted");
     blocked = member("pr_blocked");
     mutes.save(new UserMuteEntity(viewer, muted, false, null));
-    blocks.save(new UserBlockEntity(viewer, blocked));
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(blocked)));
   }
 
   @Test
@@ -114,7 +116,7 @@ class ProfileRepliesAndMediaIntegrationTest {
     assertThat(anonymous.get(1).replyingTo().excerpt()).isEqualTo("blocked voice");
     assertThat(anonymous.get(2).replyingTo().excerpt()).isEqualTo("muted voice");
 
-    follows.save(new FollowEntity(viewer, friend));
+    follows.save(new FollowEntity(FollowEdge.follower(viewer).following(friend)));
     assertThat(replies(viewer).items().get(0).replyingTo().excerpt()).isEqualTo("for followers");
   }
 
@@ -128,13 +130,13 @@ class ProfileRepliesAndMediaIntegrationTest {
 
     assertThat(ids(replies(viewer))).containsExactly(open);
     assertThat(ids(replies(author))).hasSize(3);
-    follows.save(new FollowEntity(viewer, author));
+    follows.save(new FollowEntity(FollowEdge.follower(viewer).following(author)));
     assertThat(ids(replies(viewer))).containsExactly(forFollowers, open);
 
     mutes.save(new UserMuteEntity(viewer, author, false, null));
     assertThat(ids(replies(viewer))).containsExactly(forFollowers, open);
 
-    blocks.save(new UserBlockEntity(author, viewer));
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(author).blocked(viewer)));
     assertThat(replies(viewer).items()).isEmpty();
     assertThat(ids(replies(null))).containsExactly(open);
   }
@@ -151,7 +153,8 @@ class ProfileRepliesAndMediaIntegrationTest {
     long quiet = note(author, "marked sensitive", null, n -> n.markContent(null, true));
     attach(quiet, "quiet");
 
-    List<ProfileMediaView.Item> items = query.mediaByAuthor("pr_author", 0, 20, viewer).items();
+    List<ProfileMediaView.Item> items =
+        query.mediaByAuthor("pr_author", viewer, new PageAsk(0, 20)).items();
 
     assertThat(items)
         .extracting(ProfileMediaView.Item::noteId)
@@ -175,9 +178,9 @@ class ProfileRepliesAndMediaIntegrationTest {
     attach(forFollowers, "followers");
 
     assertThat(mediaIds(viewer)).containsExactly(open);
-    follows.save(new FollowEntity(viewer, author));
+    follows.save(new FollowEntity(FollowEdge.follower(viewer).following(author)));
     assertThat(mediaIds(viewer)).containsExactly(forFollowers, open);
-    blocks.save(new UserBlockEntity(viewer, author));
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(author)));
     assertThat(mediaIds(viewer)).isEmpty();
     assertThat(mediaIds(null)).containsExactly(open);
   }
@@ -191,20 +194,20 @@ class ProfileRepliesAndMediaIntegrationTest {
     attach(newer, "b");
     note(author, "newest, with words only", null);
 
-    ProfileRepliesView first = query.repliesByAuthor("pr_author", 0, 1, viewer);
-    ProfileRepliesView second = query.repliesByAuthor("pr_author", 1, 1, viewer);
+    ProfileRepliesView first = query.repliesByAuthor("pr_author", viewer, new PageAsk(0, 1));
+    ProfileRepliesView second = query.repliesByAuthor("pr_author", viewer, new PageAsk(1, 1));
     assertThat(ids(first)).containsExactly(newer);
     assertThat(first.hasNext()).isTrue();
     assertThat(ids(second)).containsExactly(older);
     assertThat(second.hasNext()).isFalse();
 
-    ProfileMediaView firstMedia = query.mediaByAuthor("pr_author", 0, 1, viewer);
+    ProfileMediaView firstMedia = query.mediaByAuthor("pr_author", viewer, new PageAsk(0, 1));
     assertThat(firstMedia.items()).extracting(ProfileMediaView.Item::noteId).containsExactly(newer);
     assertThat(firstMedia.hasNext()).isTrue();
   }
 
   private ProfileRepliesView replies(Long reader) {
-    return query.repliesByAuthor("pr_author", 0, 20, reader);
+    return query.repliesByAuthor("pr_author", reader, new PageAsk(0, 20));
   }
 
   private static List<Long> ids(ProfileRepliesView view) {
@@ -212,7 +215,7 @@ class ProfileRepliesAndMediaIntegrationTest {
   }
 
   private List<Long> mediaIds(Long reader) {
-    return query.mediaByAuthor("pr_author", 0, 20, reader).items().stream()
+    return query.mediaByAuthor("pr_author", reader, new PageAsk(0, 20)).items().stream()
         .map(ProfileMediaView.Item::noteId)
         .toList();
   }
