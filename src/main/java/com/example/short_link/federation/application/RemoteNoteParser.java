@@ -1,6 +1,8 @@
 package com.example.short_link.federation.application;
 
+import static com.example.short_link.federation.application.ActivityStreams.MAX_URI;
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
+import static com.example.short_link.federation.application.ActivityStreams.sameHost;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
 import com.example.short_link.common.note.NoteVisibility;
@@ -70,7 +72,6 @@ public class RemoteNoteParser {
       Pattern.compile("<a\\b[^>]*\\bhref\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
   private static final List<String> QUOTE_FIELDS =
       List.of("quote", "quoteUrl", "quoteUri", "_misskey_quote");
-  private static final int MAX_URI = 512;
 
   private final FederationUrls urls;
 
@@ -155,21 +156,7 @@ public class RemoteNoteParser {
     String inReplyTo = idOf(object.get("inReplyTo"));
     Set<String> to = addresses(object.get("to"), activity.get("to"));
     Set<String> cc = addresses(object.get("cc"), activity.get("cc"));
-    Set<String> addressed = new LinkedHashSet<>();
-    for (String address : to) {
-      urls.publicIdOf(address).ifPresent(addressed::add);
-    }
-    for (String address : cc) {
-      urls.publicIdOf(address).ifPresent(addressed::add);
-    }
-    JsonNode tags = object.get("tag");
-    if (tags != null && tags.isArray()) {
-      for (JsonNode tag : tags) {
-        if ("Mention".equals(text(tag.get("type")))) {
-          urls.publicIdOf(text(tag.get("href"))).ifPresent(addressed::add);
-        }
-      }
-    }
+    Set<String> addressed = addressedPublicIds(to, cc, object.get("tag"));
     String uri = idOf(object);
     Quote quote = card ? null : quote(object);
     String body = card ? excerpt(object) : body(object);
@@ -234,8 +221,7 @@ public class RemoteNoteParser {
   // The page people open: an http(s) address on the object's own server, or none.
   private static String address(JsonNode url, String uri) {
     String href = webLink(url);
-    String host = uri == null ? null : RemoteActorParser.host(uri);
-    return href != null && host != null && host.equals(RemoteActorParser.host(href)) ? href : null;
+    return href != null && uri != null && sameHost(uri, href) ? href : null;
   }
 
   // PeerTube lists the watch page beside the video files; the text/html link is the page.
@@ -346,7 +332,7 @@ public class RemoteNoteParser {
   private static List<RemoteNotes.Media> pictures(JsonNode node) {
     String bare = text(node);
     if (bare != null) {
-      return bare.startsWith("https://") && bare.length() <= 512
+      return bare.startsWith("https://") && bare.length() <= MAX_URI
           ? List.of(new RemoteNotes.Media(bare, null, "image/jpeg"))
           : List.of();
     }
@@ -364,26 +350,29 @@ public class RemoteNoteParser {
   }
 
   public boolean addressesUs(JsonNode object, JsonNode activity) {
-    for (String address : addresses(object.get("to"), activity.get("to"))) {
-      if (urls.publicIdOf(address).isPresent()) {
-        return true;
-      }
+    return !addressedPublicIds(
+            addresses(object.get("to"), activity.get("to")),
+            addresses(object.get("cc"), activity.get("cc")),
+            object.get("tag"))
+        .isEmpty();
+  }
+
+  private Set<String> addressedPublicIds(Set<String> to, Set<String> cc, JsonNode tags) {
+    Set<String> addressed = new LinkedHashSet<>();
+    for (String address : to) {
+      urls.publicIdOf(address).ifPresent(addressed::add);
     }
-    for (String address : addresses(object.get("cc"), activity.get("cc"))) {
-      if (urls.publicIdOf(address).isPresent()) {
-        return true;
-      }
+    for (String address : cc) {
+      urls.publicIdOf(address).ifPresent(addressed::add);
     }
-    JsonNode tags = object.get("tag");
     if (tags != null && tags.isArray()) {
       for (JsonNode tag : tags) {
-        if ("Mention".equals(text(tag.get("type")))
-            && urls.publicIdOf(text(tag.get("href"))).isPresent()) {
-          return true;
+        if ("Mention".equals(text(tag.get("type")))) {
+          urls.publicIdOf(text(tag.get("href"))).ifPresent(addressed::add);
         }
       }
     }
-    return false;
+    return addressed;
   }
 
   static NoteVisibility visibility(Set<String> to, Set<String> cc) {
@@ -558,7 +547,7 @@ public class RemoteNoteParser {
     for (JsonNode attachment : items) {
       String type = mediaType(attachment);
       String url = link(attachment.get("url"));
-      if (type != null && url != null && url.startsWith("https://") && url.length() <= 512) {
+      if (type != null && url != null && url.startsWith("https://") && url.length() <= MAX_URI) {
         media.add(
             new RemoteNotes.Media(
                 url,

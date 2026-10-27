@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.MuteRepository;
@@ -31,34 +34,44 @@ class UserBlockCheckerAdapterTest {
 
   @Test
   void silencingAsksTheOneCombinedQueryAndNoOneIsSilencedByNobody() {
-    when(mutes.silences(9L, 2L, NOW)).thenReturn(true);
+    SilenceCheck member = SilenceCheck.of(9L, Actor.member(2L));
+    when(mutes.silences(member, NOW)).thenReturn(true);
 
-    assertThat(adapter().silences(9L, 2L)).isTrue();
-    assertThat(adapter().silences(null, 2L)).isFalse();
-    assertThat(adapter().silences(9L, null)).isFalse();
+    assertThat(adapter().silences(member)).isTrue();
+    assertThat(adapter().silences(SilenceCheck.of(null, Actor.member(2L)))).isFalse();
+    assertThat(adapter().silences(SilenceCheck.of(9L, Actor.NONE))).isFalse();
     verifyNoInteractions(blocks);
   }
 
   @Test
   void aMutedConversationIsAskedInTheSameQueryAndNothingToAskIsNoQuery() {
-    when(mutes.silences(9L, 2L, null, 40L, NOW)).thenReturn(true);
-    when(mutes.silences(9L, null, null, 41L, NOW)).thenReturn(false);
-    when(mutes.silences(9L, null, 70L, null, NOW)).thenReturn(true);
+    SilenceCheck memberInThread = SilenceCheck.of(9L, Actor.member(2L)).inConversation(40L);
+    SilenceCheck nobodyInThread = SilenceCheck.of(9L, Actor.NONE).inConversation(41L);
+    SilenceCheck elsewhere = SilenceCheck.of(9L, Actor.remote(70L));
+    when(mutes.silences(memberInThread, NOW)).thenReturn(true);
+    when(mutes.silences(nobodyInThread, NOW)).thenReturn(false);
+    when(mutes.silences(elsewhere, NOW)).thenReturn(true);
 
-    assertThat(adapter().silences(9L, 2L, null, 40L)).isTrue();
-    assertThat(adapter().silences(9L, null, null, 41L)).isFalse();
-    assertThat(adapter().silences(9L, null, 70L, null)).isTrue();
-    assertThat(adapter().silences(9L, null, null, null)).isFalse();
-    assertThat(adapter().silences(null, 2L, null, 40L)).isFalse();
+    assertThat(adapter().silences(memberInThread)).isTrue();
+    assertThat(adapter().silences(nobodyInThread)).isFalse();
+    assertThat(adapter().silences(elsewhere)).isTrue();
+    assertThat(adapter().silences(SilenceCheck.of(9L, Actor.NONE))).isFalse();
+    assertThat(adapter().silences(SilenceCheck.of(null, Actor.member(2L)).inConversation(40L)))
+        .isFalse();
     verifyNoInteractions(blocks);
   }
 
   @Test
   void theBlockRelationReadsBothDirectionsAtOnceAndNothingForNobodyOrOneself() {
-    when(blocks.findBetween(9L, 2L)).thenReturn(List.of(new UserBlockEntity(9L, 2L)));
-    when(blocks.findBetween(9L, 3L)).thenReturn(List.of(new UserBlockEntity(3L, 9L)));
+    when(blocks.findBetween(9L, 2L))
+        .thenReturn(List.of(new UserBlockEntity(BlockEdge.blocker(9L).blocked(2L))));
+    when(blocks.findBetween(9L, 3L))
+        .thenReturn(List.of(new UserBlockEntity(BlockEdge.blocker(3L).blocked(9L))));
     when(blocks.findBetween(9L, 4L))
-        .thenReturn(List.of(new UserBlockEntity(9L, 4L), new UserBlockEntity(4L, 9L)));
+        .thenReturn(
+            List.of(
+                new UserBlockEntity(BlockEdge.blocker(9L).blocked(4L)),
+                new UserBlockEntity(BlockEdge.blocker(4L).blocked(9L))));
     when(blocks.findBetween(9L, 5L)).thenReturn(List.of());
 
     assertThat(adapter().between(9L, 2L)).isEqualTo(new BlockRelation(true, false));

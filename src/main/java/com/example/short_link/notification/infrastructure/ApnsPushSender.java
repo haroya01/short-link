@@ -3,8 +3,8 @@ package com.example.short_link.notification.infrastructure;
 import com.example.short_link.notification.application.push.ApnsProperties;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
-import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -32,7 +32,7 @@ public class ApnsPushSender implements PushSender {
   private static final String LINK_STATS_CATEGORY = "LINK_STATS";
 
   private final ApnsProperties props;
-  private final DeviceTokenRepository deviceTokens;
+  private final DevicePushTargets deviceTokens;
   private final JsonMapper jsonMapper;
   private final HttpClient http;
   private final Executor executor;
@@ -41,7 +41,7 @@ public class ApnsPushSender implements PushSender {
   @Autowired
   public ApnsPushSender(
       ApnsProperties props,
-      DeviceTokenRepository deviceTokens,
+      DevicePushTargets deviceTokens,
       JsonMapper jsonMapper,
       ApnsTokenProvider tokenProvider) {
     this(
@@ -64,7 +64,7 @@ public class ApnsPushSender implements PushSender {
 
   ApnsPushSender(
       ApnsProperties props,
-      DeviceTokenRepository deviceTokens,
+      DevicePushTargets deviceTokens,
       JsonMapper jsonMapper,
       ApnsTokenProvider tokenProvider,
       HttpClient http,
@@ -83,13 +83,13 @@ public class ApnsPushSender implements PushSender {
   @Override
   public void send(Long recipientUserId, PushMessage message) {
     if (!tokenProvider.configured()) return;
-    dispatch(deviceTokens.targetsForUser(recipientUserId, Instant.now()), message);
+    dispatch(deviceTokens.forUser(recipientUserId, Instant.now()), message);
   }
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
     if (!tokenProvider.configured() || recipientUserIds.isEmpty()) return;
-    dispatch(deviceTokens.targetsForUsers(recipientUserIds, Instant.now()), message);
+    dispatch(deviceTokens.forUsers(recipientUserIds, Instant.now()), message);
   }
 
   private void dispatch(List<DeviceTarget> targets, PushMessage message) {
@@ -125,13 +125,13 @@ public class ApnsPushSender implements PushSender {
       int status = response.statusCode();
       String outcome;
       if (status == 410 || (status == 400 && response.body().contains("BadDeviceToken"))) {
-        deviceTokens.deleteByToken(token);
+        deviceTokens.forget(token);
         outcome = "gone";
       } else if (status < 300) {
-        if (learnTopic) deviceTokens.updateTopic(token, topic);
+        if (learnTopic) deviceTokens.recordTopic(token, topic);
         outcome = "sent";
       } else if (status == 400 && response.body().contains("DeviceTokenNotForTopic")) {
-        if (learnTopic) deviceTokens.updateTopic(token, props.otherTopic(topic));
+        if (learnTopic) deviceTokens.recordTopic(token, props.otherTopic(topic));
         outcome = "wrong_topic";
       } else {
         outcome = "rejected";

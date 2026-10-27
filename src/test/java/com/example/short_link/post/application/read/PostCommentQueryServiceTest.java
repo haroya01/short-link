@@ -12,6 +12,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -39,9 +40,9 @@ class PostCommentQueryServiceTest {
         new PostCommentQueryService(
             commentRepository,
             commentLikeRepository,
-            userRepository,
+            new UserSummaryReader(userRepository),
             postRepository,
-            new CommentMentions(userRepository),
+            new CommentMentions(new UserSummaryReader(userRepository)),
             PostAccessFixtures.policy());
   }
 

@@ -13,6 +13,6 @@ class LinkModerationAdapter implements LinkModerationPort {
 
   @Override
   public void disable(Long adminUserId, Long linkId) {
-    linkModerationService.disable(linkId, LinkDisableReason.ABUSE_REPORT, adminUserId);
+    linkModerationService.disable(adminUserId, linkId, LinkDisableReason.ABUSE_REPORT);
   }
 }

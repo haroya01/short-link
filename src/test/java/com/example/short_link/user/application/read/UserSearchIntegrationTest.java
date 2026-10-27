@@ -2,6 +2,8 @@ package com.example.short_link.user.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.user.BlockEdge;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
@@ -72,14 +74,19 @@ class UserSearchIntegrationTest {
                 })
             .getId();
 
-    followRepository.save(new FollowEntity(viewer, followed));
-    followRepository.save(new FollowEntity(user("f1" + token, u -> {}).getId(), big));
-    followRepository.save(new FollowEntity(user("f2" + token, u -> {}).getId(), big));
+    followRepository.save(new FollowEntity(FollowEdge.follower(viewer).following(followed)));
     followRepository.save(
-        new FollowEntity(user("f3" + token, UserEntity::softDelete).getId(), big));
-    followRequestRepository.save(new FollowRequestEntity(viewer, locked));
-    blockRepository.save(new UserBlockEntity(viewer, blocked));
-    blockRepository.save(new UserBlockEntity(blocker, viewer));
+        new FollowEntity(FollowEdge.follower(user("f1" + token, u -> {}).getId()).following(big)));
+    followRepository.save(
+        new FollowEntity(FollowEdge.follower(user("f2" + token, u -> {}).getId()).following(big)));
+    followRepository.save(
+        new FollowEntity(
+            FollowEdge.follower(user("f3" + token, UserEntity::softDelete).getId())
+                .following(big)));
+    followRequestRepository.save(
+        new FollowRequestEntity(FollowEdge.follower(viewer).following(locked)));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(viewer).blocked(blocked)));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(blocker).blocked(viewer)));
     muteRepository.save(new UserMuteEntity(viewer, muted, true, null));
   }
 
