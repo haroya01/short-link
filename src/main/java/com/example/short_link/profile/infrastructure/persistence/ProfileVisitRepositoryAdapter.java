@@ -56,18 +56,21 @@ class ProfileVisitRepositoryAdapter implements ProfileVisitRepository {
   }
 
   @Override
-  public List<VisitProjections.DailyVisitRow> findDailyVisits(Long uid, Instant from, String tz) {
-    return jpa.findDailyVisits(uid, from, tz);
+  public List<VisitProjections.DailyVisitRow> findDailyVisits(
+      Long uid, Instant from, Instant until, String tz) {
+    return jpa.findDailyVisits(uid, from, until, tz);
   }
 
   @Override
-  public List<VisitProjections.HourVisitRow> findHourlyVisits(Long uid, String tz) {
-    return jpa.findHourlyVisits(uid, tz);
+  public List<VisitProjections.HourVisitRow> findHourlyVisits(
+      Long uid, Instant from, Instant until, String tz) {
+    return jpa.findHourlyVisits(uid, from, until, tz);
   }
 
   @Override
-  public List<VisitProjections.HeatmapVisitRow> findHeatmap(Long uid, String tz) {
-    return jpa.findHeatmap(uid, tz);
+  public List<VisitProjections.HeatmapVisitRow> findHeatmap(
+      Long uid, Instant from, Instant until, String tz) {
+    return jpa.findHeatmap(uid, from, until, tz);
   }
 
   @Override
