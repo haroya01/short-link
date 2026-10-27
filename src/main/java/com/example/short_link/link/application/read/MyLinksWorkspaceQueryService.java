@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.read;
 
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.application.dto.MyLinksOverview;
 import com.example.short_link.link.application.dto.MyLinksOverview.DayClick;
 import com.example.short_link.link.application.dto.MyLinksResult;
@@ -11,7 +12,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
@@ -95,7 +95,8 @@ public class MyLinksWorkspaceQueryService {
             localNow.minusWeeks(1).toInstant());
     MyLinksOverview.Peak peak =
         clickRanges
-            .findHeatmapByUserIdAndRange(userId, weekStart, now, offset(zone, now), 1)
+            .findHeatmapByUserIdAndRange(
+                userId, weekStart, now, ReportZones.sqlOffset(zone, now), 1)
             .stream()
             .findFirst()
             .map(row -> new MyLinksOverview.Peak(row.getDow(), row.getHour(), row.getCount()))
@@ -121,11 +122,6 @@ public class MyLinksWorkspaceQueryService {
         peak,
         reader.assemble(top, counts, sparks, zone),
         reader.assemble(weekTop, counts, sparks, zone));
-  }
-
-  private static String offset(ZoneId zone, Instant at) {
-    ZoneOffset offset = zone.getRules().getOffset(at);
-    return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
 
   private MyLinksResult page(List<LinkEntity> items) {

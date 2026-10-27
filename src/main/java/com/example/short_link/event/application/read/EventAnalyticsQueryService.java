@@ -1,5 +1,6 @@
 package com.example.short_link.event.application.read;
 
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.event.application.read.EventAnalyticsView.Bucket;
 import com.example.short_link.event.application.read.EventAnalyticsView.DailyBucket;
 import com.example.short_link.event.domain.EventEntity;
@@ -61,7 +62,7 @@ public class EventAnalyticsQueryService {
             .filter(r -> r.getStatus() == RegistrationStatus.CONFIRMED)
             .toList();
 
-    ZoneId zone = zoneOf(event.getTimezone());
+    ZoneId zone = ReportZones.zoneOf(event.getTimezone());
     return new EventAnalyticsView(
         humanClicks,
         confirmed.size(),
@@ -108,13 +109,5 @@ public class EventAnalyticsQueryService {
 
   private static String orDirect(String value) {
     return value == null || value.isBlank() ? DIRECT : value;
-  }
-
-  private static ZoneId zoneOf(String timezone) {
-    try {
-      return ZoneId.of(timezone);
-    } catch (Exception e) {
-      return ZoneId.of("Asia/Seoul");
-    }
   }
 }

@@ -1,6 +1,7 @@
 package com.example.short_link.link.application.read;
 
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.stats.application.read.ClickTimeReader;
@@ -14,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +27,6 @@ public class MyLinkReader {
   private final Clock clock;
   private final UserAccessLookup users;
 
-  public MyLinkReader(
-      ClickTotalsReader clickTotals,
-      ClickTimeReader clickTime,
-      LinkTagLookup linkTags,
-      Clock clock) {
-    this(clickTotals, clickTime, linkTags, clock, null);
-  }
-
-  @Autowired
   public MyLinkReader(
       ClickTotalsReader clickTotals,
       ClickTimeReader clickTime,
@@ -116,12 +107,8 @@ public class MyLinkReader {
   }
 
   ZoneId ownerZone(Long userId) {
-    if (users == null || userId == null) return ZoneOffset.UTC;
-    try {
-      return ZoneId.of(users.timezone(userId).orElse("Asia/Seoul"));
-    } catch (java.time.DateTimeException invalid) {
-      return ZoneId.of("Asia/Seoul");
-    }
+    if (userId == null) return ZoneOffset.UTC;
+    return ReportZones.zoneOf(users.timezone(userId).orElse(null));
   }
 
   Map<Long, List<Long>> dailySeries(List<Long> ids, ZoneId zone, Instant now) {

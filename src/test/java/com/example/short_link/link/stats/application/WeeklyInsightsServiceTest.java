@@ -18,6 +18,10 @@ import com.example.short_link.link.stats.domain.projection.ClickProjections.Heat
 import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
 import com.example.short_link.support.TestEntities;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +42,13 @@ class WeeklyInsightsServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new WeeklyInsightsService(clickRepository, clickRangeTops, linkRepository, users);
+    service =
+        new WeeklyInsightsService(
+            clickRepository,
+            clickRangeTops,
+            linkRepository,
+            users,
+            Clock.fixed(Instant.parse("2026-10-27T00:00:00Z"), ZoneOffset.UTC));
   }
 
   @Test
@@ -98,6 +108,22 @@ class WeeklyInsightsServiceTest {
     assertThat(out.peak().dayOfWeek()).isEqualTo(2);
     assertThat(out.peak().hour()).isEqualTo(21);
     assertThat(out.peak().clicks()).isEqualTo(12L);
+  }
+
+  @Test
+  void theWeeksPeakIsReadInTheOwnersOffsetOverTheClocksWeek() {
+    Instant now = Instant.parse("2026-10-27T00:00:00Z");
+    when(users.timezone(7L)).thenReturn(Optional.of("America/New_York"));
+    HeatmapRow peak = mock(HeatmapRow.class);
+    when(peak.getDow()).thenReturn(3);
+    when(peak.getHour()).thenReturn(9);
+    when(peak.getCount()).thenReturn(4L);
+    when(clickRangeTops.topHeatmapByUser(7L, now.minus(Duration.ofDays(7)), now, "-04:00", 1))
+        .thenReturn(List.of(peak));
+
+    WeeklyInsights out = service.compute(7L);
+
+    assertThat(out.peak()).isEqualTo(new WeeklyInsights.Peak(3, 9, 4L));
   }
 
   @Test
