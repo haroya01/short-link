@@ -1,6 +1,7 @@
 package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.event.AccountUnlockedEvent;
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.user.application.read.FollowRequestView;
 import com.example.short_link.user.domain.FollowEdge;
@@ -66,7 +67,7 @@ public class FollowRequestUseCase {
     if (followRequests.delete(FollowEdge.follower(requester.getId()).following(ownerId)) == 0) {
       throw new UserException(UserErrorCode.FOLLOW_REQUEST_NOT_FOUND, username);
     }
-    events.publishEvent(new FollowRequestSettledEvent(ownerId, requester.getId(), null));
+    events.publishEvent(new FollowRequestSettledEvent(ownerId, Actor.member(requester.getId())));
     return requester;
   }
 }

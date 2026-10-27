@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.persistence;
 
+import com.example.short_link.common.event.Actor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
@@ -178,14 +179,14 @@ class NotificationRepositoryAdapter implements NotificationRepository {
   }
 
   @Override
-  public int deleteFollowRequest(Long recipientUserId, Long actorUserId, Long actorRemoteId) {
+  public int deleteFollowRequest(Long recipientUserId, Actor follower) {
     return em.createNativeQuery(
             "DELETE FROM notification WHERE recipient_user_id = :recipient"
                 + " AND type = 'FOLLOW_REQUEST' AND actor_user_id <=> :actorUserId"
                 + " AND actor_remote_id <=> :actorRemoteId")
         .setParameter("recipient", recipientUserId)
-        .setParameter("actorUserId", actorUserId)
-        .setParameter("actorRemoteId", actorRemoteId)
+        .setParameter("actorUserId", follower.userId())
+        .setParameter("actorRemoteId", follower.remoteId())
         .executeUpdate();
   }
 
