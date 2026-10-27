@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
 import com.example.short_link.note.domain.NoteEntity;
-import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteFeedReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class LatestNotesIntegrationTest {
 
-  @Autowired private NoteRepository notes;
+  @Autowired private NoteFeedReader feeds;
   @Autowired private FederationRelayedNoteRepository relayed;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
@@ -104,7 +104,7 @@ class LatestNotesIntegrationTest {
   }
 
   private List<Long> latest(Long viewerId, Long beforeId) {
-    return notes.latestBefore(viewerId, beforeId, 50).stream()
+    return feeds.latestBefore(viewerId, beforeId, 50).stream()
         .map(NoteEntity::getId)
         .filter(this::ours)
         .toList();

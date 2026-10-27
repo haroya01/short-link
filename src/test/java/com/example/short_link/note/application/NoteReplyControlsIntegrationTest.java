@@ -300,6 +300,9 @@ class NoteReplyControlsIntegrationTest {
         "https://kurl.me/ap/notes/" + parent,
         List.of(),
         List.of(),
+        null,
+        RemoteNotes.Shape.NOTE,
+        true,
         null);
   }
 

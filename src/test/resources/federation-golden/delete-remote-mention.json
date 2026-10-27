@@ -1,0 +1,1 @@
+{"@context":"https://www.w3.org/ns/activitystreams","id":"https://kurl.me/ap/notes/52#delete","type":"Delete","actor":"https://kurl.me/ap/actors/pid","to":["https://www.w3.org/ns/activitystreams#Public"],"object":{"id":"https://kurl.me/ap/notes/52","type":"Tombstone"}}
