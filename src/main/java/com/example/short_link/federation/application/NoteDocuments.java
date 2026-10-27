@@ -30,16 +30,9 @@ public class NoteDocuments {
   // Someone on another server the note addresses: the author it answers, or a person it names.
   public record Addressee(String actorUri, String handle, String profileUrl) {}
 
-  public Map<String, Object> note(NoteSnapshot note, String actorPublicId) {
-    return note(note, actorPublicId, null, List.of(), null);
-  }
-
-  public Map<String, Object> note(
-      NoteSnapshot note,
-      String actorPublicId,
-      RemoteParents.Parent parent,
-      List<Addressee> named,
-      RemoteParents.Parent quoted) {
+  public Map<String, Object> note(NoteSnapshot note, String actorPublicId, Addressing addressing) {
+    RemoteParents.Parent parent = addressing.parent();
+    List<Addressee> named = addressing.addressees();
     List<Addressee> addressed = addressed(parent, named);
     Map<String, Object> object = new LinkedHashMap<>();
     object.put("id", urls.note(note.id()));
@@ -55,7 +48,7 @@ public class NoteDocuments {
     }
     object.put("url", urls.notePage(note.authorUsername(), note.id()));
     object.put("to", to(note, actorPublicId, addressed));
-    object.put("cc", cc(note, actorPublicId, addressed, quoted));
+    object.put("cc", cc(note, actorPublicId, addressed, addressing.quoted()));
     object.put(
         "inReplyTo",
         parent != null
@@ -127,34 +120,21 @@ public class NoteDocuments {
   public Map<String, Object> pollEnded(NoteSnapshot note, String actorPublicId) {
     Map<String, Object> activity =
         activity(urls.note(note.id()) + "#updates/poll-ended", "Update", actorPublicId);
-    activity.put("to", to(note, actorPublicId));
-    activity.put("cc", cc(note, actorPublicId));
-    activity.put("object", note(note, actorPublicId));
+    activity.put("to", to(note, actorPublicId, List.of()));
+    activity.put("cc", cc(note, actorPublicId, List.of(), null));
+    activity.put("object", note(note, actorPublicId, Addressing.NONE));
     return activity;
   }
 
-  public Map<String, Object> create(NoteSnapshot note, String actorPublicId) {
-    return create(note, actorPublicId, null, List.of());
-  }
-
   public Map<String, Object> create(
-      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
-    return create(note, actorPublicId, parent, named, null);
-  }
-
-  public Map<String, Object> create(
-      NoteSnapshot note,
-      String actorPublicId,
-      RemoteParents.Parent parent,
-      List<Addressee> named,
-      RemoteParents.Parent quoted) {
-    List<Addressee> addressed = addressed(parent, named);
+      NoteSnapshot note, String actorPublicId, Addressing addressing) {
+    List<Addressee> addressed = addressed(addressing.parent(), addressing.addressees());
     String noteUri = urls.note(note.id());
     Map<String, Object> activity = activity(noteUri + "/activity", "Create", actorPublicId);
     activity.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
     activity.put("to", to(note, actorPublicId, addressed));
-    activity.put("cc", cc(note, actorPublicId, addressed, quoted));
-    activity.put("object", note(note, actorPublicId, parent, named, quoted));
+    activity.put("cc", cc(note, actorPublicId, addressed, addressing.quoted()));
+    activity.put("object", note(note, actorPublicId, addressing));
     return activity;
   }
 
@@ -173,10 +153,6 @@ public class NoteDocuments {
   // and copied to everyone, which keeps it off public timelines; followers-only is to followers
   // alone. Direct notes leave only as a reply to someone elsewhere, addressed to that person alone;
   // any other reply to them copies them in.
-  private List<String> to(NoteSnapshot note, String actorPublicId) {
-    return to(note, actorPublicId, List.of());
-  }
-
   private List<String> to(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
     if (note.visibility().direct()) {
       return addressed.stream().map(Addressee::actorUri).toList();
@@ -184,10 +160,6 @@ public class NoteDocuments {
     return note.visibility().listed()
         ? List.of(ActivityStreams.PUBLIC)
         : List.of(urls.followers(actorPublicId));
-  }
-
-  private List<String> cc(NoteSnapshot note, String actorPublicId) {
-    return cc(note, actorPublicId, List.of(), null);
   }
 
   private List<String> cc(
@@ -210,28 +182,15 @@ public class NoteDocuments {
     return cc;
   }
 
-  public Map<String, Object> update(NoteSnapshot note, String actorPublicId) {
-    return update(note, actorPublicId, null, List.of());
-  }
-
   public Map<String, Object> update(
-      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
-    return update(note, actorPublicId, parent, named, null);
-  }
-
-  public Map<String, Object> update(
-      NoteSnapshot note,
-      String actorPublicId,
-      RemoteParents.Parent parent,
-      List<Addressee> named,
-      RemoteParents.Parent quoted) {
-    List<Addressee> addressed = addressed(parent, named);
+      NoteSnapshot note, String actorPublicId, Addressing addressing) {
+    List<Addressee> addressed = addressed(addressing.parent(), addressing.addressees());
     long version = note.editedAt() == null ? 0 : note.editedAt().toEpochMilli();
     Map<String, Object> activity =
         activity(urls.note(note.id()) + "#updates/" + version, "Update", actorPublicId);
     activity.put("to", to(note, actorPublicId, addressed));
-    activity.put("cc", cc(note, actorPublicId, addressed, quoted));
-    activity.put("object", note(note, actorPublicId, parent, named, quoted));
+    activity.put("cc", cc(note, actorPublicId, addressed, addressing.quoted()));
+    activity.put("object", note(note, actorPublicId, addressing));
     return activity;
   }
 
@@ -315,10 +274,6 @@ public class NoteDocuments {
     activity.put("actor", urls.actor(actorPublicId));
     activity.put("to", List.of(ActivityStreams.PUBLIC));
     return activity;
-  }
-
-  String content(NoteSnapshot note) {
-    return content(note, List.of());
   }
 
   // A named account becomes Mastodon's h-card mention link, so its server shows it as a mention.

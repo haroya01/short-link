@@ -1,7 +1,6 @@
 package com.example.short_link.federation.presentation;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
-import com.example.short_link.federation.application.Addressing;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.NoteAddressing;
@@ -47,16 +46,10 @@ public class NoteObjectController {
                                 .location(URI.create(urls.notePage(note.authorUsername(), id)))
                                 .<Map<String, Object>>build();
                           }
-                          Addressing elsewhere = addressing.stored(note);
                           Map<String, Object> body = new LinkedHashMap<>();
                           body.put("@context", ActivityPubMedia.CONTEXT);
                           body.putAll(
-                              documents.note(
-                                  note,
-                                  actor.publicId(),
-                                  elsewhere.parent(),
-                                  elsewhere.addressees(),
-                                  elsewhere.quoted()));
+                              documents.note(note, actor.publicId(), addressing.stored(note)));
                           return ResponseEntity.ok()
                               .contentType(ActivityPubMedia.ACTIVITY_JSON)
                               .cacheControl(

@@ -18,6 +18,7 @@ import com.example.short_link.common.note.NoteSnapshotReader.PollOption;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.federation.application.ActorDocuments;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationSettings;
@@ -73,6 +74,7 @@ import tools.jackson.databind.node.ObjectNode;
     })
 @Import({
   FederationUrls.class,
+  ActorDocuments.class,
   NoteDocuments.class,
   NoteAddressing.class,
   OutgoingDocumentsGoldenTest.Props.class

@@ -103,12 +103,7 @@ public class NoteFederation {
           }
           send(
               authorId,
-              documents.create(
-                  note,
-                  actor.get().publicId(),
-                  elsewhere.parent(),
-                  elsewhere.addressees(),
-                  elsewhere.quoted()),
+              documents.create(note, actor.get().publicId(), elsewhere),
               elsewhere.inboxes(
                   note.visibility().followersRead()
                       ? followers.deliveryInboxes(authorId)
@@ -140,15 +135,7 @@ public class NoteFederation {
           if (inboxes.isEmpty()) {
             return;
           }
-          send(
-              authorId,
-              documents.update(
-                  note,
-                  actor.get().publicId(),
-                  elsewhere.parent(),
-                  elsewhere.addressees(),
-                  elsewhere.quoted()),
-              inboxes);
+          send(authorId, documents.update(note, actor.get().publicId(), elsewhere), inboxes);
         });
   }
 
@@ -222,7 +209,7 @@ public class NoteFederation {
         notes
             .find(noteId)
             .filter(NoteFederation::leaves)
-            .map(note -> documents.create(note, publicId));
+            .map(note -> documents.create(note, publicId, Addressing.NONE));
   }
 
   private Function<String, Optional<Map<String, Object>>> edit(Long noteId) {
@@ -230,7 +217,7 @@ public class NoteFederation {
         notes
             .find(noteId)
             .filter(NoteFederation::leaves)
-            .map(note -> documents.update(note, publicId));
+            .map(note -> documents.update(note, publicId, Addressing.NONE));
   }
 
   private Function<String, Optional<Map<String, Object>>> deletion(Long noteId) {
