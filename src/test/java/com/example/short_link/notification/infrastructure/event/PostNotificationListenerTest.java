@@ -96,7 +96,7 @@ class PostNotificationListenerTest {
             new Push(
                 List.of(3L),
                 "REPLY",
-                new PushRoute("replier", "owner", "the-post", null, null, 77L, null)));
+                new PushRoute("replier", "owner", "the-post", null, null, 77L, null, null)));
   }
 
   @Test
@@ -184,7 +184,7 @@ class PostNotificationListenerTest {
             new Push(
                 List.of(1L, 2L, 3L),
                 "NEW_POST",
-                new PushRoute("writer", "writer", "the-post", null, null, null, null)));
+                new PushRoute("writer", "writer", "the-post", null, null, null, null, null)));
     assertThat(stored.silenceChecks()).isZero();
   }
 
@@ -234,7 +234,7 @@ class PostNotificationListenerTest {
             new Push(
                 List.of(3L),
                 "COMMENT_LIKE",
-                new PushRoute("liker", "owner", "the-post", null, null, 77L, null)));
+                new PushRoute("liker", "owner", "the-post", null, null, 77L, null, null)));
   }
 
   @Test

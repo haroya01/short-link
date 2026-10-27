@@ -11,7 +11,8 @@ class BlogPushUrlTest {
   void trailingSlashOnTheBaseDoesNotDoubleUp() {
     assertThat(
             BlogPushUrl.of(
-                "https://blog.kurl.me/", new PushRoute(null, "me", "p", null, null, null, null)))
+                "https://blog.kurl.me/",
+                new PushRoute(null, "me", "p", null, null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@me/p");
   }
 
@@ -19,11 +20,12 @@ class BlogPushUrlTest {
   void blankHandlesFallThroughToTheNextTarget() {
     assertThat(
             BlogPushUrl.of(
-                "https://blog.kurl.me", new PushRoute("yuki", " ", "p", "s", null, 1L, null)))
+                "https://blog.kurl.me", new PushRoute("yuki", " ", "p", "s", null, 1L, null, null)))
         .isEqualTo("https://blog.kurl.me/@yuki");
     assertThat(
             BlogPushUrl.of(
-                "https://blog.kurl.me", new PushRoute(" ", null, null, null, null, null, null)))
+                "https://blog.kurl.me",
+                new PushRoute(" ", null, null, null, null, null, null, null)))
         .isEqualTo("/");
     assertThat(BlogPushUrl.of("https://blog.kurl.me", null)).isEqualTo("/");
   }
@@ -33,7 +35,7 @@ class BlogPushUrlTest {
     assertThat(
             BlogPushUrl.of(
                 "https://blog.kurl.me",
-                new PushRoute("yuki", null, null, "walks", null, null, null)))
+                new PushRoute("yuki", null, null, "walks", null, null, null, null)))
         .isEqualTo("https://blog.kurl.me/@yuki");
   }
 
