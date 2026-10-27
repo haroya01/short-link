@@ -1,5 +1,7 @@
 #
 #Tue Oct 27 13:49:37 JST 2026
+#Tue Oct 27 16:13:20 JST 2026
 moduleInternalsStayInTheirModule=9ce6d62a-37a3-4bdb-87ae-feca3e24aa5c
+springDataRepositoriesStayBehindPorts=b3f96b0d-7ffd-4cb9-86a8-fd4e2e98d5bb
 theSystemClockIsReadInConfigAlone=a3cc8e08-c5c6-4737-b7aa-75031f9e75de
 transactionsDoNotReachOutboundClients=7acda92c-e0c4-485b-bad8-b220dc3af347
