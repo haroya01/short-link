@@ -582,7 +582,7 @@
         "publicId" : "path string required"
       },
       "responses" : {
-        "200" : "#ActorResponse"
+        "200" : "#ActorDocument"
       }
     },
     "GET /ap/actors/{publicId}/featured" : {
@@ -619,7 +619,7 @@
     },
     "GET /ap/instance" : {
       "responses" : {
-        "200" : "#ActorResponse"
+        "200" : "#ActorDocument"
       }
     },
     "GET /ap/nodeinfo/2.1" : {
@@ -3954,7 +3954,7 @@
       "profileUrl" : "string",
       "username" : "string"
     },
-    "ActorResponse" : {
+    "ActorDocument" : {
       "@context" : "[object]",
       "attachment" : "[#PropertyValue]",
       "discoverable" : "boolean",
@@ -5800,6 +5800,29 @@
     "PostBookmarkStatus" : {
       "bookmarked" : "boolean"
     },
+    "PostCard" : {
+      "audience" : "string",
+      "author" : "#PublicAuthorView",
+      "commentCount" : "integer(int64)",
+      "excerpt" : "string",
+      "followReason" : "#FollowReason",
+      "id" : "integer(int64)",
+      "languageTag" : "string",
+      "likeCount" : "integer(int64)",
+      "likedByMe" : "boolean",
+      "locked" : "#PostLockView",
+      "ogImageUrl" : "string",
+      "publishedAt" : "string(date-time)",
+      "readMinutes" : "integer(int32)",
+      "regionRestricted" : "boolean",
+      "room" : "#PostRoomView",
+      "series" : "#FeedSeriesRef",
+      "slug" : "string",
+      "tags" : "[string]",
+      "thumbnailUrl" : "string",
+      "title" : "string",
+      "viewCount" : "integer(int64)"
+    },
     "PostClick" : {
       "count" : "integer(int64)",
       "postId" : "integer(int64)",
@@ -6456,8 +6479,8 @@
     },
     "RoomItem" : {
       "kind" : "string",
-      "note" : "object",
-      "post" : "object",
+      "note" : "#NoteView",
+      "post" : "#PostCard",
       "replies" : "[#Reply]"
     },
     "RoomJoinRequest" : {

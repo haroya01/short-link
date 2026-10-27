@@ -28,6 +28,7 @@ final class ApiShape {
       Set.of("get", "put", "post", "delete", "patch", "head", "options");
   private static final Pattern REF = Pattern.compile("#([A-Za-z0-9_.$-]+)");
   private static final Pattern ENUM = Pattern.compile("^(.*) enum\\[([^\\]]*)\\]$");
+  private static final Set<String> LOOSE_TYPES = Set.of("object", "any", "map<any>", "map<object>");
 
   enum Side {
     REQUEST,
@@ -537,7 +538,9 @@ final class ApiShape {
                 : new Change(true, where + ": body removed (was " + was + ")"));
         return;
       }
-      if (!a.type().equals(b.type())) {
+      if (!a.type().equals(b.type()) && LOOSE_TYPES.contains(a.type())) {
+        changes.add(new Change(false, where + ": now typed " + a.type() + " → " + b.type()));
+      } else if (!a.type().equals(b.type())) {
         List<String[]> renames = refsRenamed(a.type(), b.type());
         if (renames == null) {
           changes.add(new Change(true, where + ": type " + a.type() + " → " + b.type()));

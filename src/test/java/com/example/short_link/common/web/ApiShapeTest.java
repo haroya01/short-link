@@ -233,6 +233,27 @@ class ApiShapeTest {
   }
 
   @Test
+  void aLooseObjectThatGainsATypeIsAdditiveButLosingItIsBreaking() {
+    String loose =
+        DOCS.replace(
+            "\"owner\": {\"$ref\": \"#/components/schemas/OwnerView\"}",
+            "\"owner\": {\"type\": \"object\"}");
+
+    List<Change> typed = ApiShape.diff(shape(loose), shape(DOCS));
+    List<Change> untyped = ApiShape.diff(shape(DOCS), shape(loose));
+
+    assertThat(breaking(typed)).isEmpty();
+    assertThat(additive(typed))
+        .contains(
+            "#LinkResponse.owner [GET /api/v1/links/{id}, POST /api/v1/links]:"
+                + " now typed object → #OwnerView");
+    assertThat(breaking(untyped))
+        .containsExactly(
+            "#LinkResponse.owner [GET /api/v1/links/{id}, POST /api/v1/links]:"
+                + " type #OwnerView → object");
+  }
+
+  @Test
   void aNewEndpointIsAdditive() {
     String added =
         DOCS.replace(
