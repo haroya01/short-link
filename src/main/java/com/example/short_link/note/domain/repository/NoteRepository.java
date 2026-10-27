@@ -14,6 +14,7 @@ public interface NoteRepository {
 
   Optional<NoteEntity> findById(Long id);
 
+  // Empty when a block exists in either direction.
   Optional<NoteEntity> findUnblocked(Long id, Long viewerId);
 
   List<NoteEntity> findAllByIdIn(Collection<Long> ids);
