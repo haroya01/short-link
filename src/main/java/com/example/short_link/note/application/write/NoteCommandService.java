@@ -406,7 +406,7 @@ public class NoteCommandService {
         false,
         note.getVisibility().apiName(),
         note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
-        null,
+        false,
         note.getLanguage(),
         null,
         note.getReplyPolicy().apiName(),
