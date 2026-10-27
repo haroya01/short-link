@@ -1,20 +1,16 @@
 package com.example.short_link.federation.application;
 
-import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
-import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,7 +27,7 @@ public class NoteFederation {
 
   private final NoteSnapshotReader notes;
   private final RemoteParents remoteParents;
-  private final RemoteAccountFinder finder;
+  private final NoteAddressing addressing;
   private final FederationActorService localActors;
   private final FederationSettings settings;
   private final FederationActorRepository actors;
@@ -98,18 +94,22 @@ public class NoteFederation {
       return;
     }
     NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
+    Addressing elsewhere = addressing.lookedUp(note);
     transaction.executeWithoutResult(
         status -> {
-          if (reach.isEmpty()) {
+          if (elsewhere.isEmpty()) {
             deliver(authorId, creation(noteId));
             return;
           }
           send(
               authorId,
               documents.create(
-                  note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
-              reach.inboxes(
+                  note,
+                  actor.get().publicId(),
+                  elsewhere.parent(),
+                  elsewhere.addressees(),
+                  elsewhere.quoted()),
+              elsewhere.inboxes(
                   note.visibility().followersRead()
                       ? followers.deliveryInboxes(authorId)
                       : List.of()));
@@ -129,11 +129,11 @@ public class NoteFederation {
       return;
     }
     NoteSnapshot note = found.get();
-    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()), quotedElsewhere(note));
+    Addressing elsewhere = addressing.lookedUp(note);
     transaction.executeWithoutResult(
         status -> {
           List<String> inboxes =
-              reach.inboxes(
+              elsewhere.inboxes(
                   note.visibility().followersRead()
                       ? followers.deliveryInboxes(authorId)
                       : List.of());
@@ -143,7 +143,11 @@ public class NoteFederation {
           send(
               authorId,
               documents.update(
-                  note, actor.get().publicId(), reach.parent(), reach.addressees(), reach.quoted()),
+                  note,
+                  actor.get().publicId(),
+                  elsewhere.parent(),
+                  elsewhere.addressees(),
+                  elsewhere.quoted()),
               inboxes);
         });
   }
@@ -159,66 +163,15 @@ public class NoteFederation {
     if (actor.isEmpty()) {
       return;
     }
-    Reach reach = reach(inReplyToId, handles, quotedNoteId);
+    Addressing elsewhere = addressing.lookedUp(inReplyToId, handles, quotedNoteId);
     transaction.executeWithoutResult(
         status -> {
-          List<String> inboxes = reach.inboxes(followers.deliveryInboxes(authorId));
+          List<String> inboxes = elsewhere.inboxes(followers.deliveryInboxes(authorId));
           if (inboxes.isEmpty()) {
             return;
           }
           send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
         });
-  }
-
-  private record Reach(
-      RemoteParents.Parent parent, List<RemoteActorEntity> named, RemoteParents.Parent quoted) {
-
-    boolean isEmpty() {
-      return parent == null && named.isEmpty() && quoted == null;
-    }
-
-    List<NoteDocuments.Addressee> addressees() {
-      return named.stream()
-          .map(
-              person ->
-                  new NoteDocuments.Addressee(
-                      person.getActorUri(),
-                      "@" + person.getUsername() + "@" + person.getDomain(),
-                      person.getProfileUrl() == null
-                          ? person.getActorUri()
-                          : person.getProfileUrl()))
-          .toList();
-    }
-
-    List<String> inboxes(List<String> followerInboxes) {
-      Set<String> inboxes = new LinkedHashSet<>(followerInboxes);
-      if (parent != null) {
-        inboxes.add(parent.inbox());
-      }
-      if (quoted != null) {
-        inboxes.add(quoted.inbox());
-      }
-      named.forEach(person -> inboxes.add(person.deliveryInbox()));
-      return List.copyOf(inboxes);
-    }
-  }
-
-  private Reach reach(Long inReplyToId, List<String> handles, Long quotedNoteId) {
-    RemoteParents.Parent parent =
-        inReplyToId == null ? null : remoteParents.of(inReplyToId).orElse(null);
-    List<RemoteActorEntity> named = new ArrayList<>();
-    for (String handle : handles) {
-      finder.find(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
-    }
-    RemoteParents.Parent quoted =
-        quotedNoteId == null ? null : remoteParents.of(quotedNoteId).orElse(null);
-    return new Reach(parent, named, quoted);
-  }
-
-  private static Long quotedElsewhere(NoteSnapshot note) {
-    return note.quotedNote() != null && note.quotedNote().remote() && !note.visibility().direct()
-        ? note.quotedNote().id()
-        : null;
   }
 
   @Transactional

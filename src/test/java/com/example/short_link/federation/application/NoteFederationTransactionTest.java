@@ -43,7 +43,7 @@ class NoteFederationTransactionTest {
 
   @Configuration
   @EnableTransactionManagement
-  @Import({NoteFederation.class, NoteDocuments.class, FederationUrls.class})
+  @Import({NoteFederation.class, NoteAddressing.class, NoteDocuments.class, FederationUrls.class})
   static class Config {
     @Bean
     FederationProperties federationProperties() {

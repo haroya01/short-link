@@ -125,7 +125,7 @@ class NoteFederationAudienceTest {
         new NoteFederation(
             notes,
             parents,
-            mock(RemoteAccountFinder.class),
+            new NoteAddressing(parents, mock(RemoteAccountFinder.class)),
             localActors,
             settings,
             actors,
