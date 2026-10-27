@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
@@ -110,10 +112,10 @@ class NoteNotificationReadersE2ETest {
       ids.put(viewer, users.save(user).getId());
     }
     long author = ids.get(Viewer.AUTHOR);
-    follows.save(new FollowEntity(ids.get(Viewer.FOLLOWER), author));
-    follows.save(new FollowEntity(ids.get(Viewer.MUTER), author));
+    follows.save(new FollowEntity(FollowEdge.follower(ids.get(Viewer.FOLLOWER)).following(author)));
+    follows.save(new FollowEntity(FollowEdge.follower(ids.get(Viewer.MUTER)).following(author)));
     mutes.save(new UserMuteEntity(ids.get(Viewer.MUTER), author, false, null));
-    blocks.save(new UserBlockEntity(author, ids.get(Viewer.BLOCKED)));
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(author).blocked(ids.get(Viewer.BLOCKED))));
     String mentioned = users.findById(ids.get(Viewer.MENTIONED)).orElseThrow().getUsername();
     String roommate = users.findById(ids.get(Viewer.ROOMMATE)).orElseThrow().getUsername();
     jdbc.update(

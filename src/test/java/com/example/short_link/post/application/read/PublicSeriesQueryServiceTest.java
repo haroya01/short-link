@@ -18,6 +18,7 @@ import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -47,7 +48,7 @@ class PublicSeriesQueryServiceTest {
   void setUp() {
     service =
         new PublicSeriesQueryService(
-            userRepository,
+            new UserSummaryReader(userRepository),
             seriesRepository,
             postRepository,
             subscriptionRepository,

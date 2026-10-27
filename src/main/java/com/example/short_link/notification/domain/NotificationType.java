@@ -59,31 +59,31 @@ public enum NotificationType {
   public boolean filterable() {
     return switch (this) {
       case LIKE,
-              COMMENT,
-              FOLLOW,
-              SERIES_SUBSCRIBE,
-              REPLY,
-              MENTION,
-              NOTE_LIKE,
-              NOTE_REPOST,
-              NOTE_REPLY,
-              NOTE_QUOTE,
-              REMOTE_FOLLOW,
-              NOTE_MENTION,
-              FOLLOW_REQUEST,
-              POST_QUOTE,
-              NOTE_EMBED,
-              COMMENT_LIKE,
-              HIGHLIGHT ->
+          COMMENT,
+          FOLLOW,
+          SERIES_SUBSCRIBE,
+          REPLY,
+          MENTION,
+          NOTE_LIKE,
+          NOTE_REPOST,
+          NOTE_REPLY,
+          NOTE_QUOTE,
+          REMOTE_FOLLOW,
+          NOTE_MENTION,
+          FOLLOW_REQUEST,
+          POST_QUOTE,
+          NOTE_EMBED,
+          COMMENT_LIKE,
+          HIGHLIGHT ->
           true;
       case NEW_POST,
-              CONNECTED,
-              PATH_GREW,
-              NOTE_POLL,
-              NOTE_POST,
-              NOTE_EDIT,
-              POST_FIRST_READER,
-              POST_READ_MILESTONE ->
+          CONNECTED,
+          PATH_GREW,
+          NOTE_POLL,
+          NOTE_POST,
+          NOTE_EDIT,
+          POST_FIRST_READER,
+          POST_READ_MILESTONE ->
           false;
     };
   }

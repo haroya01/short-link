@@ -28,7 +28,7 @@ class RelayRetentionJobTest {
       mock(FederationRelayedNoteRepository.class);
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-  private final RelayTally tally = new RelayTally(meters);
+  private final RelayTally tally = new RelayTally(meters, clock);
 
   private static List<Long> ids(int count) {
     return LongStream.rangeClosed(1, count).boxed().toList();

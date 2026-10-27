@@ -97,8 +97,12 @@ final class ArchRuleProofs {
               ArchUnitRatchetRulesTest.moduleInternalsStayInTheirModule,
               List.of(
                   ModuleFixtures.ReachesAnotherModulesStore.class,
-                  ModuleFixtures.ReachesAnotherModulesRepository.class),
-              List.of(ModuleFixtures.GoesThroughAnotherModulesService.class, AlphaService.class)),
+                  ModuleFixtures.ReachesAnotherModulesRepository.class,
+                  ModuleFixtures.ReachesAnotherModulesEntity.class),
+              List.of(
+                  ModuleFixtures.GoesThroughAnotherModulesService.class,
+                  ModuleFixtures.PassesAnotherModulesValue.class,
+                  AlphaService.class)),
           new Proof(
               "ArchUnitRatchetRulesTest.transactionsDoNotReachOutboundClients",
               ArchUnitRatchetRulesTest.transactionsDoNotReachOutboundClients,

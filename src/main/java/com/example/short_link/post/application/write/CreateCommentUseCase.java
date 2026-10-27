@@ -9,8 +9,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +21,7 @@ public class CreateCommentUseCase {
 
   private final PostInteractionAccess access;
   private final CommentRepository commentRepository;
-  private final UserRepository userRepository;
+  private final UserSummaryReader users;
   private final CommentNotifications notifications;
   private final CommentMentions mentions;
 
@@ -48,7 +48,7 @@ public class CreateCommentUseCase {
 
     notifications.commentCreated(post, parent, saved, cmd.body());
 
-    UserEntity author = userRepository.findById(cmd.userId()).orElse(null);
+    UserSummary author = users.find(cmd.userId()).orElse(null);
     return new CommentView(
         saved.getId(),
         saved.getParentId(),

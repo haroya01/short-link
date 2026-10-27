@@ -13,6 +13,7 @@ import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.PostLock;
 import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
@@ -33,12 +34,11 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +60,7 @@ class PublicPostQueryServiceTest {
   @Mock private SeriesItemReader seriesItemReader;
   @Mock private CtaRepository ctaRepository;
   @Mock private UserBlockChecker userBlocks;
+  @Mock private UserModerationGuard moderation;
 
   private static final Instant NOW = Instant.now();
 
@@ -69,7 +70,7 @@ class PublicPostQueryServiceTest {
   void setUp() {
     service =
         new PublicPostQueryService(
-            userRepository,
+            new UserSummaryReader(userRepository),
             postRepository,
             postBlockRepository,
             seriesRepository,
@@ -80,8 +81,9 @@ class PublicPostQueryServiceTest {
             PostAccessFixtures.policy(),
             PostAccessFixtures.unlistedUrls(),
             PostAccessFixtures.rooms(),
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            moderation);
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
+    lenient().when(moderation.canWrite(any())).thenReturn(true);
   }
 
   private UserEntity authorWithUsername(String username) {
@@ -323,7 +325,7 @@ class PublicPostQueryServiceTest {
     post.ensurePreviewToken("tok-123");
     when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
     when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
-    if (state.suspendsAuthor) author.suspend(NOW.plusSeconds(3600));
+    if (state.suspendsAuthor) lenient().when(moderation.canWrite(author.getId())).thenReturn(false);
 
     if (state.served) {
       assertThat(service.findPreviewPost("tok-123", PostReader.of(null)).body().post().slug())
@@ -602,7 +604,7 @@ class PublicPostQueryServiceTest {
   void aReaderInABlockedCountrySeesTheCountryNoticeEvenWithTheRightKey() {
     PublicPostQueryService fromJapan =
         new PublicPostQueryService(
-            userRepository,
+            new UserSummaryReader(userRepository),
             postRepository,
             postBlockRepository,
             seriesRepository,
@@ -613,7 +615,7 @@ class PublicPostQueryServiceTest {
             PostAccessFixtures.policy(mock(FollowRepository.class), "JP"),
             PostAccessFixtures.unlistedUrls(),
             PostAccessFixtures.rooms(),
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            moderation);
     PostEntity post = protectedPost(john(), "u", PostAudience.UNLISTED);
     post.blockCountries(List.of("JP"));
 
