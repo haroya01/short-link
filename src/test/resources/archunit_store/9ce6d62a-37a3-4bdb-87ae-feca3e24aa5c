@@ -16,8 +16,6 @@ com.example.short_link.event.application.read.EventAnalyticsQueryService reaches
 com.example.short_link.event.application.read.EventQueryService reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.event.application.write.EventLinkIssuer reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.event.infrastructure.EventOrganizerLookupAdapter reaches com.example.short_link.user.domain.repository.UserRepository
-com.example.short_link.notification.infrastructure.ApnsPushSender reaches com.example.short_link.user.domain.repository.DeviceTokenRepository
-com.example.short_link.notification.infrastructure.WebPushSender reaches com.example.short_link.user.domain.repository.WebPushSubscriptionRepository
 com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.domain.repository.LinkRepository
 com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository
 com.example.short_link.notification.infrastructure.event.LinkClickNotificationListener reaches com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository
