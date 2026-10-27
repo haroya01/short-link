@@ -1,6 +1,7 @@
 package com.example.short_link.link.presentation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -17,7 +18,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,17 +44,14 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
   @Autowired UserRepository users;
   @Autowired JwtTokenService jwt;
   @Autowired EntityManager em;
-  @TestBean Clock clock;
+  @MockitoSpyBean Clock clock;
   UserEntity owner;
   UserEntity other;
   String token;
 
-  static Clock clock() {
-    return Clock.fixed(NOW, ZoneOffset.UTC);
-  }
-
   @BeforeEach
   void setup() {
+    when(clock.instant()).thenReturn(NOW);
     owner = users.save(new UserEntity("workspace-owner@example.com", "google", "workspace-owner"));
     owner.changeTimezone("Asia/Kathmandu");
     other = users.save(new UserEntity("workspace-other@example.com", "google", "workspace-other"));
