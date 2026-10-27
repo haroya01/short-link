@@ -1,4 +1,3 @@
-AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/federation/application/RemoteNoteParser.java|html#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readImages#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java|readList#1=1
 AvoidDeeplyNestedIfStmts|src/main/java/com/example/short_link/profile/application/write/UpdateProfileUseCase.java|updateUsername#1=1
