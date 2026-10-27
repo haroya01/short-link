@@ -22,6 +22,9 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +41,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class NoteQueryServiceTest {
 
   private static final NoteAuthor ME = new NoteAuthor(7L, "me", null);
+  private static final Instant NOW = Instant.parse("2026-10-27T03:00:00Z");
 
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
@@ -61,7 +65,8 @@ class NoteQueryServiceTest {
             views,
             new NoteAccess(notes),
             rooms,
-            noteSeries);
+            noteSeries,
+            Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static NoteEntity note(Long id, Long inReplyTo) {
@@ -81,7 +86,7 @@ class NoteQueryServiceTest {
     when(views.ofFeed(three.subList(0, 2), 7L))
         .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
-    NoteFeedView feed = service.everyone(1, 2, 7L);
+    NoteFeedView feed = service.everyone(7L, new PageAsk(1, 2));
 
     assertThat(feed.hasNext()).isTrue();
     assertThat(feed.page()).isEqualTo(1);
@@ -94,7 +99,7 @@ class NoteQueryServiceTest {
     when(notes.trending(null, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
 
-    NoteFeedView feed = service.trending(0, 20, null);
+    NoteFeedView feed = service.trending(null, new PageAsk(0, 20));
 
     assertThat(feed.hasNext()).isFalse();
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 9L);
@@ -107,7 +112,7 @@ class NoteQueryServiceTest {
     when(notes.federated(3L, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
-    NoteFeedView feed = service.federated(3L, 0, 20);
+    NoteFeedView feed = service.federated(3L, new PageAsk(0, 20));
 
     assertThat(feed.hasNext()).isFalse();
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(7L, 8L);
@@ -115,11 +120,7 @@ class NoteQueryServiceTest {
 
   @Test
   void trendingHashtagsAreAWeekOfTagsTwoAccountsUsed() {
-    when(notes.trendingTags(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(7),
-            org.mockito.ArgumentMatchers.eq(2),
-            org.mockito.ArgumentMatchers.eq(10)))
+    when(notes.trendingTags(NOW, 7, 2, 10))
         .thenReturn(
             List.of(
                 new com.example.short_link.note.domain.TrendingTag(
@@ -131,11 +132,7 @@ class NoteQueryServiceTest {
 
   @Test
   void trendingLinksAreAWeekOfCardsTwoAccountsShared() {
-    when(notes.trendingLinks(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(7),
-            org.mockito.ArgumentMatchers.eq(2),
-            org.mockito.ArgumentMatchers.eq(10)))
+    when(notes.trendingLinks(NOW, 7, 2, 10))
         .thenReturn(
             List.of(
                 new com.example.short_link.note.domain.TrendingLink(
@@ -152,18 +149,18 @@ class NoteQueryServiceTest {
     when(notes.linked("https://e.com", 3L, 0, 21)).thenReturn(two);
     when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
-    assertThat(service.linked("https://e.com", 0, 20, 3L).items())
+    assertThat(service.linked("https://e.com", 3L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(7L, 8L);
-    assertThat(service.linked(" ", 0, 20, 3L).items()).isEmpty();
+    assertThat(service.linked(" ", 3L, new PageAsk(0, 20)).items()).isEmpty();
   }
 
   @Test
   void pageAndSizeAreClamped() {
-    when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1, null)).thenReturn(List.of());
+    when(notes.topLevel(null, 0, PageAsk.MAX_SIZE + 1, null)).thenReturn(List.of());
     when(views.ofFeed(List.of(), null)).thenReturn(List.of());
 
-    NoteFeedView feed = service.everyone(-3, 10_000, null);
+    NoteFeedView feed = service.everyone(null, new PageAsk(-3, 10_000));
 
     assertThat(feed.page()).isZero();
     assertThat(feed.hasNext()).isFalse();
@@ -173,7 +170,7 @@ class NoteQueryServiceTest {
   void aProfileOfNoOneIs404() {
     when(people.activeByUsername("ghost")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.byAuthor("ghost", 0, 20, null))
+    assertThatThrownBy(() -> service.byAuthor("ghost", null, new PageAsk(0, 20)))
         .isInstanceOf(NoteException.class);
   }
 
@@ -182,11 +179,11 @@ class NoteQueryServiceTest {
     when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
     when(notes.topLevelByAuthor(7L, 9L, 0, 21)).thenReturn(List.of());
     when(views.ofFeed(anyList(), eq(9L))).thenReturn(List.of());
-    service.byAuthor("me", 0, 20, 9L);
+    service.byAuthor("me", 9L, new PageAsk(0, 20));
 
     when(people.followingIds(9L)).thenReturn(List.of(7L, 8L));
     when(notes.following(List.of(7L, 8L, 9L), 9L, 0, 21)).thenReturn(List.of());
-    assertThat(service.following(9L, 0, 20).items()).isEmpty();
+    assertThat(service.following(9L, new PageAsk(0, 20)).items()).isEmpty();
   }
 
   @Test
@@ -205,7 +202,7 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(reposted, orphaned, own), 9L))
         .thenReturn(List.of(view(2L, null, null), view(3L, null, null), view(1L, null, null)));
 
-    List<NoteView> items = service.following(9L, 0, 20).items();
+    List<NoteView> items = service.following(9L, new PageAsk(0, 20)).items();
 
     assertThat(items).extracting(NoteView::id).containsExactly(2L, 1L);
     assertThat(items.get(0).repostedBy()).isEqualTo(ME);
@@ -222,13 +219,13 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, null), view(2L, null, null)));
 
-    NoteFeedView feed = service.reposts("me", 0, 20, 9L);
+    NoteFeedView feed = service.reposts("me", 9L, new PageAsk(0, 20));
 
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 2L);
     assertThat(feed.hasNext()).isFalse();
 
     when(people.activeByUsername("ghost")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.reposts("ghost", 0, 20, null))
+    assertThatThrownBy(() -> service.reposts("ghost", null, new PageAsk(0, 20)))
         .isInstanceOf(NoteException.class);
   }
 
@@ -445,13 +442,13 @@ class NoteQueryServiceTest {
     when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, 0L), view(2L, null, 0L)));
 
-    assertThat(service.bookmarks(9L, 0, 20).items())
+    assertThat(service.bookmarks(9L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(5L, 2L);
 
     when(notes.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
     when(views.ofFeed(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
-    assertThat(service.quotes(7L, 0, 20, null).items())
+    assertThat(service.quotes(7L, null, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(2L);
   }
@@ -463,7 +460,7 @@ class NoteQueryServiceTest {
     when(notes.countQuotesOfPost(40L, 9L)).thenReturn(1L);
     when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
 
-    PostQuotesView quotes = service.postQuotes(40L, 0, 20, 9L);
+    PostQuotesView quotes = service.postQuotes(40L, 9L, new PageAsk(0, 20));
 
     assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
     assertThat(quotes.total()).isEqualTo(1L);
@@ -472,19 +469,19 @@ class NoteQueryServiceTest {
 
   @Test
   void aSearchWithNothingToLookForAsksNothingAndOtherwisePagesTheMatches() {
-    assertThat(service.search("  ", 0, 20, null).items()).isEmpty();
-    assertThat(service.search("가".repeat(101), 0, 20, null).items()).isEmpty();
+    assertThat(service.search("  ", null, new PageAsk(0, 20)).items()).isEmpty();
+    assertThat(service.search("가".repeat(101), null, new PageAsk(0, 20)).items()).isEmpty();
     org.mockito.Mockito.verifyNoInteractions(notes);
 
     NoteEntity hit = note(4L, null);
     when(notes.search("+(헥사고날)", null, 7L, 0, 21)).thenReturn(List.of(hit));
     when(views.ofFeed(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
-    assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
+    assertThat(service.search(" 헥사고날 ", 7L, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(4L);
 
     when(notes.search(null, "%밥%", null, 0, 21)).thenReturn(List.of());
     when(views.ofFeed(List.of(), null)).thenReturn(List.of());
-    assertThat(service.search("밥", 0, 20, null).items()).isEmpty();
+    assertThat(service.search("밥", null, new PageAsk(0, 20)).items()).isEmpty();
   }
 }

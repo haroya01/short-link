@@ -1,6 +1,7 @@
 package com.example.short_link.note.presentation;
 
 import com.example.short_link.note.application.read.NoteFeedView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteListService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.presentation.request.NoteListRequest;
@@ -76,7 +77,7 @@ public class NoteListController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return lists.feed(userId, id, page, size);
+    return lists.feed(userId, id, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/notes/list-memberships/{username}")

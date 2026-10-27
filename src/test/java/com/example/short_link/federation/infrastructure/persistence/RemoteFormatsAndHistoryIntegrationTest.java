@@ -20,6 +20,7 @@ import com.example.short_link.federation.domain.repository.RemoteActorRepository
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NotePollService;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -214,7 +215,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
     deliver(river, fixture("lemmy-page.json"));
     deliver(maker, fixture("peertube-video.json"));
 
-    NoteFeedView feed = query.following(reader, 0, 20);
+    NoteFeedView feed = query.following(reader, new PageAsk(0, 20));
     assertThat(feed.items()).hasSize(4);
 
     NoteView question = byKind(feed, "QUESTION");
@@ -245,7 +246,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
         .extracting(NoteView.Media::url)
         .containsExactly("https://" + host("peertube") + "/lazy-static/previews/9c9de5e8.jpg");
 
-    assertThat(query.byRemoteActor(maker.getId(), 0, 20, reader).items())
+    assertThat(query.byRemoteActor(maker.getId(), reader, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactly(video.id());
     assertThatThrownBy(() -> polls.vote(reader, question.id(), List.of(0)))
@@ -279,7 +280,8 @@ class RemoteFormatsAndHistoryIntegrationTest {
 
     history.fillIn(account.getId(), reader);
 
-    List<NoteView> listed = query.byRemoteActor(account.getId(), 0, 20, reader).items();
+    List<NoteView> listed =
+        query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items();
     assertThat(listed)
         .extracting(NoteView::body)
         .containsExactly(
@@ -288,7 +290,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
             "Which editor do you write in?");
     assertThat(listed.get(2).poll().expired()).isTrue();
     assertThat(listed.get(1).media()).hasSize(1);
-    assertThat(query.byRemoteActor(account.getId(), 0, 20, blocker).items()).isEmpty();
+    assertThat(query.byRemoteActor(account.getId(), blocker, new PageAsk(0, 20)).items()).isEmpty();
     assertThat(notifications(named)).isZero();
 
     history.fillIn(account.getId(), reader);
@@ -313,7 +315,7 @@ class RemoteFormatsAndHistoryIntegrationTest {
 
     history.fillIn(account.getId(), reader);
     verify(http, times(6)).get(any(), any());
-    assertThat(query.byRemoteActor(account.getId(), 0, 20, reader).items()).hasSize(4);
+    assertThat(query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items()).hasSize(4);
   }
 
   @Test
@@ -330,6 +332,6 @@ class RemoteFormatsAndHistoryIntegrationTest {
     following.follow(reader, account.getId());
     awaitBackgroundWork();
 
-    assertThat(query.byRemoteActor(account.getId(), 0, 20, reader).items()).hasSize(3);
+    assertThat(query.byRemoteActor(account.getId(), reader, new PageAsk(0, 20)).items()).hasSize(3);
   }
 }

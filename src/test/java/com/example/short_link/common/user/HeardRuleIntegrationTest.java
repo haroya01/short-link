@@ -7,6 +7,7 @@ import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
@@ -303,16 +304,16 @@ class HeardRuleIntegrationTest {
       assertThat(posts.author().username()).isEqualTo(handle);
       assertThat(posts.blockedByViewer()).isEqualTo(handle.equals("hr-blocked"));
       assertThat(posts.blocksViewer()).isEqualTo(handle.equals("hr-blocker"));
-      assertThat(notes.byAuthor(handle, 0, 20, viewer).items()).hasSize(shown);
-      assertThat(notes.reposts(handle, 0, 20, viewer).items()).hasSize(shown);
+      assertThat(notes.byAuthor(handle, viewer, new PageAsk(0, 20)).items()).hasSize(shown);
+      assertThat(notes.reposts(handle, viewer, new PageAsk(0, 20)).items()).hasSize(shown);
 
       PublicPostListView anonymous =
           profilePosts.listPublicPosts(handle, PostReader.of(null)).body();
       assertThat(anonymous.posts()).hasSize(1);
       assertThat(anonymous.blockedByViewer()).isFalse();
       assertThat(anonymous.blocksViewer()).isFalse();
-      assertThat(notes.byAuthor(handle, 0, 20, null).items()).hasSize(1);
-      assertThat(notes.reposts(handle, 0, 20, null).items()).hasSize(1);
+      assertThat(notes.byAuthor(handle, null, new PageAsk(0, 20)).items()).hasSize(1);
+      assertThat(notes.reposts(handle, null, new PageAsk(0, 20)).items()).hasSize(1);
     }
   }
 
@@ -327,10 +328,10 @@ class HeardRuleIntegrationTest {
       repostRepository.addIfAbsent(noteId, normal);
     }
 
-    assertThat(notes.reposts("hr-normal", 0, 20, viewer).items())
+    assertThat(notes.reposts("hr-normal", viewer, new PageAsk(0, 20)).items())
         .extracting(NoteView::id)
         .containsExactlyInAnyOrder(reposted.get("hr-normal"), reposted.get("hr-expired"));
-    assertThat(notes.reposts("hr-normal", 0, 20, null).items()).hasSize(6);
+    assertThat(notes.reposts("hr-normal", null, new PageAsk(0, 20)).items()).hasSize(6);
   }
 
   @Test

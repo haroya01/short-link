@@ -18,6 +18,7 @@ import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,7 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NoteQueryService {
 
-  static final int MAX_PAGE_SIZE = 50;
   static final int MAX_REPLIES = 200;
 
   private final NoteRepository notes;
@@ -49,51 +49,49 @@ public class NoteQueryService {
   private final NoteAccess access;
   private final NoteRoomReader rooms;
   private final NoteSeriesReader noteSeries;
+  private final Clock clock;
 
   @Transactional(readOnly = true)
-  public NoteFeedView everyone(int page, int size, Long viewerId) {
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit, null));
+  public NoteFeedView everyone(Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit, null));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView byRemoteActor(Long remoteActorId, int page, int size, Long viewerId) {
+  public NoteFeedView byRemoteActor(Long remoteActorId, Long viewerId, PageAsk ask) {
     return page(
-        page,
-        size,
+        ask,
         viewerId,
         (offset, limit) -> notes.byRemoteActor(remoteActorId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView room(Long roomId, Long viewerId, int page, int size) {
+  public NoteFeedView room(Long roomId, Long viewerId, PageAsk ask) {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.inRoom(roomId, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> notes.inRoom(roomId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView rooms(Long viewerId, int page, int size) {
-    return page(page, size, viewerId, (offset, limit) -> notes.inRoomsOf(viewerId, offset, limit));
+  public NoteFeedView rooms(Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.inRoomsOf(viewerId, offset, limit));
   }
 
   // The writer's own room notes, from rooms they are in or have left, so they can still delete
   // them.
   @Transactional(readOnly = true)
-  public NoteFeedView roomNotesBy(Long userId, int page, int size) {
-    return page(page, size, userId, (offset, limit) -> notes.roomNotesBy(userId, offset, limit));
+  public NoteFeedView roomNotesBy(Long userId, PageAsk ask) {
+    return page(ask, userId, (offset, limit) -> notes.roomNotesBy(userId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView direct(Long viewerId, int page, int size) {
-    return page(page, size, viewerId, (offset, limit) -> notes.direct(viewerId, offset, limit));
+  public NoteFeedView direct(Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.direct(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView trending(int page, int size, Long viewerId) {
-    return page(page, size, viewerId, (offset, limit) -> notes.trending(viewerId, offset, limit));
+  public NoteFeedView trending(Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.trending(viewerId, offset, limit));
   }
 
   // Mastodon's trending hashtags: a week, used by at least two accounts, the top ten.
@@ -103,7 +101,7 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public List<TrendingTagView> trendingTags() {
-    return notes.trendingTags(Instant.now(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
+    return notes.trendingTags(clock.instant(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
         .map(TrendingTagView::of)
         .toList();
   }
@@ -111,133 +109,109 @@ public class NoteQueryService {
   // Mastodon's trending links: same window and floor as hashtags.
   @Transactional(readOnly = true)
   public List<TrendingLinkView> trendingLinks() {
-    return notes.trendingLinks(Instant.now(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
+    return notes
+        .trendingLinks(clock.instant(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT)
+        .stream()
         .map(TrendingLinkView::of)
         .toList();
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView linked(String url, int page, int size, Long viewerId) {
+  public NoteFeedView linked(String url, Long viewerId, PageAsk ask) {
     if (url == null || url.isBlank()) {
-      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+      return new NoteFeedView(List.of(), ask.page(), false);
     }
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.linked(url, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> notes.linked(url, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView federated(Long viewerId, int page, int size) {
-    return page(page, size, viewerId, (offset, limit) -> notes.federated(viewerId, offset, limit));
+  public NoteFeedView federated(Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.federated(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView tagged(String tag, int page, int size, Long viewerId) {
+  public NoteFeedView tagged(String tag, Long viewerId, PageAsk ask) {
     String name = tag.startsWith("#") ? tag.substring(1) : tag;
     if (name.isBlank() || name.length() > Hashtags.MAX_LENGTH) {
-      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+      return new NoteFeedView(List.of(), ask.page(), false);
     }
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.tagged(name, viewerId, offset, limit));
+    return page(ask, viewerId, (offset, limit) -> notes.tagged(name, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView search(String query, int page, int size, Long viewerId) {
+  public NoteFeedView search(String query, Long viewerId, PageAsk ask) {
     String trimmed = query == null ? "" : query.strip();
     if (trimmed.isEmpty() || trimmed.length() > NoteSearchTerms.MAX_LENGTH) {
-      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+      return new NoteFeedView(List.of(), ask.page(), false);
     }
     NoteSearchTerms terms = NoteSearchTerms.of(trimmed);
     return page(
-        page,
-        size,
+        ask,
         viewerId,
         (offset, limit) -> notes.search(terms.match(), terms.like(), viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView byAuthor(String username, int page, int size, Long viewerId) {
-    NoteAuthor author =
-        people
-            .activeByUsername(username)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
+  public NoteFeedView byAuthor(String username, Long viewerId, PageAsk ask) {
+    NoteAuthor author = authorNamed(username);
     return page(
-        page,
-        size,
+        ask,
         viewerId,
         (offset, limit) -> notes.topLevelByAuthor(author.id(), viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public ProfileRepliesView repliesByAuthor(String username, int page, int size, Long viewerId) {
-    NoteAuthor author =
-        people
-            .activeByUsername(username)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    List<NoteEntity> rows =
-        notes.repliesByAuthor(author.id(), viewerId, safePage * safeSize, safeSize + 1);
-    boolean hasNext = rows.size() > safeSize;
+  public ProfileRepliesView repliesByAuthor(String username, Long viewerId, PageAsk ask) {
+    NoteAuthor author = authorNamed(username);
+    PageAsk.Rows<NoteEntity> rows =
+        ask.fetch((offset, limit) -> notes.repliesByAuthor(author.id(), viewerId, offset, limit));
     return new ProfileRepliesView(
-        views.ofReplies(hasNext ? rows.subList(0, safeSize) : rows, viewerId), safePage, hasNext);
+        views.ofReplies(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
 
   @Transactional(readOnly = true)
-  public ProfileMediaView mediaByAuthor(String username, int page, int size, Long viewerId) {
-    NoteAuthor author =
-        people
-            .activeByUsername(username)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    List<NoteEntity> rows =
-        notes.withMediaByAuthor(author.id(), viewerId, safePage * safeSize, safeSize + 1);
-    boolean hasNext = rows.size() > safeSize;
-    return new ProfileMediaView(
-        views.ofMedia(hasNext ? rows.subList(0, safeSize) : rows), safePage, hasNext);
+  public ProfileMediaView mediaByAuthor(String username, Long viewerId, PageAsk ask) {
+    NoteAuthor author = authorNamed(username);
+    PageAsk.Rows<NoteEntity> rows =
+        ask.fetch((offset, limit) -> notes.withMediaByAuthor(author.id(), viewerId, offset, limit));
+    return new ProfileMediaView(views.ofMedia(rows.current()), ask.page(), rows.hasNext());
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView reposts(String username, int page, int size, Long viewerId) {
-    NoteAuthor author =
-        people
-            .activeByUsername(username)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
+  public NoteFeedView reposts(String username, Long viewerId, PageAsk ask) {
+    NoteAuthor author = authorNamed(username);
     return page(
-        page,
-        size,
+        ask,
         viewerId,
         (offset, limit) ->
             inOrder(reposts.recentNoteIdsByUser(author.id(), viewerId, offset, limit)));
   }
 
-  // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
-  // with it, since it only came in through them.
   @Transactional(readOnly = true)
-  public NoteFeedView bookmarks(Long userId, int page, int size) {
+  public NoteFeedView bookmarks(Long userId, PageAsk ask) {
     return page(
-        page,
-        size,
+        ask,
         userId,
         (offset, limit) -> inOrder(bookmarks.recentNoteIdsByUser(userId, offset, limit)));
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView quotes(Long noteId, int page, int size, Long viewerId) {
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.quotesOf(noteId, viewerId, offset, limit));
+  public NoteFeedView quotes(Long noteId, Long viewerId, PageAsk ask) {
+    return page(ask, viewerId, (offset, limit) -> notes.quotesOf(noteId, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
-  public PostQuotesView postQuotes(Long postId, int page, int size, Long viewerId) {
+  public PostQuotesView postQuotes(Long postId, Long viewerId, PageAsk ask) {
     NoteFeedView feed =
-        page(
-            page,
-            size,
-            viewerId,
-            (offset, limit) -> notes.quotesOfPost(postId, viewerId, offset, limit));
+        page(ask, viewerId, (offset, limit) -> notes.quotesOfPost(postId, viewerId, offset, limit));
     return new PostQuotesView(
         feed.items(), feed.page(), feed.hasNext(), notes.countQuotesOfPost(postId, viewerId));
+  }
+
+  private NoteAuthor authorNamed(String username) {
+    return people
+        .activeByUsername(username)
+        .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
   }
 
   private List<NoteEntity> inOrder(List<Long> ids) {
@@ -334,17 +308,16 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView following(Long viewerId, int page, int size) {
+  public NoteFeedView following(Long viewerId, PageAsk ask) {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
     authors.add(viewerId);
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    List<NoteFeedRow> rows = notes.following(authors, viewerId, safePage * safeSize, safeSize + 1);
-    boolean hasNext = rows.size() > safeSize;
-    List<NoteFeedRow> current = hasNext ? rows.subList(0, safeSize) : rows;
-    return new NoteFeedView(followingViews(current, viewerId), safePage, hasNext);
+    PageAsk.Rows<NoteFeedRow> rows =
+        ask.fetch((offset, limit) -> notes.following(authors, viewerId, offset, limit));
+    return new NoteFeedView(followingViews(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
 
+  // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
+  // with it, since it only came in through them.
   private List<NoteView> followingViews(List<NoteFeedRow> current, Long viewerId) {
     Set<Long> reposterIds =
         current.stream()
@@ -510,12 +483,8 @@ public class NoteQueryService {
   }
 
   private NoteFeedView page(
-      int page, int size, Long viewerId, BiFunction<Integer, Integer, List<NoteEntity>> fetch) {
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    List<NoteEntity> rows = fetch.apply(safePage * safeSize, safeSize + 1);
-    boolean hasNext = rows.size() > safeSize;
-    List<NoteEntity> current = hasNext ? rows.subList(0, safeSize) : rows;
-    return new NoteFeedView(views.ofFeed(current, viewerId), safePage, hasNext);
+      PageAsk ask, Long viewerId, BiFunction<Integer, Integer, List<NoteEntity>> offsetLimit) {
+    PageAsk.Rows<NoteEntity> rows = ask.fetch(offsetLimit);
+    return new NoteFeedView(views.ofFeed(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
 }
