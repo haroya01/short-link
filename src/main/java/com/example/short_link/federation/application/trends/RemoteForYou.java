@@ -2,7 +2,7 @@ package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.NoteViewReader;
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.ForYouRanking;

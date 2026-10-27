@@ -2,8 +2,8 @@ package com.example.short_link.home;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.seen.SeenItem;
 import com.example.short_link.federation.application.trends.RemoteSeen;
-import com.example.short_link.federation.domain.SeenItem;
 import com.example.short_link.federation.domain.SeenUri;
 import java.io.IOException;
 import java.nio.file.Path;

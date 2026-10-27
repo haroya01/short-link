@@ -1,7 +1,7 @@
 package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.common.note.NoteViewReader;
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import java.time.Clock;

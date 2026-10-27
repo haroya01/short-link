@@ -1,7 +1,7 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.SeenUri;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.repository.RemoteSeenRepository;
 import java.sql.Timestamp;
 import java.time.Instant;

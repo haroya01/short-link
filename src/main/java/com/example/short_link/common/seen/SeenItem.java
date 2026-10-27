@@ -1,6 +1,5 @@
-package com.example.short_link.federation.domain;
+package com.example.short_link.common.seen;
 
-import com.example.short_link.common.seen.Unseen;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

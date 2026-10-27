@@ -1,4 +1,4 @@
-package com.example.short_link.federation.domain;
+package com.example.short_link.common.seen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -1,4 +1,4 @@
-package com.example.short_link.federation.domain;
+package com.example.short_link.common.seen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,13 +37,5 @@ class SeenViewerTest {
     assertThat(SeenViewer.of(null, "6f1c2a3b-4d5e-4f60-7a71-92b3c4d5e6f7")).isNull();
     assertThat(SeenViewer.of(null, DEVICE + "0")).isNull();
     assertThat(SeenViewer.of(null, "6f1c2a3b4d5e4f608a7192b3c4d5e6f7")).isNull();
-  }
-
-  @Test
-  void aPostIsTheFirstSixteenBytesOfTheSha256OfItsUri() {
-    SeenUri uri = SeenUri.of("https://mastodon.social/users/a/statuses/1");
-
-    assertThat(HexFormat.of().formatHex(uri.bytes())).isEqualTo("04993fcd865444ec3268dfa316f9df06");
-    assertThat(SeenUri.fromBytes(uri.bytes())).isEqualTo(uri);
   }
 }
