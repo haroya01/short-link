@@ -1,8 +1,8 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.application.VisitorSketch;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-class ClickTotalsReadRepositoryAdapter implements ClickTotalsReadRepository {
+class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
 
   private final JpaClickTotalsReadRepository jpa;
 

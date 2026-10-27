@@ -5,8 +5,8 @@ import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
@@ -39,7 +39,7 @@ public class PublicProfileLoader {
 
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
-  private final ClickTotalsReadRepository clickRepository;
+  private final ClickTotalsReader clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final PublishedPostCountReader postCountReader;

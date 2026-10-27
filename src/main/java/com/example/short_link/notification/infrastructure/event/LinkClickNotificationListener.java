@@ -4,8 +4,8 @@ import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.application.link.LinkNotificationProperties;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -30,8 +30,8 @@ public class LinkClickNotificationListener {
   private static final String VELOCITY_COOLDOWN = "notif:velocity:";
 
   private final LinkRepository links;
-  private final ClickTotalsReadRepository totals;
-  private final ClickRangeReadRepository ranges;
+  private final ClickTotalsReader totals;
+  private final ClickRangeReader ranges;
   private final LinkNotificationDispatcher dispatcher;
   private final LinkNotificationProperties props;
   private final RedisDistributedLock cooldown;

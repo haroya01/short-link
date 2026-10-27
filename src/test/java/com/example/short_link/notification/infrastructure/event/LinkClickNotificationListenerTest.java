@@ -13,8 +13,8 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.application.link.LinkNotificationProperties;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 class LinkClickNotificationListenerTest {
 
   private final LinkRepository links = mock(LinkRepository.class);
-  private final ClickTotalsReadRepository totals = mock(ClickTotalsReadRepository.class);
-  private final ClickRangeReadRepository ranges = mock(ClickRangeReadRepository.class);
+  private final ClickTotalsReader totals = mock(ClickTotalsReader.class);
+  private final ClickRangeReader ranges = mock(ClickRangeReader.class);
   private final LinkNotificationDispatcher dispatcher = mock(LinkNotificationDispatcher.class);
   private final RedisDistributedLock cooldown = mock(RedisDistributedLock.class);
   private final LinkNotificationProperties props =

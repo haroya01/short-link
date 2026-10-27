@@ -13,8 +13,8 @@ import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.ClickFlusher;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.hamcrest.Matchers;
@@ -38,7 +38,7 @@ class RedirectControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
   @Autowired private ClickEventRepository clickEventRepository;
-  @Autowired private ClickTotalsReadRepository clickRepository;
+  @Autowired private ClickTotalsReader clickRepository;
   @Autowired private CacheManager cacheManager;
   @Autowired private ClickFlusher clickFlusher;
 

@@ -14,7 +14,7 @@ import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +36,7 @@ class OgCardControllerTest {
 
   @MockitoBean private LinkLookupQueryService lookup;
   @MockitoBean private OgCardImageRenderer renderer;
-  @MockitoBean private ClickTotalsReadRepository clickRepository;
+  @MockitoBean private ClickTotalsReader clickRepository;
 
   @Test
   void servesPngWithCacheHeaders() throws Exception {

@@ -13,10 +13,10 @@ import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
 import com.example.short_link.support.TestEntities;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WeeklyInsightsServiceTest {
 
-  @Mock private ClickRangeReadRepository clickRepository;
+  @Mock private ClickRangeReader clickRepository;
   @Mock private ClickRangeTopReader clickRangeTops;
   @Mock private LinkRepository linkRepository;
   @Mock private UserAccessLookup users;

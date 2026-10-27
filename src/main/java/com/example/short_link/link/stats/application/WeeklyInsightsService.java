@@ -4,11 +4,11 @@ import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmSourceClickRow;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -25,7 +25,7 @@ public class WeeklyInsightsService {
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
   private static final int TOP_ONE = 1;
 
-  private final ClickRangeReadRepository clickRanges;
+  private final ClickRangeReader clickRanges;
   private final ClickRangeTopReader clickRangeTops;
   private final LinkRepository linkRepository;
   private final UserAccessLookup users;

@@ -3,8 +3,8 @@ package com.example.short_link.notification.scheduler;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.notification.application.link.LinkNotificationDispatcher;
 import com.example.short_link.notification.application.link.LinkNotificationProperties;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -29,7 +29,7 @@ public class LinkDigestJob {
   private static final String LOCK_KEY = "notif:digest";
 
   private final LinkRepository links;
-  private final ClickRangeReadRepository ranges;
+  private final ClickRangeReader ranges;
   private final LinkNotificationDispatcher dispatcher;
   private final LinkNotificationProperties props;
   private final RedisDistributedLock lock;

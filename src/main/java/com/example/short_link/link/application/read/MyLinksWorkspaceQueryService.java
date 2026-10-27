@@ -6,7 +6,7 @@ import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
+import com.example.short_link.link.stats.application.read.ClickRangeReader;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MyLinksWorkspaceQueryService {
   private final LinkRepository links;
   private final MyLinkReader reader;
-  private final ClickRangeReadRepository clickRanges;
+  private final ClickRangeReader clickRanges;
   private final Clock clock;
 
   public MyLinksResult favorites(Long userId) {

@@ -1,10 +1,10 @@
-package com.example.short_link.link.stats.domain.repository;
+package com.example.short_link.link.stats.application.read;
 
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import java.time.Instant;
 import java.util.List;
 
-public interface ClickTotalsReadRepository {
+public interface ClickTotalsReader {
 
   long countHumanByLinkId(Long linkId);
 
