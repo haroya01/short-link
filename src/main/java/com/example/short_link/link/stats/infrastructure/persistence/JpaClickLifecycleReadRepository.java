@@ -4,17 +4,20 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.ClickRollup;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DayClickRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.ReturnRateRow;
+import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
-public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEntity, Long> {
+public interface JpaClickLifecycleReadRepository
+    extends Repository<ClickEventEntity, Long>, ClickLifecycleReadRepository {
 
   String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
 
   // 세션화한 재방문 — 같은 visitor 가 *30분 이상 간격을 두고 다시* 와야 returning(같은 자리 더블탭은 1회).
   // 방문자를 잇는 visitor_hash는 원본에만 있어 원본 보관 기간 안의 클릭만 센다.
+  @Override
   @Query(
       value =
           "SELECT SUM(CASE WHEN sessions = 1 THEN 1 ELSE 0 END) AS newCount, "
@@ -32,6 +35,7 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
       nativeQuery = true)
   ReturnRateRow findReturnRate(@Param("linkId") Long linkId);
 
+  @Override
   @Query(
       value =
           "SELECT day, CAST(SUM(n) AS SIGNED) AS count FROM ("
@@ -49,6 +53,7 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
 
   // 재방문은 findReturnRate와 같은 30분 세션화 정의를 사용한다. 윈도 함수는 링크의 사람 클릭 전체를 훑으므로 바깥 LIMIT은 응답 크기만 줄이고 스캔량은
   // 줄이지 못한다. 클릭 수와 첫 등장은 집계를 더한 전체 기간, 방문자와 재방문은 원본 보관 기간 안이다.
+  @Override
   @Query(
       value =
           "SELECT h.referrer_host AS host, h.clicks AS count, h.firstSeenEpoch AS firstSeenEpoch, "
@@ -87,6 +92,7 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
   List<com.example.short_link.link.stats.domain.projection.ClickProjections.ChannelDepthRow>
       findChannelDepth(@Param("linkId") Long linkId, @Param("limit") int limit);
 
+  @Override
   @Query(
       value =
           "SELECT referrer_host AS host, UNIX_TIMESTAMP(MIN(first_at)) AS firstSeenEpoch "
