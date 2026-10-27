@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -48,7 +48,7 @@ class RecordPostReadUseCaseTest {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L)));
     when(postReadRepository.findByUserIdAndPostId(9L, 5L)).thenReturn(Optional.empty());
 
-    useCase.record(PostReader.of(9L), 5L);
+    useCase.record(PostViewer.of(9L), 5L);
 
     ArgumentCaptor<PostReadEntity> captor = ArgumentCaptor.forClass(PostReadEntity.class);
     verify(postReadRepository).save(captor.capture());
@@ -63,7 +63,7 @@ class RecordPostReadUseCaseTest {
     PostReadEntity existing = new PostReadEntity(9L, 5L, old);
     when(postReadRepository.findByUserIdAndPostId(9L, 5L)).thenReturn(Optional.of(existing));
 
-    useCase.record(PostReader.of(9L), 5L);
+    useCase.record(PostViewer.of(9L), 5L);
 
     verify(postReadRepository).save(existing);
     assertThat(existing.getReadAt()).isAfter(old);
@@ -73,7 +73,7 @@ class RecordPostReadUseCaseTest {
   void recordIgnoresMissingPost() {
     when(postRepository.findById(5L)).thenReturn(Optional.empty());
 
-    useCase.record(PostReader.of(9L), 5L);
+    useCase.record(PostViewer.of(9L), 5L);
 
     verify(postReadRepository, never()).save(any());
   }
@@ -84,7 +84,7 @@ class RecordPostReadUseCaseTest {
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
-    useCase.record(PostReader.of(9L), 5L);
+    useCase.record(PostViewer.of(9L), 5L);
 
     verify(postReadRepository, never()).save(any());
   }

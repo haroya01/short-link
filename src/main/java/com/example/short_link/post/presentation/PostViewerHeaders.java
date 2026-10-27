@@ -1,19 +1,19 @@
 package com.example.short_link.post.presentation;
 
 import com.example.short_link.common.web.ClientIp;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import jakarta.servlet.http.HttpServletRequest;
 
-public final class PostReaderHeaders {
+public final class PostViewerHeaders {
 
   public static final String KEY_HEADER = "X-Post-Key";
   public static final String GRANT_HEADER = "X-Post-Grant";
   public static final String RENDER_HEADER = "X-Kurl-Render";
 
-  private PostReaderHeaders() {}
+  private PostViewerHeaders() {}
 
-  public static PostReader from(Long viewerId, HttpServletRequest req) {
-    return new PostReader(
+  public static PostViewer from(Long viewerId, HttpServletRequest req) {
+    return new PostViewer(
         viewerId,
         present(req.getHeader(KEY_HEADER)),
         present(req.getHeader(GRANT_HEADER)),

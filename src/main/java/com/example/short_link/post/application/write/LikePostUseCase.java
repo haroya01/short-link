@@ -3,7 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -27,7 +27,7 @@ public class LikePostUseCase {
   private final PostAccessPolicy policy;
 
   @Transactional
-  public PostLikeStatus like(PostReader reader, Long postId) {
+  public PostLikeStatus like(PostViewer reader, Long postId) {
     Long userId = reader.viewerId();
     PostEntity post = access.requireInteractablePostForUpdate(reader, postId);
     if (postLikeRepository.insertIgnore(postId, userId) > 0) {
@@ -48,7 +48,7 @@ public class LikePostUseCase {
   }
 
   @Transactional
-  public PostLikeStatus unlike(PostReader reader, Long postId) {
+  public PostLikeStatus unlike(PostViewer reader, Long postId) {
     PostEntity post = requirePost(postId);
     if (!policy.revealsExistence(post, reader)) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, postId);

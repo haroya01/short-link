@@ -30,6 +30,6 @@ public class PublicCommentController {
       HttpServletRequest req) {
     return PostResponses.of(
         postCommentQueryService.listForPost(
-            postId, PostReaderHeaders.from(viewerId, req), tombstones));
+            postId, PostViewerHeaders.from(viewerId, req), tombstones));
   }
 }

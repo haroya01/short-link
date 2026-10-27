@@ -2,7 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -38,7 +38,7 @@ public class ReadingHistoryQueryService {
     if (reads.isEmpty()) {
       return List.of();
     }
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     List<Long> postIds = reads.stream().map(PostReadEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()

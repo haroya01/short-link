@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -65,7 +65,7 @@ class PostLikeQueryServiceTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(post));
     when(postLikeRepository.existsByPostIdAndUserId(42L, 9L)).thenReturn(true);
 
-    PostLikeStatus status = service.status(PostReader.of(9L), 42L);
+    PostLikeStatus status = service.status(PostViewer.of(9L), 42L);
 
     assertThat(status.liked()).isTrue();
   }

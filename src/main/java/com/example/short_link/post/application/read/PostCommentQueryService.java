@@ -2,7 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -32,7 +32,7 @@ public class PostCommentQueryService {
   private final PostAccessPolicy access;
 
   public PostScoped<List<CommentView>> listForPost(
-      Long postId, PostReader reader, boolean tombstones) {
+      Long postId, PostViewer reader, boolean tombstones) {
     PostEntity post = postRepository.findById(postId).orElse(null);
     if (post == null || !access.readable(post, reader)) {
       return new PostScoped<>(List.of(), false);
@@ -80,7 +80,7 @@ public class PostCommentQueryService {
   public List<MyCommentView> listMyComments(Long userId) {
     List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
-    PostAccessPolicy.Lists lists = access.forLists(PostReader.of(userId));
+    PostAccessPolicy.Lists lists = access.forLists(PostViewer.of(userId));
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(lists::keeps)

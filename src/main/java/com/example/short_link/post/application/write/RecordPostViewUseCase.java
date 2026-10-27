@@ -5,7 +5,7 @@ import com.example.short_link.common.user.Usernames;
 import com.example.short_link.link.classifier.application.ClassifiedVisit;
 import com.example.short_link.link.classifier.application.VisitClassifier;
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -48,7 +48,7 @@ public class RecordPostViewUseCase {
   }
 
   @Transactional
-  public void execute(RecordPostViewCommand cmd, VisitRequest ctx, PostReader reader) {
+  public void execute(RecordPostViewCommand cmd, VisitRequest ctx, PostViewer reader) {
     String normalized = Usernames.canonical(cmd.username());
     UserSummary author = users.findActiveByUsername(normalized).orElse(null);
     if (author == null) return;

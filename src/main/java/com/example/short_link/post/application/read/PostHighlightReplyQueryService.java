@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
@@ -36,7 +36,7 @@ public class PostHighlightReplyQueryService {
   private final PostAccessPolicy access;
 
   public PostScoped<List<HighlightReplyView>> listForHighlight(
-      Long highlightId, PostReader reader) {
+      Long highlightId, PostViewer reader) {
     PostHighlightEntity highlight = highlightRepository.findById(highlightId).orElse(null);
     PostEntity post =
         highlight == null ? null : postRepository.findById(highlight.getPostId()).orElse(null);

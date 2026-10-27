@@ -1,6 +1,6 @@
 package com.example.short_link.post.presentation;
 
-import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
+import static com.example.short_link.post.application.access.PostViewerMatchers.viewer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.storage.PresignedUpload;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.application.read.CommentView;
@@ -118,7 +118,7 @@ class PostInteractionControllersTest {
 
   @Test
   void createCommentReturns201() throws Exception {
-    when(createComment.execute(any(CreateCommentCommand.class), any(PostReader.class)))
+    when(createComment.execute(any(CreateCommentCommand.class), any(PostViewer.class)))
         .thenReturn(
             new CommentView(
                 10L,
@@ -262,7 +262,7 @@ class PostInteractionControllersTest {
         .andExpect(status().isAccepted());
 
     verify(recordPostView)
-        .execute(any(RecordPostViewCommand.class), any(VisitRequest.class), any(PostReader.class));
+        .execute(any(RecordPostViewCommand.class), any(VisitRequest.class), any(PostViewer.class));
   }
 
   @Test
@@ -279,7 +279,7 @@ class PostInteractionControllersTest {
     org.mockito.ArgumentCaptor<VisitRequest> ctx =
         org.mockito.ArgumentCaptor.forClass(VisitRequest.class);
     verify(recordPostView)
-        .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostReader.class));
+        .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostViewer.class));
     org.assertj.core.api.Assertions.assertThat(ctx.getValue().referrer())
         .isEqualTo("https://news.ycombinator.com/item?id=1");
   }
