@@ -1,9 +1,7 @@
 package com.example.short_link.common.user;
 
-// Whose writing a viewer hears, as SQL a statement can carry. A block either way hides a writer
-// everywhere, even where the viewer opens them directly; a mute until it ends hides them only
-// inside lists of other people's writing, as on Mastodon. The caller binds :viewer (-1 when
-// anonymous, so nothing is left out), and :now wherever a mute is checked.
+// Callers bind :viewer (-1 when anonymous) and :now wherever a mute is checked. A block either way
+// hides a writer everywhere; a mute hides them only in lists of other people's writing.
 public final class HeardSql {
 
   public static final String UNBLOCKED_POST_AUTHOR =
@@ -58,6 +56,16 @@ public final class HeardSql {
         + remoteActorExpr
         + " AND hrn.hide_notifications"
         + " AND (hrn.expires_at IS NULL OR hrn.expires_at > :now)))";
+  }
+
+  public static String domainBlocked(String recipientExpr, String remoteActorExpr) {
+    return "EXISTS (SELECT 1 FROM user_domain_block d"
+        + " JOIN federation_remote_actor a ON a.domain = d.domain"
+        + " WHERE d.user_id = "
+        + recipientExpr
+        + " AND a.id = "
+        + remoteActorExpr
+        + ")";
   }
 
   public static String memberSilenced(String recipientExpr, String actorExpr) {

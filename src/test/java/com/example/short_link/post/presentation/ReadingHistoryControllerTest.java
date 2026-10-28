@@ -1,6 +1,6 @@
 package com.example.short_link.post.presentation;
 
-import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
+import static com.example.short_link.post.application.access.PostViewerMatchers.viewer;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;

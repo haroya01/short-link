@@ -11,10 +11,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.RemoteNoteParser;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader.Kind;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;

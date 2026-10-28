@@ -15,7 +15,7 @@ import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.domain.PostEntity;
@@ -106,7 +106,7 @@ class CreateHighlightReplyUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
 
     HighlightReplyView view =
-        useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "  동의  "), PostReader.of(9L));
+        useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "  동의  "), PostViewer.of(9L));
 
     assertThat(view.body()).isEqualTo("동의");
     assertThat(view.author().username()).isEqualTo("carol");
@@ -128,7 +128,7 @@ class CreateHighlightReplyUseCaseTest {
 
     assertThatThrownBy(
             () ->
-                useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "hi"), PostReader.of(9L)))
+                useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "hi"), PostViewer.of(9L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.HIGHLIGHT_NOT_FOUND);
@@ -142,7 +142,7 @@ class CreateHighlightReplyUseCaseTest {
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
 
-    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "내 하이라이트에 셀프 답글"), PostReader.of(9L));
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "내 하이라이트에 셀프 답글"), PostViewer.of(9L));
 
     verify(events, times(0)).publishEvent(any());
   }
@@ -157,7 +157,7 @@ class CreateHighlightReplyUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWithId(5L, "bob")));
 
-    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"), PostReader.of(9L));
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"), PostViewer.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
@@ -185,7 +185,7 @@ class CreateHighlightReplyUseCaseTest {
     bob.softDelete();
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
 
-    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"), PostReader.of(9L));
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"), PostViewer.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
@@ -202,7 +202,7 @@ class CreateHighlightReplyUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
     when(userRepository.findByUsername("dan")).thenReturn(Optional.of(userWithId(3L, "dan")));
 
-    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"), PostReader.of(9L));
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"), PostViewer.of(9L));
 
     // Author 3 would get REPLY and a MENTION — collapse to the single REPLY notice.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
@@ -222,7 +222,7 @@ class CreateHighlightReplyUseCaseTest {
     when(userRepository.findByUsername("dan")).thenReturn(Optional.of(userWithId(3L, "dan")));
     when(muteReader.isMuted(3L, BlogNotificationKind.REPLY)).thenReturn(true);
 
-    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"), PostReader.of(9L));
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"), PostViewer.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());

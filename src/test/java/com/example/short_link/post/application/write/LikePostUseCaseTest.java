@@ -13,7 +13,7 @@ import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
@@ -70,7 +70,7 @@ class LikePostUseCaseTest {
     when(postLikeRepository.insertIgnore(42L, 9L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
 
-    PostLikeStatus status = useCase.like(PostReader.of(9L), 42L);
+    PostLikeStatus status = useCase.like(PostViewer.of(9L), 42L);
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(1);
@@ -89,7 +89,7 @@ class LikePostUseCaseTest {
     when(postLikeRepository.insertIgnore(42L, 7L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
 
-    useCase.like(PostReader.of(7L), 42L);
+    useCase.like(PostViewer.of(7L), 42L);
 
     verify(events, never()).publishEvent(org.mockito.ArgumentMatchers.any());
   }
@@ -100,7 +100,7 @@ class LikePostUseCaseTest {
     when(postLikeRepository.insertIgnore(42L, 9L)).thenReturn(0);
     when(postLikeRepository.countByPostId(42L)).thenReturn(3L);
 
-    PostLikeStatus status = useCase.like(PostReader.of(9L), 42L);
+    PostLikeStatus status = useCase.like(PostViewer.of(9L), 42L);
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(3);
@@ -115,7 +115,7 @@ class LikePostUseCaseTest {
     when(postLikeRepository.deleteByPostIdAndUserId(42L, 9L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(0L);
 
-    PostLikeStatus status = useCase.unlike(PostReader.of(9L), 42L);
+    PostLikeStatus status = useCase.unlike(PostViewer.of(9L), 42L);
 
     assertThat(status.liked()).isFalse();
     assertThat(status.likeCount()).isZero();
@@ -128,7 +128,7 @@ class LikePostUseCaseTest {
     when(postLikeRepository.deleteByPostIdAndUserId(42L, 9L)).thenReturn(0);
     when(postLikeRepository.countByPostId(42L)).thenReturn(5L);
 
-    PostLikeStatus status = useCase.unlike(PostReader.of(9L), 42L);
+    PostLikeStatus status = useCase.unlike(PostViewer.of(9L), 42L);
 
     assertThat(status.liked()).isFalse();
     assertThat(status.likeCount()).isEqualTo(5);
@@ -139,7 +139,7 @@ class LikePostUseCaseTest {
   void rejectsMissingPost() {
     when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> useCase.like(PostReader.of(9L), 42L))
+    assertThatThrownBy(() -> useCase.like(PostViewer.of(9L), 42L))
         .isInstanceOf(PostException.class);
   }
 }

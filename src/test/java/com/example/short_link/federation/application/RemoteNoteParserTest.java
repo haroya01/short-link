@@ -42,6 +42,18 @@ class RemoteNoteParserTest {
   }
 
   @Test
+  void theContentWinsOverItsTranslationsAndOtherwiseTheFirstTranslationWithTextIsTaken() {
+    assertThat(parser.body(json("{\"content\":\"<p>a</p>\",\"contentMap\":{\"ko\":\"<p>b</p>\"}}")))
+        .isEqualTo("a");
+    assertThat(
+            parser.body(
+                json(
+                    "{\"content\":\" \",\"contentMap\":{\"ko\":7,\"ja\":\"<p>b</p>\",\"en\":\"<p>c</p>\"}}")))
+        .isEqualTo("b");
+    assertThat(parser.body(json("{\"contentMap\":[\"<p>b</p>\"]}"))).isEmpty();
+  }
+
+  @Test
   void mentionsElsewhereKeepTheirServerAndMembersStayShort() {
     assertThat(
             body(

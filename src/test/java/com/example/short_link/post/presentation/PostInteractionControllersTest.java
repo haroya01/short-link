@@ -1,6 +1,6 @@
 package com.example.short_link.post.presentation;
 
-import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
+import static com.example.short_link.post.application.access.PostViewerMatchers.viewer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -12,8 +12,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.storage.PresignedUpload;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.application.read.CommentView;
@@ -31,7 +32,6 @@ import com.example.short_link.post.application.write.LikeCommentUseCase;
 import com.example.short_link.post.application.write.LikePostUseCase;
 import com.example.short_link.post.application.write.RecordPostViewCommand;
 import com.example.short_link.post.application.write.RecordPostViewUseCase;
-import com.example.short_link.post.application.write.ViewContext;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.time.Instant;
@@ -118,7 +118,7 @@ class PostInteractionControllersTest {
 
   @Test
   void createCommentReturns201() throws Exception {
-    when(createComment.execute(any(CreateCommentCommand.class), any(PostReader.class)))
+    when(createComment.execute(any(CreateCommentCommand.class), any(PostViewer.class)))
         .thenReturn(
             new CommentView(
                 10L,
@@ -262,7 +262,7 @@ class PostInteractionControllersTest {
         .andExpect(status().isAccepted());
 
     verify(recordPostView)
-        .execute(any(RecordPostViewCommand.class), any(ViewContext.class), any(PostReader.class));
+        .execute(any(RecordPostViewCommand.class), any(VisitRequest.class), any(PostViewer.class));
   }
 
   @Test
@@ -276,10 +276,10 @@ class PostInteractionControllersTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isAccepted());
 
-    org.mockito.ArgumentCaptor<ViewContext> ctx =
-        org.mockito.ArgumentCaptor.forClass(ViewContext.class);
+    org.mockito.ArgumentCaptor<VisitRequest> ctx =
+        org.mockito.ArgumentCaptor.forClass(VisitRequest.class);
     verify(recordPostView)
-        .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostReader.class));
+        .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostViewer.class));
     org.assertj.core.api.Assertions.assertThat(ctx.getValue().referrer())
         .isEqualTo("https://news.ycombinator.com/item?id=1");
   }

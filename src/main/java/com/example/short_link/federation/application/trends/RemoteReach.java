@@ -13,7 +13,6 @@ import com.example.short_link.federation.domain.repository.RemoteNoteReachReposi
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.URI;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -39,8 +38,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class RemoteReach {
 
   private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
-  static final Duration FIRST_REST = Duration.ofHours(1);
-  static final Duration LONGEST_REST = Duration.ofHours(24);
 
   private final ReachProperties props;
   private final LatestProperties latestProps;
@@ -53,12 +50,10 @@ public class RemoteReach {
   private final MeterRegistry meters;
   private final Clock clock;
   private final Set<String> oneByOne = ConcurrentHashMap.newKeySet();
-  private final Map<String, Rest> resting = new ConcurrentHashMap<>();
+  private final HostRest rests;
 
   private LocalDate day;
   private int askedToday;
-
-  private record Rest(int times, Instant until) {}
 
   private record Answer(Map<String, Counts> found, boolean answered) {}
 
@@ -83,6 +78,7 @@ public class RemoteReach {
     this.json = json;
     this.meters = meters;
     this.clock = clock;
+    this.rests = new HostRest(clock);
   }
 
   void trended(List<TrendingStatusReader.Read> reads, Set<String> keepable) {
@@ -123,7 +119,7 @@ public class RemoteReach {
     Signer signer = null;
     boolean first = true;
     for (Map.Entry<String, List<Due>> host : byHost.entrySet()) {
-      if (rests(host.getKey(), now)) {
+      if (rests.resting(host.getKey(), now)) {
         continue;
       }
       if (serverBlocks.severityFor(host.getKey()).isPresent()) {
@@ -244,25 +240,13 @@ public class RemoteReach {
     }
     boolean answered = body != null && (single ? body.isObject() : body.isArray());
     if (answered) {
-      resting.remove(host);
+      rests.answered(host);
     }
     return Optional.of(new Answer(found, answered));
   }
 
   private void rest(String host) {
-    Rest before = resting.get(host);
-    int times = before == null ? 0 : before.times() + 1;
-    Duration wait = FIRST_REST.multipliedBy(1L << Math.min(times, 5));
-    resting.put(
-        host,
-        new Rest(
-            times, clock.instant().plus(wait.compareTo(LONGEST_REST) > 0 ? LONGEST_REST : wait)));
-    log.info("federation reach resting host={} wait={}", host, wait);
-  }
-
-  private boolean rests(String host, Instant now) {
-    Rest rest = resting.get(host);
-    return rest != null && rest.until().isAfter(now);
+    log.info("federation reach resting host={} wait={}", host, rests.rest(host));
   }
 
   private synchronized boolean spend() {

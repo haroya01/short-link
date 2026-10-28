@@ -11,8 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-// A reader is a distinct human visitor of the post's page other than its signed-in author. It
-// counts under the post's row lock, so each threshold is crossed in one transaction only.
+// A reader counts under the post's row lock, so each threshold is crossed in one transaction only.
 @Component
 @RequiredArgsConstructor
 public class PostReaders {

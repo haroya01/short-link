@@ -2,7 +2,7 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.PostHighlightedEvent;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -27,7 +27,7 @@ public class CreateHighlightUseCase {
   private final ApplicationEventPublisher events;
 
   @Transactional
-  public HighlightRef execute(CreateHighlightCommand cmd, PostReader reader) {
+  public HighlightRef execute(CreateHighlightCommand cmd, PostViewer reader) {
     PostEntity post = access.requireInteractablePost(reader, cmd.postId());
 
     String quote =
@@ -80,7 +80,6 @@ public class CreateHighlightUseCase {
     if (!highlight.getUserId().equals(userId)) {
       throw new PostException(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     }
-    // DB의 FK cascade 지원에 의존하지 않고 답글도 명시적으로 삭제한다.
     replyRepository.deleteAllByHighlightId(highlight.getId());
     // 컬렉션 연결에는 FK가 없으므로 직접 제거해야 한다.
     connectionCleaner.purgeForHighlights(List.of(highlight.getId()));

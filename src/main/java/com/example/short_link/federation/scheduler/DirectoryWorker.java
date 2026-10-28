@@ -21,10 +21,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Component;
 
-// A run takes minutes of paced requests, so it goes to one low-priority thread of its own rather
-// than the shared scheduler thread; a run asked for while one is going is not started. No thread
-// exists where directories or scheduling are off. A restart can cut a run short, so a while after
-// start a run is made when a source has gone unread since the cron's last turn.
+// A restart can cut a run short, so a while after start a run is made when a source has gone
+// unread since the cron's last turn.
 @Slf4j
 @Component
 public class DirectoryWorker {

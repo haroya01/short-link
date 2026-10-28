@@ -34,8 +34,7 @@ public interface RemoteActorRepository {
   int markListed(Collection<Long> ids, Instant at);
 
   // Accounts once listed with no word of consent since the cutoff, neither from a directory nor
-  // from
-  // their own server, stop being findable by name.
+  // from their own server, stop being findable by name.
   int forgetUnlisted(Instant cutoff);
 
   void delete(RemoteActorEntity actor);

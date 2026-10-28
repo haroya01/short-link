@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.example.short_link.post.domain.DiscoveryQuality;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,9 +16,23 @@ import org.springframework.data.domain.PageRequest;
 
 class PostRepositoryAdapterFeedParametersTest {
   @Test
+  void visibilityIsJudgedAtTheInjectedClocksNow() {
+    Instant at = Instant.parse("2026-10-27T12:00:00Z");
+    JpaPostRepository jpa = mock(JpaPostRepository.class);
+    PostRepositoryAdapter adapter =
+        new PostRepositoryAdapter(
+            jpa, mock(TrendingPostRanking.class), Clock.fixed(at, java.time.ZoneOffset.UTC));
+
+    adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(5L), List.of(), List.of());
+
+    verify(jpa).countPublishedByAuthors(eq(List.of(5L)), eq(9L), eq(at));
+  }
+
+  @Test
   void followingListAndCountTranslateOnlyEmptyOperands() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
+    PostRepositoryAdapter adapter =
+        new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class), Clock.systemUTC());
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of(), 0, 20);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of());
     verify(jpa)
@@ -36,7 +51,8 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void followingOnlyAuthorsSkipsTheTagJoin() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
+    PostRepositoryAdapter adapter =
+        new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class), Clock.systemUTC());
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of(), 0, 20);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(4L), List.of(), List.of());
     verify(jpa)
@@ -49,7 +65,8 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void unreadFeedAcceptsAnEmptyExclusionList() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
+    PostRepositoryAdapter adapter =
+        new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class), Clock.systemUTC());
     adapter.findForYouCandidates(7L, List.of("java"), List.of(), 0, 20);
     adapter.countForYouCandidates(7L, List.of("java"), List.of());
     verify(jpa)
@@ -72,7 +89,8 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void anAnonymousReaderIsBoundAsNobodyAndASignedInOneAsThemselves() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class));
+    PostRepositoryAdapter adapter =
+        new PostRepositoryAdapter(jpa, mock(TrendingPostRanking.class), Clock.systemUTC());
     adapter.findPublishedRecent(null, null, 0, 20);
     adapter.findPublishedRecent(7L, null, 0, 20);
     verify(jpa)

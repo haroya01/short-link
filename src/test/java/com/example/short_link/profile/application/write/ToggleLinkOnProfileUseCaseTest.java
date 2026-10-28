@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.write.LinkOwnership;
+import com.example.short_link.link.application.write.LinkProfilePlacement;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -29,7 +31,9 @@ class ToggleLinkOnProfileUseCaseTest {
   void setUp() {
     useCase =
         new ToggleLinkOnProfileUseCase(
-            linkRepository, profileOrdering, mock(ProfileCacheEviction.class));
+            new LinkProfilePlacement(new LinkOwnership(linkRepository), linkRepository),
+            profileOrdering,
+            mock(ProfileCacheEviction.class));
   }
 
   @Test

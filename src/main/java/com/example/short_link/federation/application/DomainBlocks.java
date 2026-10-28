@@ -39,7 +39,7 @@ public class DomainBlocks {
 
   @Transactional(readOnly = true)
   public List<View> list(Long userId) {
-    return blocks.list(userId).stream().map(View::of).toList();
+    return blocks.findByUserIdOrderByDomainAsc(userId).stream().map(View::of).toList();
   }
 
   @Transactional
@@ -47,7 +47,7 @@ public class DomainBlocks {
     String domain = normalize(raw);
     UserDomainBlockEntity row =
         blocks
-            .find(userId, domain)
+            .findByUserIdAndDomain(userId, domain)
             .orElseGet(() -> blocks.save(new UserDomainBlockEntity(userId, domain)));
     following.leaveDomain(userId, domain);
     followers.rejectDomain(userId, domain);
@@ -64,7 +64,6 @@ public class DomainBlocks {
     return normalize(raw, urls.domain());
   }
 
-  // A server as people type it (any case, a leading @), never this one.
   public static String normalize(String raw, String ownDomain) {
     String domain = raw == null ? "" : raw.strip().toLowerCase(Locale.ROOT);
     if (domain.startsWith("@")) {

@@ -118,7 +118,7 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(c -> {})
-        // Spring supplies nosniff and frame denial; restrict referrer details across origins too.
+        // Spring already sends nosniff and frame denial.
         .headers(
             h ->
                 h.httpStrictTransportSecurity(
@@ -141,7 +141,6 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/oauth2/**", "/login/oauth2/**")
                     .permitAll()
-                    // Keep the internal API documentation restricted to administrators.
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .hasRole("ADMIN")
                     .requestMatchers(GET, "/")
@@ -177,7 +176,8 @@ public class SecurityConfig {
                     // controller requires.
                     .requestMatchers(POST, "/api/v1/federation/seen")
                     .permitAll()
-                    // Remote servers deliver anonymously; the inbox verifies their HTTP signature.
+                    // Remote servers deliver anonymously; the inbox verifies the HTTP signature of
+                    // every activity it acts on.
                     .requestMatchers(POST, "/ap/inbox", "/ap/actors/*/inbox")
                     .permitAll()
                     .requestMatchers(
@@ -201,8 +201,8 @@ public class SecurityConfig {
                         "/api/v1/links/*/stream",
                         "/api/v1/users/me/clicks/stream")
                     .permitAll()
-                    // 컨트롤러가 isVisibleTo()로 비공개 컬렉션을 404로 감춘다. 단일 세그먼트만 허용해
-                    // 하위 connections 등의 쓰기 경로는 인증을 유지한다.
+                    // CollectionQueryService.detail 이 isVisibleTo()로 비공개 컬렉션을 404로 감춘다. 단일 세그먼트만
+                    // 허용해 하위 connections 등의 쓰기 경로는 인증을 유지한다.
                     .requestMatchers(GET, "/api/v1/collections/*")
                     .permitAll()
                     // Controllers support a null viewer for public reads; mutations require a

@@ -6,6 +6,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
@@ -13,8 +15,10 @@ import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.link.classifier.application.VisitClassifier;
 import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,11 +44,9 @@ class ProfileVisitRecorderTest {
     recorder =
         new ProfileVisitRecorder(
             repository,
-            userRepository,
-            uaClassifier,
-            geoResolver,
-            asnResolver,
-            new BotClassifier(botHeuristic));
+            new UserSummaryReader(userRepository),
+            new VisitClassifier(
+                uaClassifier, geoResolver, asnResolver, new BotClassifier(botHeuristic)));
   }
 
   @Test
@@ -57,22 +59,31 @@ class ProfileVisitRecorderTest {
 
     recorder.record(
         7L,
-        "https://t.co/x",
-        "ua",
-        "1.2.3.4",
-        "ko-KR",
-        "x",
-        "twitter",
-        "social",
-        "launch",
-        null,
-        null,
-        false);
+        new VisitRequest(
+            "https://t.co/x",
+            "ua",
+            "1.2.3.4",
+            "ko-KR",
+            "x",
+            new Utm("twitter", "social", "launch", "kurl", "hero"),
+            false,
+            null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
     ProfileVisitEntity e = cap.getValue();
     assertThat(e.getProfileUserId()).isEqualTo(7L);
+    assertThat(
+            java.util.List.of(
+                e.getUtmSource(),
+                e.getUtmMedium(),
+                e.getUtmCampaign(),
+                e.getUtmTerm(),
+                e.getUtmContent()))
+        .containsExactly("twitter", "social", "launch", "kurl", "hero");
+    assertThat(e.getReferrerHost()).isEqualTo("t.co");
+    assertThat(e.getUserAgent()).isEqualTo("ua");
+    assertThat(e.getAsn()).isEqualTo(15169);
     assertThat(e.getCountryCode()).isEqualTo("KR");
     assertThat(e.getUtmSource()).isEqualTo("twitter");
     assertThat(e.isBot()).isFalse();
@@ -87,7 +98,17 @@ class ProfileVisitRecorderTest {
     when(asnResolver.resolve("1.2.3.4"))
         .thenReturn(new AsnResolver.AsnInfo(15169, "Google", true, false));
 
-    recorder.record(7L, null, "bot-ua", "1.2.3.4", null, null, null, null, null, null, null, false);
+    recorder.record(
+        7L,
+        new VisitRequest(
+            null,
+            "bot-ua",
+            "1.2.3.4",
+            null,
+            null,
+            new Utm(null, null, null, null, null),
+            false,
+            null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -103,7 +124,10 @@ class ProfileVisitRecorderTest {
         .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(true);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
+    recorder.record(
+        7L,
+        new VisitRequest(
+            null, "ua", "1.2.3.4", null, null, new Utm(null, null, null, null, null), false, null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -119,7 +143,10 @@ class ProfileVisitRecorderTest {
         .thenReturn(new AsnResolver.AsnInfo(16509, "AWS", true, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
+    recorder.record(
+        7L,
+        new VisitRequest(
+            null, "ua", "1.2.3.4", null, null, new Utm(null, null, null, null, null), false, null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -134,7 +161,10 @@ class ProfileVisitRecorderTest {
     when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(0, null, true, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
+    recorder.record(
+        7L,
+        new VisitRequest(
+            null, "ua", "1.2.3.4", null, null, new Utm(null, null, null, null, null), false, null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -148,17 +178,15 @@ class ProfileVisitRecorderTest {
 
     recorder.record(
         7L,
-        "https://t.co/x",
-        "ua",
-        "1.2.3.4",
-        "ko-KR",
-        "x",
-        "twitter",
-        null,
-        null,
-        null,
-        null,
-        false);
+        new VisitRequest(
+            "https://t.co/x",
+            "ua",
+            "1.2.3.4",
+            "ko-KR",
+            "x",
+            new Utm("twitter", null, null, null, null),
+            false,
+            null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -181,7 +209,17 @@ class ProfileVisitRecorderTest {
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     for (int i = 0; i < 3; i++) {
-      recorder.record(7L, null, "ua", "1.1.1.1", null, null, null, null, null, null, null, false);
+      recorder.record(
+          7L,
+          new VisitRequest(
+              null,
+              "ua",
+              "1.1.1.1",
+              null,
+              null,
+              new Utm(null, null, null, null, null),
+              false,
+              null));
     }
     verify(repository, times(3)).save(any());
   }
@@ -195,7 +233,10 @@ class ProfileVisitRecorderTest {
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
     // Sec-GPC 옵트아웃이면 재방문 식별 해시를 만들지 않는다.
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, true);
+    recorder.record(
+        7L,
+        new VisitRequest(
+            null, "ua", "1.2.3.4", null, null, new Utm(null, null, null, null, null), true, null));
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());

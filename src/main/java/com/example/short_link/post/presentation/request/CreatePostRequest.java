@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreatePostRequest(
     @NotBlank @Size(min = 1, max = 200) String slug,
-    // Title may be blank while drafting; it's required only at publish (PostEntity.publish()).
+    // Title may be blank while drafting; PostEntity.publish() and schedule() require it.
     @Size(max = 200) String title,
     @Size(max = 16) String languageTag,
     @Size(max = 16) String audience,

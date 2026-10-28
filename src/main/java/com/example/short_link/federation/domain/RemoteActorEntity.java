@@ -71,8 +71,6 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(name = "directory_seen_at", insertable = false, updatable = false)
   private Instant directorySeenAt;
 
-  // The moderators' decision about this account's server rides along with every load of the
-  // account, so the inbox, lookups and follows need no query of their own.
   // The strongest block on the account's domain or a parent down to two labels, as ServerBlockSql
   // reads it; each parent is its own unique-key lookup, because a formula cannot alias a derived
   // table.

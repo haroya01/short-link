@@ -94,6 +94,7 @@ tasks.named('test') {
 	useJUnitPlatform()
 	maxHeapSize = '2g'
 	systemProperty 'short-link.main-classpath', sourceSets.main.runtimeClasspath.asPath
+	systemProperty 'api-shape.update', providers.gradleProperty('updateApiShape').isPresent()
 	inputs.files('deploy/docker-compose.yml', 'deploy/.env.example', 'Dockerfile')
 	finalizedBy jacocoTestReport
 	outputs.dir 'build/reports/query-audit/http-contracts'

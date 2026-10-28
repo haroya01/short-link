@@ -1,6 +1,7 @@
 package com.example.short_link.link.og.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// Separate OG fields keep the main link row narrow on redirect lookups.
 @Entity
 @Table(name = "link_og_metadata")
 @Getter
@@ -72,10 +72,10 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
     this.ogFetchAttempts++;
   }
 
-  public void changeOverride(String title, String description, String image) {
-    this.ogTitleOverride = blankToNull(title);
-    this.ogDescriptionOverride = blankToNull(description);
-    this.ogImageOverride = blankToNull(image);
+  public void mirrorOverride(LinkEntity link) {
+    this.ogTitleOverride = link.getOgTitleOverride();
+    this.ogDescriptionOverride = link.getOgDescriptionOverride();
+    this.ogImageOverride = link.getOgImageOverride();
   }
 
   public void resetForNewUrl() {
@@ -100,9 +100,5 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
 
   private static boolean notBlank(String s) {
     return s != null && !s.isBlank();
-  }
-
-  private static String blankToNull(String s) {
-    return s == null || s.isBlank() ? null : s.trim();
   }
 }

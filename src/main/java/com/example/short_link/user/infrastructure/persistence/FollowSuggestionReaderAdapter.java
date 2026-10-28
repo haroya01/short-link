@@ -8,9 +8,9 @@ import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-// One statement: friends' picks ranked by how many of the member's follows follow them, then
-// accounts much followed among those who posted a note or published a post lately. Anyone the
-// member already follows or asked to follow, blocked either way, muted, or set aside never shows.
+// Friends' picks ranked by how many of the member's follows follow them, then accounts much
+// followed among those who posted a note or published a post lately. Anyone the member already
+// follows or asked to follow, blocked either way, muted, or set aside never shows.
 @Repository
 class FollowSuggestionReaderAdapter implements FollowSuggestionReader {
 

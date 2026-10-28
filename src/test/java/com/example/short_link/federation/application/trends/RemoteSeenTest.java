@@ -11,8 +11,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.SeenUri;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.repository.RemoteDwellRepository;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import com.example.short_link.federation.domain.repository.RemoteSeenRepository;

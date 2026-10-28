@@ -9,12 +9,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.common.seen.SeenItem;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
-import com.example.short_link.federation.domain.SeenItem;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.ForYouReader;

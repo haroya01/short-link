@@ -13,6 +13,8 @@ import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.link.classifier.application.VisitClassifier;
+import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.time.Instant;
@@ -42,11 +44,9 @@ class ClickEventAssemblerTest {
     lenient().when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
     assembler =
         new ClickEventAssembler(
-            userAgentClassifier,
-            clientAppClassifier,
-            geoIpResolver,
-            asnResolver,
-            new BotClassifier(botHeuristic));
+            new VisitClassifier(
+                userAgentClassifier, geoIpResolver, asnResolver, new BotClassifier(botHeuristic)),
+            clientAppClassifier);
   }
 
   private ClickContext ctx(String referrer, String clientIp, String acceptLanguage) {
@@ -175,6 +175,14 @@ class ClickEventAssemblerTest {
             new PendingClick(ctx(null, "1.2.3.4", null).withGpc(true), null, OCCURRED_AT));
 
     assertThat(event.getVisitorHash()).isNull();
+  }
+
+  @Test
+  void theVisitorHashIsScopedToTheClickedLink() {
+    ClickEventEntity event =
+        assembler.assemble(new PendingClick(ctx(null, "1.2.3.4", null), null, OCCURRED_AT));
+
+    assertThat(event.getVisitorHash()).isEqualTo(VisitorHasher.hash(1L, "1.2.3.4", "ua"));
   }
 
   @Test

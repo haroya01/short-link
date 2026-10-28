@@ -26,7 +26,6 @@ public class ReplacePostBlocksUseCase {
 
   @Transactional
   public PostBodyView execute(ReplacePostBlocksCommand cmd) {
-    // 본문만 교체해도 last_edited_at이 바뀌도록 부모 글에 편집 시각을 기록한다.
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
     post.markEdited();
@@ -63,7 +62,6 @@ public class ReplacePostBlocksUseCase {
         ReplacePostBlocksCommand.BlockInput input = wanted.get(i);
         added.add(new PostBlockEntity(postId, input.type(), input.content(), i));
       }
-      // IDENTITY는 JDBC 배치가 안 되므로 다중 행 INSERT 후 생성 ID를 다시 읽는다.
       postBlockRepository.insertAll(added);
       Set<Long> existing =
           persisted.stream().map(PostBlockEntity::getId).collect(Collectors.toSet());
@@ -78,7 +76,6 @@ public class ReplacePostBlocksUseCase {
     return persisted;
   }
 
-  // 독자가 본 내용은 모두 버전으로 남긴다. 초안 자동 저장은 기록하지 않는다.
   private void recordPublished(PostEntity post, List<PostBlockEntity> blocks) {
     if (post.isPublished()) {
       revisions.capture(post, blocks);

@@ -7,8 +7,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// A note received from another server, as our replies, boosts and likes address it: its id, its
-// author's actor and the inbox that author's server reads.
 @Component
 @RequiredArgsConstructor
 public class RemoteParents {

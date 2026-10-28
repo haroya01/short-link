@@ -30,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 // The instance actor follows a relay with the Public collection as the object, as Mastodon does.
-// Which relays have accepted, and the one setting, are held in memory so an announce costs no query
-// to recognise.
 @Slf4j
 @Service
 public class RelaySubscriptions {

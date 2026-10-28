@@ -13,7 +13,7 @@ public record CreatePostCommand(
     if (slug == null || slug.isBlank()) throw new IllegalArgumentException("slug required");
     PostMetadataValidation.requireSlug(
         slug, "slug must be lowercase alphanumeric with single hyphens (e.g., my-first-post)");
-    // Title may be blank while drafting; it's required only at publish (PostEntity.publish()).
+    // Title may be blank while drafting; PostEntity.publish() and schedule() require it.
     if (title == null) title = "";
     if (title.length() > 200) throw new IllegalArgumentException("title max 200");
     if (languageTag == null || languageTag.isBlank()) {

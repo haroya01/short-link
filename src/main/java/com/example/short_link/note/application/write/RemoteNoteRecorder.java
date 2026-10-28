@@ -36,7 +36,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// A reply to a member's note tells that member; everyone else it names hears of it as a mention.
 // Images stay on their server: the row keeps the remote address and no storage key.
 @Component
 @RequiredArgsConstructor
@@ -181,8 +180,6 @@ class RemoteNoteRecorder implements RemoteNotes {
     return stored;
   }
 
-  // A thread whose writer limited replies keeps an answer from elsewhere only from an account the
-  // first note names or, under following, one the writer follows; any other is kept unattached.
   private boolean mayAnswer(Long remoteActorId, NoteEntity parent) {
     if (!parent.getReplyPolicy().limited()) {
       return true;
@@ -201,9 +198,8 @@ class RemoteNoteRecorder implements RemoteNotes {
         () -> people.followsRemote(root.getUserId(), remoteActorId));
   }
 
-  // As on Mastodon, an Update older than the edit already kept changes nothing, and only a change
-  // to the text, warning, sensitive mark or media is an edit that people who shared the note hear
-  // of. The row is locked so two Updates of one note apply in order.
+  // An Update older than the edit already kept changes nothing. The row is locked so two Updates
+  // of one note apply in order.
   @Override
   @Transactional
   public boolean revise(Long remoteActorId, Long noteId, Revision revision) {
@@ -267,7 +263,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     return store.countListed(remoteActorId, atMost);
   }
 
-  // New counts or a later end are not an edit: Mastodon sends them in an Update as votes come in.
+  // Mastodon sends new counts and a later end in an Update as votes come in; they are not an edit.
   private void tally(NoteEntity note, Poll poll) {
     if (poll == null) {
       if (note.hasPoll()) {

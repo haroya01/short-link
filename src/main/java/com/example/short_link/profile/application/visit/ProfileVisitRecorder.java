@@ -1,22 +1,14 @@
 package com.example.short_link.profile.application.visit;
 
-import com.example.short_link.common.geoip.GeoLocation;
-import com.example.short_link.link.application.dto.UserAgentInfo;
-import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotClassifier;
-import com.example.short_link.link.classifier.application.GeoIpResolver;
-import com.example.short_link.link.classifier.application.UserAgentClassifier;
-import com.example.short_link.link.classifier.application.helper.IpMasker;
-import com.example.short_link.link.classifier.application.helper.LanguageExtractor;
-import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
-import com.example.short_link.link.classifier.application.helper.SourceChannelNormalizer;
-import com.example.short_link.link.classifier.application.helper.VisitorHasher;
+import com.example.short_link.common.analytics.VisitRequest;
+import com.example.short_link.link.classifier.application.ClassifiedVisit;
+import com.example.short_link.link.classifier.application.VisitClassifier;
 import com.example.short_link.profile.domain.repository.ProfileVisitRepository;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.application.read.UserSummary;
+import com.example.short_link.user.application.read.UserSummaryReader;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,91 +21,48 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProfileVisitRecorder {
 
   private final ProfileVisitRepository repository;
-  private final UserRepository userRepository;
-  private final UserAgentClassifier userAgentClassifier;
-  private final GeoIpResolver geoIpResolver;
-  private final AsnResolver asnResolver;
-  private final BotClassifier botClassifier;
+  private final UserSummaryReader users;
+  private final VisitClassifier visitClassifier;
 
   @Transactional
-  public void recordUsername(
-      String username,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel,
-      String utmSource,
-      String utmMedium,
-      String utmCampaign,
-      String utmTerm,
-      String utmContent,
-      boolean gpc) {
-    UserEntity owner =
-        userRepository
+  public void recordUsername(String username, VisitRequest request) {
+    UserSummary owner =
+        users
             .findByUsername(username.toLowerCase(Locale.ROOT))
             .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, username));
-    record(
-        owner.getId(),
-        referrer,
-        userAgent,
-        clientIp,
-        acceptLanguage,
-        sourceChannel,
-        utmSource,
-        utmMedium,
-        utmCampaign,
-        utmTerm,
-        utmContent,
-        gpc);
+    record(owner.id(), request);
   }
 
   @Transactional
-  public void record(
-      Long profileUserId,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel,
-      String utmSource,
-      String utmMedium,
-      String utmCampaign,
-      String utmTerm,
-      String utmContent,
-      boolean gpc) {
+  public void record(Long profileUserId, VisitRequest request) {
     ProfileVisitEntity event;
     try {
-      UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-      GeoLocation geo = geoIpResolver.resolve(clientIp);
-      AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
-      BotClassifier.Verdict bot = botClassifier.classify(ua, asnInfo, clientIp);
+      ClassifiedVisit visit = visitClassifier.classify(request, profileUserId);
       event =
           ProfileVisitEntity.builder()
               .profileUserId(profileUserId)
-              .referrer(ReferrerNormalizer.normalize(referrer))
-              .referrerHost(ReferrerNormalizer.hostOf(referrer))
-              .userAgent(userAgent)
-              .clientIp(IpMasker.mask(clientIp))
-              .utmSource(utmSource)
-              .utmMedium(utmMedium)
-              .utmCampaign(utmCampaign)
-              .utmTerm(utmTerm)
-              .utmContent(utmContent)
-              .deviceClass(ua.deviceClass())
-              .osName(ua.osName())
-              .browserName(ua.browserName())
-              .bot(bot.isBot())
-              .botName(bot.botName())
-              .countryCode(geo.countryCode())
-              .regionName(geo.region())
-              .cityName(geo.city())
-              .language(LanguageExtractor.extract(acceptLanguage))
-              // GPC 수신 시 익명 방문만 집계하고 재방문 식별 해시는 만들지 않는다.
-              .visitorHash(gpc ? null : VisitorHasher.hash(profileUserId, clientIp, userAgent))
-              .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
-              .asn(asnInfo.asn())
-              .asnOrg(asnInfo.organization())
+              .referrer(visit.referrer().url())
+              .referrerHost(visit.referrer().host())
+              .userAgent(request.userAgent())
+              .clientIp(visit.maskedIp())
+              .utmSource(request.utm().source())
+              .utmMedium(request.utm().medium())
+              .utmCampaign(request.utm().campaign())
+              .utmTerm(request.utm().term())
+              .utmContent(request.utm().content())
+              .deviceClass(visit.device().deviceClass())
+              .osName(visit.device().osName())
+              .browserName(visit.device().browserName())
+              .bot(visit.bot().isBot())
+              .botName(visit.bot().botName())
+              .countryCode(visit.geo().countryCode())
+              .regionName(visit.geo().region())
+              .cityName(visit.geo().city())
+              .language(visit.language())
+              .visitorHash(visit.visitorHash())
+              .sourceChannel(visit.sourceChannel())
+              .asn(visit.asn().asn())
+              .asnOrg(visit.asn().organization())
               .build();
     } catch (RuntimeException e) {
       log.warn("profile visit enrichment failed for userId={}", profileUserId, e);

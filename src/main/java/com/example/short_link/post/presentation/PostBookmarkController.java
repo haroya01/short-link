@@ -32,7 +32,7 @@ public class PostBookmarkController {
   @PutMapping("/posts/{postId}/bookmark")
   public PostBookmarkStatus bookmark(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
-    return bookmarkPost.bookmark(PostReaderHeaders.from(userId, req), postId);
+    return bookmarkPost.bookmark(PostViewerHeaders.from(userId, req), postId);
   }
 
   @DeleteMapping("/posts/{postId}/bookmark")

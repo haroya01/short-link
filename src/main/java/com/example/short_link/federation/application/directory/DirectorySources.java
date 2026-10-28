@@ -49,7 +49,7 @@ public class DirectorySources {
 
   @Transactional(readOnly = true)
   public List<View> list() {
-    return sources.list().stream().map(View::of).toList();
+    return sources.findAllByOrderByHostAsc().stream().map(View::of).toList();
   }
 
   @Transactional
@@ -64,7 +64,7 @@ public class DirectorySources {
     int reads = cap == null ? props.defaultCap() : cap;
     FederationDirectorySourceEntity row =
         sources
-            .find(host)
+            .findById(host)
             .map(
                 existing -> {
                   existing.change(enabled, reads);
@@ -79,7 +79,7 @@ public class DirectorySources {
     String host = DomainBlocks.normalize(raw, urls.domain());
     sources.delete(
         sources
-            .find(host)
+            .findById(host)
             .orElseThrow(
                 () ->
                     new FederationException(FederationErrorCode.DIRECTORY_SOURCE_NOT_FOUND, host)));

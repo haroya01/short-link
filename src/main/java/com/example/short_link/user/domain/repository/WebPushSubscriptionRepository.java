@@ -13,7 +13,7 @@ public interface WebPushSubscriptionRepository {
 
   void deleteByEndpoint(String endpoint);
 
-  // 사용자 요청 구독해제 — 자기 소유(userId) 의 endpoint 만 지운다. 남의 구독을 endpoint 만으로 못 지우게.
+  // endpoint 만으로는 남의 구독을 지우지 못한다.
   void deleteByUserIdAndEndpoint(Long userId, String endpoint);
 
   // Must be called on account hard delete; subscriptions have no users FK.

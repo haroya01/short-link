@@ -1,7 +1,7 @@
 package com.example.short_link.home.presentation;
 
-import com.example.short_link.federation.domain.SeenViewer;
-import com.example.short_link.federation.presentation.RemoteTrendsController;
+import com.example.short_link.common.seen.SeenParameters;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.home.application.read.HomeAsk;
 import com.example.short_link.home.application.read.HomeFeedQueryService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class HomeFeedController {
   @GetMapping("/api/v1/public/home")
   public HomeFeedQueryService.Page home(
       @AuthenticationPrincipal Long viewerId,
-      @RequestHeader(name = RemoteTrendsController.DEVICE_HEADER, required = false) String device,
+      @RequestHeader(name = SeenParameters.DEVICE_HEADER, required = false) String device,
       @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false) String languages,
       @RequestParam(defaultValue = "latest") String tab,
       @RequestParam(defaultValue = "20") int limit,
@@ -37,6 +37,6 @@ public class HomeFeedController {
             cursor,
             since,
             limit,
-            RemoteTrendsController.HIDE_SEEN.equals(seen)));
+            SeenParameters.HIDE_SEEN.equals(seen)));
   }
 }

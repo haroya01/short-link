@@ -48,7 +48,7 @@ public class CollectionContentReader {
     return loadPublishedContent(connections).connectionViews(connections);
   }
 
-  // 순서 있는 컬렉션은 처음 두 단계를, 나머지는 최근 두 연결을 고른다.
+  // 두 연결을 먼저 고르고 CollectionTargets.shows 는 그 뒤에 거른다. 숨겨진 연결을 더 오래된 연결로 채우지 않는다.
   private Map<Long, List<CollectionConnectionEntity>> previewConnections(
       List<CollectionEntity> collections) {
     Set<Long> ordered =
@@ -68,7 +68,6 @@ public class CollectionContentReader {
         picked.add(connection);
       }
     }
-    // 먼저 두 연결을 고른 뒤 공개 범위를 적용한다. 제외된 항목을 더 오래된 연결로 채우지 않는다.
     return selected;
   }
 

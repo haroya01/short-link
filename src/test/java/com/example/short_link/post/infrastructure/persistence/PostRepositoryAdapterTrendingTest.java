@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,7 +23,8 @@ class PostRepositoryAdapterTrendingTest {
 
   private final JpaPostRepository jpa = mock(JpaPostRepository.class);
   private final TrendingPostRanking ranking = mock(TrendingPostRanking.class);
-  private final PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, ranking);
+  private final PostRepositoryAdapter adapter =
+      new PostRepositoryAdapter(jpa, ranking, Clock.systemUTC());
 
   private static List<Long> ranked(int size) {
     return LongStream.rangeClosed(1, size).boxed().toList();

@@ -6,8 +6,7 @@ import java.util.Locale;
 // and a two-letter Latin term (AI, Go) would match inside every longer word; a query with no other
 // term falls back to LIKE. Boolean operators and a hashtag's # are removed so a query never changes
 // the search's syntax, and every indexed term is required: a bare +term misses a term of one
-// bigram,
-// +(term) does not.
+// bigram, +(term) does not.
 public record NoteSearchTerms(String match, String like) {
 
   public static final int MAX_LENGTH = 100;

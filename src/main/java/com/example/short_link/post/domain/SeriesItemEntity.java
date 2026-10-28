@@ -13,7 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// One post or note in a series, at its place in the series' single order.
 @Entity
 @Table(name = "series_item")
 @Getter

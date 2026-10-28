@@ -1,6 +1,6 @@
 package com.example.short_link.post.application.write;
 
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -24,7 +24,7 @@ public class CreateHighlightReplyUseCase {
   private final CommentMentions mentions;
 
   @Transactional
-  public HighlightReplyView execute(CreateHighlightReplyCommand cmd, PostReader reader) {
+  public HighlightReplyView execute(CreateHighlightReplyCommand cmd, PostViewer reader) {
     PostHighlightEntity highlight = access.requireReplyableHighlight(reader, cmd.highlightId());
 
     PostHighlightReplyEntity saved =

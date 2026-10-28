@@ -17,9 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-// Mastodon's scheduled statuses: the draft is kept as written and posted when due, at least five
-// minutes ahead, at most 300 waiting and 25 on one UTC day. A note that can no longer be posted
-// stays with the reason instead of vanishing.
+// A draft that can no longer be posted stays, with its reason, instead of vanishing.
 @Service
 @RequiredArgsConstructor
 public class NoteScheduleService {

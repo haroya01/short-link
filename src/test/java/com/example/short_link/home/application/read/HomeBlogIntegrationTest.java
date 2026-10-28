@@ -3,7 +3,7 @@ package com.example.short_link.home.application.read;
 import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;

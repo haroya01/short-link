@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
@@ -48,9 +49,9 @@ class BannerServiceTest {
     service =
         new BannerService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(
+                UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)),
             objectStorage,
-            new ObjectStoragePublicUrls(storageProperties),
             mock(ProfileCacheInvalidator.class));
   }
 
@@ -61,9 +62,8 @@ class BannerServiceTest {
     BannerService svc =
         new BannerService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBucket)),
             objectStorage,
-            new ObjectStoragePublicUrls(noBucket),
             mock(ProfileCacheInvalidator.class));
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(UserException.class)
@@ -109,7 +109,7 @@ class BannerServiceTest {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
         .isInstanceOf(UserException.class)
-        .hasMessageContaining("exceeds maxBytes");
+        .hasMessageContaining("banner exceeds maxBytes");
     verify(objectStorage).delete("banners/1/x.png");
   }
 
@@ -188,9 +188,8 @@ class BannerServiceTest {
     BannerService svc =
         new BannerService(
             userRepository,
-            UPLOAD_POLICY,
+            new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noCdn)),
             objectStorage,
-            new ObjectStoragePublicUrls(noCdn),
             mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");

@@ -63,7 +63,7 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "published_at")
   private Instant publishedAt;
 
-  // 내용 편집 시 markEdited()로만 갱신한다. 조회·좋아요 쓰기에 바뀌지 않도록 Hibernate 자동 수정 시각을 사용하지 않는다. 최초 편집 전에는 null이다.
+  // 내용 편집 시 markEdited()로만 갱신한다. 최초 편집 전에는 null이다.
   @Column(name = "last_edited_at")
   private Instant lastEditedAt;
 
@@ -204,7 +204,6 @@ public class PostEntity extends BaseTimeEntity {
     this.title = title;
   }
 
-  // Slug is frozen once the post has ever been public (published or unpublished).
   // 한 번이라도 공개된 글의 주소는 공유된 링크라 바꾸지 않는다.
   public void numberSlug(long number) {
     if (publishedAt != null) {

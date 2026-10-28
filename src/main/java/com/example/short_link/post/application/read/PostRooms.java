@@ -11,8 +11,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// The room each room post is in, named, for the posts in hand; nothing is asked when none is a room
-// post.
+// Asks nothing when no post in hand is a room post.
 @Component
 @RequiredArgsConstructor
 public class PostRooms {

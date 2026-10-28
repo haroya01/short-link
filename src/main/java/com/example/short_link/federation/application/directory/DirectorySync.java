@@ -30,11 +30,9 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// Reads each instance's public profile directory, most active first, one request at a time with a
-// pause between. An account is stored only as its own server gives its actor, at most new-per-run
-// of them an instance a run; the rest come in later runs. What was listed is marked seen and
-// findable; then anyone listed before with no word of consent for the consent window, from a
-// directory or from their own server, stops being findable by name.
+// One request at a time with a pause between. An account is stored only as its own server gives
+// its actor. Anyone listed before with no word of consent for the consent window, from a directory
+// or from their own server, stops being findable by name.
 @Slf4j
 @Service
 public class DirectorySync {
@@ -94,7 +92,7 @@ public class DirectorySync {
   public List<Outcome> run() {
     Instant started = clock.instant();
     List<Outcome> outcomes = new ArrayList<>();
-    for (FederationDirectorySourceEntity source : sources.list()) {
+    for (FederationDirectorySourceEntity source : sources.findAllByOrderByHostAsc()) {
       if (source.isEnabled()
           && (source.getRetryAfter() == null || !started.isBefore(source.getRetryAfter()))) {
         try {
@@ -111,11 +109,9 @@ public class DirectorySync {
     return outcomes;
   }
 
-  // Whether an enabled source not waiting out a failure has gone unread since the given time:
-  // never read, or its last run was cut short.
   public boolean unreadSince(Instant since) {
     Instant now = clock.instant();
-    return sources.list().stream()
+    return sources.findAllByOrderByHostAsc().stream()
         .anyMatch(
             source ->
                 source.isEnabled()
@@ -125,7 +121,7 @@ public class DirectorySync {
   }
 
   public Outcome sync(String host) {
-    Optional<FederationDirectorySourceEntity> found = sources.find(host);
+    Optional<FederationDirectorySourceEntity> found = sources.findById(host);
     if (found.isEmpty()) {
       return new Outcome(host, 0, 0, 0, 0, 0, "gone");
     }

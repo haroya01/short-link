@@ -12,8 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Mastodon's follow suggestions: who the people a member follows follow, then accounts much
-// followed and active in the last thirty days. Setting one aside keeps it out for good.
+// Mirrors Mastodon's follow suggestions. Setting one aside keeps it out for good.
 @Service
 @RequiredArgsConstructor
 public class FollowSuggestionService {

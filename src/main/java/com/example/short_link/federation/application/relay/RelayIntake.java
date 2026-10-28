@@ -13,8 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Component;
 
 // The inbox only judges an announce by its object's address and hands it to one worker: the reply
-// goes out at once, whatever the worker is doing. A full queue lets the oldest address go, and no
-// more are taken once a day's worth has been.
+// goes out at once, whatever the worker is doing.
 @Component
 public class RelayIntake {
 

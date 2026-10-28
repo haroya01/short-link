@@ -1,7 +1,7 @@
 package com.example.short_link.profile.presentation.visit;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.profile.application.visit.ProfileVisitRecorder;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
@@ -38,19 +40,7 @@ class PublicProfileVisitControllerTest {
   void unknownUserReturns404() throws Exception {
     doThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "nobody"))
         .when(recorder)
-        .recordUsername(
-            eq("nobody"),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            anyBoolean());
+        .recordUsername(eq("nobody"), any());
 
     mvc.perform(post("/api/v1/public/profiles/nobody/visit")).andExpect(status().isNotFound());
   }
@@ -60,21 +50,7 @@ class PublicProfileVisitControllerTest {
     UserEntity user = userRepository.save(new UserEntity("v@x.com", "google", "g-pv"));
     user.claimUsername("visituser");
     userRepository.save(user);
-    doNothing()
-        .when(recorder)
-        .recordUsername(
-            eq("visituser"),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            anyBoolean());
+    doNothing().when(recorder).recordUsername(eq("visituser"), any());
 
     mvc.perform(
             post("/api/v1/public/profiles/visituser/visit")
@@ -96,17 +72,16 @@ class PublicProfileVisitControllerTest {
     verify(recorder)
         .recordUsername(
             eq("visituser"),
-            eq("https://t.co/x"),
-            eq("Mozilla/5.0"),
-            eq("203.0.113.1"),
-            eq("ko-KR"),
-            eq("x"),
-            eq("twitter"),
-            eq("social"),
-            eq(null),
-            eq(null),
-            eq(null),
-            eq(false));
+            eq(
+                new VisitRequest(
+                    "https://t.co/x",
+                    "Mozilla/5.0",
+                    "203.0.113.1",
+                    "ko-KR",
+                    "x",
+                    new Utm("twitter", "social", null, null, null),
+                    false,
+                    null)));
   }
 
   @Test
@@ -114,39 +89,12 @@ class PublicProfileVisitControllerTest {
     UserEntity user = userRepository.save(new UserEntity("g@x.com", "google", "g-gpc"));
     user.claimUsername("gpcuser");
     userRepository.save(user);
-    doNothing()
-        .when(recorder)
-        .recordUsername(
-            eq("gpcuser"),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            anyBoolean());
+    doNothing().when(recorder).recordUsername(eq("gpcuser"), any());
 
     mvc.perform(post("/api/v1/public/profiles/gpcuser/visit").header("Sec-GPC", "1"))
         .andExpect(status().isNoContent());
 
-    verify(recorder)
-        .recordUsername(
-            eq("gpcuser"),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            eq(true));
+    verify(recorder).recordUsername(eq("gpcuser"), argThat(request -> request.gpc() == true));
   }
 
   @Test

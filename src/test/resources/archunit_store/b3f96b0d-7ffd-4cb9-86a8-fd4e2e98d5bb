@@ -1,2 +1,0 @@
-com.example.short_link.admin.application.read.AdminLinkMetricsQueryService reaches com.example.short_link.common.observability.RequestMetricJpaRepository
-com.example.short_link.admin.application.read.AdminRouteMetricsService reaches com.example.short_link.common.observability.RequestMetricJpaRepository

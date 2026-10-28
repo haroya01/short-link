@@ -8,7 +8,10 @@ import com.example.short_link.room.domain.RoomInvitee;
 import com.example.short_link.room.domain.RoomJoinRequest;
 import com.example.short_link.room.domain.RoomPerson;
 import com.example.short_link.room.domain.RoomSummary;
+import com.example.short_link.room.domain.repository.RoomInvitationRepository;
+import com.example.short_link.room.domain.repository.RoomInviteRepository;
 import com.example.short_link.room.domain.repository.RoomRepository;
+import com.example.short_link.room.domain.repository.RoomSuggestionRepository;
 import com.example.short_link.room.exception.RoomErrorCode;
 import com.example.short_link.room.exception.RoomException;
 import java.time.Clock;
@@ -29,6 +32,9 @@ public class RoomQueryService {
   static final int SHOWN_INVITATIONS = 20;
 
   private final RoomRepository rooms;
+  private final RoomInviteRepository invites;
+  private final RoomInvitationRepository invitations;
+  private final RoomSuggestionRepository suggestions;
   private final RoomInviteUrls urls;
   private final Clock clock;
 
@@ -58,16 +64,15 @@ public class RoomQueryService {
             .toList());
   }
 
-  // The owner sees every invite of the room, a member only their own.
   @Transactional(readOnly = true)
   public List<RoomInviteView> invites(Long userId, Long roomId) {
     RoomEntity room = joined(userId, roomId);
-    List<RoomInviteEntity> invites =
-        rooms.invites(roomId).stream()
+    List<RoomInviteEntity> shown =
+        invites.invites(roomId).stream()
             .filter(invite -> room.isOwnedBy(userId) || invite.getCreatorId().equals(userId))
             .toList();
     List<RoomPerson> members = rooms.members(roomId, RoomEntity.MAX_MEMBERS);
-    return invites.stream()
+    return shown.stream()
         .map(
             invite ->
                 RoomInviteView.of(
@@ -86,14 +91,14 @@ public class RoomQueryService {
     if (!room.isOwnedBy(userId)) {
       throw new RoomException(RoomErrorCode.ROOM_OWNER_ONLY);
     }
-    return rooms.requests(roomId);
+    return invites.requests(roomId);
   }
 
-  // What anyone holding the code may see before joining: the room's name and faces, never a note.
+  // What anyone holding the code may see before joining: never a note.
   @Transactional(readOnly = true)
   public RoomInviteLanding landing(String code) {
     RoomInviteEntity invite =
-        rooms
+        invites
             .inviteByCode(code)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITE_NOT_FOUND));
     RoomEntity room =
@@ -111,7 +116,7 @@ public class RoomQueryService {
                         : Optional.empty());
     return new RoomInviteLanding(
         room.getName(),
-        rooms.person(invite.getCreatorId()).orElse(null),
+        invites.person(invite.getCreatorId()).orElse(null),
         memberCount,
         rooms.members(room.getId(), LANDING_FACES),
         invite.isApproval() || room.isApprovalRequired(),
@@ -121,18 +126,18 @@ public class RoomQueryService {
 
   @Transactional(readOnly = true)
   public RoomSuggestions suggestions(Long userId) {
-    return new RoomSuggestions(rooms.friendsWithoutARoom(userId, SUGGESTED_FRIENDS));
+    return new RoomSuggestions(suggestions.friendsWithoutARoom(userId, SUGGESTED_FRIENDS));
   }
 
   @Transactional(readOnly = true)
   public List<RoomInvitee> invitees(Long userId, Long roomId) {
     joined(userId, roomId);
-    return rooms.invitees(roomId);
+    return invitations.invitees(roomId);
   }
 
   @Transactional(readOnly = true)
   public List<RoomInvitation> invitations(Long userId) {
-    return rooms.invitationsFor(userId, SHOWN_INVITATIONS);
+    return invitations.invitationsFor(userId, SHOWN_INVITATIONS);
   }
 
   private RoomEntity joined(Long userId, Long roomId) {

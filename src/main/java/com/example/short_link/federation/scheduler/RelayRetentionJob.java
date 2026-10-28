@@ -17,9 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-// The shared scheduler has a single thread, so a run with pauses goes to one low-priority thread of
-// its own. It runs whatever the relay setting, so notes kept before a relay was turned off still
-// go.
+// Runs whatever the relay setting, so notes kept before a relay was turned off still go.
 @Slf4j
 @Component
 public class RelayRetentionJob {

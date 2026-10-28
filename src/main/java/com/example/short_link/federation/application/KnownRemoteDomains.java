@@ -13,11 +13,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// Servers people may mean when they type a handle: the ones this server knows the most accounts
-// on, and a few large ones it may not know yet, never one it blocked or this one. A server with
-// more
-// known accounts comes first; among equals the named ones keep their order, then by name. The list
-// is read once per cache lifetime and matched in memory.
 @Component
 public class KnownRemoteDomains {
 

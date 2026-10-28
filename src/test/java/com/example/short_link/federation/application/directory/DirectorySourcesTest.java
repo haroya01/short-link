@@ -55,7 +55,7 @@ class DirectorySourcesTest {
 
   @Test
   void anInstanceIsAddedByItsDomainWithTheDefaultCapAndChangedInPlace() {
-    when(sources.find("qdon.space")).thenReturn(Optional.empty());
+    when(sources.findById("qdon.space")).thenReturn(Optional.empty());
 
     DirectorySources.View added = directories(true).put(" @QDON.space ", true, null);
 
@@ -66,7 +66,7 @@ class DirectorySourcesTest {
     FederationDirectorySourceEntity existing =
         new FederationDirectorySourceEntity("qdon.space", true, 1_000);
     existing.failed("HTTP 503", Instant.parse("2026-10-17T06:00:00Z"));
-    when(sources.find("qdon.space")).thenReturn(Optional.of(existing));
+    when(sources.findById("qdon.space")).thenReturn(Optional.of(existing));
     DirectorySources.View changed = directories(true).put("qdon.space", false, 400);
     assertThat(changed.enabled()).isFalse();
     assertThat(changed.cap()).isEqualTo(400);
@@ -91,7 +91,7 @@ class DirectorySourcesTest {
 
   @Test
   void removingAnInstanceNoOneAddedIsNotFound() {
-    when(sources.find("qdon.space")).thenReturn(Optional.empty());
+    when(sources.findById("qdon.space")).thenReturn(Optional.empty());
 
     assertThat(codeOf(() -> directories(true).delete("qdon.space")))
         .isEqualTo(FederationErrorCode.DIRECTORY_SOURCE_NOT_FOUND);

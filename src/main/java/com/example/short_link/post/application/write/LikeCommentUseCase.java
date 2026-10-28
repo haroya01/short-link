@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.CommentLikedEvent;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -13,7 +13,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// INSERT IGNORE로 중복 좋아요를 무시한다.
 @Service
 @RequiredArgsConstructor
 public class LikeCommentUseCase {
@@ -25,7 +24,7 @@ public class LikeCommentUseCase {
   private final CommentNotifications notifications;
 
   @Transactional
-  public CommentLikeStatus like(PostReader reader, Long commentId) {
+  public CommentLikeStatus like(PostViewer reader, Long commentId) {
     Long userId = reader.viewerId();
     PostInteractionAccess.LikeableComment target = access.requireLikeableComment(reader, commentId);
     if (commentLikeRepository.insertIgnore(commentId, userId) > 0

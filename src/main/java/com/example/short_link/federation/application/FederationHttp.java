@@ -5,8 +5,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.function.Predicate;
 
-// Outbound ActivityPub HTTP. Implementations sign every request and only connect to public
-// addresses.
+// Implementations sign every request and only connect to public addresses.
 public interface FederationHttp {
 
   Result get(URI uri, Signer signer);

@@ -19,8 +19,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// A locked member's waiting followers: approve one (the request becomes a follow), turn one down,
-// or — on unlocking the account — let everyone in, as Mastodon does.
+// Unlocking the account lets every waiting follower in, as Mastodon does.
 @Service
 @RequiredArgsConstructor
 public class FollowRequestUseCase {

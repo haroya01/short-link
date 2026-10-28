@@ -10,8 +10,7 @@ import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetric;
-import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricJpaRepository;
+import com.example.short_link.common.observability.RequestMetricReader;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -25,8 +24,8 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void groupsShortCodesAndJoinsDbMetadata() {
-    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
-    when(requestRepo.findWindow(any(), any()))
+    RequestMetricReader requestRepo = mock(RequestMetricReader.class);
+    when(requestRepo.between(any(), any()))
         .thenReturn(
             List.of(
                 row("abc1234", 302, "redirect", 10),
@@ -64,8 +63,8 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void rowsWithoutShortCodeAreIgnored() {
-    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
-    when(requestRepo.findWindow(any(), any()))
+    RequestMetricReader requestRepo = mock(RequestMetricReader.class);
+    when(requestRepo.between(any(), any()))
         .thenReturn(
             List.of(
                 row(null, 200, "ok", 12), row("", 200, "ok", 14), row("real", 302, "redirect", 8)));
@@ -84,8 +83,8 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void emptySliceReturnsEmpty() {
-    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
-    when(requestRepo.findWindow(any(), any())).thenReturn(List.of());
+    RequestMetricReader requestRepo = mock(RequestMetricReader.class);
+    when(requestRepo.between(any(), any())).thenReturn(List.of());
     AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
     AdminLinkMetricsQueryService service =
         new AdminLinkMetricsQueryService(requestRepo, metricsRepo, fixedClock);
@@ -96,10 +95,9 @@ class AdminLinkMetricsQueryServiceTest {
         .isEmpty();
   }
 
-  private static RequestMetricEntity row(String shortCode, int status, String outcome, long ms) {
-    return new RequestMetricEntity(
-        new RequestMetric(
-            NOW, "/r/{shortCode}", "GET", status, outcome, ms, shortCode, null, null));
+  private static RequestMetric row(String shortCode, int status, String outcome, long ms) {
+    return new RequestMetric(
+        NOW, "/r/{shortCode}", "GET", status, outcome, ms, shortCode, null, null);
   }
 
   private static LinkMetricRow linkMetricRow(

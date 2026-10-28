@@ -30,7 +30,7 @@ public class WebPushSubscriptionCommandService {
             existing -> existing.reassign(userId),
             () ->
                 subscriptions.save(new WebPushSubscriptionEntity(userId, endpoint, p256dh, auth)));
-    // 이 브라우저의 언어를 사용자 로케일로 — 서버조합 푸시를 그 언어로 낸다(Accept-Language).
+    // 웹은 푸시 구독 때 Accept-Language 를 보내야 한다. 서버가 조합하는 푸시가 이 언어로 나간다.
     userRepository
         .findById(userId)
         .ifPresent(u -> u.updateLocale(LocaleContextHolder.getLocale().getLanguage()));

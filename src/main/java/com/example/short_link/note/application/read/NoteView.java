@@ -91,75 +91,104 @@ public record NoteView(
       String contentWarning,
       boolean sensitive) {}
 
-  NoteView withRepostedBy(NoteAuthor reposter) {
+  record Origin(Long id, NoteAuthor author, Instant createdAt, Instant editedAt, Remote remote) {}
+
+  record Text(
+      String body,
+      List<String> mentions,
+      String contentWarning,
+      boolean sensitive,
+      String language) {}
+
+  record Reach(String visibility, String replyPolicy, Room room) {}
+
+  record Standing(Long inReplyToId, boolean pinned, boolean hidden) {}
+
+  record Attached(
+      List<Media> media,
+      QuotedPost quotedPost,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview,
+      Poll poll) {}
+
+  record Counts(Long likes, long replies, Long reposts, long quotes) {}
+
+  record Mine(
+      Boolean liked,
+      Boolean reposted,
+      Boolean bookmarked,
+      Boolean conversationMuted,
+      Boolean canReply) {
+
+    static final Mine ANONYMOUS = new Mine(null, null, null, null, null);
+  }
+
+  record InFeed(NoteAuthor repostedBy, SelfThread thread) {
+
+    static final InFeed ALONE = new InFeed(null, null);
+  }
+
+  static NoteView compose(
+      Origin origin,
+      Text text,
+      Reach reach,
+      Standing standing,
+      Attached attached,
+      Counts counts,
+      Mine mine,
+      InFeed inFeed) {
     return new NoteView(
-        id,
-        body,
-        createdAt,
-        editedAt,
-        likeCount,
-        likedByMe,
-        author,
-        media,
-        quotedPost,
-        inReplyToId,
-        replyCount,
-        repostCount,
-        repostedByMe,
-        quotedNote,
-        linkPreview,
-        reposter,
-        quoteCount,
-        bookmarkedByMe,
-        mentions,
-        contentWarning,
-        sensitive,
-        pinned,
-        visibility,
-        poll,
-        conversationMuted,
-        language,
-        thread,
-        replyPolicy,
-        canReply,
-        hidden,
-        remote,
-        room);
+        origin.id(),
+        text.body(),
+        origin.createdAt(),
+        origin.editedAt(),
+        counts.likes(),
+        mine.liked(),
+        origin.author(),
+        attached.media(),
+        attached.quotedPost(),
+        standing.inReplyToId(),
+        counts.replies(),
+        counts.reposts(),
+        mine.reposted(),
+        attached.quotedNote(),
+        attached.linkPreview(),
+        inFeed.repostedBy(),
+        counts.quotes(),
+        mine.bookmarked(),
+        text.mentions(),
+        text.contentWarning(),
+        text.sensitive(),
+        standing.pinned(),
+        reach.visibility(),
+        attached.poll(),
+        mine.conversationMuted(),
+        text.language(),
+        inFeed.thread(),
+        reach.replyPolicy(),
+        mine.canReply(),
+        standing.hidden(),
+        origin.remote(),
+        reach.room());
+  }
+
+  NoteView withRepostedBy(NoteAuthor reposter) {
+    return shownAs(new InFeed(reposter, thread));
   }
 
   NoteView withThread(SelfThread selfThread) {
-    return new NoteView(
-        id,
-        body,
-        createdAt,
-        editedAt,
-        likeCount,
-        likedByMe,
-        author,
-        media,
-        quotedPost,
-        inReplyToId,
-        replyCount,
-        repostCount,
-        repostedByMe,
-        quotedNote,
-        linkPreview,
-        repostedBy,
-        quoteCount,
-        bookmarkedByMe,
-        mentions,
-        contentWarning,
-        sensitive,
-        pinned,
-        visibility,
-        poll,
-        conversationMuted,
-        language,
-        selfThread,
-        replyPolicy,
-        canReply,
-        hidden,
-        remote,
-        room);
+    return shownAs(new InFeed(repostedBy, selfThread));
+  }
+
+  private NoteView shownAs(InFeed inFeed) {
+    return compose(
+        new Origin(id, author, createdAt, editedAt, remote),
+        new Text(body, mentions, contentWarning, sensitive, language),
+        new Reach(visibility, replyPolicy, room),
+        new Standing(inReplyToId, pinned, hidden),
+        new Attached(media, quotedPost, quotedNote, linkPreview, poll),
+        new Counts(likeCount, replyCount, repostCount, quoteCount),
+        new Mine(likedByMe, repostedByMe, bookmarkedByMe, conversationMuted, canReply),
+        inFeed);
   }
 }

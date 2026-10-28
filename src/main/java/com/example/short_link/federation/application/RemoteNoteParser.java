@@ -28,13 +28,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
 
-// Reads a Note from another server the way Mastodon addresses it: Public in "to" is public, in "cc"
-// unlisted, a followers collection is followers-only, and anything else is for the people named.
-// Content is HTML; it becomes plain text with paragraphs as blank lines. A mention of someone
-// elsewhere keeps its server (@bob@host) so it never links to a member who shares the name.
-// A Question is a note with a poll. An Article, Page or Video is kept as a card, as Mastodon
-// converts them: its title, its summary or the start of its text, one picture and its address;
-// the full text and the video stay on their server.
 @Component
 @RequiredArgsConstructor
 public class RemoteNoteParser {
@@ -152,6 +145,8 @@ public class RemoteNoteParser {
 
   public Parsed parse(JsonNode object, JsonNode activity) {
     Kind kind = kindOf(object).orElse(Kind.NOTE);
+    // An Article, Page or Video is kept as a card, as Mastodon converts them: title, summary or
+    // start of the text, one picture, the address; the full text and video stay on their server.
     boolean card = kind == Kind.ARTICLE || kind == Kind.PAGE || kind == Kind.VIDEO;
     String inReplyTo = idOf(object.get("inReplyTo"));
     Set<String> to = addresses(object.get("to"), activity.get("to"));
@@ -375,6 +370,8 @@ public class RemoteNoteParser {
     return addressed;
   }
 
+  // Mastodon's addressing: Public in "to" is public, in "cc" unlisted; a followers collection is
+  // followers-only; anything else is for the people named.
   static NoteVisibility visibility(Set<String> to, Set<String> cc) {
     return NoteVisibility.addressed(
         to.stream().anyMatch(PUBLIC::contains),
@@ -408,18 +405,20 @@ public class RemoteNoteParser {
 
   private static String html(JsonNode object, String field, String mapField) {
     String html = text(object.get(field));
-    if (html == null) {
-      JsonNode map = object.get(mapField);
-      if (map != null && map.isObject()) {
-        for (JsonNode value : map) {
-          html = text(value);
-          if (html != null) {
-            break;
-          }
-        }
+    if (html != null) {
+      return html;
+    }
+    JsonNode map = object.get(mapField);
+    if (map == null || !map.isObject()) {
+      return null;
+    }
+    for (JsonNode value : map) {
+      String translated = text(value);
+      if (translated != null) {
+        return translated;
       }
     }
-    return html;
+    return null;
   }
 
   private static String cut(String text, int max) {
@@ -499,6 +498,7 @@ public class RemoteNoteParser {
       if (label.indexOf('@', 1) > 0 || href.isEmpty() || urls.isOurs(href)) {
         return label;
       }
+      // A mention elsewhere keeps its server so it never links to a member who shares the name.
       String host = RemoteActorParser.host(href);
       return host == null ? label : label + "@" + host;
     }

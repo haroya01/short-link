@@ -1,19 +1,12 @@
 package com.example.short_link.link.stats.application;
 
-import com.example.short_link.common.geoip.GeoLocation;
-import com.example.short_link.link.application.dto.UserAgentInfo;
+import com.example.short_link.common.analytics.Utm;
+import com.example.short_link.common.analytics.VisitRequest;
 import com.example.short_link.link.application.dto.UtmParams;
-import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotClassifier;
+import com.example.short_link.link.classifier.application.ClassifiedVisit;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
-import com.example.short_link.link.classifier.application.GeoIpResolver;
-import com.example.short_link.link.classifier.application.UserAgentClassifier;
-import com.example.short_link.link.classifier.application.helper.IpMasker;
-import com.example.short_link.link.classifier.application.helper.LanguageExtractor;
-import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
-import com.example.short_link.link.classifier.application.helper.SourceChannelNormalizer;
+import com.example.short_link.link.classifier.application.VisitClassifier;
 import com.example.short_link.link.classifier.application.helper.UtmExtractor;
-import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -22,55 +15,54 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ClickEventAssembler {
 
-  private final UserAgentClassifier userAgentClassifier;
+  private final VisitClassifier visitClassifier;
   private final ClientAppClassifier clientAppClassifier;
-  private final GeoIpResolver geoIpResolver;
-  private final AsnResolver asnResolver;
-  private final BotClassifier botClassifier;
 
   public ClickEventEntity assemble(PendingClick click) {
     ClickContext ctx = click.ctx();
     UtmParams utm = UtmExtractor.extract(ctx.originalUrl());
-    UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());
-    GeoLocation geo = geoIpResolver.resolve(ctx.clientIp());
-    AsnResolver.AsnInfo asnInfo = asnResolver.resolve(ctx.clientIp());
-    BotClassifier.Verdict bot =
+    VisitRequest request =
+        new VisitRequest(
+            ctx.referrer(),
+            ctx.userAgent(),
+            ctx.clientIp(),
+            ctx.acceptLanguage(),
+            ctx.sourceChannel(),
+            Utm.none(),
+            ctx.gpc(),
+            null);
+    Long hashScope = ctx.linkId() == null ? null : ctx.linkId().value();
+    ClassifiedVisit visit =
         click.forcedBotName() != null
-            ? BotClassifier.Verdict.bot(click.forcedBotName())
-            : botClassifier.classify(ua, asnInfo, ctx.clientIp());
+            ? visitClassifier.classifyKnownBot(request, hashScope, click.forcedBotName())
+            : visitClassifier.classify(request, hashScope);
     return ClickEventEntity.builder()
         .linkId(ctx.linkId())
         .clickedAt(click.occurredAt())
-        .referrer(ReferrerNormalizer.normalize(ctx.referrer()))
-        .referrerHost(ReferrerNormalizer.hostOf(ctx.referrer()))
+        .referrer(visit.referrer().url())
+        .referrerHost(visit.referrer().host())
         .userAgent(ctx.userAgent())
-        .clientIp(IpMasker.mask(ctx.clientIp()))
+        .clientIp(visit.maskedIp())
         .utmSource(utm.source())
         .utmMedium(utm.medium())
         .utmCampaign(utm.campaign())
         .utmTerm(utm.term())
         .utmContent(utm.content())
-        .deviceClass(ua.deviceClass())
-        .osName(ua.osName())
-        .browserName(ua.browserName())
-        .bot(bot.isBot())
-        .botName(bot.botName())
-        .countryCode(geo.countryCode())
-        .regionName(geo.region())
-        .cityName(geo.city())
-        .language(LanguageExtractor.extract(ctx.acceptLanguage()))
-        .visitorHash(
-            ctx.gpc()
-                ? null
-                : VisitorHasher.hash(
-                    ctx.linkId() == null ? null : ctx.linkId().value(),
-                    ctx.clientIp(),
-                    ctx.userAgent()))
-        .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
+        .deviceClass(visit.device().deviceClass())
+        .osName(visit.device().osName())
+        .browserName(visit.device().browserName())
+        .bot(visit.bot().isBot())
+        .botName(visit.bot().botName())
+        .countryCode(visit.geo().countryCode())
+        .regionName(visit.geo().region())
+        .cityName(visit.geo().city())
+        .language(visit.language())
+        .visitorHash(visit.visitorHash())
+        .sourceChannel(visit.sourceChannel())
         .destinationId(ctx.destinationId())
         .postId(ctx.postId())
-        .asn(asnInfo.asn())
-        .asnOrg(asnInfo.organization())
+        .asn(visit.asn().asn())
+        .asnOrg(visit.asn().organization())
         .clientApp(clientAppClassifier.classify(ctx.userAgent()))
         .fetchSite(ctx.fetchSite())
         .build();

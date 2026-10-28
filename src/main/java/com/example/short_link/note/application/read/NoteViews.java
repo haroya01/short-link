@@ -38,10 +38,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// Batches every lookup for a page of notes: one query per kind of data, never per note. Notes by
-// soft-deleted authors are dropped, and so are followers-only and direct notes this viewer may not
-// read (one lookup, and only when the page has such notes by someone else). Mentioned members ride
-// along in the authors query, so a mention links only when that member exists.
+// One query per kind of data for a page, never one per note.
 @Component
 @RequiredArgsConstructor
 public class NoteViews {
@@ -150,45 +147,63 @@ public class NoteViews {
   }
 
   public static NoteView assemble(NoteEntity note, NoteBatch batch, Long viewerId) {
-    NoteStats counts = batch.stats().getOrDefault(note.getId(), NoteStats.NONE);
-    NoteViewerMarks marks = batch.marks();
-    return new NoteView(
-        note.getId(),
+    return NoteView.compose(
+        origin(note, batch),
+        text(note, batch),
+        reach(note, batch),
+        new NoteView.Standing(note.getInReplyToId(), note.isPinned(), note.isReplyHidden()),
+        attached(note, batch),
+        counts(batch.stats().getOrDefault(note.getId(), NoteStats.NONE)),
+        viewerId == null ? NoteView.Mine.ANONYMOUS : mine(note, batch),
+        NoteView.InFeed.ALONE);
+  }
+
+  private static NoteView.Origin origin(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Origin(
+        note.getId(), batch.authorOf(note), note.getCreatedAt(), note.getEditedAt(), remote(note));
+  }
+
+  private static NoteView.Text text(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Text(
         note.getBody(),
-        note.getCreatedAt(),
-        note.getEditedAt(),
-        counts.likes(),
-        viewerId == null ? null : marks.liked().contains(note.getId()),
-        batch.authorOf(note),
+        Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
+        note.getContentWarning(),
+        note.isSensitive(),
+        note.getLanguage());
+  }
+
+  private static NoteView.Reach reach(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Reach(
+        note.getVisibility().apiName(),
+        note.getReplyPolicy().apiName(),
+        note.getRoomId() == null
+            ? null
+            : new NoteView.Room(note.getRoomId(), batch.roomNames().get(note.getRoomId())));
+  }
+
+  private static NoteView.Attached attached(NoteEntity note, NoteBatch batch) {
+    return new NoteView.Attached(
         batch.images().getOrDefault(note.getId(), List.of()),
         note.getQuotedPostId() == null ? null : batch.quotedPosts().get(note.getQuotedPostId()),
-        note.getInReplyToId(),
-        counts.replies(),
-        counts.reposts(),
-        viewerId == null ? null : marks.reposted().contains(note.getId()),
         note.getQuotedNoteId() == null
             ? null
             : quotedNote(batch.quotedNotes().get(note.getQuotedNoteId()), batch),
         batch.cards().get(note.getId()),
-        null,
-        counts.quotes(),
-        viewerId == null ? null : marks.bookmarked().contains(note.getId()),
-        Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
-        note.getContentWarning(),
-        note.isSensitive(),
-        note.isPinned(),
-        note.getVisibility().apiName(),
-        batch.polls().get(note.getId()),
-        viewerId == null ? null : marks.muted().contains(note.getId()),
-        note.getLanguage(),
-        null,
-        note.getReplyPolicy().apiName(),
-        viewerId == null ? null : !batch.closedThreads().contains(note.conversation()),
-        note.isReplyHidden(),
-        remote(note),
-        note.getRoomId() == null
-            ? null
-            : new NoteView.Room(note.getRoomId(), batch.roomNames().get(note.getRoomId())));
+        batch.polls().get(note.getId()));
+  }
+
+  private static NoteView.Counts counts(NoteStats stats) {
+    return new NoteView.Counts(stats.likes(), stats.replies(), stats.reposts(), stats.quotes());
+  }
+
+  private static NoteView.Mine mine(NoteEntity note, NoteBatch batch) {
+    NoteViewerMarks marks = batch.marks();
+    return new NoteView.Mine(
+        marks.liked().contains(note.getId()),
+        marks.reposted().contains(note.getId()),
+        marks.bookmarked().contains(note.getId()),
+        marks.muted().contains(note.getId()),
+        !batch.closedThreads().contains(note.conversation()));
   }
 
   private static NoteView.Remote remote(NoteEntity note) {
@@ -208,8 +223,6 @@ public class NoteViews {
     return lower.startsWith("https://") || lower.startsWith("http://");
   }
 
-  // The first notes of the page's threads that limit replies, read only when the viewer is signed
-  // in and the page holds such a thread; a first note already on the page is not read again.
   private Map<Long, NoteEntity> limitedRoots(List<NoteEntity> page, Long viewerId) {
     if (viewerId == null) {
       return Map.of();
@@ -235,8 +248,6 @@ public class NoteViews {
     return roots;
   }
 
-  // Of those threads, the ones ReplyGate closes to this viewer. Whether their writers follow the
-  // viewer is one lookup for every writer of a thread still closed without it.
   private Set<Long> closedTo(
       Long viewerId, Map<Long, NoteEntity> roots, Map<Long, NoteAuthor> members) {
     if (roots.isEmpty()) {
@@ -320,9 +331,6 @@ public class NoteViews {
     return items;
   }
 
-  // A feed page: each top-level note that the author went on in their own replies carries the next
-  // part, so the feed can show the first two parts joined. One query walks every chain on the page,
-  // and the next parts are viewed in the same batch as the page.
   public List<NoteView> ofFeed(List<NoteEntity> page, Long viewerId) {
     List<Long> roots = page.stream().filter(NoteEntity::isTopLevel).map(NoteEntity::getId).toList();
     Map<Long, List<Long>> chains =
@@ -352,8 +360,6 @@ public class NoteViews {
     return views;
   }
 
-  // Each root's parts in order. When the author answered the same part twice, the earlier answer
-  // carries the thread on, as on Threads and X.
   static Map<Long, List<Long>> chains(List<SelfReply> replies) {
     Map<Long, Map<Long, Long>> firstAnswer = new HashMap<>();
     for (SelfReply reply : replies) {
@@ -375,8 +381,6 @@ public class NoteViews {
     return chains;
   }
 
-  // Like link cards, a page without a poll of its own costs no query: a poll from elsewhere carries
-  // its server's counts.
   private Map<Long, NoteView.Poll> polls(List<NoteEntity> visible, Long viewerId) {
     List<NoteEntity> polled = visible.stream().filter(NoteEntity::hasPoll).toList();
     Map<Long, NoteView.Poll> views = new HashMap<>();
@@ -398,7 +402,6 @@ public class NoteViews {
     return views;
   }
 
-  // Only notes whose body has an address can carry a card, so a page without one costs no query.
   private Map<Long, NoteView.LinkPreview> linkCards(List<NoteEntity> visible) {
     List<Long> linked =
         visible.stream()

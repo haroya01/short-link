@@ -30,7 +30,7 @@ class BlogWebhookQueryServiceTest {
             "mine",
             BlogWebhookFormat.GENERIC,
             EnumSet.of(BlogInteractionType.LIKE, BlogInteractionType.COMMENT));
-    when(repository.findAllByUserId(7L)).thenReturn(List.of(hook));
+    when(repository.findAllByUserIdOrderByIdDesc(7L)).thenReturn(List.of(hook));
 
     List<BlogWebhookSummary> list = new BlogWebhookQueryService(repository).listForUser(7L);
 

@@ -1,10 +1,11 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.federation.LocalAddress;
 import java.net.URI;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "short-link.federation")
-public record FederationProperties(String baseUrl, String profileBaseUrl) {
+public record FederationProperties(String baseUrl, String profileBaseUrl) implements LocalAddress {
 
   public FederationProperties {
     baseUrl = trimSlash(baseUrl == null || baseUrl.isBlank() ? "http://localhost:8080" : baseUrl);
@@ -15,6 +16,7 @@ public record FederationProperties(String baseUrl, String profileBaseUrl) {
                 : profileBaseUrl);
   }
 
+  @Override
   public String domain() {
     URI uri = URI.create(baseUrl);
     return uri.getPort() == -1 ? uri.getHost() : uri.getHost() + ":" + uri.getPort();

@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
-// Series live in the post module; a note reads its series' order straight from the tables.
 @Repository
 class NoteSeriesReaderAdapter implements NoteSeriesReader {
 

@@ -1,9 +1,8 @@
 package com.example.short_link.user.application.write.avatar;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
-import com.example.short_link.common.storage.ImageUploadPolicy;
+import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
-import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -14,18 +13,10 @@ public class BannerService extends UserImageUpload {
 
   public BannerService(
       UserRepository userRepository,
-      ImageUploadPolicy uploadPolicy,
+      ImageUploads uploads,
       ObjectStorage objectStorage,
-      ObjectStoragePublicUrls publicUrls,
       ProfileCacheInvalidator cacheEviction) {
-    super(
-        "banners",
-        "banner",
-        userRepository,
-        uploadPolicy,
-        objectStorage,
-        publicUrls,
-        cacheEviction);
+    super("banners", "banner", userRepository, uploads, objectStorage, cacheEviction);
   }
 
   @Transactional

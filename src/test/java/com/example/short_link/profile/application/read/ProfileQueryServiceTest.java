@@ -3,11 +3,15 @@ package com.example.short_link.profile.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.read.ProfileLinks;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
@@ -45,7 +49,10 @@ class ProfileQueryServiceTest {
     service =
         new ProfileQueryService(
             new UserProfileReader(userRepository),
-            linkRepository,
+            new ProfileLinks(
+                linkRepository,
+                mock(ClickTotalsReader.class),
+                new ShortLinkUrlBuilder("https://kurl.me")),
             publicProfiles,
             Clock.fixed(NOW, ZoneOffset.UTC),
             "https://kurl.app/u/");

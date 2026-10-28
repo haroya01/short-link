@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.application.access.PostAccessPolicy;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.PostBookmarkStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -21,9 +21,8 @@ public class BookmarkPostUseCase {
   private final PostAccessPolicy access;
 
   @Transactional
-  public PostBookmarkStatus bookmark(PostReader reader, Long postId) {
+  public PostBookmarkStatus bookmark(PostViewer reader, Long postId) {
     access.requireReadable(requirePost(postId), reader);
-    // INSERT IGNORE makes concurrent duplicate bookmarks a no-op without failing the transaction.
     postBookmarkRepository.insertIgnore(postId, reader.viewerId());
     return new PostBookmarkStatus(true);
   }

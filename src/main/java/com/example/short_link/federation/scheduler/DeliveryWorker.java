@@ -16,8 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-// Sends one claimed batch per tick on the scheduler thread, so delivery adds no threads beside the
-// request pool. fixedDelay keeps ticks from overlapping.
+// fixedDelay keeps ticks from overlapping.
 @Slf4j
 @Component
 public class DeliveryWorker {

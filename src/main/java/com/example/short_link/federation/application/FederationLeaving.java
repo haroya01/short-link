@@ -13,10 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-// Leaving the fediverse (turning federation off, or deleting the account) unfollows everyone it
-// followed elsewhere, tells every follower's server to drop the account and its notes, then
-// forgets the followers. Remote copies are deleted
-// by those servers, not by us; re-enabling starts with no followers.
+// Remote copies of the account and its notes are deleted by the follower servers told here, not by
+// us; re-enabling starts with no followers.
 @Service
 public class FederationLeaving {
 

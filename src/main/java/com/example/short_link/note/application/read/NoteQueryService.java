@@ -84,8 +84,6 @@ public class NoteQueryService {
     return page(ask, viewerId, (offset, limit) -> feeds.inRoomsOf(viewerId, offset, limit));
   }
 
-  // The writer's own room notes, from rooms they are in or have left, so they can still delete
-  // them.
   @Transactional(readOnly = true)
   public NoteFeedView roomNotesBy(Long userId, PageAsk ask) {
     return page(ask, userId, (offset, limit) -> feeds.roomNotesBy(userId, offset, limit));
@@ -101,7 +99,6 @@ public class NoteQueryService {
     return page(ask, viewerId, (offset, limit) -> trends.trending(viewerId, offset, limit));
   }
 
-  // Mastodon's trending hashtags: a week, used by at least two accounts, the top ten.
   static final int TREND_DAYS = 7;
   static final int TREND_MIN_ACCOUNTS = 2;
   static final int TREND_LIMIT = 10;
@@ -115,7 +112,6 @@ public class NoteQueryService {
         .toList();
   }
 
-  // Mastodon's trending links: same window and floor as hashtags.
   @Transactional(readOnly = true)
   public List<TrendingLinkView> trendingLinks() {
     return trends
@@ -325,8 +321,6 @@ public class NoteQueryService {
     return new NoteFeedView(followingViews(rows.current(), viewerId), ask.page(), rows.hasNext());
   }
 
-  // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
-  // with it, since it only came in through them.
   private List<NoteView> followingViews(List<NoteFeedRow> current, Long viewerId) {
     Set<Long> reposterIds =
         current.stream()
@@ -353,9 +347,6 @@ public class NoteQueryService {
     return items;
   }
 
-  // Mastodon's edit history: the note as it reads now, then each earlier version, newest first.
-  // It opens for whoever may open the thread: not across a block, not once the writer is gone or
-  // their server suspended, and a restricted note only for its readers.
   @Transactional(readOnly = true)
   public NoteHistoryView history(Long viewerId, Long noteId) {
     NoteEntity note =
@@ -456,8 +447,6 @@ public class NoteQueryService {
                 : notes.findById(root));
   }
 
-  // Threads' hidden replies: the replies the thread's writer moved out of the thread under this
-  // note, for anyone who may open the note itself.
   @Transactional(readOnly = true)
   public List<NoteView> hiddenReplies(Long viewerId, Long noteId) {
     NoteEntity note =

@@ -9,9 +9,9 @@ public interface NoteFilterRepository {
 
   List<NoteFilterEntity> live(Long userId, Instant now);
 
-  Optional<NoteFilterEntity> owned(Long id, Long userId);
+  Optional<NoteFilterEntity> findByIdAndUserId(Long id, Long userId);
 
-  long count(Long userId);
+  long countByUserId(Long userId);
 
   NoteFilterEntity save(NoteFilterEntity filter);
 

@@ -56,7 +56,7 @@ public interface JpaCollectionConnectionRepository
     int getPosition();
   }
 
-  // FK 없는 다형 참조를 정리한다. 벌크 삭제가 영속성 컨텍스트를 우회하므로 삭제 트랜잭션 안에서만 호출한다.
+  // 벌크 삭제가 영속성 컨텍스트를 우회하므로 삭제 트랜잭션 안에서만 호출한다.
   @Modifying
   @Query(
       "delete from CollectionConnectionEntity c"
@@ -64,7 +64,6 @@ public interface JpaCollectionConnectionRepository
   int deleteByBlockTypeAndRefIdIn(
       @Param("blockType") ConnectionBlockType blockType, @Param("refIds") Collection<Long> refIds);
 
-  // PUBLIC 컬렉션에서만 공동 등장을 집계하며 대상 블록 자신은 제외한다.
   @Query(
       value =
           "SELECT cc2.block_type AS blockType, cc2.ref_id AS refId, "
@@ -86,7 +85,6 @@ public interface JpaCollectionConnectionRepository
           @Param("refId") Long refId,
           @Param("limit") int limit);
 
-  // sharedItems는 중복을 제거한 (block_type, ref_id) 쌍의 수다.
   @Query(
       value =
           "SELECT col2.owner_id AS curatorId, "

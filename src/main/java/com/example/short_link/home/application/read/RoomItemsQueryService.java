@@ -19,9 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// A room's notes and blog posts as one list, newest first by a note's writing time and a post's
-// publishing time, each with its latest replies; or the same across every room of the member. The
-// cursor is the next position in each source, "<notes>.<posts>", as on the home feed.
+// The cursor is "<notes>.<posts>", as on the home feed.
 @Service
 @RequiredArgsConstructor
 public class RoomItemsQueryService {

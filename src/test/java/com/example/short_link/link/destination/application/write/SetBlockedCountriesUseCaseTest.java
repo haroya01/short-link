@@ -7,12 +7,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
+import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +26,13 @@ class SetBlockedCountriesUseCaseTest {
   private final LinkExpirationPolicyRepository policies =
       mock(LinkExpirationPolicyRepository.class);
   private final SetBlockedCountriesUseCase useCase =
-      new SetBlockedCountriesUseCase(ownership, policies, linkCacheEviction);
+      new SetBlockedCountriesUseCase(
+          ownership,
+          new LinkSidecars(
+              mock(LinkAccessControlRepository.class),
+              policies,
+              mock(LinkOgMetadataRepository.class)),
+          linkCacheEviction);
 
   private LinkEntity link() {
     LinkEntity l = new LinkEntity("https://target", "abc", 7L, null);

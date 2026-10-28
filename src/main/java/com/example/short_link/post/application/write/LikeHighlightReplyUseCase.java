@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.HighlightReplyLikedEvent;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
@@ -24,7 +24,7 @@ public class LikeHighlightReplyUseCase {
   private final CommentNotifications notifications;
 
   @Transactional
-  public HighlightReplyLikeStatus like(PostReader reader, Long replyId) {
+  public HighlightReplyLikeStatus like(PostViewer reader, Long replyId) {
     Long userId = reader.viewerId();
     PostInteractionAccess.LikeableHighlightReply target =
         access.requireLikeableHighlightReply(reader, replyId);

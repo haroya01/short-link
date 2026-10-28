@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.user.application.read.AccountExportService.Kind;
 import com.example.short_link.user.domain.repository.AccountExportReader;
 import com.example.short_link.user.domain.repository.AccountExportReader.Account;
@@ -21,7 +22,7 @@ class AccountExportServiceTest {
   @Mock private AccountExportReader reader;
 
   private AccountExportService service() {
-    return new AccountExportService(reader, "https://kurl.me/");
+    return new AccountExportService(reader, new FederationProperties("https://kurl.me/", null));
   }
 
   @Test
@@ -100,7 +101,10 @@ class AccountExportServiceTest {
   void aServerOnAPortKeepsItInTheAddress() {
     when(reader.blocks(7L)).thenReturn(List.of(new Account("troll", null)));
 
-    assertThat(new AccountExportService(reader, "http://localhost:8080").csv(7L, Kind.BLOCKS))
+    assertThat(
+            new AccountExportService(
+                    reader, new FederationProperties("http://localhost:8080", null))
+                .csv(7L, Kind.BLOCKS))
         .isEqualTo("troll@localhost:8080\n");
   }
 }

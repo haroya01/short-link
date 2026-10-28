@@ -1,7 +1,7 @@
 package com.example.short_link.federation.application.trends;
 
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.domain.SeenUri;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.repository.RemoteDwellRepository;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import com.example.short_link.federation.domain.repository.RemoteSeenRepository;
@@ -76,8 +76,6 @@ public class RemoteSeen {
     this.flushTime = meterRegistry.timer("federation_seen_flush");
   }
 
-  // A feed outside FEEDS is not counted; a dwell under a second is dropped and one over ten minutes
-  // is cut to ten.
   public void record(
       SeenViewer viewer, Collection<String> uris, Collection<Dwell> dwelt, String feed) {
     int shown = record(viewer, uris);

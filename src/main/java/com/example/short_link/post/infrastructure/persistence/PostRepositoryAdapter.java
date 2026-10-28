@@ -14,13 +14,13 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -39,6 +39,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   private final JpaPostRepository jpa;
   private final TrendingPostRanking ranking;
+  private final Clock clock;
 
   @PersistenceContext private EntityManager em;
 
@@ -175,7 +176,7 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         HeardSql.viewer(viewerId),
-        Instant.now(),
+        clock.instant(),
         PageRequest.of(page, size));
   }
 
@@ -202,7 +203,7 @@ class PostRepositoryAdapter implements PostRepository {
         .setParameter("lang", null)
         .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
         .setParameter("viewer", HeardSql.viewer(viewerId))
-        .setParameter("now", Instant.now())
+        .setParameter("now", clock.instant())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
@@ -227,7 +228,7 @@ class PostRepositoryAdapter implements PostRepository {
             .setParameter("since", since)
             .setParameter("until", until)
             .setParameter("viewer", HeardSql.viewer(viewerId))
-            .setParameter("now", Instant.now())
+            .setParameter("now", clock.instant())
             .setMaxResults(limit)
             .unwrap(NativeQuery.class)
             .addScalar("id", Long.class)
@@ -299,12 +300,12 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @SuppressWarnings("unchecked")
-  private static List<PostEntity> blog(Query query, Long viewerId, int limit) {
+  private List<PostEntity> blog(Query query, Long viewerId, int limit) {
     return query
         .setParameter("lang", null)
         .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
         .setParameter("viewer", HeardSql.viewer(viewerId))
-        .setParameter("now", Instant.now())
+        .setParameter("now", clock.instant())
         .setMaxResults(limit)
         .getResultList();
   }
@@ -320,7 +321,7 @@ class PostRepositoryAdapter implements PostRepository {
             PostEntity.class)
         .setParameter("room", roomId)
         .setParameter("viewer", HeardSql.viewer(viewerId))
-        .setParameter("now", Instant.now())
+        .setParameter("now", clock.instant())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
@@ -336,7 +337,7 @@ class PostRepositoryAdapter implements PostRepository {
                 + " ORDER BY p.published_at DESC, p.id DESC",
             PostEntity.class)
         .setParameter("viewer", HeardSql.viewer(viewerId))
-        .setParameter("now", Instant.now())
+        .setParameter("now", clock.instant())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
@@ -374,7 +375,7 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   private List<PostEntity> trending(Long viewerId, String lang, long offset, int limit) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     List<Long> ranked = ranking.ids(lang);
     List<PostEntity> shown =
         ranked.isEmpty()
@@ -428,7 +429,7 @@ class PostRepositoryAdapter implements PostRepository {
                 PostEntity.class)
             .setParameter("authorIds", idsForIn(authorIds))
             .setParameter("viewer", HeardSql.viewer(viewerId))
-            .setParameter("now", Instant.now());
+            .setParameter("now", clock.instant());
     if (!byAuthorsOnly) {
       query.setParameter("seriesIds", idsForIn(seriesIds)).setParameter("tags", tagsForIn(tags));
     }
@@ -443,14 +444,14 @@ class PostRepositoryAdapter implements PostRepository {
       Pageable pageable) {
     if (seriesIds.isEmpty() && tags.isEmpty()) {
       return jpa.findPublishedByAuthors(
-          idsForIn(authorIds), HeardSql.viewer(viewerId), Instant.now(), pageable);
+          idsForIn(authorIds), HeardSql.viewer(viewerId), clock.instant(), pageable);
     }
     return jpa.findPublishedByAuthorsSeriesOrTags(
         idsForIn(authorIds),
         idsForIn(seriesIds),
         tagsForIn(tags),
         HeardSql.viewer(viewerId),
-        Instant.now(),
+        clock.instant(),
         pageable);
   }
 
@@ -465,7 +466,7 @@ class PostRepositoryAdapter implements PostRepository {
         normLang(lang),
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         HeardSql.viewer(viewerId),
-        Instant.now());
+        clock.instant());
   }
 
   @Override
@@ -479,14 +480,14 @@ class PostRepositoryAdapter implements PostRepository {
         tag,
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         HeardSql.viewer(viewerId),
-        Instant.now(),
+        clock.instant(),
         PageRequest.of(page, size));
   }
 
   @Override
   public List<PostEntity> findPublishedTrendingByTag(
       Long viewerId, String tag, int page, int size) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     return jpa.findPublishedTrendingByTagSince(
         tag,
         now.minus(TRENDING_WINDOW),
@@ -500,27 +501,27 @@ class PostRepositoryAdapter implements PostRepository {
   public List<PostEntity> findPublishedQuotingNote(
       Long noteId, Long viewerId, int offset, int limit) {
     return jpa.findPublishedQuotingNote(
-        noteId, HeardSql.viewer(viewerId), Instant.now(), offset, limit);
+        noteId, HeardSql.viewer(viewerId), clock.instant(), offset, limit);
   }
 
   @Override
   public long countPublishedByTag(Long viewerId, String tag) {
     return jpa.countPublishedByTag(
-        tag, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, HeardSql.viewer(viewerId), Instant.now());
+        tag, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, HeardSql.viewer(viewerId), clock.instant());
   }
 
   @Override
   public List<PostEntity> searchPublishedByRelevanceAt(
       Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedByRelevance(
-        booleanMatch(query),
-        matchWordBoundaries(query),
-        likePattern(query),
-        titleLikeFallback(query),
-        titleWordFallback(query),
+        PostSearchTerms.booleanMatch(query),
+        PostSearchTerms.matchWordBoundaries(query),
+        PostSearchTerms.likePattern(query),
+        PostSearchTerms.titleLikeFallback(query),
+        PostSearchTerms.titleWordFallback(query),
         normLang(lang),
         HeardSql.viewer(viewerId),
-        Instant.now(),
+        clock.instant(),
         new OffsetLimit(offset, limit));
   }
 
@@ -528,27 +529,27 @@ class PostRepositoryAdapter implements PostRepository {
   public List<PostEntity> searchPublishedAt(
       Long viewerId, String query, String lang, long offset, int limit) {
     return jpa.searchPublishedRecent(
-        booleanMatch(query),
-        matchWordBoundaries(query),
-        likePattern(query),
-        titleLikeFallback(query),
-        titleWordFallback(query),
+        PostSearchTerms.booleanMatch(query),
+        PostSearchTerms.matchWordBoundaries(query),
+        PostSearchTerms.likePattern(query),
+        PostSearchTerms.titleLikeFallback(query),
+        PostSearchTerms.titleWordFallback(query),
         normLang(lang),
         HeardSql.viewer(viewerId),
-        Instant.now(),
+        clock.instant(),
         new OffsetLimit(offset, limit));
   }
 
   @Override
   public List<PostEntity> searchPublishedTrendingAt(
       Long viewerId, String query, String lang, long offset, int limit) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     return jpa.searchPublishedTrendingSince(
-        booleanMatch(query),
-        matchWordBoundaries(query),
-        likePattern(query),
-        titleLikeFallback(query),
-        titleWordFallback(query),
+        PostSearchTerms.booleanMatch(query),
+        PostSearchTerms.matchWordBoundaries(query),
+        PostSearchTerms.likePattern(query),
+        PostSearchTerms.titleLikeFallback(query),
+        PostSearchTerms.titleWordFallback(query),
         now.minus(TRENDING_WINDOW),
         normLang(lang),
         HeardSql.viewer(viewerId),
@@ -558,103 +559,6 @@ class PostRepositoryAdapter implements PostRepository {
 
   private static String normLang(String lang) {
     return lang == null || lang.isBlank() ? null : lang.trim();
-  }
-
-  // LIKE의 이스케이프 문자 !부터 처리해야 사용자의 !가 다음 문자에 영향을 주지 않는다.
-  private static String likePattern(String query) {
-    String escaped =
-        query.toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_");
-    return "%" + escaped + "%";
-  }
-
-  // BOOLEAN 연산자와 해시태그 #을 지워 검색어가 구문을 바꾸지 않게 하고, 색인에 남는 항마다 +( )로
-  // 모두 요구한다. 괄호 없는 +는 한 바이그램짜리 항(설계)을 찾지 못한다.
-  static String booleanMatch(String query) {
-    StringBuilder match = new StringBuilder();
-    for (String term : scrub(query).split(" ")) {
-      if (indexed(term)) {
-        match.append(match.isEmpty() ? "" : " ").append("+(").append(term).append(')');
-      }
-    }
-    return match.toString();
-  }
-
-  private static String scrub(String query) {
-    return query.replaceAll("[+\\-><()~*\"@#]", " ").replaceAll("\\s+", " ").trim();
-  }
-
-  static String matchWordBoundaries(String query) {
-    StringBuilder pattern = new StringBuilder();
-    for (String term : scrub(query).split(" ")) {
-      if (!indexed(term)) {
-        continue;
-      }
-      String word = term.toLowerCase(Locale.ROOT);
-      boolean head = isAsciiAlnum(word.charAt(0));
-      boolean tail = isAsciiAlnum(word.charAt(word.length() - 1));
-      if (head || tail) {
-        pattern
-            .append("(?=[\\s\\S]*")
-            .append(head ? "(^|[^a-z0-9])" : "")
-            .append(regexLiteral(word))
-            .append(tail ? "([^a-z0-9]|$)" : "")
-            .append(')');
-      }
-    }
-    return pattern.isEmpty() ? null : "^" + pattern;
-  }
-
-  // 두 글자 영문·숫자(AI·Go)는 ngram이 email·google 속까지 맞추므로 색인 대신 낱말 폴백에 둔다.
-  private static boolean indexed(String term) {
-    if (term.length() < 2) return false;
-    if (term.length() > 2) return true;
-    String lower = term.toLowerCase(Locale.ROOT);
-    return !(isAsciiAlnum(lower.charAt(0)) && isAsciiAlnum(lower.charAt(1)));
-  }
-
-  // 색인에 남는 항이 하나도 없는 질의만 제목·요약 LIKE 폴백을 사용한다.
-  static String titleLikeFallback(String query) {
-    String scrubbed = scrub(query);
-    if (scrubbed.isEmpty()) {
-      return null;
-    }
-    for (String term : scrubbed.split(" ")) {
-      if (indexed(term)) {
-        return null;
-      }
-    }
-    // C++ 같은 원문을 그대로 찾도록 연산자 제거 전 검색어를 이스케이프한다.
-    return likePattern(query);
-  }
-
-  // 영문·숫자로 시작하거나 끝나는 폴백 질의는 낱말 속(email·domain의 ai, javascript의 java)에
-  // 걸리지 않게 앞뒤가 영문·숫자가 아닐 때만 맞춘다. 한글 조사가 붙은 'AI가'·'Java로'는 걸린다.
-  static String titleWordFallback(String query) {
-    if (titleLikeFallback(query) == null) {
-      return null;
-    }
-    String phrase = query.toLowerCase(Locale.ROOT);
-    boolean head = isAsciiAlnum(phrase.charAt(0));
-    boolean tail = isAsciiAlnum(phrase.charAt(phrase.length() - 1));
-    if (!head && !tail) {
-      return null;
-    }
-    return (head ? "(^|[^a-z0-9])" : "") + regexLiteral(phrase) + (tail ? "([^a-z0-9]|$)" : "");
-  }
-
-  private static boolean isAsciiAlnum(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-  }
-
-  private static String regexLiteral(String text) {
-    StringBuilder out = new StringBuilder(text.length() * 2);
-    for (char c : text.toCharArray()) {
-      if ("\\^$.|?*+()[]{}".indexOf(c) >= 0) {
-        out.append('\\');
-      }
-      out.append(c);
-    }
-    return out.toString();
   }
 
   @Override
@@ -676,14 +580,14 @@ class PostRepositoryAdapter implements PostRepository {
       Collection<String> tags) {
     if (seriesIds.isEmpty() && tags.isEmpty()) {
       return jpa.countPublishedByAuthors(
-          idsForIn(authorIds), HeardSql.viewer(viewerId), Instant.now());
+          idsForIn(authorIds), HeardSql.viewer(viewerId), clock.instant());
     }
     return jpa.countPublishedByAuthorsSeriesOrTags(
         idsForIn(authorIds),
         idsForIn(seriesIds),
         tagsForIn(tags),
         HeardSql.viewer(viewerId),
-        Instant.now());
+        clock.instant());
   }
 
   @Override
@@ -694,7 +598,7 @@ class PostRepositoryAdapter implements PostRepository {
         tagsForIn(tags),
         idsForIn(excludeIds),
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        Instant.now(),
+        clock.instant(),
         PageRequest.of(page, size));
   }
 
@@ -706,7 +610,7 @@ class PostRepositoryAdapter implements PostRepository {
         tagsForIn(tags),
         idsForIn(excludeIds),
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        Instant.now());
+        clock.instant());
   }
 
   @Override
@@ -724,7 +628,7 @@ class PostRepositoryAdapter implements PostRepository {
         .findTopAuthorIds(
             DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
             HeardSql.viewer(viewerId),
-            Instant.now(),
+            clock.instant(),
             PageRequest.of(0, limit))
         .stream()
         .map(

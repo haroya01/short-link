@@ -23,9 +23,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// Notes a post quotes as cards: a kurl note URL on its own line (an EMBED block). Kept only for
-// posts that are or were public, so draft autosaves stay at their usual statements and a first
-// publish has nothing to clear. Only quotes a public post newly gains reach the notes' authors.
 @Component
 public class PostNoteQuotes {
 

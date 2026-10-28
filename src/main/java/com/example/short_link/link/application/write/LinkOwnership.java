@@ -29,4 +29,11 @@ public class LinkOwnership {
   public LinkId requireOwnedId(Long userId, ShortCode shortCode) {
     return requireOwned(userId, shortCode).linkId();
   }
+
+  public LinkEntity requireOwnedHidingOthers(Long userId, ShortCode shortCode) {
+    return repository
+        .findByShortCode(shortCode)
+        .filter(link -> link.isOwnedBy(userId))
+        .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+  }
 }

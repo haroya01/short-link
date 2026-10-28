@@ -91,7 +91,6 @@ final class NotePublication {
     return told;
   }
 
-  // Whoever already hears about this note as the replied-to or quoted author is not told twice.
   static List<NoteInteractionEvent> mentions(
       NoteEntity note, Long actorId, List<NoteAuthor> mentioned, Set<Long> toldOtherwise) {
     List<NoteInteractionEvent> told = new ArrayList<>();

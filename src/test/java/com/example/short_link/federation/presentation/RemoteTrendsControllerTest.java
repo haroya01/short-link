@@ -9,11 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.seen.SeenParameters;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.util.List;
@@ -41,7 +42,7 @@ class RemoteTrendsControllerTest {
   void aSignedOutDeviceAndAMemberBothHandOverWhatTheySaw() throws Exception {
     mvc.perform(
             post("/api/v1/federation/seen")
-                .header(RemoteTrendsController.DEVICE_HEADER, DEVICE)
+                .header(SeenParameters.DEVICE_HEADER, DEVICE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(BODY))
         .andExpect(status().isAccepted())
@@ -49,7 +50,7 @@ class RemoteTrendsControllerTest {
     mvc.perform(
             post("/api/v1/federation/seen")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7")
-                .header(RemoteTrendsController.DEVICE_HEADER, DEVICE)
+                .header(SeenParameters.DEVICE_HEADER, DEVICE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(BODY))
         .andExpect(status().isAccepted());
@@ -72,7 +73,7 @@ class RemoteTrendsControllerTest {
   void howLongEachPostStayedAndWhichFeedShowedItGoAlong() throws Exception {
     mvc.perform(
             post("/api/v1/federation/seen")
-                .header(RemoteTrendsController.DEVICE_HEADER, DEVICE)
+                .header(SeenParameters.DEVICE_HEADER, DEVICE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -107,8 +108,7 @@ class RemoteTrendsControllerTest {
         .andExpect(jsonPath("$.next").value("f1.30"))
         .andExpect(jsonPath("$.seenFrom").value(3))
         .andExpect(jsonPath("$.gap").doesNotExist());
-    mvc.perform(
-            get("/api/v1/federation/for-you").header(RemoteTrendsController.DEVICE_HEADER, DEVICE))
+    mvc.perform(get("/api/v1/federation/for-you").header(SeenParameters.DEVICE_HEADER, DEVICE))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.next").isEmpty())
         .andExpect(jsonPath("$.seenFrom").doesNotExist());
@@ -150,7 +150,7 @@ class RemoteTrendsControllerTest {
         .andExpect(jsonPath("$.code").value("SEEN_WITHOUT_VIEWER"));
     mvc.perform(
             post("/api/v1/federation/seen")
-                .header(RemoteTrendsController.DEVICE_HEADER, "device-1")
+                .header(SeenParameters.DEVICE_HEADER, "device-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(BODY))
         .andExpect(status().isUnauthorized());
@@ -165,12 +165,11 @@ class RemoteTrendsControllerTest {
     when(feed.latest(null, null, null, null, 20))
         .thenReturn(new RemoteTrendingFeed.Page(List.of(), null));
 
-    mvc.perform(
-            get("/api/v1/federation/latest").header(RemoteTrendsController.DEVICE_HEADER, DEVICE))
+    mvc.perform(get("/api/v1/federation/latest").header(SeenParameters.DEVICE_HEADER, DEVICE))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.seenFrom").value(0))
         .andExpect(jsonPath("$.next").value("s1.t1"));
-    mvc.perform(get("/api/v1/federation/latest").header(RemoteTrendsController.DEVICE_HEADER, "x"))
+    mvc.perform(get("/api/v1/federation/latest").header(SeenParameters.DEVICE_HEADER, "x"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.seenFrom").doesNotExist())
         .andExpect(jsonPath("$.gap").doesNotExist());

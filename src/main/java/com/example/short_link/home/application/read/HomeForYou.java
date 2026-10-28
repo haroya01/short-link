@@ -1,12 +1,12 @@
 package com.example.short_link.home.application.read;
 
 import com.example.short_link.common.note.NoteViewReader;
+import com.example.short_link.common.seen.SeenItem;
+import com.example.short_link.common.seen.SeenViewer;
 import com.example.short_link.federation.application.trends.LocalSeen;
 import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
-import com.example.short_link.federation.domain.SeenItem;
-import com.example.short_link.federation.domain.SeenViewer;
 import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.federation.domain.foryou.HomeRanking;
@@ -31,9 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
-// Notes, blog posts and posts from elsewhere ranked as one list for the reader at the first page's
-// time. A cursor's pages are cut from the ranking made for its asOf, held in this process for half
-// an hour; one made again after that may differ a little, as counts move.
+// A cursor's pages are cut from the ranking made for its asOf, held in this process for half an
+// hour; one made again after that may differ a little, as counts move.
 @Service
 public class HomeForYou {
 

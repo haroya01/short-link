@@ -1,6 +1,6 @@
 package com.example.short_link.federation.domain.repository;
 
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

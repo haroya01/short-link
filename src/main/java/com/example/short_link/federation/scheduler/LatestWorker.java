@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
-// One low-priority thread of its own pulls the chosen servers' newest posts every interval, whether
-// or not anyone reads. The first pull waits one interval, so the day's count has been read at start
-// before it. It does not run where scheduling or pulling is off.
+// The first pull waits one interval, so the day's count has been read at start before it.
 @Slf4j
 @Component
 public class LatestWorker implements SmartLifecycle {

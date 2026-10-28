@@ -40,19 +40,28 @@ public class NoteInteractions {
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
     NoteEntity note = guard.readable(userId, noteId);
     if (on) {
-      if (likes.addIfAbsent(noteId, userId)) {
-        events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
-        if (note.isRemote()) {
-          events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, true));
-        }
-      }
+      like(userId, noteId, note);
     } else {
-      likes.delete(noteId, userId);
-      if (note.isRemote()) {
-        events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, false));
-      }
+      unlike(userId, noteId, note);
     }
     return new LikeStatus(on, statsOf(noteId).likes());
+  }
+
+  private void like(Long userId, Long noteId, NoteEntity note) {
+    if (!likes.addIfAbsent(noteId, userId)) {
+      return;
+    }
+    events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
+    if (note.isRemote()) {
+      events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, true));
+    }
+  }
+
+  private void unlike(Long userId, Long noteId, NoteEntity note) {
+    likes.delete(noteId, userId);
+    if (note.isRemote()) {
+      events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, false));
+    }
   }
 
   @Transactional
@@ -84,7 +93,6 @@ public class NoteInteractions {
     return new RepostStatus(on, statsOf(noteId).reposts());
   }
 
-  // Mastodon's "mute conversation": the reader hears nothing more from the thread this note is in.
   @Transactional
   public ConversationMuteStatus setConversationMuted(Long userId, Long noteId, boolean on) {
     NoteEntity note = guard.readable(userId, noteId);
@@ -96,7 +104,7 @@ public class NoteInteractions {
     return new ConversationMuteStatus(on);
   }
 
-  // A bookmark is the reader's own: it notifies no one and does not federate.
+  // A bookmark is the reader's own: it notifies no one and never federates.
   @Transactional
   public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
     guard.readable(userId, noteId);

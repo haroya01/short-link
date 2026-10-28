@@ -59,7 +59,7 @@ public class NoteFilterService {
   @Transactional
   public FilterView create(Long userId, Draft draft) {
     Valid valid = validate(draft);
-    if (filters.count(userId) >= NoteFilterEntity.MAX_FILTERS) {
+    if (filters.countByUserId(userId) >= NoteFilterEntity.MAX_FILTERS) {
       throw new NoteException(NoteErrorCode.NOTE_FILTER_LIMIT, NoteFilterEntity.MAX_FILTERS);
     }
     return FilterView.of(
@@ -89,7 +89,7 @@ public class NoteFilterService {
 
   private NoteFilterEntity owned(Long userId, Long id) {
     return filters
-        .owned(id, userId)
+        .findByIdAndUserId(id, userId)
         .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_FILTER_NOT_FOUND, id));
   }
 

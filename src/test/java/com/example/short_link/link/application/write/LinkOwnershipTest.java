@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -40,5 +41,22 @@ class LinkOwnershipTest {
 
     assertThatThrownBy(() -> ownership.requireOwned(99L, new ShortCode("abc1234")))
         .isInstanceOf(LinkException.class);
+  }
+
+  @Test
+  void hidingOthersAnswersAnotherUsersLinkAsIfItWereMissing() {
+    LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
+    when(repository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
+    when(repository.findByShortCode(new ShortCode("nope0001"))).thenReturn(Optional.empty());
+
+    assertThat(ownership.requireOwnedHidingOthers(42L, new ShortCode("abc1234"))).isSameAs(link);
+    assertThatThrownBy(() -> ownership.requireOwnedHidingOthers(99L, new ShortCode("abc1234")))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_NOT_FOUND));
+    assertThatThrownBy(() -> ownership.requireOwnedHidingOthers(42L, new ShortCode("nope0001")))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_NOT_FOUND));
   }
 }

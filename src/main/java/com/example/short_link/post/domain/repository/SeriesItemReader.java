@@ -15,7 +15,7 @@ public interface SeriesItemReader {
   // Readable notes that sit in a series, with their live author and their series, in one read.
   Map<Long, SeriesFeedNote> feedNotes(Collection<Long> noteIds);
 
-  // What a reader can open, in series order: published posts and public or unlisted notes.
+  // In series order: published public posts with no country block, and public or unlisted notes.
   List<SeriesEntry> readableEntries(Long seriesId);
 
   Map<Long, List<SeriesEntry>> readableEntries(Collection<Long> seriesIds);

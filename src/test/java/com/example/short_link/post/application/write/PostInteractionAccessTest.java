@@ -15,7 +15,7 @@ import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
-import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -192,8 +192,8 @@ class PostInteractionAccessTest {
     CommentEntity comment = new CommentEntity(1L, 9L, null, "said in the room");
     comment.saidIn(50L);
 
-    assertThat(inRoom.hears(comment, PostReader.of(7L))).isTrue();
-    assertThat(inRoom.hears(comment, PostReader.of(8L))).isFalse();
+    assertThat(inRoom.hears(comment, PostViewer.of(7L))).isTrue();
+    assertThat(inRoom.hears(comment, PostViewer.of(8L))).isFalse();
   }
 
   @Test
@@ -202,7 +202,7 @@ class PostInteractionAccessTest {
     deleted.softDelete();
     when(comments.findById(60L)).thenReturn(Optional.of(deleted));
 
-    assertThatThrownBy(() -> access.requireLikeableComment(PostReader.of(9L), 60L))
+    assertThatThrownBy(() -> access.requireLikeableComment(PostViewer.of(9L), 60L))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_NOT_FOUND);
@@ -215,7 +215,7 @@ class PostInteractionAccessTest {
     takenDown.softDelete(Instant.parse("2026-10-10T00:00:00Z"));
     when(replies.findById(70L)).thenReturn(Optional.of(takenDown));
 
-    assertThatThrownBy(() -> access.requireLikeableHighlightReply(PostReader.of(9L), 70L))
+    assertThatThrownBy(() -> access.requireLikeableHighlightReply(PostViewer.of(9L), 70L))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND);
@@ -239,12 +239,12 @@ class PostInteractionAccessTest {
 
   private void access(Interaction interaction) {
     switch (interaction) {
-      case COMMENT -> access.requireCommentablePost(PostReader.of(9L), 42L);
-      case HIGHLIGHT_REPLY -> access.requireReplyableHighlight(PostReader.of(9L), 50L);
-      case HIGHLIGHT -> access.requireInteractablePost(PostReader.of(9L), 42L);
-      case POST_LIKE -> access.requireInteractablePostForUpdate(PostReader.of(9L), 42L);
-      case COMMENT_LIKE -> access.requireLikeableComment(PostReader.of(9L), 60L);
-      case HIGHLIGHT_REPLY_LIKE -> access.requireLikeableHighlightReply(PostReader.of(9L), 70L);
+      case COMMENT -> access.requireCommentablePost(PostViewer.of(9L), 42L);
+      case HIGHLIGHT_REPLY -> access.requireReplyableHighlight(PostViewer.of(9L), 50L);
+      case HIGHLIGHT -> access.requireInteractablePost(PostViewer.of(9L), 42L);
+      case POST_LIKE -> access.requireInteractablePostForUpdate(PostViewer.of(9L), 42L);
+      case COMMENT_LIKE -> access.requireLikeableComment(PostViewer.of(9L), 60L);
+      case HIGHLIGHT_REPLY_LIKE -> access.requireLikeableHighlightReply(PostViewer.of(9L), 70L);
     }
   }
 

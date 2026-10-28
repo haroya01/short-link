@@ -28,8 +28,7 @@ public interface JpaSeriesSubscriptionRepository
   @Query("select s.seriesId from SeriesSubscriptionEntity s where s.userId = :userId")
   List<Long> findSubscribedSeriesIds(@Param("userId") Long userId);
 
-  // INSERT IGNORE avoids duplicate exceptions. Native inserts bypass @CreationTimestamp,
-  // so created_at is set explicitly.
+  // Native inserts bypass @CreationTimestamp, so created_at is set here.
   @Modifying
   @Query(
       value =

@@ -11,8 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 import org.springframework.stereotype.Component;
 
-// What became of each announce, today (Seoul) for the admin view and since start as the
-// federation.relay counter. The day's counts live in process memory only.
 @Component
 public class RelayTally {
 
@@ -26,7 +24,6 @@ public class RelayTally {
   public RelayTally(MeterRegistry meters, Clock clock) {
     this.meters = meters;
     this.clock = clock;
-    this.day = LocalDate.now(clock.withZone(SEOUL));
   }
 
   public void count(String outcome) {

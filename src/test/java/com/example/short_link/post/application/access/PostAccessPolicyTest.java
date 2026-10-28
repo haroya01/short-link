@@ -115,7 +115,7 @@ class PostAccessPolicyTest {
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
     when(rooms.roomsOf(MEMBER)).thenReturn(Set.of(ROOM));
     PostEntity post = post(audience, countryBlocked ? List.of(BLOCKED_HERE) : List.of());
-    PostReader reader = reader(viewer, post);
+    PostViewer reader = reader(viewer, post);
 
     assertThat(code(policy.forLists(reader).of(post)))
         .isEqualTo(code(policy.decide(post, reader.withoutCredentials())));
@@ -141,7 +141,7 @@ class PostAccessPolicyTest {
   @Test
   void aServerRenderOfARegionRestrictedPostIsSentBackToTheBrowser() {
     PostEntity post = post(PostAudience.PUBLIC, List.of(BLOCKED_HERE));
-    PostReader render = new PostReader(null, null, null, "76.76.21.21", true);
+    PostViewer render = new PostViewer(null, null, null, "76.76.21.21", true);
 
     assertThat(policy.decide(post, render).lock()).isEqualTo(PostLock.REGION_CHECK);
     verifyNoInteractions(geo);
@@ -151,14 +151,14 @@ class PostAccessPolicyTest {
   void aServerRenderOfAnUnrestrictedPostIsAnsweredInFull() {
     PostEntity post = post(PostAudience.PUBLIC, List.of());
 
-    assertThat(policy.decide(post, new PostReader(null, null, null, null, true)).full()).isTrue();
+    assertThat(policy.decide(post, new PostViewer(null, null, null, null, true)).full()).isTrue();
   }
 
   @Test
   void anUnpublishedPostIsHiddenEvenFromItsAuthor() {
     PostEntity draft = TestEntities.withId(new PostEntity(AUTHOR, "d", "Draft", "ko"), 9L);
 
-    assertThat(policy.decide(draft, PostReader.of(AUTHOR)).hidden()).isTrue();
+    assertThat(policy.decide(draft, PostViewer.of(AUTHOR)).hidden()).isTrue();
   }
 
   @Test
@@ -175,7 +175,7 @@ class PostAccessPolicyTest {
     String grant = grants.issue(post).grant();
     post.protectWith("$2a$10$another-password-hash-0000000000000000000000000000000");
 
-    assertThat(policy.decide(post, new PostReader(STRANGER, null, grant, null, false)).lock())
+    assertThat(policy.decide(post, new PostViewer(STRANGER, null, grant, null, false)).lock())
         .isEqualTo(PostLock.PASSWORD);
   }
 
@@ -205,12 +205,12 @@ class PostAccessPolicyTest {
     PostEntity unlisted = post(PostAudience.UNLISTED, List.of());
     PostEntity followers = post(PostAudience.FOLLOWERS, List.of());
 
-    assertThat(policy.readable(unlisted, PostReader.of(STRANGER))).isFalse();
-    assertThatThrownBy(() -> policy.requireReadable(unlisted, PostReader.of(STRANGER)))
+    assertThat(policy.readable(unlisted, PostViewer.of(STRANGER))).isFalse();
+    assertThatThrownBy(() -> policy.requireReadable(unlisted, PostViewer.of(STRANGER)))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND));
-    assertThatThrownBy(() -> policy.readable(followers, PostReader.of(STRANGER)))
+    assertThatThrownBy(() -> policy.readable(followers, PostViewer.of(STRANGER)))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> {
@@ -252,14 +252,14 @@ class PostAccessPolicyTest {
   void onlyAnUnlistedPostWithoutItsKeyHidesThatItExists() {
     PostEntity unlisted = post(PostAudience.UNLISTED, List.of());
 
-    assertThat(policy.revealsExistence(unlisted, PostReader.of(STRANGER))).isFalse();
-    assertThat(policy.revealsExistence(unlisted, PostReader.of(AUTHOR))).isTrue();
+    assertThat(policy.revealsExistence(unlisted, PostViewer.of(STRANGER))).isFalse();
+    assertThat(policy.revealsExistence(unlisted, PostViewer.of(AUTHOR))).isTrue();
     assertThat(
             policy.revealsExistence(
-                unlisted, new PostReader(null, unlisted.getUnlistedKey(), null, null, false)))
+                unlisted, new PostViewer(null, unlisted.getUnlistedKey(), null, null, false)))
         .isTrue();
     assertThat(
-            policy.revealsExistence(post(PostAudience.FOLLOWERS, List.of()), PostReader.of(null)))
+            policy.revealsExistence(post(PostAudience.FOLLOWERS, List.of()), PostViewer.of(null)))
         .isTrue();
   }
 
@@ -268,10 +268,10 @@ class PostAccessPolicyTest {
     when(rooms.isMember(ROOM, MEMBER)).thenReturn(true);
     PostEntity room = post(PostAudience.ROOM, List.of());
 
-    assertThat(policy.revealsExistence(room, PostReader.of(STRANGER))).isFalse();
-    assertThat(policy.revealsExistence(room, PostReader.of(null))).isFalse();
-    assertThat(policy.revealsExistence(room, PostReader.of(MEMBER))).isTrue();
-    assertThat(policy.revealsExistence(room, PostReader.of(AUTHOR))).isTrue();
+    assertThat(policy.revealsExistence(room, PostViewer.of(STRANGER))).isFalse();
+    assertThat(policy.revealsExistence(room, PostViewer.of(null))).isFalse();
+    assertThat(policy.revealsExistence(room, PostViewer.of(MEMBER))).isTrue();
+    assertThat(policy.revealsExistence(room, PostViewer.of(AUTHOR))).isTrue();
   }
 
   @Test
@@ -306,18 +306,18 @@ class PostAccessPolicyTest {
     return post;
   }
 
-  private PostReader reader(Viewer viewer, PostEntity post) {
+  private PostViewer reader(Viewer viewer, PostEntity post) {
     String ip = "203.0.113.7";
     return switch (viewer) {
-      case ANONYMOUS -> new PostReader(null, null, null, ip, false);
-      case NON_FOLLOWER -> new PostReader(STRANGER, null, null, ip, false);
-      case FOLLOWER -> new PostReader(FOLLOWER, null, null, ip, false);
-      case PENDING_FOLLOWER -> new PostReader(PENDING, null, null, ip, false);
-      case OWNER -> new PostReader(AUTHOR, null, null, ip, false);
-      case GRANT_HOLDER -> new PostReader(STRANGER, null, grants.issue(post).grant(), ip, false);
-      case WRONG_KEY -> new PostReader(STRANGER, "not-the-key", null, ip, false);
-      case RIGHT_KEY -> new PostReader(null, "the-unlisted-key-of-this-post-00", null, ip, false);
-      case MEMBER -> new PostReader(MEMBER, null, null, ip, false);
+      case ANONYMOUS -> new PostViewer(null, null, null, ip, false);
+      case NON_FOLLOWER -> new PostViewer(STRANGER, null, null, ip, false);
+      case FOLLOWER -> new PostViewer(FOLLOWER, null, null, ip, false);
+      case PENDING_FOLLOWER -> new PostViewer(PENDING, null, null, ip, false);
+      case OWNER -> new PostViewer(AUTHOR, null, null, ip, false);
+      case GRANT_HOLDER -> new PostViewer(STRANGER, null, grants.issue(post).grant(), ip, false);
+      case WRONG_KEY -> new PostViewer(STRANGER, "not-the-key", null, ip, false);
+      case RIGHT_KEY -> new PostViewer(null, "the-unlisted-key-of-this-post-00", null, ip, false);
+      case MEMBER -> new PostViewer(MEMBER, null, null, ip, false);
     };
   }
 

@@ -12,7 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteViewReader;
-import com.example.short_link.federation.domain.SeenViewer;
+import com.example.short_link.common.seen.SeenViewer;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;

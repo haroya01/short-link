@@ -38,7 +38,6 @@ final class CommentNotificationPlan {
   static CommentNotificationPlan forComment(
       Long ownerId, Long actorId, Long parentAuthorId, Lookups lookups) {
     Set<Long> suppressed = new HashSet<>();
-    // 소유자에게 직접 답한 경우 REPLY가 우선한다. REPLY를 꺼도 COMMENT로 대체하지 않는다.
     boolean replyToOwner = ownerId.equals(parentAuthorId);
     boolean ownerHearsComment = !ownerId.equals(actorId) && !replyToOwner;
     if (ownerHearsComment) {
