@@ -9,11 +9,9 @@ import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.ShortCode;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 // 같은 목적지라도 채널별 클릭을 구분하려고 deduplicate=false로 발급한다. 쿼터 초과 등 발급 실패는 이벤트 저장을 막지 않는다.
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class EventLinkIssuer {
@@ -26,18 +24,18 @@ public class EventLinkIssuer {
   public record IssuedLink(Long linkId, String shortCode) {}
 
   public Optional<IssuedLink> issue(Long userId, Long eventId, String slug, String label) {
-    try {
-      ShortCode code = createLink.createForOwnPage(urlBuilder.build(slug), userId).shortCode();
-      Optional<LinkRef> link = links.find(code);
-      if (link.isEmpty()) {
-        return Optional.empty();
-      }
-      Long linkId = link.get().linkId().value();
-      eventLinkRepository.save(new EventLinkEntity(eventId, linkId, label));
-      return Optional.of(new IssuedLink(linkId, code.value()));
-    } catch (RuntimeException e) {
-      log.warn("event link issue skipped for event {}: {}", eventId, e.getMessage());
+    return createLink
+        .tryCreateForOwnPage(urlBuilder.build(slug), userId)
+        .flatMap(created -> record(eventId, created.shortCode(), label));
+  }
+
+  private Optional<IssuedLink> record(Long eventId, ShortCode code, String label) {
+    Optional<LinkRef> link = links.find(code);
+    if (link.isEmpty()) {
       return Optional.empty();
     }
+    Long linkId = link.get().linkId().value();
+    eventLinkRepository.save(new EventLinkEntity(eventId, linkId, label));
+    return Optional.of(new IssuedLink(linkId, code.value()));
   }
 }

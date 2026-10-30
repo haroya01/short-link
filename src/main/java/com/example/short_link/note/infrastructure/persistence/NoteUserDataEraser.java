@@ -3,11 +3,10 @@ package com.example.short_link.note.infrastructure.persistence;
 import com.example.short_link.common.user.UserDataEraser;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.util.List;
 import org.springframework.stereotype.Repository;
 
-// Notes and their image rows go with the user by ON DELETE CASCADE, but the stored image files and
-// this user's likes and reposts of other people's notes (no cascading FK on the user) do not.
+// Notes and their image rows go with the user by ON DELETE CASCADE, but this user's likes and
+// reposts of other people's notes (no cascading FK on the user) do not.
 @Repository
 class NoteUserDataEraser implements UserDataEraser {
 
@@ -46,16 +45,5 @@ class NoteUserDataEraser implements UserDataEraser {
     em.createNativeQuery("DELETE FROM note_filter WHERE user_id = :userId")
         .setParameter("userId", userId)
         .executeUpdate();
-  }
-
-  @Override
-  public List<String> storedFilesOf(long userId) {
-    List<?> keys =
-        em.createNativeQuery(
-                "SELECT m.storage_key FROM note_media m JOIN note n ON n.id = m.note_id"
-                    + " WHERE n.user_id = :userId")
-            .setParameter("userId", userId)
-            .getResultList();
-    return keys.stream().map(String.class::cast).toList();
   }
 }

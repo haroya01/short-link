@@ -3,6 +3,7 @@ package com.example.short_link.profile.application.image;
 import com.example.short_link.common.storage.ImageRejections;
 import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.PresignedUpload;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +14,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ProfileImageService {
-
-  private static final String KEY_PREFIX = "profile-images/";
 
   private static final ImageRejections REJECTIONS =
       new ImageRejections(
@@ -34,13 +33,15 @@ public class ProfileImageService {
   public PresignedUpload presignUpload(Long userId, String contentType) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     uploads.requireConfigured(REJECTIONS);
-    return uploads.presign(KEY_PREFIX + userId + "/", contentType, ImageUploads.STILL, REJECTIONS);
+    return uploads.presign(
+        UserFolder.PROFILE_IMAGES.of(userId), contentType, ImageUploads.STILL, REJECTIONS);
   }
 
   public CommitResult commitUpload(Long userId, String key) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     uploads.requireConfigured(REJECTIONS);
-    return new CommitResult(uploads.commit(KEY_PREFIX + userId + "/", key, REJECTIONS), key);
+    return new CommitResult(
+        uploads.commit(UserFolder.PROFILE_IMAGES.of(userId), key, REJECTIONS), key);
   }
 
   public record CommitResult(String imageUrl, String key) {}

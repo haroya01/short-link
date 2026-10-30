@@ -7,7 +7,6 @@ import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +15,6 @@ public class CreateEventAliasLinkUseCase {
   private final EventRepository eventRepository;
   private final EventLinkIssuer linkIssuer;
 
-  @Transactional
   public IssuedLink execute(Long userId, Long eventId, String label) {
     EventEntity event =
         eventRepository

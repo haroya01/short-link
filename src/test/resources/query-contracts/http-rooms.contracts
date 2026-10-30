@@ -13,7 +13,7 @@
 # page), the invite updated with its short code, and the creator for the answer.
 # An event or room-invite link points at our own page, so it skips the blocked-domain and Safe Browsing
 # checks and no longer reads the blocked-domain list.
-@junit | room-invite-create | 7 | 6 | 3 | 0 | 16
+@junit | room-invite-create | 7 | 6 | 2 | 0 | 15
 # The public invite page: invite, room, member count, inviter and up to eight faces. No note is read.
 @junit | room-invite-landing | 5 | 0 | 0 | 0 | 5
 # Joining locks the invite and then the room; membership, removal and an open request are checked,

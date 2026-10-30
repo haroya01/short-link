@@ -3,6 +3,7 @@ package com.example.short_link.common.storage.s3;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +11,21 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -127,6 +136,64 @@ public class S3ObjectStorage implements ObjectStorage {
       s3Client.deleteObject(DeleteObjectRequest.builder().bucket(props.bucket()).key(key).build());
     } catch (RuntimeException e) {
       throw new ObjectStorageException("S3 delete failed for key=" + key, e);
+    }
+  }
+
+  @Override
+  public void deleteFolder(String folder) {
+    if (folder == null || folder.isBlank() || !folder.endsWith("/")) {
+      throw new IllegalArgumentException("not a folder: " + folder);
+    }
+    String token = null;
+    do {
+      ListObjectsV2Response page = list(folder, token);
+      deleteAll(folder, page.contents());
+      token = Boolean.TRUE.equals(page.isTruncated()) ? page.nextContinuationToken() : null;
+    } while (token != null);
+  }
+
+  private ListObjectsV2Response list(String folder, String token) {
+    try {
+      return s3Client.listObjectsV2(
+          ListObjectsV2Request.builder()
+              .bucket(props.bucket())
+              .prefix(folder)
+              .continuationToken(token)
+              .build());
+    } catch (RuntimeException e) {
+      throw new ObjectStorageException("S3 list failed for folder=" + folder, e);
+    }
+  }
+
+  private void deleteAll(String folder, List<S3Object> objects) {
+    if (objects.isEmpty()) {
+      return;
+    }
+    List<ObjectIdentifier> keys =
+        objects.stream().map(o -> ObjectIdentifier.builder().key(o.key()).build()).toList();
+    DeleteObjectsResponse response;
+    try {
+      response =
+          s3Client.deleteObjects(
+              DeleteObjectsRequest.builder()
+                  .bucket(props.bucket())
+                  .delete(Delete.builder().objects(keys).quiet(true).build())
+                  .build());
+    } catch (RuntimeException e) {
+      throw new ObjectStorageException("S3 delete failed under folder=" + folder, e);
+    }
+    if (!response.errors().isEmpty()) {
+      S3Error first = response.errors().getFirst();
+      throw new ObjectStorageException(
+          "S3 kept "
+              + response.errors().size()
+              + " objects under folder="
+              + folder
+              + ", first key="
+              + first.key()
+              + ": "
+              + first.code(),
+          null);
     }
   }
 }

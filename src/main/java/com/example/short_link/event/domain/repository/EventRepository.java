@@ -20,5 +20,7 @@ public interface EventRepository {
 
   int decrementRegistrationCount(Long eventId);
 
+  void attachPrimaryLink(Long eventId, Long linkId);
+
   List<EventEntity> findPurgeCandidates(Instant endedBefore, int limit);
 }

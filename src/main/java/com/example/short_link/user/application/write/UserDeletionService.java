@@ -6,6 +6,7 @@ import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.application.LinkAccountData;
 import com.example.short_link.user.domain.UserEntity;
@@ -75,19 +76,13 @@ public class UserDeletionService {
   }
 
   public void hardDelete(Long userId) {
-    List<String> files = transaction.execute(status -> purge(userId));
-    files.forEach(this::deleteStoredFile);
+    if (Boolean.TRUE.equals(transaction.execute(status -> purge(userId)))) {
+      emptyFoldersOf(userId);
+    }
   }
 
-  private List<String> purge(Long userId) {
-    if (!userRepository.existsById(userId)) return List.of();
-    List<String> files =
-        storage.isConfigured()
-            ? userDataErasers.stream()
-                .flatMap(eraser -> eraser.storedFilesOf(userId).stream())
-                .toList()
-            : List.of();
-
+  private boolean purge(Long userId) {
+    if (!userRepository.existsById(userId)) return false;
     // Purge slice-owned rows before users: their foreign keys lack ON DELETE CASCADE.
     userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
     followRepository.deleteAllInvolving(userId);
@@ -102,14 +97,17 @@ public class UserDeletionService {
     meterRegistry
         .counter("user.hard_deleted", "links_removed", String.valueOf(deletedLinks))
         .increment();
-    return files;
+    return true;
   }
 
-  private void deleteStoredFile(String key) {
-    try {
-      storage.deleteWithVariants(key);
-    } catch (ObjectStorageException e) {
-      log.warn("failed to delete a stored file of a hard-deleted user key={}", key, e);
+  private void emptyFoldersOf(long userId) {
+    if (!storage.isConfigured()) return;
+    for (UserFolder folder : UserFolder.values()) {
+      try {
+        storage.deleteFolder(folder.of(userId));
+      } catch (ObjectStorageException e) {
+        log.warn("failed to empty a folder of a hard-deleted user folder={}", folder.of(userId), e);
+      }
     }
   }
 }

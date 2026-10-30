@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.link.application.LinkAccountData;
 import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
@@ -62,7 +63,7 @@ class AccountFilesOutsideTransactionIntegrationTest {
               return null;
             })
         .when(storage)
-        .deleteWithVariants(anyString());
+        .deleteFolder(anyString());
   }
 
   private static String where() {
@@ -89,10 +90,13 @@ class AccountFilesOutsideTransactionIntegrationTest {
   }
 
   @Test
-  void aHardDeleteRemovesNoteImagesOutsideTheTransactionThatErasedTheirRows() {
+  void aHardDeleteEmptiesTheUsersFoldersOutsideTheTransactionThatErasedTheirRows() {
     deletion.hardDelete(userId);
 
-    assertThat(calls).containsExactly("delete " + image + " outside");
+    assertThat(calls)
+        .contains("delete note-images/" + userId + "/ outside")
+        .hasSize(UserFolder.values().length)
+        .allMatch(call -> call.endsWith(" outside"));
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE id = ?", Long.class, userId))
         .isZero();
     assertThat(imagesStillStored()).isZero();

@@ -11,14 +11,17 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.ShortCodeGenerator;
+import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
+import com.example.short_link.support.FakeTransactions;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -94,7 +97,7 @@ class CreateLinkUseCaseCheckedDestinationTest {
 
   @Test
   void anOwnPageIsLinkedWithoutAskingSafeBrowsingOrTheBlockList() {
-    links.createForOwnPage("https://kurl.me/e/party", 7L);
+    assertThat(links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)).isPresent();
 
     verify(safety, never()).isSafe(any());
     verify(blockedDomains, never()).isBlocked(any());
@@ -103,10 +106,38 @@ class CreateLinkUseCaseCheckedDestinationTest {
 
   @Test
   void aForeignUrlCannotPassAsAnOwnPage() {
-    assertThatThrownBy(() -> links.createForOwnPage("https://kurl.me.evil.com/e/party", 7L))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> links.createForOwnPage("https://example.com/e/party", 7L))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(links.tryCreateForOwnPage("https://kurl.me.evil.com/e/party", 7L)).isEmpty();
+    assertThat(links.tryCreateForOwnPage("https://example.com/e/party", 7L)).isEmpty();
     verify(repository, never()).save(any());
+  }
+
+  @Test
+  void insideTheCallersTransactionAnOptionalLinkIsMade() {
+    Optional<LinkCreated> made =
+        FakeTransactions.template()
+            .execute(status -> links.tryCreateForOwnPage("https://kurl.me/e/party", 7L));
+
+    assertThat(made).isPresent();
+  }
+
+  @Test
+  void insideTheCallersTransactionAnOptionalLinkDoesNotSwallowItsFailure() {
+    when(repository.countByUserId(7L)).thenReturn(200L);
+
+    assertThatThrownBy(
+            () ->
+                FakeTransactions.template()
+                    .execute(status -> links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_QUOTA_EXCEEDED));
+  }
+
+  @Test
+  void anOptionalLinkOverTheQuotaComesBackEmpty() {
+    when(repository.countByUserId(7L)).thenReturn(200L);
+
+    assertThat(links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)).isEmpty();
+    verify(repository, never()).save(any(LinkEntity.class));
   }
 }

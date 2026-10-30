@@ -7,6 +7,7 @@ import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.common.storage.PresignedUpload;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -20,8 +21,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class PostImageService {
-
-  private static final String KEY_PREFIX = "post-images/";
 
   private static final ImageRejections REJECTIONS =
       new ImageRejections(
@@ -81,7 +80,7 @@ public class PostImageService {
   }
 
   private static String ownedPrefix(Long userId, Long postId) {
-    return KEY_PREFIX + userId + "/" + postId + "/";
+    return UserFolder.POST_IMAGES.of(userId) + postId + "/";
   }
 
   public record CommitResult(String imageUrl, String key) {}

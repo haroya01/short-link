@@ -17,41 +17,25 @@ public class CtaLinkTracker {
   private final CreateLinkUseCase createLink;
   private final ShortLinkDetector detector;
 
-  public record Tracking(
-      String existingCode, CreateLinkCommand link, CheckedDestination destination) {
-    public static final Tracking NONE = new Tracking(null, null, null);
-  }
-
-  public Tracking plan(Long userId, String url) {
+  public String trackingCodeFor(Long userId, String url) {
     if (url == null || url.isBlank()) {
-      return Tracking.NONE;
+      return null;
     }
     String existing = detector.extractCode(url);
     if (existing != null) {
-      return new Tracking(existing, null, null); // already a kurl link — measured as-is
+      return existing; // already a kurl link — measured as-is
     }
     CreateLinkCommand link = CreateLinkCommand.of(url, userId, null, null);
+    CheckedDestination destination;
     try {
-      return new Tracking(null, link, createLink.check(link));
+      destination = createLink.check(link);
     } catch (RuntimeException e) {
       log.warn("CTA link tracking skipped for user {}: {}", userId, e.getMessage());
-      return Tracking.NONE;
-    }
-  }
-
-  public String trackingCodeFor(Tracking tracking) {
-    if (tracking.existingCode() != null) {
-      return tracking.existingCode();
-    }
-    if (tracking.destination() == null) {
       return null;
     }
-    try {
-      return createLink.execute(tracking.link(), tracking.destination()).shortCode().value();
-    } catch (RuntimeException e) {
-      log.warn(
-          "CTA link tracking skipped for user {}: {}", tracking.link().userId(), e.getMessage());
-      return null;
-    }
+    return createLink
+        .tryExecute(link, destination)
+        .map(created -> created.shortCode().value())
+        .orElse(null);
   }
 }

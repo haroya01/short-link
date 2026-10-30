@@ -188,7 +188,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact/ProductCardCarousel.java|validateHttpUrl(String, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/domain/contact/TextBlockBody.java|normalize(String)#1=15
 CyclomaticComplexity|src/main/java/com/example/short_link/room/application/write/RoomInvitationService.java|accept(Long, Long)#1=11
-CyclomaticComplexity|src/main/java/com/example/short_link/room/application/write/RoomInviteService.java|create(Long, Long, Integer, Long, Boolean)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/user/domain/UserEntity.java|updateProfileTheme(String)#1=15
 ExcessiveParameterList|src/main/java/com/example/short_link/common/event/BlogInteractionEvent.java|BlogInteractionEvent#1=11
 ExcessiveParameterList|src/main/java/com/example/short_link/event/domain/EventEntity.java|EventEntity#1=13
