@@ -6,6 +6,7 @@ import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.PresignedUpload;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -16,7 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Slf4j
 public abstract class UserImageUpload {
 
-  private final String folder;
+  private final UserFolder folder;
   private final String label;
   private final UserRepository userRepository;
   private final ImageUploads uploads;
@@ -26,7 +27,7 @@ public abstract class UserImageUpload {
   private final ImageRejections rejections;
 
   protected UserImageUpload(
-      String folder,
+      UserFolder folder,
       String label,
       UserRepository userRepository,
       ImageUploads uploads,
@@ -89,7 +90,7 @@ public abstract class UserImageUpload {
   }
 
   private String ownedPrefix(Long userId) {
-    return folder + "/" + userId + "/";
+    return folder.of(userId);
   }
 
   private UserEntity user(Long userId) {

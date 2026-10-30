@@ -2,6 +2,7 @@ package com.example.short_link.common.storage.s3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -19,14 +20,21 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -191,5 +199,66 @@ class S3ObjectStorageTest {
             "note-images/1/a.w1080.jpg",
             "note-images/1/a.w480.jpg",
             "avatars/1/a.jpg");
+  }
+
+  @Test
+  void deleteFolderDeletesEveryPageOfTheListing() {
+    when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(
+            ListObjectsV2Response.builder()
+                .contents(S3Object.builder().key("avatars/7/a.png").build())
+                .isTruncated(true)
+                .nextContinuationToken("next")
+                .build())
+        .thenReturn(
+            ListObjectsV2Response.builder()
+                .contents(S3Object.builder().key("avatars/7/b.png").build())
+                .isTruncated(false)
+                .build());
+    when(s3.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(DeleteObjectsResponse.builder().build());
+
+    storage(true).deleteFolder("avatars/7/");
+
+    ArgumentCaptor<ListObjectsV2Request> listed =
+        ArgumentCaptor.forClass(ListObjectsV2Request.class);
+    verify(s3, Mockito.times(2)).listObjectsV2(listed.capture());
+    assertThat(listed.getAllValues())
+        .extracting(ListObjectsV2Request::prefix, ListObjectsV2Request::continuationToken)
+        .containsExactly(tuple("avatars/7/", null), tuple("avatars/7/", "next"));
+    ArgumentCaptor<DeleteObjectsRequest> deleted =
+        ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+    verify(s3, Mockito.times(2)).deleteObjects(deleted.capture());
+    assertThat(deleted.getAllValues())
+        .flatExtracting(request -> request.delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly("avatars/7/a.png", "avatars/7/b.png");
+  }
+
+  @Test
+  void deleteFolderRefusesAnythingThatIsNotAFolder() {
+    for (String notAFolder : new String[] {null, "", "avatars/7"}) {
+      assertThatThrownBy(() -> storage(true).deleteFolder(notAFolder))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    verify(s3, Mockito.never()).listObjectsV2(any(ListObjectsV2Request.class));
+  }
+
+  @Test
+  void deleteFolderFailsWhenStorageKeepsSomeObjects() {
+    when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(
+            ListObjectsV2Response.builder()
+                .contents(S3Object.builder().key("avatars/7/a.png").build())
+                .build());
+    when(s3.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(
+            DeleteObjectsResponse.builder()
+                .errors(S3Error.builder().key("avatars/7/a.png").code("AccessDenied").build())
+                .build());
+
+    assertThatThrownBy(() -> storage(true).deleteFolder("avatars/7/"))
+        .isInstanceOf(ObjectStorageException.class)
+        .hasMessageContaining("AccessDenied");
   }
 }

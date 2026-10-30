@@ -3,6 +3,7 @@ package com.example.short_link.event.application.image;
 import com.example.short_link.common.storage.ImageRejections;
 import com.example.short_link.common.storage.ImageUploads;
 import com.example.short_link.common.storage.PresignedUpload;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
@@ -14,8 +15,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 @RequiredArgsConstructor
 public class EventCoverImageService {
-
-  private static final String KEY_PREFIX = "event-covers/";
 
   private static final ImageRejections REJECTIONS =
       new ImageRejections(
@@ -54,7 +53,7 @@ public class EventCoverImageService {
   }
 
   private static String ownedPrefix(Long userId, Long eventId) {
-    return KEY_PREFIX + userId + "/" + eventId + "/";
+    return UserFolder.EVENT_COVERS.of(userId) + eventId + "/";
   }
 
   private EventEntity requireOwned(Long userId, Long eventId) {

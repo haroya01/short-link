@@ -4,6 +4,7 @@ import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -22,8 +23,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class NoteImages {
-
-  static final String KEY_PREFIX = "note-images/";
 
   private static final Map<String, String> EXTENSIONS =
       Map.of(
@@ -44,7 +43,7 @@ public class NoteImages {
       throw new NoteException(
           NoteErrorCode.NOTE_IMAGE_INVALID, "contentType must be one of " + EXTENSIONS.keySet());
     }
-    String key = KEY_PREFIX + userId + "/" + UUID.randomUUID() + "." + extension;
+    String key = UserFolder.NOTE_IMAGES.of(userId) + UUID.randomUUID() + "." + extension;
     return new PresignedImage(
         storage.presignPut(key, type, Duration.ofSeconds(policy.presignTtlSeconds())),
         key,
@@ -68,7 +67,7 @@ public class NoteImages {
     requireStorage();
     String key = image.key();
     String contentType = key == null ? null : contentTypeOf(key);
-    if (key == null || !key.startsWith(KEY_PREFIX + userId + "/") || contentType == null) {
+    if (key == null || !key.startsWith(UserFolder.NOTE_IMAGES.of(userId)) || contentType == null) {
       throw new NoteException(NoteErrorCode.NOTE_IMAGE_INVALID, "image key not owned by user");
     }
     long size =
