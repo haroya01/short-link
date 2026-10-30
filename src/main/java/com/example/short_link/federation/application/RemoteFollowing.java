@@ -68,7 +68,6 @@ public class RemoteFollowing {
     this.clock = clock;
   }
 
-  @Transactional
   public RemoteAccountView lookup(Long userId, String handle) {
     RemoteActorEntity actor =
         finder

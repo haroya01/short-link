@@ -5,8 +5,6 @@ com.example.short_link.cta.application.write.UpdateCtaUseCase.execute(com.exampl
 com.example.short_link.event.application.write.CreateEventAliasLinkUseCase.execute(java.lang.Long, java.lang.Long, java.lang.String) reaches an outbound client
 com.example.short_link.event.application.write.CreateEventUseCase.execute(com.example.short_link.event.application.write.CreateEventCommand) reaches an outbound client
 com.example.short_link.event.application.write.RegisterForEventUseCase.execute(com.example.short_link.event.application.write.RegisterForEventCommand) reaches an outbound client
-com.example.short_link.federation.application.RemoteFollowing.lookup(java.lang.Long, java.lang.String) reaches an outbound client
-com.example.short_link.federation.application.relay.RelaySubscriptions.subscribe(java.lang.String) reaches an outbound client
 com.example.short_link.link.og.application.LinkOgFetchService.refresh(com.example.short_link.link.domain.ShortCode, java.lang.String) reaches an outbound client
 com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.sweep() reaches an outbound client
 com.example.short_link.link.webhook.scheduler.ThresholdSpikeDetector.onClickRecorded(com.example.short_link.link.application.dto.ClickRecordedEvent) reaches an outbound client

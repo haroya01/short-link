@@ -41,7 +41,7 @@ class ArchUnitRatchetRulesTest {
       Map.of(
           "moduleInternalsStayInTheirModule", 6,
           "theSystemClockIsReadInConfigAlone", 0,
-          "transactionsDoNotReachOutboundClients", 13,
+          "transactionsDoNotReachOutboundClients", 11,
           "springDataRepositoriesStayBehindPorts", 0,
           "constructorCallsPassFewerThanTenArguments", 135);
 
