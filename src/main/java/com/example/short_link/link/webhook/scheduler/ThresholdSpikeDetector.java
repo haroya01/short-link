@@ -16,14 +16,13 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // Counts committed human clicks in the rolling window. A fired hook stays in cooldown for
-// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts; REQUIRES_NEW persists markSpikeFired
-// after the click transaction closes.
+// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts; the cooldown is stored in its own
+// short transaction once the alert has gone out.
 @Slf4j
 @Component
 public class ThresholdSpikeDetector {
@@ -34,6 +33,7 @@ public class ThresholdSpikeDetector {
   private final ClickAlertReadRepository clickAlerts;
   private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
+  private final TransactionTemplate transaction;
 
   public ThresholdSpikeDetector(
       LinkWebhookRepository hooks,
@@ -41,18 +41,19 @@ public class ThresholdSpikeDetector {
       ClickTotalsReader clickTotals,
       ClickAlertReadRepository clickAlerts,
       WebhookHttpDeliveryClient deliveryClient,
-      Clock clock) {
+      Clock clock,
+      TransactionTemplate transaction) {
     this.hooks = hooks;
     this.links = links;
     this.clickTotals = clickTotals;
     this.clickAlerts = clickAlerts;
     this.deliveryClient = deliveryClient;
     this.clock = clock;
+    this.transaction = transaction;
   }
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onClickRecorded(ClickRecordedEvent event) {
     if (event.bot()) return;
     List<LinkWebhookEntity> candidates =
@@ -85,7 +86,8 @@ public class ThresholdSpikeDetector {
         new ThresholdSpikePayload(
             link.getShortCode(), windowMinutes + "m", count, threshold, topReferrer);
     deliveryClient.deliver(hook, new WebhookNotification.SpikeAlert(payload));
-    hook.markSpikeFired(now);
+    transaction.executeWithoutResult(
+        status -> hooks.findById(hook.getId()).ifPresent(fired -> fired.markSpikeFired(now)));
   }
 
   private static boolean inCooldown(LinkWebhookEntity hook, Instant now, int windowMinutes) {

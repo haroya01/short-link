@@ -21,6 +21,7 @@ import com.example.short_link.link.webhook.application.helper.WebhookNotificatio
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -41,7 +42,14 @@ class ThresholdSpikeDetectorTest {
   private final Clock fixed = Clock.fixed(now, ZoneOffset.UTC);
 
   private final ThresholdSpikeDetector detector =
-      new ThresholdSpikeDetector(hooks, links, clickTotals, clickAlerts, deliveryClient, fixed);
+      new ThresholdSpikeDetector(
+          hooks,
+          links,
+          clickTotals,
+          clickAlerts,
+          deliveryClient,
+          fixed,
+          FakeTransactions.template());
 
   @BeforeEach
   void defaults() {
@@ -126,6 +134,7 @@ class ThresholdSpikeDetectorTest {
   void marksSpikeFiredAfterDelivery() {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(hook));
+    when(hooks.findById(hook.getId())).thenReturn(Optional.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
 

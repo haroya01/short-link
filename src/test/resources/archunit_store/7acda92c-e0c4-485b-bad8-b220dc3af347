@@ -6,6 +6,4 @@ com.example.short_link.event.application.write.CreateEventAliasLinkUseCase.execu
 com.example.short_link.event.application.write.CreateEventUseCase.execute(com.example.short_link.event.application.write.CreateEventCommand) reaches an outbound client
 com.example.short_link.event.application.write.RegisterForEventUseCase.execute(com.example.short_link.event.application.write.RegisterForEventCommand) reaches an outbound client
 com.example.short_link.link.og.application.LinkOgFetchService.refresh(com.example.short_link.link.domain.ShortCode, java.lang.String) reaches an outbound client
-com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.sweep() reaches an outbound client
-com.example.short_link.link.webhook.scheduler.ThresholdSpikeDetector.onClickRecorded(com.example.short_link.link.application.dto.ClickRecordedEvent) reaches an outbound client
 com.example.short_link.room.application.write.RoomInviteService.create(java.lang.Long, java.lang.Long, java.lang.Integer, java.lang.Long, java.lang.Boolean) reaches an outbound client
