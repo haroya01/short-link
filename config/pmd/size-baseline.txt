@@ -66,7 +66,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/customdomain/domain/Cu
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventContacts.java|normalize(ContactField, String)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateAndSerializeAnswers(List<EventQuestionEntity>, Map<Long, String>)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateSpecs(List<QuestionSpec>)#1=19
-CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|execute(RegisterForEventCommand)#1=10
+CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|register(RegisterForEventCommand)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/ActivityStreams.java|isDocumentType(String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/OutboxBackfill.java|fill(RemoteActorEntity)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/RemoteActorParser.java|parse(JsonNode, URI, String)#1=18
