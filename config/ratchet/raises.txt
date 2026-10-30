@@ -1,0 +1,4 @@
+# 래칫 총계(ArchUnit 규칙별 동결 위반, 기준선 상수·천장, PMD 규칙별 합, // 주석 줄)가 오를 때마다 같은 변경에서 한 줄을 더한다.
+# 형식: YYYY-MM-DD | <지표> | <옛값> -> <새값> | <이유>
+# 지표 이름은 RatchetsOnlyComeDownTest 실패 메시지에 나온 그대로 쓴다. 이 파일은 줄을 더하기만 한다.
+2026-06-11 | ArchitectureRulesTest.SPRING_BOOT_CONTROLLER_TEST_BASELINE | 36 -> 37 | #541이 MobileAuthControllerTest(@SpringBootTest)를 더하며 올렸다. 당시 이유 기록이 없어 2026-10-30 기록에서 찾아 남긴다.
