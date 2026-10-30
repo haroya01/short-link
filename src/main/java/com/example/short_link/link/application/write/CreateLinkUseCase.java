@@ -94,10 +94,7 @@ public class CreateLinkUseCase {
 
     validator.rejectIfReserved(code);
     // bcrypt 는 수십 ms 가 걸려서 커넥션을 잡기 전에 끝낸다.
-    String passwordHash =
-        authenticated && command.password() != null && !command.password().isBlank()
-            ? passwordEncoder.encode(command.password())
-            : null;
+    String passwordHash = passwordHashFor(command, authenticated);
 
     // 실패한 INSERT 는 트랜잭션을 rollback-only 로 만들어서 코드마다 트랜잭션을 따로 연다.
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
@@ -124,6 +121,14 @@ public class CreateLinkUseCase {
       }
     }
     throw new LinkException(LinkErrorCode.SHORT_CODE_EXHAUSTED);
+  }
+
+  private String passwordHashFor(CreateLinkCommand command, boolean authenticated) {
+    String password = command.password();
+    if (!authenticated || password == null || password.isBlank()) {
+      return null;
+    }
+    return passwordEncoder.encode(password);
   }
 
   private LinkCreated persist(
