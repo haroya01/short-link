@@ -17,6 +17,7 @@ import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.common.storage.PresignedUpload;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
+import com.example.short_link.support.FakeTransactions;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -52,7 +53,8 @@ class AvatarServiceTest {
             new ImageUploads(
                 UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)),
             objectStorage,
-            mock(ProfileCacheInvalidator.class));
+            mock(ProfileCacheInvalidator.class),
+            FakeTransactions.template());
   }
 
   @Test
@@ -64,7 +66,8 @@ class AvatarServiceTest {
             userRepository,
             new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBucket)),
             objectStorage,
-            mock(ProfileCacheInvalidator.class));
+            mock(ProfileCacheInvalidator.class),
+            FakeTransactions.template());
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
@@ -201,7 +204,8 @@ class AvatarServiceTest {
             userRepository,
             new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noCdn)),
             objectStorage,
-            mock(ProfileCacheInvalidator.class));
+            mock(ProfileCacheInvalidator.class),
+            FakeTransactions.template());
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
     PresignedUpload r = svc.presignUpload(1L, "image/png");
@@ -217,7 +221,8 @@ class AvatarServiceTest {
             userRepository,
             new ImageUploads(UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(slashed)),
             objectStorage,
-            mock(ProfileCacheInvalidator.class));
+            mock(ProfileCacheInvalidator.class),
+            FakeTransactions.template());
     when(objectStorage.presignPut(any(), eq("image/webp"), any(Duration.class)))
         .thenReturn("https://s3/put");
     PresignedUpload r = svc.presignUpload(1L, "image/webp");

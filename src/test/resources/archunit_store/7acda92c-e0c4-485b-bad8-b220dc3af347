@@ -2,7 +2,6 @@ com.example.short_link.campaign.application.CampaignBatchService.create(java.lan
 com.example.short_link.campaign.application.CampaignBatchService.createBulk(java.lang.Long, java.lang.Long, com.example.short_link.campaign.application.write.CampaignBatchBulkCommand) reaches an outbound client
 com.example.short_link.cta.application.write.CreateCtaUseCase.execute(com.example.short_link.cta.application.write.CreateCtaCommand) reaches an outbound client
 com.example.short_link.cta.application.write.UpdateCtaUseCase.execute(com.example.short_link.cta.application.write.UpdateCtaCommand) reaches an outbound client
-com.example.short_link.event.application.image.EventCoverImageService.commitUpload(java.lang.Long, java.lang.Long, java.lang.String) reaches an outbound client
 com.example.short_link.event.application.write.CreateEventAliasLinkUseCase.execute(java.lang.Long, java.lang.Long, java.lang.String) reaches an outbound client
 com.example.short_link.event.application.write.CreateEventUseCase.execute(com.example.short_link.event.application.write.CreateEventCommand) reaches an outbound client
 com.example.short_link.event.application.write.RegisterForEventUseCase.execute(com.example.short_link.event.application.write.RegisterForEventCommand) reaches an outbound client
@@ -13,7 +12,3 @@ com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.sweep() rea
 com.example.short_link.link.webhook.scheduler.ThresholdSpikeDetector.onClickRecorded(com.example.short_link.link.application.dto.ClickRecordedEvent) reaches an outbound client
 com.example.short_link.room.application.write.RoomInviteService.create(java.lang.Long, java.lang.Long, java.lang.Integer, java.lang.Long, java.lang.Boolean) reaches an outbound client
 com.example.short_link.user.application.write.UserDeletionService.hardDelete(java.lang.Long) reaches an outbound client
-com.example.short_link.user.application.write.avatar.AvatarService.clearAvatar(java.lang.Long) reaches an outbound client
-com.example.short_link.user.application.write.avatar.AvatarService.commitUpload(java.lang.Long, java.lang.String) reaches an outbound client
-com.example.short_link.user.application.write.avatar.BannerService.clearBanner(java.lang.Long) reaches an outbound client
-com.example.short_link.user.application.write.avatar.BannerService.commitUpload(java.lang.Long, java.lang.String) reaches an outbound client

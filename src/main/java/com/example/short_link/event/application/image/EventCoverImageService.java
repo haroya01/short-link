@@ -9,7 +9,7 @@ import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +27,7 @@ public class EventCoverImageService {
 
   private final ImageUploads uploads;
   private final EventRepository eventRepository;
+  private final TransactionTemplate transaction;
 
   public record PresignResult(
       String uploadUrl, String publicUrl, String key, String contentType, long maxBytes) {}
@@ -44,12 +45,11 @@ public class EventCoverImageService {
         upload.maxBytes());
   }
 
-  @Transactional
   public String commitUpload(Long userId, Long eventId, String key) {
     uploads.requireConfigured(REJECTIONS);
-    EventEntity event = requireOwned(userId, eventId);
+    requireOwned(userId, eventId);
     String publicUrl = uploads.commit(ownedPrefix(userId, eventId), key, REJECTIONS);
-    event.updateCoverImage(key);
+    transaction.executeWithoutResult(status -> requireOwned(userId, eventId).updateCoverImage(key));
     return publicUrl;
   }
 

@@ -11,6 +11,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.RoomErasure;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
