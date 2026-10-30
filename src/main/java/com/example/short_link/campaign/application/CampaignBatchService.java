@@ -14,6 +14,7 @@ import com.example.short_link.link.application.CampaignLinks;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.application.read.LinkRefReader;
+import com.example.short_link.link.application.write.CheckedDestination;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -31,35 +33,36 @@ public class CampaignBatchService {
   private final CampaignQueryService campaignQuery;
   private final LinkRefReader links;
   private final CampaignLinks campaignLinks;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     campaign.requireBatchEditable();
     String destination = resolveDestination(command.destinationUrl(), campaign);
     validateRow(command, destination, 0);
-    return persistRow(campaign, ownerId, command, destination);
+    PreparedBatch batch = checked(command, destination, ownerId);
+    return transaction.execute(status -> persistRow(campaign, batch));
   }
 
-  @Transactional
   public List<BatchWithLink> createBulk(
       Long campaignId, Long ownerId, CampaignBatchBulkCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     campaign.requireBatchEditable();
 
-    List<PreparedBatch> prepared = new ArrayList<>(command.batches().size());
+    List<String> destinations = new ArrayList<>(command.batches().size());
     for (int i = 0; i < command.batches().size(); i++) {
       CampaignBatchCreateCommand row = command.batches().get(i);
       String destination = resolveDestination(row.destinationUrl(), campaign);
       validateRow(row, destination, i);
-      prepared.add(new PreparedBatch(row, destination));
+      destinations.add(destination);
+    }
+    List<PreparedBatch> prepared = new ArrayList<>(command.batches().size());
+    for (int i = 0; i < command.batches().size(); i++) {
+      prepared.add(checked(command.batches().get(i), destinations.get(i), ownerId));
     }
 
-    List<BatchWithLink> out = new ArrayList<>(command.batches().size());
-    for (PreparedBatch batch : prepared) {
-      out.add(persistRow(campaign, ownerId, batch.command(), batch.destination()));
-    }
-    return out;
+    return transaction.execute(
+        status -> prepared.stream().map(batch -> persistRow(campaign, batch)).toList());
   }
 
   @Transactional(readOnly = true)
@@ -117,16 +120,20 @@ public class CampaignBatchService {
     return new BatchWithLink(batch, link);
   }
 
-  private BatchWithLink persistRow(
-      CampaignEntity campaign, Long ownerId, CampaignBatchCreateCommand row, String destination) {
+  private PreparedBatch checked(CampaignBatchCreateCommand row, String destination, Long ownerId) {
     // 배치별 추적 코드와 Batch:Link 1:1 관계를 유지하려고 URL 중복 제거를 끈다.
-    LinkCreated created =
-        linkCreationService.execute(CreateLinkCommand.perBatch(destination, ownerId));
+    CreateLinkCommand link = CreateLinkCommand.perBatch(destination, ownerId);
+    return new PreparedBatch(row, link, linkCreationService.check(link));
+  }
+
+  private BatchWithLink persistRow(CampaignEntity campaign, PreparedBatch batch) {
+    CampaignBatchCreateCommand row = batch.row();
+    LinkCreated created = linkCreationService.execute(batch.link(), batch.destination());
     LinkRef link =
         links
             .find(created.shortCode())
             .orElseThrow(() -> new IllegalStateException("link missing right after create"));
-    CampaignBatchEntity batch =
+    CampaignBatchEntity saved =
         batchRepository.save(
             new CampaignBatchEntity(
                 campaign.getId(),
@@ -136,10 +143,11 @@ public class CampaignBatchService {
                 blankToNull(row.areaLabel()),
                 row.quantity(),
                 blankToNull(row.memo())));
-    return new BatchWithLink(batch, link);
+    return new BatchWithLink(saved, link);
   }
 
-  private record PreparedBatch(CampaignBatchCreateCommand command, String destination) {}
+  private record PreparedBatch(
+      CampaignBatchCreateCommand row, CreateLinkCommand link, CheckedDestination destination) {}
 
   private static String resolveDestination(String rowDestination, CampaignEntity campaign) {
     if (rowDestination != null && !rowDestination.isBlank()) {

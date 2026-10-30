@@ -25,7 +25,6 @@ CognitiveComplexity|src/main/java/com/example/short_link/federation/scheduler/Re
 CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/HomeFeedQueryService.java|blog(Long, String, String, int)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/HomeFeedQueryService.java|page(HomeAsk)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/HomeForYou.java|show(Long, List<Ref>)#1=24
-CognitiveComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|execute(CreateLinkCommand)#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/link/export/application/LinkExportService.java|exportEventsCsv(Long, ShortCode)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=27
 CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, long, Scope)#1=15
@@ -66,7 +65,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/customdomain/domain/Cu
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventContacts.java|normalize(ContactField, String)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateAndSerializeAnswers(List<EventQuestionEntity>, Map<Long, String>)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/helper/EventQuestions.java|validateSpecs(List<QuestionSpec>)#1=19
-CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|execute(RegisterForEventCommand)#1=10
+CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|register(RegisterForEventCommand)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/ActivityStreams.java|isDocumentType(String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/OutboxBackfill.java|fill(RemoteActorEntity)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/RemoteActorParser.java|parse(JsonNode, URI, String)#1=18
@@ -110,7 +109,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/home/application/read/
 CyclomaticComplexity|src/main/java/com/example/short_link/home/application/read/RoomItemsQueryService.java|page(Long, Positions, int, NoteSlice, PostSlice)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/access/presentation/PasswordUnlockController.java|unlock(ShortCode, String, String, String, String, String, String, HttpServletRequest)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/dto/MyLinksCursor.java|decode(String)#1=14
-CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|execute(CreateLinkCommand)#1=14
+CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|execute(CreateLinkCommand, CheckedDestination)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|persist(String, Long, String, boolean, Instant, boolean, boolean, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/ImportLinksFromCsvUseCase.java|execute(ImportLinksFromCsvCommand)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/link/classifier/application/UserAgentClassifier.java|mapDevice(String)#1=12

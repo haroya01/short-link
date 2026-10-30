@@ -5,6 +5,7 @@ import static com.example.short_link.ArchRuleProofs.RULES_WITHOUT_A_PROOF;
 import static com.example.short_link.ArchRuleProofs.RULES_WITHOUT_A_PROOF_BASELINE;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.example.short_link.ArchRuleProofs.Proof;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -112,6 +113,16 @@ class ArchRuleProofTest {
     Set<String> provenButStillListed = new TreeSet<>(RULES_WITHOUT_A_PROOF);
     provenButStillListed.retainAll(provenRules());
     assertThat(provenButStillListed).as("A proven rule leaves RULES_WITHOUT_A_PROOF.").isEmpty();
+  }
+
+  @Test
+  void everyAfterCommitHandoffNamesATestThatExists() {
+    for (Map.Entry<String, String> handoff :
+        ArchUnitRatchetRulesTest.AFTER_COMMIT_HANDOFFS.entrySet()) {
+      assertThatCode(() -> Class.forName(handoff.getValue()))
+          .as("%s names a test that is gone: %s", handoff.getKey(), handoff.getValue())
+          .doesNotThrowAnyException();
+    }
   }
 
   private static List<String> violations(ArchRule rule, JavaClasses scanned, Class<?> fixture) {

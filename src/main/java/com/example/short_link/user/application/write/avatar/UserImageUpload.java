@@ -11,6 +11,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 public abstract class UserImageUpload {
@@ -21,6 +22,7 @@ public abstract class UserImageUpload {
   private final ImageUploads uploads;
   private final ObjectStorage objectStorage;
   private final ProfileCacheInvalidator cacheEviction;
+  private final TransactionTemplate transaction;
   private final ImageRejections rejections;
 
   protected UserImageUpload(
@@ -29,13 +31,15 @@ public abstract class UserImageUpload {
       UserRepository userRepository,
       ImageUploads uploads,
       ObjectStorage objectStorage,
-      ProfileCacheInvalidator cacheEviction) {
+      ProfileCacheInvalidator cacheEviction,
+      TransactionTemplate transaction) {
     this.folder = folder;
     this.label = label;
     this.userRepository = userRepository;
     this.uploads = uploads;
     this.objectStorage = objectStorage;
     this.cacheEviction = cacheEviction;
+    this.transaction = transaction;
     this.rejections =
         new ImageRejections(
             () -> new UserException(UserErrorCode.AVATAR_UNAVAILABLE),
@@ -62,24 +66,26 @@ public abstract class UserImageUpload {
   String commit(Long userId, String key) {
     uploads.requireConfigured(rejections);
     String publicUrl = uploads.commit(ownedPrefix(userId), key, rejections);
-    UserEntity user = user(userId);
-    String previousKey = currentKey(user);
-    replace(user, publicUrl, key);
+    String previousKey = transaction.execute(status -> swap(userId, publicUrl, key));
     if (previousKey != null && !previousKey.isBlank() && !previousKey.equals(key)) {
       deleteQuietly(previousKey, "previous " + label);
     }
-    cacheEviction.evictByUsername(user.getUsername());
     return publicUrl;
   }
 
   void clear(Long userId) {
-    UserEntity user = user(userId);
-    String previousKey = currentKey(user);
-    replace(user, null, null);
+    String previousKey = transaction.execute(status -> swap(userId, null, null));
     if (objectStorage.isConfigured() && previousKey != null && !previousKey.isBlank()) {
       deleteQuietly(previousKey, "cleared " + label);
     }
+  }
+
+  private String swap(Long userId, String url, String key) {
+    UserEntity user = user(userId);
+    String previousKey = currentKey(user);
+    replace(user, url, key);
     cacheEviction.evictByUsername(user.getUsername());
+    return previousKey;
   }
 
   private String ownedPrefix(Long userId) {

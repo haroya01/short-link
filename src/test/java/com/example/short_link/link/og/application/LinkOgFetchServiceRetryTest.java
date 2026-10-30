@@ -41,7 +41,7 @@ class LinkOgFetchServiceRetryTest {
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAfterCommit(new ShortCode("retry001"), "https://example.com/x");
+    listener.refresh(new ShortCode("retry001"), "https://example.com/x");
 
     verify(repo).recordOgFetchFailed(eq(1L), any(Instant.class), eq(true));
   }
@@ -65,7 +65,7 @@ class LinkOgFetchServiceRetryTest {
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAfterCommit(new ShortCode("retry002"), "https://example.com/x");
+    listener.refresh(new ShortCode("retry002"), "https://example.com/x");
 
     verify(repo).recordOgFetchFailed(eq(1L), any(Instant.class), eq(false));
   }

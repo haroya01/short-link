@@ -20,6 +20,7 @@ import com.example.short_link.link.webhook.application.helper.WebhookNotificatio
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -68,7 +69,8 @@ class DailyWebhookSummaryJobTest {
   }
 
   private DailyWebhookSummaryJob jobAt(ZonedDateTime t) {
-    return new DailyWebhookSummaryJob(hooks, links, users, assembler, deliveryClient, clockAt(t));
+    return new DailyWebhookSummaryJob(
+        hooks, links, users, assembler, deliveryClient, clockAt(t), FakeTransactions.template());
   }
 
   private DailySummaryPayload stubPayload() {
@@ -95,6 +97,7 @@ class DailyWebhookSummaryJobTest {
   void marksSummarySentAfterDelivery() {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
+    when(hooks.findById(hook.getId())).thenReturn(Optional.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
     when(assembler.assemble(

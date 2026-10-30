@@ -1,6 +1,5 @@
 package com.example.short_link.room.application.write;
 
-import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.room.application.read.RoomInviteUrls;
 import com.example.short_link.room.application.read.RoomInviteView;
@@ -73,10 +72,7 @@ public class RoomInviteService {
                 expiresInSeconds == null ? null : now.plusSeconds(expiresInSeconds)));
     try {
       invite.linkAs(
-          links
-              .execute(CreateLinkCommand.forOwnPage(urls.page(invite.getCode()), userId))
-              .shortCode()
-              .value());
+          links.createForOwnPage(urls.page(invite.getCode()), userId).shortCode().value());
     } catch (RuntimeException e) {
       log.warn("room invite link skipped for room {}: {}", roomId, e.getMessage());
     }

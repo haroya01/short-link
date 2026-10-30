@@ -111,11 +111,15 @@ final class ArchRuleProofs {
               List.of(
                   TransactionFixtures.CallsNetworkInsideTransaction.class,
                   TransactionFixtures.ReachesNetworkThroughAHelperInsideTransaction.class,
-                  TransactionFixtures.ReachesNetworkThroughAPortInsideTransaction.class),
+                  TransactionFixtures.ReachesNetworkThroughAPortInsideTransaction.class,
+                  TransactionFixtures.CallsNetworkInsideANewTransaction.class),
               List.of(
                   TransactionFixtures.CallsNetworkOutsideTransaction.class,
                   TransactionFixtures.ReachesNetworkBeforeTheTransaction.class,
-                  TransactionFixtures.HandsNetworkToAnotherThreadInsideTransaction.class)),
+                  TransactionFixtures.HandsNetworkToAnotherThreadInsideTransaction.class,
+                  TransactionFixtures.SuspendsTheTransactionToCallNetwork.class,
+                  TransactionFixtures.ReachesNetworkThroughASuspendingBeanInsideTransaction.class,
+                  TransactionFixtures.HandsAPushPastTheCommitInsideTransaction.class)),
           new Proof(
               "ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone",
               ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone,

@@ -11,7 +11,9 @@
 # An invite: membership, the invite row, then the kurl short link to the invite page through the
 # usual link creation (blocked domains, quota, link and its policy rows, audit, OG metadata of the
 # page), the invite updated with its short code, and the creator for the answer.
-@junit | room-invite-create | 8 | 6 | 3 | 0 | 17
+# An event or room-invite link points at our own page, so it skips the blocked-domain and Safe Browsing
+# checks and no longer reads the blocked-domain list.
+@junit | room-invite-create | 7 | 6 | 3 | 0 | 16
 # The public invite page: invite, room, member count, inviter and up to eight faces. No note is read.
 @junit | room-invite-landing | 5 | 0 | 0 | 0 | 5
 # Joining locks the invite and then the room; membership, removal and an open request are checked,

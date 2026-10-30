@@ -21,6 +21,7 @@ import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,8 @@ class EventCoverImageServiceTest {
     return new EventCoverImageService(
         new ImageUploads(
             UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties)),
-        eventRepository);
+        eventRepository,
+        FakeTransactions.template());
   }
 
   private EventEntity ownedEvent() {

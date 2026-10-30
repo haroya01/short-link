@@ -27,6 +27,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 // The instance actor follows a relay with the Public collection as the object, as Mastodon does.
@@ -42,6 +43,7 @@ public class RelaySubscriptions {
   private final JsonMapper json;
   private final RelayProperties props;
   private final Clock clock;
+  private final TransactionTemplate transaction;
 
   private volatile Map<String, Long> accepted = Map.of();
   private volatile Setting setting = new Setting(RelayMode.OFF, List.of());
@@ -79,7 +81,8 @@ public class RelaySubscriptions {
       FederationUrls urls,
       JsonMapper json,
       RelayProperties props,
-      Clock clock) {
+      Clock clock,
+      TransactionTemplate transaction) {
     this.relays = relays;
     this.relayed = relayed;
     this.resolver = resolver;
@@ -88,6 +91,7 @@ public class RelaySubscriptions {
     this.json = json;
     this.props = props;
     this.clock = clock;
+    this.transaction = transaction;
   }
 
   @EventListener(ApplicationReadyEvent.class)
@@ -135,7 +139,6 @@ public class RelaySubscriptions {
         kept.values().stream().mapToLong(Long::longValue).sum());
   }
 
-  @Transactional
   public View subscribe(String raw) {
     if (!props.enabled()) {
       throw new FederationException(FederationErrorCode.RELAY_DISABLED);
@@ -147,6 +150,10 @@ public class RelaySubscriptions {
             .filter(found -> !found.onSuspendedServer())
             .orElseThrow(
                 () -> new FederationException(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND, asked));
+    return transaction.execute(status -> subscribeTo(actor));
+  }
+
+  private View subscribeTo(RemoteActorEntity actor) {
     Optional<FederationRelayEntity> existing = relays.findByActorUri(actor.getActorUri());
     if (existing.isPresent()) {
       return View.of(existing.get(), 0);

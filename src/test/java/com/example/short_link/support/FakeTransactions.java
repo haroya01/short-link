@@ -1,4 +1,4 @@
-package com.example.short_link.note.application.write;
+package com.example.short_link.support;
 
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
@@ -6,11 +6,11 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-final class FakeTransactions {
+public final class FakeTransactions {
 
   private FakeTransactions() {}
 
-  static TransactionTemplate template() {
+  public static TransactionTemplate template() {
     return new TransactionTemplate(
         new AbstractPlatformTransactionManager() {
           @Override
@@ -29,7 +29,7 @@ final class FakeTransactions {
         });
   }
 
-  static String where() {
+  public static String where() {
     return TransactionSynchronizationManager.isActualTransactionActive() ? "inside" : "outside";
   }
 }

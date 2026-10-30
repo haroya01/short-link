@@ -11,6 +11,7 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksCommand;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksUseCase;
@@ -21,6 +22,7 @@ import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.support.FakeTransactions;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.application.write.UserDeletionService;
 import com.example.short_link.user.domain.UserEntity;
@@ -66,7 +68,8 @@ class LinkCacheEvictingWritesTest {
             mock(CreateLinkUseCase.class),
             mock(CampaignQueryService.class),
             new LinkRefReader(links),
-            new CampaignLinks(links, mock(LinkSidecars.class), cache));
+            new CampaignLinks(links, mock(LinkSidecars.class), cache),
+            FakeTransactions.template());
 
     service.delete(5L, 4L, 9L);
 
@@ -94,7 +97,9 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            mock(ProfileCacheInvalidator.class));
+            mock(ProfileCacheInvalidator.class),
+            mock(ObjectStorage.class),
+            FakeTransactions.template());
 
     deletion.hardDelete(9L);
 
@@ -123,7 +128,9 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            profiles);
+            profiles,
+            mock(ObjectStorage.class),
+            FakeTransactions.template());
 
     deletion.deleteAccount(9L);
 

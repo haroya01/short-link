@@ -15,6 +15,6 @@ public class LinkOgFetchListener {
   @Async
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onLinkCreated(LinkOgFetchRequested event) {
-    fetchService.fetchAfterCommit(event.shortCode(), event.originalUrl());
+    fetchService.refresh(event.shortCode(), event.originalUrl());
   }
 }

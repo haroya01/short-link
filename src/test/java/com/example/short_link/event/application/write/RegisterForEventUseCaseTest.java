@@ -16,6 +16,7 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
+import com.example.short_link.support.FakeTransactions;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -48,7 +49,8 @@ class RegisterForEventUseCaseTest {
             registrationRepository,
             attributor,
             mailer,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            FakeTransactions.template());
   }
 
   private EventEntity openEvent(Integer capacity) {

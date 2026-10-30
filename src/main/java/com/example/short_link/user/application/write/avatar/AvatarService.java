@@ -6,7 +6,7 @@ import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class AvatarService extends UserImageUpload {
@@ -15,16 +15,15 @@ public class AvatarService extends UserImageUpload {
       UserRepository userRepository,
       ImageUploads uploads,
       ObjectStorage objectStorage,
-      ProfileCacheInvalidator cacheEviction) {
-    super("avatars", "avatar", userRepository, uploads, objectStorage, cacheEviction);
+      ProfileCacheInvalidator cacheEviction,
+      TransactionTemplate transaction) {
+    super("avatars", "avatar", userRepository, uploads, objectStorage, cacheEviction, transaction);
   }
 
-  @Transactional
   public CommitResult commitUpload(Long userId, String key) {
     return new CommitResult(commit(userId, key));
   }
 
-  @Transactional
   public void clearAvatar(Long userId) {
     clear(userId);
   }

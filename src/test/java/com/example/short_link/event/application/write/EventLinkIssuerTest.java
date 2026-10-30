@@ -36,7 +36,8 @@ class EventLinkIssuerTest {
   @Test
   void theIssuedLinkIsRecordedUnderTheEventWithItsId() {
     ShortCode code = new ShortCode("evt0001");
-    when(createLink.execute(any())).thenReturn(new LinkCreated(code));
+    when(createLink.createForOwnPage("https://kurl.me/e/party", 7L))
+        .thenReturn(new LinkCreated(code));
     LinkEntity link = withId(new LinkEntity("https://kurl.me/e/party", "evt0001", 7L, null), 42L);
     when(links.findByShortCode(code)).thenReturn(Optional.of(link));
 
@@ -52,7 +53,8 @@ class EventLinkIssuerTest {
   @Test
   void aLinkThatCannotBeReadBackIssuesNothing() {
     ShortCode code = new ShortCode("evt0002");
-    when(createLink.execute(any())).thenReturn(new LinkCreated(code));
+    when(createLink.createForOwnPage("https://kurl.me/e/party", 7L))
+        .thenReturn(new LinkCreated(code));
     when(links.findByShortCode(code)).thenReturn(Optional.empty());
 
     assertThat(issuer.issue(7L, 5L, "party", "poster")).isEmpty();

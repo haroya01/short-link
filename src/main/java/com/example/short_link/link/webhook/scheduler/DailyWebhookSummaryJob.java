@@ -19,7 +19,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // Uses the owner's timezone for the configured hour, yesterday's reporting window, and
 // summaryLastSentDate daily deduplication.
@@ -33,6 +33,7 @@ public class DailyWebhookSummaryJob {
   private final DailySummaryAssembler assembler;
   private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
+  private final TransactionTemplate transaction;
 
   public DailyWebhookSummaryJob(
       LinkWebhookRepository hooks,
@@ -40,23 +41,27 @@ public class DailyWebhookSummaryJob {
       UserAccessLookup users,
       DailySummaryAssembler assembler,
       WebhookHttpDeliveryClient deliveryClient,
-      Clock clock) {
+      Clock clock,
+      TransactionTemplate transaction) {
     this.hooks = hooks;
     this.links = links;
     this.users = users;
     this.assembler = assembler;
     this.deliveryClient = deliveryClient;
     this.clock = clock;
+    this.transaction = transaction;
   }
 
   @Scheduled(fixedDelay = 5 * 60 * 1000L)
-  @Transactional
   public void sweep() {
     List<LinkWebhookEntity> candidates =
         hooks.findAllEnabledByDeliveryModes(WebhookDeliveryMode.dailySummaryModes());
-    if (candidates.isEmpty()) return;
     for (LinkWebhookEntity hook : candidates) {
-      tryDeliverFor(hook);
+      try {
+        tryDeliverFor(hook);
+      } catch (RuntimeException failure) {
+        log.warn("daily webhook summary failed: hookId={}", hook.getId(), failure);
+      }
     }
   }
 
@@ -78,7 +83,8 @@ public class DailyWebhookSummaryJob {
     DailySummaryPayload payload =
         assembler.assemble(hook.linkId(), link.getShortCode(), yesterday, tz);
     deliveryClient.deliver(hook, new WebhookNotification.DailySummary(payload));
-    hook.markSummarySent(today);
+    transaction.executeWithoutResult(
+        status -> hooks.findById(hook.getId()).ifPresent(sent -> sent.markSummarySent(today)));
   }
 
   Optional<LocalDate> peekLastSent(LinkWebhookEntity hook) {

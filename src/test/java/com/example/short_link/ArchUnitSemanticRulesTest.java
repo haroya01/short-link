@@ -68,9 +68,11 @@ class ArchUnitSemanticRulesTest {
           "org.springframework.web.client.RestClient",
           "com.example.short_link.common.net.HttpFetcher",
           "com.example.short_link.common.net.TxtResolver",
+          "com.example.short_link.common.net.PublicHttpUrlGuard",
           "software.amazon.awssdk.services.s3.S3Client",
           "org.springframework.mail.javamail.JavaMailSender",
-          "com.example.short_link.common.mail.MailSender");
+          "com.example.short_link.common.mail.MailSender",
+          "nl.martijndwars.webpush.PushService");
 
   // Jars are not imported, so Redis types are matched by name rather than by assignability.
   private static final Set<String> REDIS_OPERATION_TYPES =
@@ -89,6 +91,9 @@ class ArchUnitSemanticRulesTest {
           Propagation.NOT_SUPPORTED,
           Propagation.NEVER,
           Propagation.NESTED);
+
+  private static final Set<Propagation> WITHOUT_A_TRANSACTION =
+      Set.of(Propagation.NOT_SUPPORTED, Propagation.NEVER);
 
   @ArchTest
   static final ArchRule cacheEvictAnnotationIsNotUsed =
@@ -308,8 +313,17 @@ class ArchUnitSemanticRulesTest {
         || codeUnit.getOwner().isAnnotatedWith(Transactional.class);
   }
 
+  static boolean runsWithoutATransaction(JavaCodeUnit codeUnit) {
+    return codeUnit
+        .tryGetAnnotationOfType(Transactional.class)
+        .or(() -> codeUnit.getOwner().tryGetAnnotationOfType(Transactional.class))
+        .map(transactional -> WITHOUT_A_TRANSACTION.contains(transactional.propagation()))
+        .orElse(false);
+  }
+
   static DescribedPredicate<JavaMethod> areTransactional() {
-    return DescribedPredicate.describe("are transactional", method -> isTransactional(method));
+    return DescribedPredicate.describe(
+        "are transactional", method -> isTransactional(method) && !runsWithoutATransaction(method));
   }
 
   private static ArchCondition<JavaMethod> notCallOutboundClients() {

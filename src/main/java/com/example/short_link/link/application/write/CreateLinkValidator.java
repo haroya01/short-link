@@ -23,16 +23,19 @@ public class CreateLinkValidator {
   private final UrlSafetyChecker urlSafetyChecker;
   private final MeterRegistry meterRegistry;
   private final String shortLinkHost;
+  private final String ownPagePrefix;
 
   CreateLinkValidator(
       BlockedDomainChecker blockedDomainChecker,
       UrlSafetyChecker urlSafetyChecker,
       MeterRegistry meterRegistry,
-      @Value("${short-link.base-url}") String baseUrl) {
+      @Value("${short-link.base-url}") String baseUrl,
+      @Value("${short-link.frontend-base-url}") String frontendBaseUrl) {
     this.blockedDomainChecker = blockedDomainChecker;
     this.urlSafetyChecker = urlSafetyChecker;
     this.meterRegistry = meterRegistry;
     this.shortLinkHost = canonicalHost(baseUrl);
+    this.ownPagePrefix = frontendBaseUrl.endsWith("/") ? frontendBaseUrl : frontendBaseUrl + "/";
   }
 
   public void validateUrl(String url) {
@@ -65,6 +68,12 @@ public class CreateLinkValidator {
     if (host != null && host.equals(shortLinkHost)) {
       meterRegistry.counter("short_link.created", "result", "self_reference").increment();
       throw new LinkException(LinkErrorCode.SELF_REFERENCING_URL, host);
+    }
+  }
+
+  void requireOwnPage(String url) {
+    if (url == null || !url.startsWith(ownPagePrefix)) {
+      throw new IllegalArgumentException("not one of our own pages: " + url);
     }
   }
 

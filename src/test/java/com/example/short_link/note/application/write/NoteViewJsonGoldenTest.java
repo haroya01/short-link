@@ -35,6 +35,7 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.domain.repository.RoomNoteErasureRepository;
+import com.example.short_link.support.FakeTransactions;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

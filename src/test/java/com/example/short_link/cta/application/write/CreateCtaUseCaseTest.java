@@ -9,6 +9,7 @@ import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
 import com.example.short_link.cta.domain.repository.CtaRepository;
+import com.example.short_link.support.FakeTransactions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +26,7 @@ class CreateCtaUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateCtaUseCase(ctaRepository, linkTracker);
+    useCase = new CreateCtaUseCase(ctaRepository, linkTracker, FakeTransactions.template());
   }
 
   @Test

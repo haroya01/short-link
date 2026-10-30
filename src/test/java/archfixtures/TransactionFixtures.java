@@ -1,5 +1,7 @@
 package archfixtures;
 
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushSender;
 import java.net.http.HttpClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Propagation;
@@ -123,6 +125,38 @@ public final class TransactionFixtures {
     @Transactional
     public void run(LaterFetcher later) {
       later.fetch();
+    }
+  }
+
+  public static class CallsNetworkInsideANewTransaction {
+    private final Fetcher fetcher = new Fetcher();
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Object run() {
+      return fetcher.fetch();
+    }
+  }
+
+  public static class SuspendsTheTransactionToCallNetwork {
+    private final Fetcher fetcher = new Fetcher();
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Object run() {
+      return fetcher.fetch();
+    }
+  }
+
+  public static class ReachesNetworkThroughASuspendingBeanInsideTransaction {
+    @Transactional
+    public Object run(SuspendsTheTransactionToCallNetwork suspending) {
+      return suspending.run();
+    }
+  }
+
+  public static class HandsAPushPastTheCommitInsideTransaction {
+    @Transactional
+    public void run(NotificationPushDelivery pushes) {
+      pushes.send(1L, new PushSender.PushMessage("title", null, "body"));
     }
   }
 }

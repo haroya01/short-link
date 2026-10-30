@@ -4,6 +4,8 @@ import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.AccountDeletedEvent;
+import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.application.LinkAccountData;
 import com.example.short_link.user.domain.UserEntity;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
@@ -42,6 +45,8 @@ public class UserDeletionService {
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher events;
   private final ProfileCacheInvalidator profileCache;
+  private final ObjectStorage storage;
+  private final TransactionTemplate transaction;
 
   @Transactional
   public void deleteAccount(Long userId) {
@@ -69,9 +74,19 @@ public class UserDeletionService {
     log.info("user {} soft-deleted (links retained: {})", userId, ownedLinks);
   }
 
-  @Transactional
   public void hardDelete(Long userId) {
-    if (!userRepository.existsById(userId)) return;
+    List<String> files = transaction.execute(status -> purge(userId));
+    files.forEach(this::deleteStoredFile);
+  }
+
+  private List<String> purge(Long userId) {
+    if (!userRepository.existsById(userId)) return List.of();
+    List<String> files =
+        storage.isConfigured()
+            ? userDataErasers.stream()
+                .flatMap(eraser -> eraser.storedFilesOf(userId).stream())
+                .toList()
+            : List.of();
 
     // Purge slice-owned rows before users: their foreign keys lack ON DELETE CASCADE.
     userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
@@ -87,5 +102,14 @@ public class UserDeletionService {
     meterRegistry
         .counter("user.hard_deleted", "links_removed", String.valueOf(deletedLinks))
         .increment();
+    return files;
+  }
+
+  private void deleteStoredFile(String key) {
+    try {
+      storage.deleteWithVariants(key);
+    } catch (ObjectStorageException e) {
+      log.warn("failed to delete a stored file of a hard-deleted user key={}", key, e);
+    }
   }
 }

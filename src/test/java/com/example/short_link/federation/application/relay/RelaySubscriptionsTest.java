@@ -25,6 +25,7 @@ import com.example.short_link.federation.domain.repository.FederationRelayReposi
 import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -78,7 +79,8 @@ class RelaySubscriptionsTest {
             Duration.ofSeconds(4),
             startIn,
             List.of()),
-        Clock.fixed(NOW, ZoneOffset.UTC));
+        Clock.fixed(NOW, ZoneOffset.UTC),
+        FakeTransactions.template());
   }
 
   private static FederationRelaySettingEntity settingRow(RelayMode mode, Instant chosenAt) {

@@ -13,6 +13,7 @@ import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.cta.exception.CtaErrorCode;
 import com.example.short_link.cta.exception.CtaException;
 import com.example.short_link.link.visit.application.SplashCtaChanges;
+import com.example.short_link.support.FakeTransactions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,13 @@ class UpdateCtaUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdateCtaUseCase(ctaOwnership, ctaRepository, linkTracker, splashCtaChanges);
+    useCase =
+        new UpdateCtaUseCase(
+            ctaOwnership,
+            ctaRepository,
+            linkTracker,
+            splashCtaChanges,
+            FakeTransactions.template());
   }
 
   private CtaEntity owned() {

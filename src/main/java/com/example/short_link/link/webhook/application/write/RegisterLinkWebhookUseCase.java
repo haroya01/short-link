@@ -14,7 +14,6 @@ import java.security.SecureRandom;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +30,6 @@ public class RegisterLinkWebhookUseCase {
   private final MeterRegistry meterRegistry;
   private final SecretCipher cipher;
 
-  @Transactional
   public IssuedWebhook execute(RegisterLinkWebhookCommand cmd) {
     LinkEntity link = ownership.ownedLink(cmd.userId(), cmd.shortCode());
     if (!PublicHttpUrlGuard.isPublic(cmd.url())) {
