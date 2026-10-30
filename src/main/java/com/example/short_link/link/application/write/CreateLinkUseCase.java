@@ -97,10 +97,8 @@ public class CreateLinkUseCase {
   }
 
   private Optional<LinkCreated> optionally(Long userId, Supplier<LinkCreated> create) {
-    if (TransactionSynchronizationManager.isActualTransactionActive()) {
-      throw new IllegalStateException(
-          "an optional link must be saved outside the caller's transaction:"
-              + " its failure would mark that transaction rollback-only");
+    if (aFailureWouldLeaveTheCallersTransactionRollbackOnly()) {
+      return Optional.of(create.get());
     }
     try {
       return Optional.of(create.get());
@@ -108,6 +106,10 @@ public class CreateLinkUseCase {
       log.warn("optional link skipped for user {}: {}", userId, e.getMessage());
       return Optional.empty();
     }
+  }
+
+  private static boolean aFailureWouldLeaveTheCallersTransactionRollbackOnly() {
+    return TransactionSynchronizationManager.isActualTransactionActive();
   }
 
   public LinkCreated execute(CreateLinkCommand command, CheckedDestination destination) {
