@@ -125,4 +125,29 @@ public final class TransactionFixtures {
       later.fetch();
     }
   }
+
+  public static class CallsNetworkInsideANewTransaction {
+    private final Fetcher fetcher = new Fetcher();
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Object run() {
+      return fetcher.fetch();
+    }
+  }
+
+  public static class SuspendsTheTransactionToCallNetwork {
+    private final Fetcher fetcher = new Fetcher();
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Object run() {
+      return fetcher.fetch();
+    }
+  }
+
+  public static class ReachesNetworkThroughASuspendingBeanInsideTransaction {
+    @Transactional
+    public Object run(SuspendsTheTransactionToCallNetwork suspending) {
+      return suspending.run();
+    }
+  }
 }

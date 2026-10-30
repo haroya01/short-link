@@ -41,7 +41,7 @@ class ArchUnitRatchetRulesTest {
       Map.of(
           "moduleInternalsStayInTheirModule", 6,
           "theSystemClockIsReadInConfigAlone", 0,
-          "transactionsDoNotReachOutboundClients", 26,
+          "transactionsDoNotReachOutboundClients", 22,
           "springDataRepositoriesStayBehindPorts", 0,
           "constructorCallsPassFewerThanTenArguments", 135);
 
@@ -293,8 +293,12 @@ class ArchUnitRatchetRulesTest {
     for (JavaClass implementation : owner.getAllSubclasses()) {
       implementation.tryGetMethod(call.getName(), parameters).ifPresent(landings::add);
     }
-    // An @Async method runs on another thread, outside the caller's transaction.
-    landings.removeIf(method -> method.isAnnotatedWith(Async.class));
+    // An @Async method runs on another thread, and a NOT_SUPPORTED or NEVER one suspends or
+    // refuses the caller's transaction, so neither runs inside it.
+    landings.removeIf(
+        method ->
+            method.isAnnotatedWith(Async.class)
+                || ArchUnitSemanticRulesTest.runsWithoutATransaction(method));
     return landings;
   }
 

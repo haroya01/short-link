@@ -90,6 +90,9 @@ class ArchUnitSemanticRulesTest {
           Propagation.NEVER,
           Propagation.NESTED);
 
+  private static final Set<Propagation> WITHOUT_A_TRANSACTION =
+      Set.of(Propagation.NOT_SUPPORTED, Propagation.NEVER);
+
   @ArchTest
   static final ArchRule cacheEvictAnnotationIsNotUsed =
       noMethods().should().beAnnotatedWith(CacheEvict.class);
@@ -308,8 +311,17 @@ class ArchUnitSemanticRulesTest {
         || codeUnit.getOwner().isAnnotatedWith(Transactional.class);
   }
 
+  static boolean runsWithoutATransaction(JavaCodeUnit codeUnit) {
+    return codeUnit
+        .tryGetAnnotationOfType(Transactional.class)
+        .or(() -> codeUnit.getOwner().tryGetAnnotationOfType(Transactional.class))
+        .map(transactional -> WITHOUT_A_TRANSACTION.contains(transactional.propagation()))
+        .orElse(false);
+  }
+
   static DescribedPredicate<JavaMethod> areTransactional() {
-    return DescribedPredicate.describe("are transactional", method -> isTransactional(method));
+    return DescribedPredicate.describe(
+        "are transactional", method -> isTransactional(method) && !runsWithoutATransaction(method));
   }
 
   private static ArchCondition<JavaMethod> notCallOutboundClients() {
