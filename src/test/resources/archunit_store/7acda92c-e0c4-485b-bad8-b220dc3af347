@@ -11,4 +11,3 @@ com.example.short_link.link.og.application.LinkOgFetchService.refresh(com.exampl
 com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.sweep() reaches an outbound client
 com.example.short_link.link.webhook.scheduler.ThresholdSpikeDetector.onClickRecorded(com.example.short_link.link.application.dto.ClickRecordedEvent) reaches an outbound client
 com.example.short_link.room.application.write.RoomInviteService.create(java.lang.Long, java.lang.Long, java.lang.Integer, java.lang.Long, java.lang.Boolean) reaches an outbound client
-com.example.short_link.user.application.write.UserDeletionService.hardDelete(java.lang.Long) reaches an outbound client
