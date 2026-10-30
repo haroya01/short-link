@@ -279,8 +279,10 @@
 @junit | event-cover-foreign-denied | 2 | 0 | 0 | 0 | 2
 @junit | event-cover-presign | 2 | 0 | 0 | 0 | 2
 @junit | event-cover-read | 4 | 0 | 0 | 0 | 4
-@junit | event-create | 11 | 8 | 3 | 0 | 22
-@junit | event-create-cover | 11 | 8 | 3 | 0 | 22
+# An event or room-invite link points at our own page, so it skips the blocked-domain and Safe Browsing
+# checks and no longer reads the blocked-domain list.
+@junit | event-create | 10 | 8 | 3 | 0 | 21
+@junit | event-create-cover | 10 | 8 | 3 | 0 | 21
 @junit | event-detail | 4 | 0 | 0 | 0 | 4
 @junit | event-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | event-list | 1 | 0 | 0 | 0 | 1
