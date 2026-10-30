@@ -68,6 +68,7 @@ class ArchUnitSemanticRulesTest {
           "org.springframework.web.client.RestClient",
           "com.example.short_link.common.net.HttpFetcher",
           "com.example.short_link.common.net.TxtResolver",
+          "com.example.short_link.common.net.PublicHttpUrlGuard",
           "software.amazon.awssdk.services.s3.S3Client",
           "org.springframework.mail.javamail.JavaMailSender",
           "com.example.short_link.common.mail.MailSender",
