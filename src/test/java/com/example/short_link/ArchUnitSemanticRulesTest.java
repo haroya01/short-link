@@ -70,7 +70,8 @@ class ArchUnitSemanticRulesTest {
           "com.example.short_link.common.net.TxtResolver",
           "software.amazon.awssdk.services.s3.S3Client",
           "org.springframework.mail.javamail.JavaMailSender",
-          "com.example.short_link.common.mail.MailSender");
+          "com.example.short_link.common.mail.MailSender",
+          "nl.martijndwars.webpush.PushService");
 
   // Jars are not imported, so Redis types are matched by name rather than by assignability.
   private static final Set<String> REDIS_OPERATION_TYPES =
