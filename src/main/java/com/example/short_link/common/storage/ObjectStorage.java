@@ -22,6 +22,8 @@ public interface ObjectStorage {
 
   void delete(String key);
 
+  void deleteFolder(String folder);
+
   default void deleteWithVariants(String key) {
     delete(key);
     for (String variant : ImageVariantKeys.variantsOf(key)) {

@@ -47,4 +47,9 @@ public class InMemoryObjectStorage implements ObjectStorage {
   public void delete(String key) {
     objects.remove(key);
   }
+
+  @Override
+  public void deleteFolder(String folder) {
+    objects.keySet().removeIf(key -> key.startsWith(folder));
+  }
 }
