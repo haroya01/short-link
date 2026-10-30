@@ -273,7 +273,9 @@
 @junit | event-attendees-csv | 4 | 0 | 0 | 0 | 4
 @junit | event-cancel | 7 | 0 | 1 | 0 | 8
 @junit | event-close | 7 | 0 | 1 | 0 | 8
-@junit | event-cover-commit | 2 | 0 | 1 | 0 | 3
+# A cover is checked against storage outside the transaction that stores it, so its event is read
+# once before that check and once inside the transaction.
+@junit | event-cover-commit | 3 | 0 | 1 | 0 | 4
 @junit | event-cover-foreign-denied | 2 | 0 | 0 | 0 | 2
 @junit | event-cover-presign | 2 | 0 | 0 | 0 | 2
 @junit | event-cover-read | 4 | 0 | 0 | 0 | 4
