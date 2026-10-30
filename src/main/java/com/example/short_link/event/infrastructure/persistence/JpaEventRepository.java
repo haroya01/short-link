@@ -26,6 +26,11 @@ public interface JpaEventRepository extends JpaRepository<EventEntity, Long>, Ev
   int decrementRegistrationCount(@Param("id") Long id);
 
   @Override
+  @Modifying
+  @Query("UPDATE EventEntity e SET e.primaryLinkId = :linkId WHERE e.id = :id")
+  void attachPrimaryLink(@Param("id") Long eventId, @Param("linkId") Long linkId);
+
+  @Override
   @Query(
       "SELECT e FROM EventEntity e WHERE e.piiPurgedAt IS NULL "
           + "AND COALESCE(e.endsAt, e.startsAt) < :endedBefore ORDER BY e.id LIMIT :limit")

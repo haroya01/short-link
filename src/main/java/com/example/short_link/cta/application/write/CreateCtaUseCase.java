@@ -16,11 +16,7 @@ public class CreateCtaUseCase {
 
   public CtaEntity execute(CreateCtaCommand cmd) {
     CtaEntity cta = new CtaEntity(cmd.userId(), cmd.label(), cmd.url(), cmd.style(), cmd.purpose());
-    CtaLinkTracker.Tracking tracking = linkTracker.plan(cmd.userId(), cmd.url());
-    return transaction.execute(
-        status -> {
-          cta.trackVia(linkTracker.trackingCodeFor(tracking));
-          return ctaRepository.save(cta);
-        });
+    cta.trackVia(linkTracker.trackingCodeFor(cmd.userId(), cmd.url()));
+    return transaction.execute(status -> ctaRepository.save(cta));
   }
 }
