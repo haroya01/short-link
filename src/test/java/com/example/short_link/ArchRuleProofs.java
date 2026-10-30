@@ -118,7 +118,8 @@ final class ArchRuleProofs {
                   TransactionFixtures.ReachesNetworkBeforeTheTransaction.class,
                   TransactionFixtures.HandsNetworkToAnotherThreadInsideTransaction.class,
                   TransactionFixtures.SuspendsTheTransactionToCallNetwork.class,
-                  TransactionFixtures.ReachesNetworkThroughASuspendingBeanInsideTransaction.class)),
+                  TransactionFixtures.ReachesNetworkThroughASuspendingBeanInsideTransaction.class,
+                  TransactionFixtures.HandsAPushPastTheCommitInsideTransaction.class)),
           new Proof(
               "ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone",
               ArchUnitRatchetRulesTest.theSystemClockIsReadInConfigAlone,

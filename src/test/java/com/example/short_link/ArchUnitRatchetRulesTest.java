@@ -41,7 +41,7 @@ class ArchUnitRatchetRulesTest {
       Map.of(
           "moduleInternalsStayInTheirModule", 6,
           "theSystemClockIsReadInConfigAlone", 0,
-          "transactionsDoNotReachOutboundClients", 22,
+          "transactionsDoNotReachOutboundClients", 19,
           "springDataRepositoriesStayBehindPorts", 0,
           "constructorCallsPassFewerThanTenArguments", 135);
 
@@ -55,6 +55,18 @@ class ArchUnitRatchetRulesTest {
       Set.of("systemUTC", "systemDefaultZone", "system");
 
   private static final int LONG_PARAMETER_LIST = 10;
+
+  // ArchUnit counts a lambda's calls as calls of the method that declares it, so a method that
+  // hands work past the commit looks like it reaches the network inside the caller's transaction.
+  // Each entry names the test that proves at runtime that nothing is sent before the commit.
+  static final Map<String, String> AFTER_COMMIT_HANDOFFS =
+      Map.of(
+          "com.example.short_link.notification.application.push.NotificationPushDelivery.send",
+          "com.example.short_link.notification.infrastructure"
+              + ".NotificationPushTransactionIntegrationTest",
+          "com.example.short_link.notification.application.push.NotificationPushDelivery.sendToAll",
+          "com.example.short_link.notification.infrastructure"
+              + ".NotificationPushTransactionIntegrationTest");
 
   static final ArchRule moduleInternalsStayInTheirModule =
       classes()
@@ -298,7 +310,9 @@ class ArchUnitRatchetRulesTest {
     landings.removeIf(
         method ->
             method.isAnnotatedWith(Async.class)
-                || ArchUnitSemanticRulesTest.runsWithoutATransaction(method));
+                || ArchUnitSemanticRulesTest.runsWithoutATransaction(method)
+                || AFTER_COMMIT_HANDOFFS.containsKey(
+                    method.getOwner().getName() + "." + method.getName()));
     return landings;
   }
 
