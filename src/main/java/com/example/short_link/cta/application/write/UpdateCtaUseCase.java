@@ -18,22 +18,21 @@ public class UpdateCtaUseCase {
   private final TransactionTemplate transaction;
 
   public CtaEntity execute(UpdateCtaCommand cmd) {
-    CtaLinkTracker.Tracking tracking =
-        cmd.url() == null ? CtaLinkTracker.Tracking.NONE : trackingFor(cmd);
-    return transaction.execute(status -> update(cmd, tracking));
+    String trackedCode = cmd.url() == null ? null : trackingCodeFor(cmd);
+    return transaction.execute(status -> update(cmd, trackedCode));
   }
 
-  private CtaLinkTracker.Tracking trackingFor(UpdateCtaCommand cmd) {
+  private String trackingCodeFor(UpdateCtaCommand cmd) {
     ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId());
-    return linkTracker.plan(cmd.userId(), cmd.url());
+    return linkTracker.trackingCodeFor(cmd.userId(), cmd.url());
   }
 
-  private CtaEntity update(UpdateCtaCommand cmd, CtaLinkTracker.Tracking tracking) {
+  private CtaEntity update(UpdateCtaCommand cmd, String trackedCode) {
     CtaEntity cta = ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId());
     if (cmd.label() != null) cta.updateLabel(cmd.label());
     if (cmd.url() != null) {
       cta.updateUrl(cmd.url());
-      cta.trackVia(linkTracker.trackingCodeFor(tracking));
+      cta.trackVia(trackedCode);
     }
     if (cmd.style() != null) cta.updateStyle(cmd.style());
     if (cmd.purpose() != null) cta.updatePurpose(cmd.purpose());

@@ -16,11 +16,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoomInviteService {
@@ -48,9 +47,9 @@ public class RoomInviteService {
   private final RoomInviteUrls urls;
   private final CreateLinkUseCase links;
   private final Clock clock;
+  private final TransactionTemplate transaction;
 
   // Issuing the kurl link may fail; the code works without it.
-  @Transactional
   public RoomInviteView create(
       Long userId, Long roomId, Integer maxUses, Long expiresInSeconds, Boolean approval) {
     guard.requireMember(userId, roomId);
@@ -62,20 +61,17 @@ public class RoomInviteService {
     }
     Instant now = now();
     RoomInviteEntity invite =
-        invites.save(
-            new RoomInviteEntity(
-                roomId,
-                userId,
-                code(),
-                maxUses,
-                Boolean.TRUE.equals(approval),
-                expiresInSeconds == null ? null : now.plusSeconds(expiresInSeconds)));
-    try {
-      invite.linkAs(
-          links.createForOwnPage(urls.page(invite.getCode()), userId).shortCode().value());
-    } catch (RuntimeException e) {
-      log.warn("room invite link skipped for room {}: {}", roomId, e.getMessage());
-    }
+        new RoomInviteEntity(
+            roomId,
+            userId,
+            code(),
+            maxUses,
+            Boolean.TRUE.equals(approval),
+            expiresInSeconds == null ? null : now.plusSeconds(expiresInSeconds));
+    links
+        .tryCreateForOwnPage(urls.page(invite.getCode()), userId)
+        .ifPresent(created -> invite.linkAs(created.shortCode().value()));
+    transaction.executeWithoutResult(status -> invites.save(invite));
     return RoomInviteView.of(invite, urls, invites.person(userId).orElse(null));
   }
 

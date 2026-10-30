@@ -12,7 +12,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -24,16 +24,27 @@ public class CreateEventUseCase {
   private final EventRepository eventRepository;
   private final EventQuestionRepository questionRepository;
   private final EventLinkIssuer linkIssuer;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public EventEntity execute(CreateEventCommand cmd) {
     EventQuestions.validateSpecs(cmd.questions());
-    EventEntity event = saveWithFreshSlug(cmd);
-    saveQuestions(event.getId(), cmd.questions());
+    EventEntity event = transaction.execute(status -> save(cmd));
     linkIssuer
         .issue(cmd.userId(), event.getId(), event.getSlug(), PRIMARY_LINK_LABEL)
-        .ifPresent(issued -> event.attachPrimaryLink(issued.linkId()));
+        .ifPresent(issued -> attachPrimaryLink(event, issued.linkId()));
     return event;
+  }
+
+  private EventEntity save(CreateEventCommand cmd) {
+    EventEntity event = saveWithFreshSlug(cmd);
+    saveQuestions(event.getId(), cmd.questions());
+    return event;
+  }
+
+  private void attachPrimaryLink(EventEntity event, Long linkId) {
+    transaction.executeWithoutResult(
+        status -> eventRepository.attachPrimaryLink(event.getId(), linkId));
+    event.attachPrimaryLink(linkId);
   }
 
   private EventEntity saveWithFreshSlug(CreateEventCommand cmd) {

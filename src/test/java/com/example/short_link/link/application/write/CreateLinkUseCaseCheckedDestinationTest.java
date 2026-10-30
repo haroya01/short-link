@@ -17,6 +17,7 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
+import com.example.short_link.support.FakeTransactions;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,7 +95,7 @@ class CreateLinkUseCaseCheckedDestinationTest {
 
   @Test
   void anOwnPageIsLinkedWithoutAskingSafeBrowsingOrTheBlockList() {
-    links.createForOwnPage("https://kurl.me/e/party", 7L);
+    assertThat(links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)).isPresent();
 
     verify(safety, never()).isSafe(any());
     verify(blockedDomains, never()).isBlocked(any());
@@ -103,10 +104,26 @@ class CreateLinkUseCaseCheckedDestinationTest {
 
   @Test
   void aForeignUrlCannotPassAsAnOwnPage() {
-    assertThatThrownBy(() -> links.createForOwnPage("https://kurl.me.evil.com/e/party", 7L))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> links.createForOwnPage("https://example.com/e/party", 7L))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(links.tryCreateForOwnPage("https://kurl.me.evil.com/e/party", 7L)).isEmpty();
+    assertThat(links.tryCreateForOwnPage("https://example.com/e/party", 7L)).isEmpty();
     verify(repository, never()).save(any());
+  }
+
+  @Test
+  void anOptionalLinkRefusesToJoinTheCallersTransaction() {
+    assertThatThrownBy(
+            () ->
+                FakeTransactions.template()
+                    .execute(status -> links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)))
+        .isInstanceOf(IllegalStateException.class);
+    verify(repository, never()).save(any(LinkEntity.class));
+  }
+
+  @Test
+  void anOptionalLinkOverTheQuotaComesBackEmpty() {
+    when(repository.countByUserId(7L)).thenReturn(200L);
+
+    assertThat(links.tryCreateForOwnPage("https://kurl.me/e/party", 7L)).isEmpty();
+    verify(repository, never()).save(any(LinkEntity.class));
   }
 }

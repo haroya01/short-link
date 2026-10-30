@@ -16,6 +16,8 @@ import com.example.short_link.event.application.write.CreateEventCommand;
 import com.example.short_link.event.application.write.CreateEventUseCase;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
+import com.example.short_link.room.application.write.RoomCommandService;
+import com.example.short_link.room.application.write.RoomInviteService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -41,6 +43,8 @@ class LinkFailureKeepsOwnerSaveIntegrationTest {
   @Autowired private UpdateCtaUseCase updateCta;
   @Autowired private CtaRepository ctas;
   @Autowired private CreateEventUseCase createEvent;
+  @Autowired private RoomCommandService rooms;
+  @Autowired private RoomInviteService roomInvites;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
 
@@ -58,6 +62,9 @@ class LinkFailureKeepsOwnerSaveIntegrationTest {
 
   @AfterEach
   void deleteTheOwnersRows() {
+    jdbc.update("DELETE FROM room_invite WHERE creator_id = ?", userId);
+    jdbc.update("DELETE FROM room_member WHERE user_id = ?", userId);
+    jdbc.update("DELETE FROM room WHERE owner_id = ?", userId);
     jdbc.update("DELETE FROM cta WHERE user_id = ?", userId);
     jdbc.update("UPDATE event SET primary_link_id = NULL WHERE user_id = ?", userId);
     jdbc.update(
@@ -121,6 +128,20 @@ class LinkFailureKeepsOwnerSaveIntegrationTest {
                 "SELECT COUNT(*) FROM event WHERE user_id = ? AND primary_link_id IS NULL",
                 Long.class,
                 userId))
+        .isEqualTo(1);
+  }
+
+  @Test
+  void aRoomInviteIsSavedWithoutItsLinkWhenTheLinkIsOverTheQuota() {
+    Long roomId = rooms.create(userId, "스터디방").id();
+
+    roomInvites.create(userId, roomId, null, null, false);
+
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM room_invite WHERE room_id = ? AND short_code IS NULL",
+                Long.class,
+                roomId))
         .isEqualTo(1);
   }
 }

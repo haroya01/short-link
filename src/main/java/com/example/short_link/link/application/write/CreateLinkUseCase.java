@@ -16,6 +16,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,8 +25,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+@Slf4j
 @Service
 public class CreateLinkUseCase {
 
@@ -78,9 +82,32 @@ public class CreateLinkUseCase {
     return new CheckedDestination(command.url(), command.allowSelfHost());
   }
 
-  public LinkCreated createForOwnPage(String url, Long userId) {
+  private LinkCreated createForOwnPage(String url, Long userId) {
     validator.requireOwnPage(url);
     return execute(CreateLinkCommand.forOwnPage(url, userId), new CheckedDestination(url, true));
+  }
+
+  public Optional<LinkCreated> tryExecute(
+      CreateLinkCommand command, CheckedDestination destination) {
+    return optionally(command.userId(), () -> execute(command, destination));
+  }
+
+  public Optional<LinkCreated> tryCreateForOwnPage(String url, Long userId) {
+    return optionally(userId, () -> createForOwnPage(url, userId));
+  }
+
+  private Optional<LinkCreated> optionally(Long userId, Supplier<LinkCreated> create) {
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      throw new IllegalStateException(
+          "an optional link must be saved outside the caller's transaction:"
+              + " its failure would mark that transaction rollback-only");
+    }
+    try {
+      return Optional.of(create.get());
+    } catch (RuntimeException e) {
+      log.warn("optional link skipped for user {}: {}", userId, e.getMessage());
+      return Optional.empty();
+    }
   }
 
   public LinkCreated execute(CreateLinkCommand command, CheckedDestination destination) {
