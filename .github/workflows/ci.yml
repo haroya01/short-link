@@ -18,6 +18,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.SUB_TOKEN }}
+          fetch-depth: 2
 
       - uses: actions/setup-java@v6
         with:
@@ -62,6 +63,8 @@ jobs:
       # CI tests run against the bundled GeoLite2-City-Fallback.mmdb so we don't burn
       # MaxMind's daily download quota on every PR. Production downloads use the key.
       - run: ./gradlew test verifyHttpEndpointCoverage
+        env:
+          RATCHET_BASE: HEAD^1
 
       - run: ./gradlew pitest
 
