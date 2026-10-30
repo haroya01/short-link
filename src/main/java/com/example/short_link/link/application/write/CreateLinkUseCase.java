@@ -70,9 +70,24 @@ public class CreateLinkUseCase {
   }
 
   public LinkCreated execute(CreateLinkCommand command) {
-    String url = command.url();
-    validator.validateUrl(url, command.allowSelfHost());
+    return execute(command, check(command));
+  }
 
+  public CheckedDestination check(CreateLinkCommand command) {
+    validator.validateUrl(command.url(), command.allowSelfHost());
+    return new CheckedDestination(command.url(), command.allowSelfHost());
+  }
+
+  public LinkCreated createForOwnPage(String url, Long userId) {
+    validator.requireOwnPage(url);
+    return execute(CreateLinkCommand.forOwnPage(url, userId), new CheckedDestination(url, true));
+  }
+
+  public LinkCreated execute(CreateLinkCommand command, CheckedDestination destination) {
+    if (!destination.isFor(command)) {
+      throw new IllegalArgumentException("the destination was checked for another link");
+    }
+    String url = command.url();
     boolean authenticated = command.userId() != null;
     String code = authenticated ? command.customCode() : null;
     Instant expiresAt = authenticated ? command.expiresAt() : Instant.now().plus(ANONYMOUS_TTL);

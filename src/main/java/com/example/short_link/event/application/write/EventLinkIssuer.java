@@ -5,7 +5,6 @@ import com.example.short_link.event.domain.EventLinkEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
 import com.example.short_link.link.application.dto.LinkRef;
 import com.example.short_link.link.application.read.LinkRefReader;
-import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.ShortCode;
 import java.util.Optional;
@@ -28,10 +27,7 @@ public class EventLinkIssuer {
 
   public Optional<IssuedLink> issue(Long userId, Long eventId, String slug, String label) {
     try {
-      ShortCode code =
-          createLink
-              .execute(CreateLinkCommand.forOwnPage(urlBuilder.build(slug), userId))
-              .shortCode();
+      ShortCode code = createLink.createForOwnPage(urlBuilder.build(slug), userId).shortCode();
       Optional<LinkRef> link = links.find(code);
       if (link.isEmpty()) {
         return Optional.empty();

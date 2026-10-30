@@ -68,7 +68,8 @@ class LinkCacheEvictingWritesTest {
             mock(CreateLinkUseCase.class),
             mock(CampaignQueryService.class),
             new LinkRefReader(links),
-            new CampaignLinks(links, mock(LinkSidecars.class), cache));
+            new CampaignLinks(links, mock(LinkSidecars.class), cache),
+            FakeTransactions.template());
 
     service.delete(5L, 4L, 9L);
 

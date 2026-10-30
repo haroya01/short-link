@@ -77,6 +77,10 @@ class CreateLinkValidatorTest {
     UrlSafetyChecker urlSafetyChecker = mock(UrlSafetyChecker.class);
     when(urlSafetyChecker.isSafe(any())).thenReturn(true);
     return new CreateLinkValidator(
-        blockedDomainChecker, urlSafetyChecker, new SimpleMeterRegistry(), baseUrl);
+        blockedDomainChecker,
+        urlSafetyChecker,
+        new SimpleMeterRegistry(),
+        baseUrl,
+        "http://localhost:3001");
   }
 }

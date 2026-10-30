@@ -2,12 +2,15 @@ package com.example.short_link.cta.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.ShortLinkDetector;
 import com.example.short_link.link.application.dto.LinkCreated;
+import com.example.short_link.link.application.write.CheckedDestination;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.ShortCode;
@@ -22,45 +25,55 @@ class CtaLinkTrackerTest {
   @Mock private CreateLinkUseCase createLink;
   @Mock private ShortLinkDetector detector;
 
-  private CtaLinkTracker tracker() {
-    return new CtaLinkTracker(createLink, detector);
+  private final CheckedDestination checked = mock(CheckedDestination.class);
+
+  private String track(String url) {
+    CtaLinkTracker tracker = new CtaLinkTracker(createLink, detector);
+    return tracker.trackingCodeFor(tracker.plan(7L, url));
   }
 
   @Test
   void wrapsExternalUrlIntoShortLink() {
     when(detector.extractCode("https://example.com/join")).thenReturn(null);
-    when(createLink.execute(any(CreateLinkCommand.class)))
+    when(createLink.check(any(CreateLinkCommand.class))).thenReturn(checked);
+    when(createLink.execute(any(CreateLinkCommand.class), eq(checked)))
         .thenReturn(new LinkCreated(ShortCode.of("abc123")));
 
-    String code = tracker().trackingCodeFor(7L, "https://example.com/join");
-
-    assertThat(code).isEqualTo("abc123");
+    assertThat(track("https://example.com/join")).isEqualTo("abc123");
   }
 
   @Test
   void reusesExistingKurlLinkWithoutWrapping() {
     when(detector.extractCode("https://kurl.me/xy12")).thenReturn("xy12");
 
-    String code = tracker().trackingCodeFor(7L, "https://kurl.me/xy12");
+    assertThat(track("https://kurl.me/xy12")).isEqualTo("xy12");
+    verify(createLink, never()).check(any());
+    verify(createLink, never()).execute(any(), any());
+  }
 
-    assertThat(code).isEqualTo("xy12");
-    verify(createLink, never()).execute(any());
+  @Test
+  void skipsTrackingWhenTheDestinationIsRefused() {
+    when(detector.extractCode(any())).thenReturn(null);
+    when(createLink.check(any(CreateLinkCommand.class)))
+        .thenThrow(new RuntimeException("malicious url"));
+
+    assertThat(track("https://example.com/x")).isNull();
+    verify(createLink, never()).execute(any(), any());
   }
 
   @Test
   void skipsTrackingWhenLinkCreationFails() {
     when(detector.extractCode(any())).thenReturn(null);
-    when(createLink.execute(any(CreateLinkCommand.class)))
+    when(createLink.check(any(CreateLinkCommand.class))).thenReturn(checked);
+    when(createLink.execute(any(CreateLinkCommand.class), eq(checked)))
         .thenThrow(new RuntimeException("link quota exceeded"));
 
-    String code = tracker().trackingCodeFor(7L, "https://example.com/x");
-
-    assertThat(code).isNull();
+    assertThat(track("https://example.com/x")).isNull();
   }
 
   @Test
   void nullUrlIsNotTracked() {
-    assertThat(tracker().trackingCodeFor(7L, null)).isNull();
-    verify(createLink, never()).execute(any());
+    assertThat(track(null)).isNull();
+    verify(createLink, never()).check(any());
   }
 }
