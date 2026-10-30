@@ -16,7 +16,6 @@ import java.util.Locale;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +31,6 @@ public class RegisterBlogWebhookUseCase {
   private final MeterRegistry meterRegistry;
   private final SecretCipher cipher;
 
-  @Transactional
   public IssuedBlogWebhook execute(
       Long userId, String url, String name, Set<BlogInteractionType> events) {
     if (!PublicHttpUrlGuard.isPublic(url)) {

@@ -17,7 +17,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // 정원을 원자적으로 확보한 뒤 저장한다. 연락처 중복 경합으로 저장에 실패하면 확보한 정원을 돌려준다. 취소된 연락처의 재신청은 기존 행을 복구한다.
 @Service
@@ -30,9 +30,17 @@ public class RegisterForEventUseCase {
   private final RegistrationAttributor attributor;
   private final RegistrationMailer mailer;
   private final MeterRegistry meterRegistry;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public RegistrationResult execute(RegisterForEventCommand cmd) {
+    Registered registered = transaction.execute(status -> register(cmd));
+    mailer.sendConfirmation(
+        registered.event(), registered.registration(), registered.cancelToken());
+    meterRegistry.counter("event.registration", "result", "ok").increment();
+    return registered.result();
+  }
+
+  private Registered register(RegisterForEventCommand cmd) {
     EventEntity event =
         eventRepository
             .findBySlug(cmd.slug())
@@ -72,13 +80,21 @@ public class RegisterForEventUseCase {
     }
 
     attributor.attribute(event.getId(), registration, cmd.clientIp(), cmd.userAgent());
-    mailer.sendConfirmation(event, registration, cancelToken);
-    meterRegistry.counter("event.registration", "result", "ok").increment();
 
     Integer spotsLeft =
         event.getCapacity() == null
             ? null
             : Math.max(0, event.getCapacity() - (event.getRegistrationCount() + 1));
-    return new RegistrationResult(registration.getId(), cancelToken, spotsLeft);
+    return new Registered(
+        event,
+        registration,
+        cancelToken,
+        new RegistrationResult(registration.getId(), cancelToken, spotsLeft));
   }
+
+  private record Registered(
+      EventEntity event,
+      EventRegistrationEntity registration,
+      String cancelToken,
+      RegistrationResult result) {}
 }

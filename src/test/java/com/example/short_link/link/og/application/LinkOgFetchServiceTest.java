@@ -49,7 +49,7 @@ class LinkOgFetchServiceTest {
             new LinkCacheEviction(cacheManager, mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAfterCommit(new ShortCode("abc1234"), "https://example.com/x");
+    listener.refresh(new ShortCode("abc1234"), "https://example.com/x");
 
     verify(repository)
         .recordOgFetched(
@@ -80,7 +80,7 @@ class LinkOgFetchServiceTest {
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(1, 30, true));
 
-    listener.fetchAfterCommit(new ShortCode("zzz1234"), "https://example.com/none");
+    listener.refresh(new ShortCode("zzz1234"), "https://example.com/none");
 
     verify(repository).recordOgFetchFailed(eq(entity.getId()), any(Instant.class), eq(false));
     verify(repository, never()).recordOgFetched(any(), any(), any(), any(), any());
@@ -104,7 +104,7 @@ class LinkOgFetchServiceTest {
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAfterCommit(new ShortCode("gone1234"), "https://example.com/x");
+    listener.refresh(new ShortCode("gone1234"), "https://example.com/x");
 
     verify(repository).findByShortCode(new ShortCode("gone1234"));
   }

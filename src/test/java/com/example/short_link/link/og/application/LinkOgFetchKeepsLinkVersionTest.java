@@ -57,7 +57,7 @@ class LinkOgFetchKeepsLinkVersionTest {
     transaction.executeWithoutResult(
         status -> {
           LinkEntity loaded = links.findByShortCode(code).orElseThrow();
-          CompletableFuture.runAsync(() -> ogFetch.fetchAfterCommit(code, URL)).join();
+          CompletableFuture.runAsync(() -> ogFetch.refresh(code, URL)).join();
           links.delete(loaded);
         });
 
@@ -75,7 +75,7 @@ class LinkOgFetchKeepsLinkVersionTest {
     ShortCode code = link();
     LinkEntity before = links.findByShortCode(code).orElseThrow();
 
-    ogFetch.fetchAfterCommit(code, URL);
+    ogFetch.refresh(code, URL);
 
     LinkEntity after = links.findByShortCode(code).orElseThrow();
     assertThat(after.getVersion()).isEqualTo(before.getVersion());
@@ -93,7 +93,7 @@ class LinkOgFetchKeepsLinkVersionTest {
     ShortCode code = link();
 
     for (int attempt = 1; attempt <= ogFetchProperties.maxAttempts(); attempt++) {
-      ogFetch.fetchAfterCommit(code, URL);
+      ogFetch.refresh(code, URL);
       LinkEntity link = links.findByShortCode(code).orElseThrow();
       assertThat(link.getOgFetchAttempts()).isEqualTo(attempt);
       assertThat(link.getOgFetchStatus())

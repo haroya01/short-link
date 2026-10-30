@@ -12,7 +12,6 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -26,17 +25,8 @@ public class LinkOgFetchService {
   private final LinkCacheEviction linkCacheEviction;
   private final OgFetchProperties ogFetch;
 
-  // AFTER_COMMIT 비동기 경로는 조회·저장 전체를 감싸지 않고 저장소별 트랜잭션을 사용한다.
-  public void fetchAfterCommit(ShortCode shortCode, String originalUrl) {
-    fetchAndStore(shortCode, originalUrl);
-  }
-
-  @Transactional
+  // 페이지 조회는 트랜잭션 밖에서 하고, 저장은 저장소별 트랜잭션으로 한다.
   public void refresh(ShortCode shortCode, String originalUrl) {
-    fetchAndStore(shortCode, originalUrl);
-  }
-
-  private void fetchAndStore(ShortCode shortCode, String originalUrl) {
     OgMetadata og = scraper.fetch(originalUrl);
     LinkEntity entity = repository.findByShortCode(shortCode).orElse(null);
     if (entity == null) {
