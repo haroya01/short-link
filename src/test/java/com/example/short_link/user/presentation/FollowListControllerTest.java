@@ -165,7 +165,8 @@ class FollowListControllerTest {
                         + "\"avatarUrl\":\"https://m.example/a.png\","
                         + "\"url\":\"https://m.example/@carol\",\"following\":true,"
                         + "\"requested\":false,\"domainBlocked\":false,\"blocking\":false,"
-                        + "\"muting\":true}}],\"page\":0,\"size\":20,\"hasNext\":true}"));
+                        + "\"muting\":true,\"emojis\":[]}}],\"page\":0,\"size\":20,"
+                        + "\"hasNext\":true}"));
   }
 
   @Test
