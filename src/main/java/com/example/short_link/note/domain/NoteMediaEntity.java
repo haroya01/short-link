@@ -47,6 +47,9 @@ public class NoteMediaEntity extends BaseCreatedEntity {
 
   private Integer height;
 
+  @Column(name = "remote_url", length = 512)
+  private String remoteUrl;
+
   public NoteMediaEntity(
       Long noteId,
       int position,
@@ -75,6 +78,10 @@ public class NoteMediaEntity extends BaseCreatedEntity {
     boolean sized = inRange(width) && inRange(height);
     this.width = sized ? width : null;
     this.height = sized ? height : null;
+  }
+
+  public String originalUrl() {
+    return remoteUrl == null ? url : remoteUrl;
   }
 
   private static boolean inRange(Integer side) {
