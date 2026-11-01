@@ -144,7 +144,8 @@ class RemoteFollowingTest {
                 true,
                 false,
                 false,
-                false));
+                false,
+                List.of()));
   }
 
   @Test

@@ -14,10 +14,6 @@ public record NoteAuthor(
     String url,
     List<CustomEmoji> emojis) {
 
-  public NoteAuthor {
-    emojis = emojis == null ? List.of() : List.copyOf(emojis);
-  }
-
   public NoteAuthor(Long id, String username, String avatarUrl) {
     this(id, username, avatarUrl, null, null, null, List.of());
   }

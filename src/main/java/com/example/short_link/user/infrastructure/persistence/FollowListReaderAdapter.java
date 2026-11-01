@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.user.domain.repository.FollowListReader;
@@ -42,6 +43,7 @@ class FollowListReaderAdapter implements FollowListReader {
           + HeardSql.remoteBlocked(":viewer", "a.id")
           + ", "
           + HeardSql.remoteMuted(":viewer", "a.id")
+          + ", a.emojis"
           + " FROM federation_remote_actor a LEFT JOIN federation_following vf"
           + " ON vf.user_id = :viewer AND vf.remote_actor_id = a.id"
           + " WHERE a.id IN (:ids)";
@@ -124,7 +126,8 @@ class FollowListReaderAdapter implements FollowListReader {
               flag(row[7]),
               flag(row[8]),
               flag(row[9]),
-              flag(row[10])));
+              flag(row[10]),
+              CustomEmoji.fromColumn(row[11] == null ? null : row[11].toString())));
     }
     return accounts;
   }

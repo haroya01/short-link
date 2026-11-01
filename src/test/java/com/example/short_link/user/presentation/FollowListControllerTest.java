@@ -110,7 +110,8 @@ class FollowListControllerTest {
                     false,
                     false,
                     false,
-                    true))),
+                    true,
+                    List.of()))),
         0,
         20,
         true);

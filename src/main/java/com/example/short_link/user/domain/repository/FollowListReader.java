@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain.repository;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,8 @@ public interface FollowListReader {
       boolean requested,
       boolean domainBlocked,
       boolean blocking,
-      boolean muting) {}
+      boolean muting,
+      List<CustomEmoji> emojis) {}
 
   record Counts(long followers, long following, long remoteFollowers, long remoteFollowing) {}
 

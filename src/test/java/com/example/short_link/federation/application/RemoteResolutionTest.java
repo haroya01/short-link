@@ -42,7 +42,8 @@ class RemoteResolutionTest {
           false,
           false,
           false,
-          false);
+          false,
+          List.of());
 
   @Mock private RemoteAccountFinder finder;
   @Mock private RemoteDocuments documents;

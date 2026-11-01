@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.federation.application.FederationFollowers;
+import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
@@ -51,6 +53,8 @@ class RemoteEmojiIntegrationTest {
   @Autowired private NoteComposer composer;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
+  @Autowired private RemoteFollowing following;
+  @Autowired private FederationFollowers followers;
   @PersistenceContext private EntityManager em;
 
   private final String run = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
@@ -185,6 +189,38 @@ class RemoteEmojiIntegrationTest {
     JsonNode local = shown(written.id());
     assertThat(local.get("emojis").isEmpty()).isTrue();
     assertThat(local.path("author").get("emojis").isEmpty()).isTrue();
+  }
+
+  @Test
+  void theAccountsNameEmojisComeWithItsProfileItsFollowRequestAndTheFollowerList()
+      throws Exception {
+    UserEntity member = new UserEntity(run + "@x.com", "google", "g-" + run);
+    member.claimUsername("em" + run);
+    long writer = users.save(member).getId();
+    jdbc.update(
+        "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NULL, NOW(6), NOW(6))",
+        writer,
+        actor,
+        "https://em.example/users/" + run + "#follows/1");
+    reread();
+
+    assertThat(following.account(writer, actor).emojis()).containsExactly(VERIFIED);
+    assertThat(followers.pending(writer, 0))
+        .singleElement()
+        .satisfies(request -> assertThat(request.emojis()).containsExactly(VERIFIED));
+
+    jdbc.update(
+        "UPDATE federation_follower SET accepted_at = NOW(6) WHERE remote_actor_id = ?", actor);
+    String body =
+        mvc.perform(get("/api/v1/users/em" + run + "/followers").param("include", "remote"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    JsonNode account = JSON.readTree(body).path("items").get(0).path("account");
+    assertThat(account.path("displayName").asString()).isEqualTo("Ged :verified:");
+    assertThat(emojis(account.get("emojis"))).containsExactly(VERIFIED);
   }
 
   private long receive(String name, String body, Long quotedNoteId, List<CustomEmoji> emojis) {

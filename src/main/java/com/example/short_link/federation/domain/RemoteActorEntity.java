@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -117,6 +118,10 @@ public class RemoteActorEntity extends BaseTimeEntity {
 
   public void knownAt(String accountDomain) {
     this.accountDomain = accountDomain;
+  }
+
+  public List<CustomEmoji> emojis() {
+    return CustomEmoji.fromColumn(emojis);
   }
 
   public boolean onSuspendedServer() {

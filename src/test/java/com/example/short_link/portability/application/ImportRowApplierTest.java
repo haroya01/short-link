@@ -107,7 +107,8 @@ class ImportRowApplierTest {
         false,
         false,
         false,
-        false);
+        false,
+        List.of());
   }
 
   @Test
@@ -125,7 +126,8 @@ class ImportRowApplierTest {
             false,
             false,
             false,
-            false);
+            false,
+            List.of());
     when(remoteFollowing.lookup(7L, "Alice@mastodon.social")).thenReturn(alice);
 
     assertThat(applier().apply(7L, ImportKind.FOLLOWING, List.of("Alice@Mastodon.Social", "true")))
