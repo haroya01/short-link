@@ -325,8 +325,6 @@ public class NoteEntity extends BaseCreatedEntity {
     return CustomEmoji.fromColumn(remoteEmojis);
   }
 
-  // MySQL hands a JSON column back normalized (keys reordered, spaces added), so the stored list is
-  // compared by what it decodes to, never by its text.
   public void useRemoteEmojis(List<CustomEmoji> emojis) {
     if (!remoteEmojis().equals(emojis == null ? List.of() : emojis)) {
       this.remoteEmojis = CustomEmoji.column(emojis);
