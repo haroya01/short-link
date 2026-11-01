@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -60,13 +61,13 @@ class RemoteMediaCopierTest {
     copier.copy(KEY, IMAGE, List.of(10L, 11L));
 
     verify(copies).attach(KEY, IMAGE.url(), COPY, List.of(10L, 11L), NOW);
-    verify(fetcher, never()).fetch(anyString(), anyString(), anyInt());
+    verify(fetcher, never()).fetch(anyString(), anyInt());
     verify(variants, never()).storeWithVariants(anyString(), any(), anyLong());
   }
 
   @Test
   void aFetchedImageIsStoredWithItsCopiesBeforeTheRowsShowIt() {
-    when(fetcher.fetch(IMAGE.url(), "image/png", 1000)).thenReturn(new Image(BYTES));
+    when(fetcher.fetch(IMAGE.url(), 1000)).thenReturn(new Image(BYTES, "image/png"));
     when(variants.storeWithVariants(KEY, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS))
         .thenReturn(true);
     when(copies.attach(KEY, IMAGE.url(), COPY, List.of(10L), NOW)).thenReturn(1);
@@ -80,12 +81,46 @@ class RemoteMediaCopierTest {
   }
 
   @Test
+  void aNoteThatSaidJpegButWasServedAPngIsStoredUnderAPngKey() {
+    RemoteImage saidJpeg =
+        new RemoteImage(12L, "https://files.example/original/b.jpg", "image/jpeg");
+    String asked = RemoteMediaKeys.keyOf(saidJpeg.url(), "image/jpeg");
+    String stored = RemoteMediaKeys.keyOf(saidJpeg.url(), "image/png");
+    when(fetcher.fetch(saidJpeg.url(), 1000)).thenReturn(new Image(BYTES, "image/png"));
+    when(variants.storeWithVariants(stored, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS))
+        .thenReturn(true);
+    when(copies.attach(stored, saidJpeg.url(), "https://cdn.example/" + stored, List.of(12L), NOW))
+        .thenReturn(1);
+
+    copier.copy(asked, saidJpeg, List.of(12L));
+
+    verify(variants).storeWithVariants(stored, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS);
+    verify(copies)
+        .attach(stored, saidJpeg.url(), "https://cdn.example/" + stored, List.of(12L), NOW);
+    verify(variants, never()).storeWithVariants(eq(asked), any(), anyLong());
+  }
+
+  @Test
+  void aCopyKeptUnderTheOtherTypeIsShownWithoutFetchingAgain() {
+    RemoteImage saidJpeg =
+        new RemoteImage(12L, "https://files.example/original/b.jpg", "image/jpeg");
+    String stored = RemoteMediaKeys.keyOf(saidJpeg.url(), "image/png");
+    when(copies.kept(stored)).thenReturn(true);
+
+    copier.copy(RemoteMediaKeys.keyOf(saidJpeg.url(), "image/jpeg"), saidJpeg, List.of(12L));
+
+    verify(copies)
+        .attach(stored, saidJpeg.url(), "https://cdn.example/" + stored, List.of(12L), NOW);
+    verify(fetcher, never()).fetch(anyString(), anyInt());
+  }
+
+  @Test
   void aRefusedOrUndecodableImageLeavesTheRowsOnTheOtherServer() {
-    when(fetcher.fetch(IMAGE.url(), "image/png", 1000)).thenReturn(new Refused("HTTP 404"));
+    when(fetcher.fetch(IMAGE.url(), 1000)).thenReturn(new Refused("HTTP 404"));
     copier.copy(KEY, IMAGE, List.of(10L));
     verify(variants, never()).storeWithVariants(anyString(), any(), anyLong());
 
-    when(fetcher.fetch(IMAGE.url(), "image/png", 1000)).thenReturn(new Image(BYTES));
+    when(fetcher.fetch(IMAGE.url(), 1000)).thenReturn(new Image(BYTES, "image/png"));
     when(variants.storeWithVariants(KEY, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS))
         .thenReturn(false);
     copier.copy(KEY, IMAGE, List.of(10L));
@@ -96,7 +131,7 @@ class RemoteMediaCopierTest {
 
   @Test
   void aCopyWhoseRowsWentWhileItWasMadeIsDeletedAgain() {
-    when(fetcher.fetch(IMAGE.url(), "image/png", 1000)).thenReturn(new Image(BYTES));
+    when(fetcher.fetch(IMAGE.url(), 1000)).thenReturn(new Image(BYTES, "image/png"));
     when(variants.storeWithVariants(KEY, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS))
         .thenReturn(true);
     when(copies.attach(KEY, IMAGE.url(), COPY, List.of(10L), NOW)).thenReturn(0);
@@ -109,7 +144,7 @@ class RemoteMediaCopierTest {
 
   @Test
   void aFailureAfterStoringDeletesWhatWasStoredAndStaysInTheWorker() {
-    when(fetcher.fetch(IMAGE.url(), "image/png", 1000)).thenReturn(new Image(BYTES));
+    when(fetcher.fetch(IMAGE.url(), 1000)).thenReturn(new Image(BYTES, "image/png"));
     when(variants.storeWithVariants(KEY, BYTES, RemoteMediaCopier.MAX_SOURCE_PIXELS))
         .thenThrow(new ObjectStorageException("down", null));
 
