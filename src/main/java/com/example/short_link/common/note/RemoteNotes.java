@@ -1,5 +1,6 @@
 package com.example.short_link.common.note;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +48,8 @@ public interface RemoteNotes {
       String language,
       Shape shape,
       boolean notifies,
-      Long quotedNoteId) {}
+      Long quotedNoteId,
+      List<CustomEmoji> emojis) {}
 
   record Media(String url, String altText, String contentType, Integer width, Integer height) {
     public Media(String url, String altText, String contentType) {
@@ -63,7 +65,8 @@ public interface RemoteNotes {
       List<Media> media,
       String language,
       Shape shape,
-      String quoteLink) {}
+      String quoteLink,
+      List<CustomEmoji> emojis) {}
 
   record Target(String uri, Long remoteActorId, boolean shareable) {}
 

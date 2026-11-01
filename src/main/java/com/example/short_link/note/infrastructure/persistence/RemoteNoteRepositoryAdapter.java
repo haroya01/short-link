@@ -2,6 +2,7 @@ package com.example.short_link.note.infrastructure.persistence;
 
 import static com.example.short_link.note.infrastructure.persistence.NoteSql.notReply;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.RemoteNoteRow;
@@ -41,11 +42,11 @@ class RemoteNoteRepositoryAdapter implements RemoteNoteRepository {
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
                     + " conversation_id, reply, reply_policy, language, remote_kind, remote_title,"
                     + " remote_community, poll_options, poll_expires_at, poll_multiple,"
-                    + " poll_closed_at, poll_votes, poll_voters, quoted_note_id) VALUES"
-                    + " (:actor, :uri, :url, :body, :createdAt, :warning, :sensitive, :visibility,"
-                    + " :parent, :conversation, :reply, :replyPolicy, :language, :kind, :title,"
-                    + " :community, :pollOptions, :pollExpiresAt, :pollMultiple, :pollClosedAt,"
-                    + " :pollVotes, :pollVoters, :quoted)")
+                    + " poll_closed_at, poll_votes, poll_voters, quoted_note_id, remote_emojis)"
+                    + " VALUES (:actor, :uri, :url, :body, :createdAt, :warning, :sensitive,"
+                    + " :visibility, :parent, :conversation, :reply, :replyPolicy, :language,"
+                    + " :kind, :title, :community, :pollOptions, :pollExpiresAt, :pollMultiple,"
+                    + " :pollClosedAt, :pollVotes, :pollVoters, :quoted, :emojis)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -71,6 +72,7 @@ class RemoteNoteRepositoryAdapter implements RemoteNoteRepository {
             .setParameter(
                 "pollVoters", poll == null ? null : Math.clamp(poll.voters(), 0, Integer.MAX_VALUE))
             .setParameter("quoted", row.quotedNoteId())
+            .setParameter("emojis", CustomEmoji.column(row.emojis()))
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }

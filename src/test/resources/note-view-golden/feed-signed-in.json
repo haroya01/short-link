@@ -11,7 +11,8 @@
     "avatarUrl" : "https://cdn/me.png",
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ {
     "url" : "https://cdn/note-images/1/0.png",
@@ -60,7 +61,8 @@
   "canReply" : true,
   "hidden" : false,
   "remote" : null,
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 }, {
   "id" : 2,
   "body" : "인용합니다",
@@ -74,7 +76,8 @@
     "avatarUrl" : null,
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -92,7 +95,8 @@
       "avatarUrl" : null,
       "displayName" : null,
       "remoteId" : null,
-      "url" : null
+      "url" : null,
+      "emojis" : [ ]
     },
     "media" : [ {
       "url" : "https://cdn/note-images/10/0.png",
@@ -102,7 +106,8 @@
       "height" : 900
     } ],
     "contentWarning" : null,
-    "sensitive" : true
+    "sensitive" : true,
+    "emojis" : [ ]
   },
   "linkPreview" : null,
   "repostedBy" : null,
@@ -121,7 +126,8 @@
   "canReply" : true,
   "hidden" : false,
   "remote" : null,
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 }, {
   "id" : 3,
   "body" : "from afar 3",
@@ -133,9 +139,13 @@
     "id" : -42,
     "username" : "alice@m.example",
     "avatarUrl" : "https://m.example/a.png",
-    "displayName" : "Alice",
+    "displayName" : "Alice :verified:",
     "remoteId" : 42,
-    "url" : "https://m.example/@alice"
+    "url" : "https://m.example/@alice",
+    "emojis" : [ {
+      "shortcode" : "verified",
+      "url" : "https://m.example/emoji/verified.png"
+    } ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -166,7 +176,8 @@
     "url" : "https://m.example/@alice/3",
     "community" : "books"
   },
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 }, {
   "id" : 4,
   "body" : "from afar 4",
@@ -178,9 +189,13 @@
     "id" : -42,
     "username" : "alice@m.example",
     "avatarUrl" : "https://m.example/a.png",
-    "displayName" : "Alice",
+    "displayName" : "Alice :verified:",
     "remoteId" : 42,
-    "url" : "https://m.example/@alice"
+    "url" : "https://m.example/@alice",
+    "emojis" : [ {
+      "shortcode" : "verified",
+      "url" : "https://m.example/emoji/verified.png"
+    } ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -226,7 +241,11 @@
     "url" : "https://m.example/notes/4",
     "community" : null
   },
-  "room" : null
+  "room" : null,
+  "emojis" : [ {
+    "shortcode" : "blobcat",
+    "url" : "https://m.example/emoji/blobcat.png"
+  } ]
 }, {
   "id" : 5,
   "body" : "방에서",
@@ -240,7 +259,8 @@
     "avatarUrl" : "https://cdn/me.png",
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -269,7 +289,8 @@
   "room" : {
     "id" : 30,
     "name" : "책 모임"
-  }
+  },
+  "emojis" : [ ]
 }, {
   "id" : 6,
   "body" : "말 걸지 마세요",
@@ -283,7 +304,8 @@
     "avatarUrl" : null,
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -309,7 +331,8 @@
   "canReply" : false,
   "hidden" : false,
   "remote" : null,
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 }, {
   "id" : 8,
   "body" : "골라 주세요",
@@ -323,7 +346,8 @@
     "avatarUrl" : "https://cdn/me.png",
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -367,7 +391,8 @@
   "canReply" : true,
   "hidden" : false,
   "remote" : null,
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 }, {
   "id" : 11,
   "body" : "숨긴 답글",
@@ -381,7 +406,8 @@
     "avatarUrl" : null,
     "displayName" : null,
     "remoteId" : null,
-    "url" : null
+    "url" : null,
+    "emojis" : [ ]
   },
   "media" : [ ],
   "quotedPost" : null,
@@ -407,5 +433,6 @@
   "canReply" : false,
   "hidden" : true,
   "remote" : null,
-  "room" : null
+  "room" : null,
+  "emojis" : [ ]
 } ]

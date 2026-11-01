@@ -2,6 +2,7 @@ package com.example.short_link.note.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.QuotedPost;
 import java.time.Instant;
@@ -18,11 +19,13 @@ class NoteViewPartsTest {
   private static final NoteView.Remote REMOTE =
       new NoteView.Remote("ARTICLE", "A long read", "https://m.example/@alice/1", "books");
   private static final NoteView.Room ROOM = new NoteView.Room(30L, "책 모임");
+  private static final List<CustomEmoji> EMOJIS =
+      List.of(new CustomEmoji("blobcat", "https://m.example/emoji/blobcat.png"));
   private static final List<NoteView.Media> MEDIA =
       List.of(new NoteView.Media("https://cdn/a.png", "창밖", "image/png", 1200, 900));
   private static final QuotedPost QUOTED_POST = new QuotedPost(5L, "Title", "slug", "yuki", 11L);
   private static final NoteView.QuotedNote QUOTED_NOTE =
-      new NoteView.QuotedNote(10L, "인용", WRITTEN, QUOTED_WRITER, List.of(), "cw", true);
+      new NoteView.QuotedNote(10L, "인용", WRITTEN, QUOTED_WRITER, List.of(), "cw", true, List.of());
   private static final NoteView.LinkPreview CARD =
       new NoteView.LinkPreview("https://example.com/a", "Example", "A page", "https://e/a.png");
   private static final NoteView.Poll POLL =
@@ -32,7 +35,7 @@ class NoteViewPartsTest {
   private static final NoteView.Origin ORIGIN =
       new NoteView.Origin(1L, WRITER, WRITTEN, EDITED, REMOTE);
   private static final NoteView.Text TEXT =
-      new NoteView.Text("@mina 보세요", List.of("mina"), "스포일러", true, "ko");
+      new NoteView.Text("@mina 보세요", List.of("mina"), "스포일러", true, "ko", EMOJIS);
   private static final NoteView.Reach REACH = new NoteView.Reach("followers", "mentioned", ROOM);
   private static final NoteView.Standing STANDING = new NoteView.Standing(50L, true, false);
   private static final NoteView.Attached ATTACHED =
@@ -81,7 +84,8 @@ class NoteViewPartsTest {
                 true,
                 false,
                 REMOTE,
-                ROOM));
+                ROOM,
+                EMOJIS));
   }
 
   @Test

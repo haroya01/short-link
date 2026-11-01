@@ -5,6 +5,7 @@ import static com.example.short_link.federation.application.ActivityStreams.idOf
 import static com.example.short_link.federation.application.ActivityStreams.sameHost;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Kind;
@@ -83,7 +84,8 @@ public class RemoteNoteParser {
       String language,
       Shape shape,
       Quote quote,
-      Long quotedNoteId) {
+      Long quotedNoteId,
+      List<CustomEmoji> emojis) {
 
     public Parsed quoting(String body, Long quotedNoteId) {
       return new Parsed(
@@ -101,7 +103,8 @@ public class RemoteNoteParser {
           language,
           shape,
           null,
-          quotedNoteId);
+          quotedNoteId,
+          emojis);
     }
 
     public String linkedBody() {
@@ -129,7 +132,8 @@ public class RemoteNoteParser {
               language,
               shape,
               new Quote(quote.uri(), quote.link(), quote.authorization(), true),
-              null);
+              null,
+              emojis);
     }
   }
 
@@ -179,7 +183,8 @@ public class RemoteNoteParser {
             community(object, kind),
             kind == Kind.QUESTION ? poll(object) : null),
         quote,
-        null);
+        null,
+        RemoteEmojis.fromTags(object.get("tag")));
   }
 
   private static Quote quote(JsonNode object) {

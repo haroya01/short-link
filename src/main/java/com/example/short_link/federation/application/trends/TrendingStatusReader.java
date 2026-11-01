@@ -3,9 +3,11 @@ package com.example.short_link.federation.application.trends;
 import static com.example.short_link.federation.application.ActivityStreams.MAX_URI;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.ActivityStreams;
 import com.example.short_link.federation.application.RemoteActorParser;
+import com.example.short_link.federation.application.RemoteEmojis;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +85,8 @@ class TrendingStatusReader {
                 https(text(account.get("avatar"))),
                 cut(text(account.get("display_name")), MAX_NAME),
                 null,
-                https(text(account.get("url")))),
+                https(text(account.get("url"))),
+                RemoteEmojis.fromRest(account.get("emojis"))),
             parsed.media(),
             card(status.get("card")),
             parsed.contentWarning(),
@@ -97,7 +100,8 @@ class TrendingStatusReader {
                 parsed.shape().community()),
             uri,
             parsed.url() != null ? parsed.url() : uri,
-            List.of(server));
+            List.of(server),
+            parsed.emojis());
     return Optional.of(
         new Read(
             note,
@@ -136,6 +140,13 @@ class TrendingStatusReader {
       attachment.set("name", media.get("description"));
       attachment.set("width", media.path("meta").path("original").get("width"));
       attachment.set("height", media.path("meta").path("original").get("height"));
+    }
+    ArrayNode tags = object.putArray("tag");
+    for (CustomEmoji emoji : RemoteEmojis.fromRest(status.get("emojis"))) {
+      ObjectNode tag = tags.addObject();
+      tag.put("type", "Emoji");
+      tag.put("name", ":" + emoji.shortcode() + ":");
+      tag.putObject("icon").put("type", "Image").put("url", emoji.url());
     }
     if (question) {
       question(object, poll);

@@ -1,9 +1,11 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import java.util.List;
 import java.util.Optional;
 
 public record RemoteAccountView(
@@ -18,7 +20,8 @@ public record RemoteAccountView(
     boolean requested,
     boolean domainBlocked,
     boolean blocking,
-    boolean muting) {
+    boolean muting,
+    List<CustomEmoji> emojis) {
 
   static RemoteAccountView of(RemoteAccountMatch match) {
     return new RemoteAccountView(
@@ -29,11 +32,12 @@ public record RemoteAccountView(
         match.displayName(),
         match.avatarUrl(),
         match.url(),
-        match.following(),
-        match.requested(),
+        match.relation().following(),
+        match.relation().requested(),
         false,
         false,
-        match.muting());
+        match.relation().muting(),
+        match.emojis());
   }
 
   static RemoteAccountView of(
@@ -53,6 +57,7 @@ public record RemoteAccountView(
         following.map(row -> !row.accepted()).orElse(false),
         standing.domainBlocked(),
         standing.blocking(),
-        standing.muting());
+        standing.muting(),
+        actor.emojis());
   }
 }

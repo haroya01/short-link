@@ -39,7 +39,8 @@ class RemoteBlockControllerTest {
         false,
         false,
         blocking,
-        muting);
+        muting,
+        List.of());
   }
 
   @Autowired private MockMvc mvc;

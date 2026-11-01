@@ -1,5 +1,6 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.federation.domain.RemoteAccountMatch;
@@ -24,7 +25,7 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   // follows or asked to follow it or typed its whole handle.
   private static final String SEARCH =
       "SELECT a.id, a.username, a.domain, a.display_name, a.avatar_url,"
-          + " COALESCE(a.profile_url, a.actor_uri), f.accepted_at IS NOT NULL,"
+          + " COALESCE(a.profile_url, a.actor_uri), a.emojis, f.accepted_at IS NOT NULL,"
           + " f.id IS NOT NULL AND f.accepted_at IS NULL, "
           + HeardSql.remoteMuted(":viewer", "a.id")
           + " FROM federation_remote_actor a"
@@ -53,7 +54,7 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
 
   private static final String SUGGESTIONS =
       "SELECT a.id, a.username, a.domain, a.display_name, a.avatar_url,"
-          + " COALESCE(a.profile_url, a.actor_uri)"
+          + " COALESCE(a.profile_url, a.actor_uri), a.emojis"
           + " FROM user_follow uf"
           + " JOIN federation_following ff"
           + " ON ff.user_id = uf.following_id AND ff.accepted_at IS NOT NULL"
@@ -142,9 +143,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
                     (String) row[3],
                     (String) row[4],
                     (String) row[5],
-                    false,
-                    false,
-                    false))
+                    emojis(row[6]),
+                    RemoteAccountMatch.Relation.NONE))
         .toList();
   }
 
@@ -207,9 +207,12 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
         (String) row[3],
         (String) row[4],
         (String) row[5],
-        flag(row[6]),
-        flag(row[7]),
-        flag(row[8]));
+        emojis(row[6]),
+        new RemoteAccountMatch.Relation(flag(row[7]), flag(row[8]), flag(row[9])));
+  }
+
+  private static List<CustomEmoji> emojis(Object column) {
+    return CustomEmoji.fromColumn(column == null ? null : column.toString());
   }
 
   private static boolean flag(Object value) {

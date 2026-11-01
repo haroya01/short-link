@@ -169,7 +169,8 @@ public class NoteViews {
         Mentions.of(note.getBody()).stream().filter(batch.memberNames()::contains).toList(),
         note.getContentWarning(),
         note.isSensitive(),
-        note.getLanguage());
+        note.getLanguage(),
+        note.remoteEmojis());
   }
 
   private static NoteView.Reach reach(NoteEntity note, NoteBatch batch) {
@@ -446,7 +447,8 @@ public class NoteViews {
         batch.authorOf(quoted),
         batch.images().getOrDefault(quoted.getId(), List.of()),
         quoted.getContentWarning(),
-        quoted.isSensitive());
+        quoted.isSensitive(),
+        quoted.remoteEmojis());
   }
 
   private Map<Long, List<NoteView.Media>> images(List<Long> noteIds) {

@@ -139,7 +139,8 @@ class RemoteNoteRecorder implements RemoteNotes {
                         now,
                         poll.votes(),
                         poll.voters()),
-                received.quotedNoteId()));
+                received.quotedNoteId(),
+                received.emojis()));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
@@ -227,6 +228,7 @@ class RemoteNoteRecorder implements RemoteNotes {
             || !Objects.equals(note.pollOptions(), pollOptions(shape.poll()));
     note.describeElsewhere(shape.kind().name(), title, cut(shape.community(), MAX_TITLE));
     tally(note, shape.poll());
+    note.useRemoteEmojis(revision.emojis());
     String body =
         revision.quoteLink() != null && note.getQuotedNoteId() == null
             ? revision.body() + "\n\n" + revision.quoteLink()

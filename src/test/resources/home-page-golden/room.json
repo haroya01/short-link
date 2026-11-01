@@ -14,7 +14,8 @@
         "avatarUrl" : null,
         "displayName" : null,
         "remoteId" : null,
-        "url" : null
+        "url" : null,
+        "emojis" : [ ]
       },
       "media" : [ ],
       "quotedPost" : null,
@@ -40,7 +41,8 @@
       "canReply" : null,
       "hidden" : false,
       "remote" : null,
-      "room" : null
+      "room" : null,
+      "emojis" : [ ]
     },
     "replies" : [ {
       "id" : 11,

@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application.trends;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.RemoteNotes;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
@@ -27,13 +28,20 @@ public record TrendingNote(
     Remote remote,
     String uri,
     String url,
-    List<String> servers) {
+    List<String> servers,
+    List<CustomEmoji> emojis) {
 
   public record Author(
-      Long id, String username, String avatarUrl, String displayName, Long remoteId, String url) {
+      Long id,
+      String username,
+      String avatarUrl,
+      String displayName,
+      Long remoteId,
+      String url,
+      List<CustomEmoji> emojis) {
 
     Author known(Long remoteId) {
-      return new Author(-remoteId, username, avatarUrl, displayName, remoteId, url);
+      return new Author(-remoteId, username, avatarUrl, displayName, remoteId, url, emojis);
     }
   }
 
@@ -176,7 +184,8 @@ public record TrendingNote(
         remote,
         uri,
         url,
-        trendingOn);
+        trendingOn,
+        emojis);
   }
 
   TrendingNote by(Author known) {
@@ -197,7 +206,8 @@ public record TrendingNote(
         remote,
         uri,
         url,
-        servers);
+        servers,
+        emojis);
   }
 
   TrendingNote seenBy(boolean signedIn) {
@@ -220,6 +230,7 @@ public record TrendingNote(
             remote,
             uri,
             url,
-            servers);
+            servers,
+            emojis);
   }
 }

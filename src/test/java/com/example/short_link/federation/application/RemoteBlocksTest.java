@@ -72,7 +72,8 @@ class RemoteBlocksTest {
                 "Alice",
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(alice, "id", 42L);
     lenient().when(following.remote(42L)).thenReturn(alice);
@@ -226,7 +227,8 @@ class RemoteBlocksTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(bob, "id", 43L);
     when(blocks.page(7L, 20, 10))

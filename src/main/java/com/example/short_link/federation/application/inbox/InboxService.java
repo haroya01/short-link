@@ -227,7 +227,8 @@ public class InboxService {
                 note.media(),
                 note.language(),
                 note.shape(),
-                note.quote() == null ? null : note.quote().link()))
+                note.quote() == null ? null : note.quote().link(),
+                note.emojis()))
         ? InboxOutcome.accepted("update")
         : InboxOutcome.ignored("unknown-note");
   }

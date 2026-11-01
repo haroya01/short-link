@@ -438,7 +438,8 @@ class TrendingPostsTest {
             "uri",
             "url",
             "sourceHost",
-            "servers");
+            "servers",
+            "emojis");
     assertThat(item.get("id").isNull()).isTrue();
     assertThat(item.get("likedByMe").isNull()).isTrue();
     assertThat(item.get("mentions").isEmpty()).isTrue();
@@ -446,7 +447,10 @@ class TrendingPostsTest {
     assertThat(item.get("replyPolicy").asString()).isEqualTo("everyone");
     assertThat(item.get("sourceHost").asString()).isEqualTo("a.example");
     assertThat(new ArrayList<>(item.get("author").propertyNames()))
-        .containsExactlyInAnyOrder("id", "username", "avatarUrl", "displayName", "remoteId", "url");
+        .containsExactlyInAnyOrder(
+            "id", "username", "avatarUrl", "displayName", "remoteId", "url", "emojis");
+    assertThat(item.get("emojis").isArray()).isTrue();
+    assertThat(item.get("author").get("emojis").isArray()).isTrue();
     assertThat(new ArrayList<>(item.get("poll").propertyNames()))
         .containsExactlyInAnyOrder(
             "expiresAt",

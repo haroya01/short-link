@@ -503,7 +503,8 @@ class OutgoingDocumentsGoldenTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         CREATED);
   }
 

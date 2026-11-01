@@ -13,6 +13,7 @@ import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class RemoteResolutionTest {
           false,
           false,
           false,
-          false);
+          false,
+          List.of());
 
   @Mock private RemoteAccountFinder finder;
   @Mock private RemoteDocuments documents;
@@ -94,7 +96,8 @@ class RemoteResolutionTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         Instant.parse("2026-10-06T00:00:00Z"));
   }
 

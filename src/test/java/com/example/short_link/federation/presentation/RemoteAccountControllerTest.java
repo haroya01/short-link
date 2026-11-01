@@ -35,7 +35,8 @@ class RemoteAccountControllerTest {
           true,
           false,
           false,
-          false);
+          false,
+          List.of());
 
   @Autowired private MockMvc mvc;
   @MockitoBean private RemoteFollowing following;
@@ -59,7 +60,8 @@ class RemoteAccountControllerTest {
                 false,
                 false,
                 false,
-                false));
+                false,
+                List.of()));
 
     mvc.perform(
             get("/api/v1/federation/accounts/lookup")

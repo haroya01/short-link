@@ -1,5 +1,6 @@
 package com.example.short_link.note.domain;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.NoteVisibility;
@@ -140,6 +141,9 @@ public class NoteEntity extends BaseCreatedEntity {
 
   @Column(name = "remote_community")
   private String remoteCommunity;
+
+  @Column(name = "remote_emojis", columnDefinition = "json")
+  private String remoteEmojis;
 
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
@@ -315,6 +319,16 @@ public class NoteEntity extends BaseCreatedEntity {
     this.remoteKind = kind;
     this.remoteTitle = title;
     this.remoteCommunity = community;
+  }
+
+  public List<CustomEmoji> remoteEmojis() {
+    return CustomEmoji.fromColumn(remoteEmojis);
+  }
+
+  public void useRemoteEmojis(List<CustomEmoji> emojis) {
+    if (!remoteEmojis().equals(emojis == null ? List.of() : emojis)) {
+      this.remoteEmojis = CustomEmoji.column(emojis);
+    }
   }
 
   public void edit(String body, Instant at) {

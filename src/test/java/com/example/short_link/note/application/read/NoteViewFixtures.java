@@ -41,6 +41,7 @@ public final class NoteViewFixtures {
         null,
         false,
         null,
-        null);
+        null,
+        List.of());
   }
 }

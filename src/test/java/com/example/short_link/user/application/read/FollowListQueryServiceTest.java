@@ -206,7 +206,8 @@ class FollowListQueryServiceTest {
         false,
         false,
         false,
-        false);
+        false,
+        List.of());
   }
 
   @Test

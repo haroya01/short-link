@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNoteFixtures;
@@ -86,7 +87,8 @@ class RemoteNoteRecorderTest {
         "en",
         RemoteNotes.Shape.NOTE,
         true,
-        null);
+        null,
+        List.of());
   }
 
   @Test
@@ -340,13 +342,87 @@ class RemoteNoteRecorderTest {
             "en",
             RemoteNotes.Shape.NOTE,
             true,
-            77L);
+            77L,
+            List.of());
 
     recorder().receive(quote);
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
     assertThat(row.getValue().quotedNoteId()).isEqualTo(77L);
+  }
+
+  @Test
+  void aNoteIsStoredWithTheCustomEmojisItsServerNamed() {
+    when(store.insertRemote(any())).thenReturn(Optional.of(903L));
+    List<CustomEmoji> emojis =
+        List.of(new CustomEmoji("neoghost", "https://m.example/emoji/neoghost.png"));
+    RemoteNotes.Received received =
+        new RemoteNotes.Received(
+            42L,
+            URI,
+            null,
+            "boo :neoghost:",
+            null,
+            false,
+            NoteVisibility.PUBLIC,
+            null,
+            null,
+            null,
+            List.of(),
+            List.of(),
+            "en",
+            RemoteNotes.Shape.NOTE,
+            true,
+            null,
+            emojis);
+
+    recorder().receive(received);
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(store).insertRemote(row.capture());
+    assertThat(row.getValue().emojis()).isEqualTo(emojis);
+  }
+
+  @Test
+  void anUpdateReplacesTheEmojisAndOnlyNewEmojisAreNoEdit() {
+    NoteEntity note = kept("boo :neoghost:", null);
+    note.useRemoteEmojis(List.of(new CustomEmoji("neoghost", "https://m.example/emoji/old.png")));
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
+    List<CustomEmoji> redrawn =
+        List.of(new CustomEmoji("neoghost", "https://m.example/emoji/new.png"));
+
+    assertThat(
+            recorder()
+                .revise(
+                    42L,
+                    900L,
+                    new RemoteNotes.Revision(
+                        "boo :neoghost:",
+                        null,
+                        false,
+                        null,
+                        List.of(),
+                        "en",
+                        RemoteNotes.Shape.NOTE,
+                        null,
+                        redrawn)))
+        .isTrue();
+
+    assertThat(note.remoteEmojis()).isEqualTo(redrawn);
+    assertThat(note.getEditedAt()).isNull();
+    verifyNoInteractions(events);
+
+    recorder()
+        .revise(
+            42L,
+            900L,
+            RemoteNoteFixtures.revision("boo, plainly", null, false, null, List.of(), "en"));
+
+    assertThat(note.remoteEmojis()).isEmpty();
+    assertThat(note.getRemoteEmojis()).isNull();
+    assertThat(note.getEditedAt()).isEqualTo(NOW);
   }
 
   @Test
@@ -364,7 +440,8 @@ class RemoteNoteRecorderTest {
             List.of(),
             "en",
             RemoteNotes.Shape.NOTE,
-            "https://news.example/@desk/1");
+            "https://news.example/@desk/1",
+            List.of());
 
     recorder().revise(42L, 900L, edit);
     recorder().revise(42L, 900L, edit);
@@ -495,7 +572,8 @@ class RemoteNoteRecorderTest {
                 null,
                 RemoteNotes.Shape.NOTE,
                 true,
-                null));
+                null,
+                List.of()));
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
@@ -569,7 +647,8 @@ class RemoteNoteRecorderTest {
         null,
         shape,
         notifies,
-        null);
+        null,
+        List.of());
   }
 
   private static RemoteNotes.Poll poll(List<String> options, List<Long> votes, Instant endsAt) {
@@ -688,7 +767,8 @@ class RemoteNoteRecorderTest {
                             null,
                             null,
                             poll(List.of("a", "b"), List.of(6L, 3L), later)),
-                        null)))
+                        null,
+                        List.of())))
         .isTrue();
 
     assertThat(note.remoteTally().votes()).containsExactly(6L, 3L);
@@ -720,7 +800,8 @@ class RemoteNoteRecorderTest {
                 List.of(),
                 "en",
                 new RemoteNotes.Shape(RemoteNotes.Kind.ARTICLE, "New title", null, null),
-                null));
+                null,
+                List.of()));
     recorder()
         .revise(
             42L, 900L, RemoteNoteFixtures.revision("pick one", null, false, null, List.of(), "en"));
@@ -757,7 +838,8 @@ class RemoteNoteRecorderTest {
                     null,
                     null,
                     poll(List.of("x", "y"), List.of(0L, 2L), null)),
-                null));
+                null,
+                List.of()));
 
     assertThat(note.pollOptions()).containsExactly("x", "y");
     assertThat(note.getPollClosedAt()).isEqualTo(NOW);

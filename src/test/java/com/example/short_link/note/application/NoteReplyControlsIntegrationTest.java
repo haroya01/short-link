@@ -305,7 +305,8 @@ class NoteReplyControlsIntegrationTest {
         null,
         RemoteNotes.Shape.NOTE,
         true,
-        null);
+        null,
+        List.of());
   }
 
   private String handle(String prefix) {
