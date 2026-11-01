@@ -28,13 +28,18 @@ public class ImageVariantRenderer {
   static final long MAX_DECODED_PIXELS = 2L * ImageVariantKeys.LARGE * 2880;
 
   public Rendered render(byte[] source, boolean png) throws IOException {
+    return render(source, png, Long.MAX_VALUE);
+  }
+
+  public Rendered render(byte[] source, boolean png, long maxSourcePixels) throws IOException {
     int orientation = ExifOrientation.of(source);
-    BufferedImage large = upright(decode(source, orientation), orientation, png);
+    BufferedImage large = upright(decode(source, orientation, maxSourcePixels), orientation, png);
     BufferedImage small = shrink(large, Math.min(ImageVariantKeys.SMALL, large.getWidth()), png);
     return new Rendered(encode(large, png), encode(small, png));
   }
 
-  static BufferedImage decode(byte[] source, int orientation) throws IOException {
+  static BufferedImage decode(byte[] source, int orientation, long maxSourcePixels)
+      throws IOException {
     try (ImageInputStream in = new MemoryCacheImageInputStream(new ByteArrayInputStream(source))) {
       Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
       if (!readers.hasNext()) {
@@ -43,7 +48,12 @@ public class ImageVariantRenderer {
       ImageReader reader = readers.next();
       try {
         reader.setInput(in, true, true);
-        int step = subsampling(reader.getWidth(0), reader.getHeight(0), orientation);
+        int width = reader.getWidth(0);
+        int height = reader.getHeight(0);
+        if ((long) width * height > maxSourcePixels) {
+          throw new IIOException("too many pixels: " + width + "x" + height);
+        }
+        int step = subsampling(width, height, orientation);
         ImageReadParam param = reader.getDefaultReadParam();
         param.setSourceSubsampling(step, step, 0, 0);
         return reader.read(0, param);

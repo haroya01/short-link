@@ -53,4 +53,8 @@ public class ImageVariantLedger {
         outcome.name(),
         Timestamp.from(clock.instant()));
   }
+
+  public void forget(String key) {
+    jdbc.update("DELETE FROM image_variant WHERE storage_key = ?", key);
+  }
 }

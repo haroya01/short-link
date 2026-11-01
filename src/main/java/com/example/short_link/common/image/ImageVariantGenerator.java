@@ -17,7 +17,7 @@ public class ImageVariantGenerator {
   private final ImageVariantRenderer renderer;
   private final ImageVariantLedger ledger;
 
-  public void generate(String key) {
+  public synchronized void generate(String key) {
     long started = System.nanoTime();
     try {
       if (ledger.recorded(key)) {
@@ -31,31 +31,48 @@ public class ImageVariantGenerator {
         return;
       }
       byte[] original = source.get();
-      boolean png = ImageVariantKeys.png(key);
       ImageVariantRenderer.Rendered rendered;
       try {
-        rendered = renderer.render(original, png);
+        rendered = renderer.render(original, ImageVariantKeys.png(key));
       } catch (IOException unreadable) {
         ledger.record(key, Outcome.FAILED);
         log(key, "failed", started, original.length, 0, "undecodable");
         return;
       }
-      String contentType = ImageVariantKeys.contentType(key);
-      storage.putObject(
-          ImageVariantKeys.variantKey(key, ImageVariantKeys.LARGE), contentType, rendered.large());
-      storage.putObject(
-          ImageVariantKeys.variantKey(key, ImageVariantKeys.SMALL), contentType, rendered.small());
+      putVariants(key, rendered);
       ledger.record(key, Outcome.MADE);
-      log(
-          key,
-          "made",
-          started,
-          original.length,
-          rendered.large().length + rendered.small().length,
-          null);
+      log(key, "made", started, original.length, size(rendered), null);
     } catch (RuntimeException transientFailure) {
       log(key, "failed", started, 0, 0, transientFailure.getClass().getSimpleName());
     }
+  }
+
+  public synchronized boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
+    long started = System.nanoTime();
+    ImageVariantRenderer.Rendered rendered;
+    try {
+      rendered = renderer.render(original, ImageVariantKeys.png(key), maxSourcePixels);
+    } catch (IOException unreadable) {
+      log(key, "failed", started, original.length, 0, unreadable.getMessage());
+      return false;
+    }
+    storage.putObject(key, ImageVariantKeys.contentType(key), original);
+    putVariants(key, rendered);
+    ledger.record(key, Outcome.MADE);
+    log(key, "made", started, original.length, size(rendered), null);
+    return true;
+  }
+
+  private void putVariants(String key, ImageVariantRenderer.Rendered rendered) {
+    String contentType = ImageVariantKeys.contentType(key);
+    storage.putObject(
+        ImageVariantKeys.variantKey(key, ImageVariantKeys.LARGE), contentType, rendered.large());
+    storage.putObject(
+        ImageVariantKeys.variantKey(key, ImageVariantKeys.SMALL), contentType, rendered.small());
+  }
+
+  private static long size(ImageVariantRenderer.Rendered rendered) {
+    return (long) rendered.large().length + rendered.small().length;
   }
 
   private static void log(
