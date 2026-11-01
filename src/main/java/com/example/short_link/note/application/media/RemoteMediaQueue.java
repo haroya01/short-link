@@ -13,6 +13,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ public class RemoteMediaQueue {
   private final ThreadPoolExecutor executor;
   private final boolean copying;
   private final Map<String, Set<Long>> pending = new HashMap<>();
+  private final ReentrantLock lock = new ReentrantLock();
   private final AtomicBoolean sweeping = new AtomicBoolean();
 
   public RemoteMediaQueue(
@@ -51,11 +53,20 @@ public class RemoteMediaQueue {
     this.copying = executor != null && props.enabled() && variants.enabled();
   }
 
-  public synchronized boolean enqueue(RemoteImage image) {
+  public boolean enqueue(RemoteImage image) {
     if (!copying) {
       return false;
     }
     String key = RemoteMediaKeys.keyOf(image.url(), image.type());
+    lock.lock();
+    try {
+      return add(key, image);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private boolean add(String key, RemoteImage image) {
     Set<Long> waiting = pending.get(key);
     if (waiting != null) {
       waiting.add(image.mediaId());
@@ -96,8 +107,13 @@ public class RemoteMediaQueue {
     return copying;
   }
 
-  private synchronized List<Long> take(String key) {
-    return List.copyOf(pending.remove(key));
+  private List<Long> take(String key) {
+    lock.lock();
+    try {
+      return List.copyOf(pending.remove(key));
+    } finally {
+      lock.unlock();
+    }
   }
 
   @PreDestroy

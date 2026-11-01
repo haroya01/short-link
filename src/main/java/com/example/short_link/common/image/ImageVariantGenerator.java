@@ -4,6 +4,7 @@ import com.example.short_link.common.image.ImageVariantLedger.Outcome;
 import com.example.short_link.common.storage.ObjectStorage;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,8 +17,27 @@ public class ImageVariantGenerator {
   private final ObjectStorage storage;
   private final ImageVariantRenderer renderer;
   private final ImageVariantLedger ledger;
+  private final ReentrantLock decoding = new ReentrantLock();
 
-  public synchronized void generate(String key) {
+  public void generate(String key) {
+    decoding.lock();
+    try {
+      generateAlone(key);
+    } finally {
+      decoding.unlock();
+    }
+  }
+
+  public boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
+    decoding.lock();
+    try {
+      return storeAlone(key, original, maxSourcePixels);
+    } finally {
+      decoding.unlock();
+    }
+  }
+
+  private void generateAlone(String key) {
     long started = System.nanoTime();
     try {
       if (ledger.recorded(key)) {
@@ -47,7 +67,7 @@ public class ImageVariantGenerator {
     }
   }
 
-  public synchronized boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
+  private boolean storeAlone(String key, byte[] original, long maxSourcePixels) {
     long started = System.nanoTime();
     ImageVariantRenderer.Rendered rendered;
     try {
