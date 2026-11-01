@@ -4614,6 +4614,10 @@
     "CustomDomainRegisterRequest" : {
       "domain" : "string required"
     },
+    "CustomEmoji" : {
+      "shortcode" : "string",
+      "url" : "string"
+    },
     "DailyBucket" : {
       "count" : "integer(int64)",
       "date" : "string"
@@ -5560,6 +5564,7 @@
     "NoteAuthor" : {
       "avatarUrl" : "string",
       "displayName" : "string",
+      "emojis" : "[#CustomEmoji]",
       "id" : "integer(int64)",
       "remoteId" : "integer(int64)",
       "url" : "string",
@@ -5623,6 +5628,7 @@
       "conversationMuted" : "boolean",
       "createdAt" : "string(date-time)",
       "editedAt" : "string(date-time)",
+      "emojis" : "[#CustomEmoji]",
       "hidden" : "boolean",
       "id" : "integer(int64)",
       "inReplyToId" : "integer(int64)",
@@ -6175,6 +6181,7 @@
       "body" : "string",
       "contentWarning" : "string",
       "createdAt" : "string(date-time)",
+      "emojis" : "[#CustomEmoji]",
       "id" : "integer(int64)",
       "media" : "[#Media]",
       "sensitive" : "boolean"
@@ -6356,6 +6363,7 @@
       "displayName" : "string",
       "domain" : "string",
       "domainBlocked" : "boolean",
+      "emojis" : "[#CustomEmoji]",
       "following" : "boolean",
       "id" : "integer(int64)",
       "muting" : "boolean",
@@ -6371,6 +6379,7 @@
       "avatarUrl" : "string",
       "displayName" : "string",
       "domain" : "string",
+      "emojis" : "[#CustomEmoji]",
       "id" : "integer(int64)",
       "requestedAt" : "string(date-time)",
       "url" : "string",

@@ -111,7 +111,8 @@ class RelayStoreTest {
             null,
             null,
             true,
-            true),
+            true,
+            List.of()),
         NOW);
   }
 

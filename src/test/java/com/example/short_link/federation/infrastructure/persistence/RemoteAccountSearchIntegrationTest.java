@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.ServerBlockSeverity;
@@ -31,6 +32,9 @@ class RemoteAccountSearchIntegrationTest {
   @Autowired private FederationDomainBlockRepository blocks;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
+
+  private static final CustomEmoji VERIFIED =
+      new CustomEmoji("verified", "https://one.example/emoji/verified.png");
 
   private String tag;
   private Long viewer;
@@ -136,10 +140,10 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(found)
         .extracting(RemoteAccountMatch::id)
         .containsExactly(followed, exact, first, requested);
-    assertThat(found.get(0).following()).isTrue();
-    assertThat(found.get(0).requested()).isFalse();
-    assertThat(found.get(3).following()).isFalse();
-    assertThat(found.get(3).requested()).isTrue();
+    assertThat(found.get(0).relation().following()).isTrue();
+    assertThat(found.get(0).relation().requested()).isFalse();
+    assertThat(found.get(3).relation().following()).isFalse();
+    assertThat(found.get(3).relation().requested()).isTrue();
     assertThat(ids(null, tag)).containsExactly(exact, first, requested, followed);
     assertThat(actors.search(viewer, tag, 2, Instant.now())).hasSize(2);
   }
@@ -183,7 +187,7 @@ class RemoteAccountSearchIntegrationTest {
     List<RemoteAccountMatch> found = actors.search(viewer, tag, 20, Instant.now());
 
     assertThat(found).extracting(RemoteAccountMatch::id).containsExactly(muted, lapsed);
-    assertThat(found).extracting(RemoteAccountMatch::muting).containsExactly(true, false);
+    assertThat(found).extracting(match -> match.relation().muting()).containsExactly(true, false);
     assertThat(ids(null, tag)).containsExactly(blocked, muted, lapsed);
   }
 
@@ -318,6 +322,34 @@ class RemoteAccountSearchIntegrationTest {
         .extracting(RemoteAccountMatch::id)
         .containsExactly(popular);
     assertThat(actors.suggestions(unknown, 20, Instant.now())).isEmpty();
+  }
+
+  @Test
+  void aSearchOrSuggestionMatchCarriesTheEmojisInTheAccountsName() {
+    Long named = discoverable(tag + "ged", domain("one"));
+    exec(
+        "UPDATE federation_remote_actor SET display_name = 'Ged :verified:', emojis = ?"
+            + " WHERE id = ?",
+        CustomEmoji.column(List.of(VERIFIED)),
+        named);
+    Long plain = discoverable(tag + "gem", domain("two"));
+    Long followee = member("f");
+    exec(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        viewer,
+        followee);
+    follows(followee, named, true);
+    em.flush();
+    em.clear();
+
+    List<RemoteAccountMatch> found = actors.search(viewer, tag + "ge", 20, Instant.now());
+
+    assertThat(found).extracting(RemoteAccountMatch::id).containsExactly(named, plain);
+    assertThat(found.get(0).emojis()).containsExactly(VERIFIED);
+    assertThat(found.get(1).emojis()).isEmpty();
+    assertThat(actors.suggestions(viewer, 20, Instant.now()))
+        .singleElement()
+        .satisfies(match -> assertThat(match.emojis()).containsExactly(VERIFIED));
   }
 
   @Test

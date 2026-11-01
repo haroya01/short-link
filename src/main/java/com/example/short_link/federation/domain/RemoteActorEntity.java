@@ -1,5 +1,6 @@
 package com.example.short_link.federation.domain;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,6 +57,9 @@ public class RemoteActorEntity extends BaseTimeEntity {
 
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
+
+  @Column(columnDefinition = "json")
+  private String emojis;
 
   @Column(nullable = false)
   private boolean discoverable;
@@ -105,6 +110,7 @@ public class RemoteActorEntity extends BaseTimeEntity {
     this.profileUrl = document.profileUrl();
     this.displayName = document.displayName();
     this.avatarUrl = document.avatarUrl();
+    this.emojis = CustomEmoji.column(document.emojis());
     this.discoverable = document.discoverable();
     this.indexable = document.indexable();
     this.fetchedAt = fetchedAt;
@@ -112,6 +118,10 @@ public class RemoteActorEntity extends BaseTimeEntity {
 
   public void knownAt(String accountDomain) {
     this.accountDomain = accountDomain;
+  }
+
+  public List<CustomEmoji> emojis() {
+    return CustomEmoji.fromColumn(emojis);
   }
 
   public boolean onSuspendedServer() {

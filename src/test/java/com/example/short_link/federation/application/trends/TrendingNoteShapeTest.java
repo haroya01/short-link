@@ -28,7 +28,8 @@ class TrendingNoteShapeTest {
         1,
         2,
         3,
-        new TrendingNote.Author(null, "alice@m.example", null, "Alice", 4L, "https://m.example/@a"),
+        new TrendingNote.Author(
+            null, "alice@m.example", null, "Alice", 4L, "https://m.example/@a", List.of()),
         List.of(),
         null,
         null,
@@ -38,7 +39,8 @@ class TrendingNoteShapeTest {
         new TrendingNote.Remote("NOTE", null, "https://m.example/@a/1", null),
         "https://m.example/users/a/statuses/1",
         "https://m.example/@a/1",
-        List.of("m.example"));
+        List.of("m.example"),
+        List.of());
   }
 
   @Test

@@ -9,6 +9,7 @@ import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +43,8 @@ class RemoteParentsTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 

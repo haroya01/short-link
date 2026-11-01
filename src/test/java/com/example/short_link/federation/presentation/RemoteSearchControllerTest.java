@@ -36,7 +36,8 @@ class RemoteSearchControllerTest {
           false,
           false,
           false,
-          false);
+          false,
+          List.of());
 
   @Autowired private MockMvc mvc;
   @MockitoBean private RemoteAccountSearch search;

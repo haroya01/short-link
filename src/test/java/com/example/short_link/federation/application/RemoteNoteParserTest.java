@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Kind;
@@ -152,6 +153,35 @@ class RemoteNoteParserTest {
                 json("{}")))
         .isTrue();
     assertThat(parser.addressesUs(json("{\"cc\":\"" + PUBLIC + "\"}"), json("{}"))).isFalse();
+  }
+
+  @Test
+  void aNoteCarriesTheCustomEmojisItsTagsNameThroughAQuote() {
+    JsonNode object =
+        json(
+            """
+            {"id":"https://m.example/s/2","type":"Note","to":["%s"],
+             "content":"<p>\\"Wait, it has pockets ...\\" :neoghost:\u200b</p>",
+             "quote":"https://m.example/s/1",
+             "tag":[{"type":"Mention","href":"https://kurl.me/ap/actors/pid","name":"@pid"},
+                    {"type":"Emoji","name":":neoghost:","updated":"2024-01-01T00:00:00Z",
+                     "icon":{"type":"Image","mediaType":"image/png",
+                             "url":"https://files.m.example/custom_emojis/neoghost.png"}},
+                    {"type":"Emoji","name":":broken:","icon":{"url":"ftp://files.m.example/b.png"}}]}
+            """
+                .formatted(PUBLIC));
+
+    RemoteNoteParser.Parsed parsed = parser.parse(object, json("{}"));
+
+    List<CustomEmoji> expected =
+        List.of(new CustomEmoji("neoghost", "https://files.m.example/custom_emojis/neoghost.png"));
+    assertThat(parsed.body()).isEqualTo("\"Wait, it has pockets ...\" :neoghost:\u200b");
+    assertThat(parsed.emojis()).isEqualTo(expected);
+    assertThat(parsed.addressedPublicIds()).containsExactly("pid");
+    assertThat(parsed.quoting("kept", 5L).emojis()).isEqualTo(expected);
+    assertThat(parsed.acceptingQuote().emojis()).isEqualTo(expected);
+    assertThat(parser.parse(json("{\"id\":\"x\",\"content\":\"hi\"}"), json("{}")).emojis())
+        .isEmpty();
   }
 
   @Test

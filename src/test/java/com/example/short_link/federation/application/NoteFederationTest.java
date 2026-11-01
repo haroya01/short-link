@@ -598,7 +598,8 @@ class NoteFederationTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 

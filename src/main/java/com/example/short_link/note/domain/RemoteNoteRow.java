@@ -1,5 +1,6 @@
 package com.example.short_link.note.domain;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteVisibility;
 import java.time.Instant;
 import java.util.List;
@@ -22,7 +23,8 @@ public record RemoteNoteRow(
     String title,
     String community,
     Poll poll,
-    Long quotedNoteId) {
+    Long quotedNoteId,
+    List<CustomEmoji> emojis) {
 
   public record Poll(
       List<String> options,

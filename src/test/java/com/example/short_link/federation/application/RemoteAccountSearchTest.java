@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import java.time.Clock;
@@ -20,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RemoteAccountSearchTest {
 
   private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
+  private static final CustomEmoji VERIFIED =
+      new CustomEmoji("verified", "https://mastodon.example/emoji/verified.png");
 
   @Mock private RemoteActorRepository actors;
 
@@ -71,12 +74,11 @@ class RemoteAccountSearchTest {
                     42L,
                     "alice",
                     "mastodon.example",
-                    "Alice",
+                    "Alice :verified:",
                     "https://mastodon.example/a.png",
                     "https://mastodon.example/@alice",
-                    true,
-                    false,
-                    false),
+                    List.of(VERIFIED),
+                    new RemoteAccountMatch.Relation(true, false, false)),
                 new RemoteAccountMatch(
                     43L,
                     "alicia",
@@ -84,9 +86,8 @@ class RemoteAccountSearchTest {
                     null,
                     null,
                     "https://social.example/users/alicia",
-                    false,
-                    true,
-                    true)));
+                    List.of(),
+                    new RemoteAccountMatch.Relation(false, true, true))));
 
     assertThat(search().search(7L, "alice", 10))
         .containsExactly(
@@ -95,14 +96,15 @@ class RemoteAccountSearchTest {
                 "alice@mastodon.example",
                 "alice",
                 "mastodon.example",
-                "Alice",
+                "Alice :verified:",
                 "https://mastodon.example/a.png",
                 "https://mastodon.example/@alice",
                 true,
                 false,
                 false,
                 false,
-                false),
+                false,
+                List.of(VERIFIED)),
             new RemoteAccountView(
                 43L,
                 "alicia@social.example",
@@ -115,14 +117,22 @@ class RemoteAccountSearchTest {
                 true,
                 false,
                 false,
-                true));
+                true,
+                List.of()));
   }
 
   @Test
   void suggestionsAreKeptBetweenOneAndTwentyAndComeBackAsAccountViews() {
     RemoteAccountMatch carol =
         new RemoteAccountMatch(
-            44L, "carol", "social.example", "Carol", null, "u", false, false, false);
+            44L,
+            "carol",
+            "social.example",
+            "Carol",
+            null,
+            "u",
+            List.of(),
+            RemoteAccountMatch.Relation.NONE);
     when(actors.suggestions(7L, 1, NOW)).thenReturn(List.of(carol));
     when(actors.suggestions(7L, 20, NOW)).thenReturn(List.of());
 

@@ -72,7 +72,8 @@ class RemoteMutesTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(actor, "id", id);
     return actor;

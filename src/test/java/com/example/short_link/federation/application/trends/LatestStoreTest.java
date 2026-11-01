@@ -107,7 +107,8 @@ class LatestStoreTest {
             null,
             null,
             true,
-            true),
+            true,
+            List.of()),
         NOW);
   }
 

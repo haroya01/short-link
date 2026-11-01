@@ -106,7 +106,8 @@ class RelaySubscriptionsTest {
             "#dev",
             null,
             false,
-            false),
+            false,
+            List.of()),
         NOW);
   }
 
@@ -200,7 +201,8 @@ class RelaySubscriptionsTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     assertThat(subscriptions.answered(someoneElse, pending.getFollowActivityId(), true)).isFalse();
     assertThat(subscriptions.isAccepted(RELAY)).isFalse();

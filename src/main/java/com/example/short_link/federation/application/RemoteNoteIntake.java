@@ -174,7 +174,8 @@ public class RemoteNoteIntake {
             note.language(),
             note.shape(),
             notifies,
-            note.quotedNoteId()));
+            note.quotedNoteId(),
+            note.emojis()));
   }
 
   public Optional<Long> fetched(JsonNode object, URI from) {

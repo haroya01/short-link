@@ -89,7 +89,8 @@ class RemoteQuotesTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             Instant.parse("2026-10-23T00:00:00Z"));
     ReflectionTestUtils.setField(actor, "id", id);
     return actor;

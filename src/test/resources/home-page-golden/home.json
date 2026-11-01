@@ -14,7 +14,8 @@
         "avatarUrl" : null,
         "displayName" : null,
         "remoteId" : null,
-        "url" : null
+        "url" : null,
+        "emojis" : [ ]
       },
       "media" : [ ],
       "quotedPost" : null,
@@ -40,7 +41,8 @@
       "canReply" : null,
       "hidden" : false,
       "remote" : null,
-      "room" : null
+      "room" : null,
+      "emojis" : [ ]
     }
   }, {
     "kind" : "post",
@@ -85,7 +87,8 @@
         "avatarUrl" : null,
         "displayName" : null,
         "remoteId" : null,
-        "url" : null
+        "url" : null,
+        "emojis" : [ ]
       },
       "media" : [ ],
       "quotedPost" : null,
@@ -112,6 +115,7 @@
       "hidden" : false,
       "remote" : null,
       "room" : null,
+      "emojis" : [ ],
       "uri" : "https://m.example/notes/2"
     }
   } ],
@@ -132,7 +136,8 @@
         "avatarUrl" : null,
         "displayName" : null,
         "remoteId" : null,
-        "url" : null
+        "url" : null,
+        "emojis" : [ ]
       },
       "media" : [ ],
       "quotedPost" : null,
@@ -158,7 +163,8 @@
       "canReply" : null,
       "hidden" : false,
       "remote" : null,
-      "room" : null
+      "room" : null,
+      "emojis" : [ ]
     }
   } ],
   "next" : null,

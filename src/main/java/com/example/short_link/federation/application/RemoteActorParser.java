@@ -75,7 +75,8 @@ public final class RemoteActorParser {
             text(document.get("name")),
             link(document.get("icon")),
             flag(document.get("discoverable")),
-            flag(document.get("indexable"))));
+            flag(document.get("indexable")),
+            RemoteEmojis.fromTags(document.get("tag"))));
   }
 
   private static JsonNode publicKey(JsonNode document, String keyId) {

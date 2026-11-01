@@ -1,9 +1,11 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.FollowOnDomain;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import java.time.Instant;
+import java.util.List;
 
 public record RemoteFollowRequestView(
     Long id,
@@ -13,7 +15,8 @@ public record RemoteFollowRequestView(
     String displayName,
     String avatarUrl,
     String url,
-    Instant requestedAt) {
+    Instant requestedAt,
+    List<CustomEmoji> emojis) {
 
   static RemoteFollowRequestView of(FollowOnDomain<FederationFollowerEntity> row) {
     RemoteActorEntity actor = row.actor();
@@ -26,6 +29,7 @@ public record RemoteFollowRequestView(
         actor.getDisplayName(),
         actor.getAvatarUrl(),
         actor.getProfileUrl() == null ? actor.getActorUri() : actor.getProfileUrl(),
-        row.follow().getCreatedAt());
+        row.follow().getCreatedAt(),
+        actor.emojis());
   }
 }
