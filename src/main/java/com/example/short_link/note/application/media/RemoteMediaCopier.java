@@ -36,20 +36,21 @@ public class RemoteMediaCopier {
 
   public void copy(String key, RemoteImage image, List<Long> mediaIds) {
     long started = System.nanoTime();
-    String outcome;
+    Outcome outcome;
     try {
+      String kept = keptKey(image.url());
       outcome =
-          copies.kept(key)
-              ? "linked rows=" + show(key, image, mediaIds)
+          kept != null
+              ? new Outcome(kept, "linked rows=" + show(kept, image, mediaIds))
               : fetch(key, image, mediaIds);
     } catch (RuntimeException failed) {
-      outcome = "failed " + failed.getClass().getSimpleName();
+      outcome = new Outcome(key, "failed " + failed.getClass().getSimpleName());
     }
     log.info(
         "remote-media key={} host={} outcome={} ms={}",
-        key,
+        outcome.key(),
         host(image.url()),
-        outcome,
+        outcome.text(),
         (System.nanoTime() - started) / 1_000_000);
   }
 
@@ -65,11 +66,23 @@ public class RemoteMediaCopier {
     }
   }
 
-  private String fetch(String key, RemoteImage image, List<Long> mediaIds) {
-    return switch (fetcher.fetch(image.url(), image.type(), props.maxBytes())) {
-      case Refused refused -> "refused " + refused.reason();
-      case Image fetched -> store(key, image, mediaIds, fetched.bytes());
+  private Outcome fetch(String key, RemoteImage image, List<Long> mediaIds) {
+    return switch (fetcher.fetch(image.url(), props.maxBytes())) {
+      case Refused refused -> new Outcome(key, "refused " + refused.reason());
+      case Image fetched -> {
+        String stored = RemoteMediaKeys.keyOf(image.url(), fetched.type());
+        yield new Outcome(stored, store(stored, image, mediaIds, fetched.bytes()));
+      }
     };
+  }
+
+  private String keptKey(String url) {
+    for (String key : RemoteMediaKeys.keysOf(url)) {
+      if (copies.kept(key)) {
+        return key;
+      }
+    }
+    return null;
   }
 
   private String store(String key, RemoteImage image, List<Long> mediaIds, byte[] bytes) {
@@ -119,6 +132,8 @@ public class RemoteMediaCopier {
   private Instant now() {
     return clock.instant().truncatedTo(ChronoUnit.MICROS);
   }
+
+  private record Outcome(String key, String text) {}
 
   private static String host(String url) {
     try {

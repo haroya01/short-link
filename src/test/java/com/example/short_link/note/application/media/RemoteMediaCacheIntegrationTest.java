@@ -98,7 +98,7 @@ class RemoteMediaCacheIntegrationTest {
   void aPictureOnANoteFromElsewhereIsServedFromOurCdnOnceItAndItsCopiesAreStored() {
     String photo = picture("photo.png");
     String gif = picture("moving.gif");
-    when(fetcher.fetch(photo, "image/png", MAX_BYTES)).thenReturn(new Image(PNG));
+    when(fetcher.fetch(photo, MAX_BYTES)).thenReturn(new Image(PNG, "image/png"));
 
     long note =
         receive(
@@ -138,31 +138,31 @@ class RemoteMediaCacheIntegrationTest {
             jdbc.queryForObject(
                 "SELECT outcome FROM image_variant WHERE storage_key = ?", String.class, key))
         .isEqualTo("MADE");
-    verify(fetcher, times(1)).fetch(anyString(), anyString(), anyInt());
+    verify(fetcher, times(1)).fetch(anyString(), anyInt());
   }
 
   @Test
   void theSameAddressOnTwoNotesIsFetchedOnceAndShownOnBoth() {
     String photo = picture("shared.png");
-    when(fetcher.fetch(photo, "image/png", MAX_BYTES)).thenReturn(new Image(PNG));
+    when(fetcher.fetch(photo, MAX_BYTES)).thenReturn(new Image(PNG, "image/png"));
 
     long first = receive("one", List.of(new RemoteNotes.Media(photo, null, "image/png")));
     long second = receive("two", List.of(new RemoteNotes.Media(photo, null, "image/png")));
 
     awaitShown(first, 0);
     awaitShown(second, 0);
-    verify(fetcher, times(1)).fetch(photo, "image/png", MAX_BYTES);
+    verify(fetcher, times(1)).fetch(photo, MAX_BYTES);
     verify(s3, times(3)).putObject(any(PutObjectRequest.class), any(RequestBody.class));
   }
 
   @Test
   void aPictureTheOtherServerDoesNotHandOverStaysOnThatServer() {
     String photo = picture("gone.png");
-    when(fetcher.fetch(photo, "image/png", MAX_BYTES)).thenReturn(new Refused("HTTP 404"));
+    when(fetcher.fetch(photo, MAX_BYTES)).thenReturn(new Refused("HTTP 404"));
 
     long note = receive("refused", List.of(new RemoteNotes.Media(photo, null, "image/png")));
 
-    verify(fetcher, timeout(10_000)).fetch(photo, "image/png", MAX_BYTES);
+    verify(fetcher, timeout(10_000)).fetch(photo, MAX_BYTES);
     settle();
     Map<String, Object> row = row(note, 0);
     assertThat(row.get("url")).isEqualTo(photo);
@@ -175,7 +175,7 @@ class RemoteMediaCacheIntegrationTest {
   @Test
   void anUpdateThatKeepsThePictureKeepsTheCopyWithoutFetchingAgain() {
     String photo = picture("kept.png");
-    when(fetcher.fetch(photo, "image/png", MAX_BYTES)).thenReturn(new Image(PNG));
+    when(fetcher.fetch(photo, MAX_BYTES)).thenReturn(new Image(PNG, "image/png"));
     long note = receive("before", List.of(new RemoteNotes.Media(photo, "alt", "image/png")));
     awaitShown(note, 0);
 
@@ -196,14 +196,14 @@ class RemoteMediaCacheIntegrationTest {
     assertThat(row(note, 0).get("url")).isEqualTo("https://cdn.example/" + key(photo));
     assertThat(jdbc.queryForObject("SELECT body FROM note WHERE id = ?", String.class, note))
         .isEqualTo("after");
-    verify(fetcher, times(1)).fetch(photo, "image/png", MAX_BYTES);
+    verify(fetcher, times(1)).fetch(photo, MAX_BYTES);
   }
 
   @Test
   void aCopyOlderThanThirtyDaysGoesAndItsRowsPointBackAtTheOtherServer() {
     String old = picture("old.png");
     String fresh = picture("fresh.png");
-    when(fetcher.fetch(anyString(), eq("image/png"), eq(MAX_BYTES))).thenReturn(new Image(PNG));
+    when(fetcher.fetch(anyString(), eq(MAX_BYTES))).thenReturn(new Image(PNG, "image/png"));
     long oldNote = receive("old", List.of(new RemoteNotes.Media(old, null, "image/png")));
     long freshNote = receive("fresh", List.of(new RemoteNotes.Media(fresh, null, "image/png")));
     awaitShown(oldNote, 0);
@@ -230,7 +230,7 @@ class RemoteMediaCacheIntegrationTest {
   void aCopyGoesWhenNoNoteShowsItAnyMore() {
     String shared = picture("both.png");
     String alone = picture("alone.png");
-    when(fetcher.fetch(anyString(), eq("image/png"), eq(MAX_BYTES))).thenReturn(new Image(PNG));
+    when(fetcher.fetch(anyString(), eq(MAX_BYTES))).thenReturn(new Image(PNG, "image/png"));
     long keeper = receive("keeper", List.of(new RemoteNotes.Media(shared, null, "image/png")));
     long leaver =
         receive(
@@ -320,9 +320,9 @@ class RemoteMediaCacheIntegrationTest {
 
   private void settle() {
     String marker = picture("marker.png");
-    when(fetcher.fetch(marker, "image/png", MAX_BYTES)).thenReturn(new Refused("marker"));
+    when(fetcher.fetch(marker, MAX_BYTES)).thenReturn(new Refused("marker"));
     receive("marker", List.of(new RemoteNotes.Media(marker, null, "image/png")));
-    verify(fetcher, timeout(10_000)).fetch(marker, "image/png", MAX_BYTES);
+    verify(fetcher, timeout(10_000)).fetch(marker, MAX_BYTES);
   }
 
   private static void await(BooleanSupplier condition) {
