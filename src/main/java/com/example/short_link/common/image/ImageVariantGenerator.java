@@ -4,6 +4,7 @@ import com.example.short_link.common.image.ImageVariantLedger.Outcome;
 import com.example.short_link.common.storage.ObjectStorage;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,8 +17,27 @@ public class ImageVariantGenerator {
   private final ObjectStorage storage;
   private final ImageVariantRenderer renderer;
   private final ImageVariantLedger ledger;
+  private final ReentrantLock decoding = new ReentrantLock();
 
   public void generate(String key) {
+    decoding.lock();
+    try {
+      generateAlone(key);
+    } finally {
+      decoding.unlock();
+    }
+  }
+
+  public boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
+    decoding.lock();
+    try {
+      return storeAlone(key, original, maxSourcePixels);
+    } finally {
+      decoding.unlock();
+    }
+  }
+
+  private void generateAlone(String key) {
     long started = System.nanoTime();
     try {
       if (ledger.recorded(key)) {
@@ -31,31 +51,48 @@ public class ImageVariantGenerator {
         return;
       }
       byte[] original = source.get();
-      boolean png = ImageVariantKeys.png(key);
       ImageVariantRenderer.Rendered rendered;
       try {
-        rendered = renderer.render(original, png);
+        rendered = renderer.render(original, ImageVariantKeys.png(key));
       } catch (IOException unreadable) {
         ledger.record(key, Outcome.FAILED);
         log(key, "failed", started, original.length, 0, "undecodable");
         return;
       }
-      String contentType = ImageVariantKeys.contentType(key);
-      storage.putObject(
-          ImageVariantKeys.variantKey(key, ImageVariantKeys.LARGE), contentType, rendered.large());
-      storage.putObject(
-          ImageVariantKeys.variantKey(key, ImageVariantKeys.SMALL), contentType, rendered.small());
+      putVariants(key, rendered);
       ledger.record(key, Outcome.MADE);
-      log(
-          key,
-          "made",
-          started,
-          original.length,
-          rendered.large().length + rendered.small().length,
-          null);
+      log(key, "made", started, original.length, size(rendered), null);
     } catch (RuntimeException transientFailure) {
       log(key, "failed", started, 0, 0, transientFailure.getClass().getSimpleName());
     }
+  }
+
+  private boolean storeAlone(String key, byte[] original, long maxSourcePixels) {
+    long started = System.nanoTime();
+    ImageVariantRenderer.Rendered rendered;
+    try {
+      rendered = renderer.render(original, ImageVariantKeys.png(key), maxSourcePixels);
+    } catch (IOException unreadable) {
+      log(key, "failed", started, original.length, 0, unreadable.getMessage());
+      return false;
+    }
+    storage.putObject(key, ImageVariantKeys.contentType(key), original);
+    putVariants(key, rendered);
+    ledger.record(key, Outcome.MADE);
+    log(key, "made", started, original.length, size(rendered), null);
+    return true;
+  }
+
+  private void putVariants(String key, ImageVariantRenderer.Rendered rendered) {
+    String contentType = ImageVariantKeys.contentType(key);
+    storage.putObject(
+        ImageVariantKeys.variantKey(key, ImageVariantKeys.LARGE), contentType, rendered.large());
+    storage.putObject(
+        ImageVariantKeys.variantKey(key, ImageVariantKeys.SMALL), contentType, rendered.small());
+  }
+
+  private static long size(ImageVariantRenderer.Rendered rendered) {
+    return (long) rendered.large().length + rendered.small().length;
   }
 
   private static void log(

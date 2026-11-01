@@ -116,7 +116,7 @@ class ImageVariantRendererTest {
         .isLessThanOrEqualTo(ImageVariantRenderer.MAX_DECODED_PIXELS);
 
     byte[] phone = ImageFixtures.photo(4032, 3024);
-    BufferedImage decoded = ImageVariantRenderer.decode(phone, 1);
+    BufferedImage decoded = ImageVariantRenderer.decode(phone, 1, Long.MAX_VALUE);
     assertThat(decoded.getWidth()).isEqualTo(1344);
     assertThat(decoded.getHeight()).isEqualTo(1008);
 

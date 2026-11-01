@@ -10,6 +10,7 @@ import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Poll;
 import com.example.short_link.common.note.RemoteNotes.Shape;
+import com.example.short_link.note.application.media.RemoteMediaCopies;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -36,7 +37,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// Images stay on their server: the row keeps the remote address and no storage key.
+// Rows keep the remote address until a copy moves it to remote_url; compare by originalUrl().
 @Component
 @RequiredArgsConstructor
 class RemoteNoteRecorder implements RemoteNotes {
@@ -52,6 +53,7 @@ class RemoteNoteRecorder implements RemoteNotes {
   private final NotePeopleReader people;
   private final ApplicationEventPublisher events;
   private final Clock clock;
+  private final RemoteMediaCopies copies;
 
   @Override
   @Transactional(readOnly = true)
@@ -142,7 +144,7 @@ class RemoteNoteRecorder implements RemoteNotes {
       return Optional.empty();
     }
     Long noteId = stored.get();
-    media.saveAll(mediaRows(noteId, received.media()));
+    copies.request(media.saveAll(mediaRows(noteId, received.media())));
     notes.tag(noteId, Hashtags.of(received.body()));
     Set<Long> addressed = new LinkedHashSet<>(received.addressedUserIds());
     if (visibility.restricted() && !addressed.isEmpty()) {
@@ -244,7 +246,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     }
     if (mediaChanged) {
       media.deleteAllByNoteId(noteId);
-      media.saveAll(attached);
+      copies.request(media.saveAll(attached));
     }
     events.publishEvent(
         new NoteRevisedEvent(noteId, Actor.remote(remoteActorId), Excerpt.of(body)));
@@ -318,7 +320,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     for (int i = 0; i < kept.size(); i++) {
       NoteMediaEntity a = kept.get(i);
       NoteMediaEntity b = sent.get(i);
-      if (!a.getUrl().equals(b.getUrl())
+      if (!a.originalUrl().equals(b.getUrl())
           || !a.getContentType().equals(b.getContentType())
           || !Objects.equals(a.getAltText(), b.getAltText())
           || !Objects.equals(a.getWidth(), b.getWidth())

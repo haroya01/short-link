@@ -18,6 +18,7 @@ import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNoteFixtures;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.note.application.media.RemoteMediaCopies;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -54,10 +55,11 @@ class RemoteNoteRecorderTest {
   @Mock private NoteLinkPreviewRepository previews;
   @Mock private NotePeopleReader people;
   @Mock private ApplicationEventPublisher events;
+  @Mock private RemoteMediaCopies copies;
 
   private RemoteNoteRecorder recorder() {
     return new RemoteNoteRecorder(
-        notes, store, media, previews, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        notes, store, media, previews, people, events, Clock.fixed(NOW, ZoneOffset.UTC), copies);
   }
 
   private static RemoteNotes.Received received(
@@ -226,6 +228,96 @@ class RemoteNoteRecorderTest {
 
   private static NoteMediaEntity image(String url, String alt) {
     return new NoteMediaEntity(900L, 0, "", url, "image/png", alt, 1200, 900);
+  }
+
+  private static NoteMediaEntity copied(String remoteUrl, String alt) {
+    NoteMediaEntity row =
+        new NoteMediaEntity(
+            900L,
+            0,
+            "note-images/remote/ab.png",
+            "https://cdn.example/note-images/remote/ab.png",
+            "image/png",
+            alt,
+            1200,
+            900);
+    ReflectionTestUtils.setField(row, "remoteUrl", remoteUrl);
+    return row;
+  }
+
+  @Test
+  void theSavedImagesOfANoteAreHandedOnToBeCopied() {
+    when(store.insertRemote(any())).thenReturn(Optional.of(900L));
+    NoteMediaEntity saved = image("https://m.example/1.png", null);
+    ReflectionTestUtils.setField(saved, "id", 77L);
+    when(media.saveAll(any())).thenReturn(List.of(saved));
+
+    recorder()
+        .receive(
+            received(
+                NoteVisibility.PUBLIC,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(new RemoteNotes.Media("https://m.example/1.png", null, "image/png")),
+                null));
+
+    verify(copies).request(List.of(saved));
+  }
+
+  @Test
+  void anUpdateWithTheSameRemoteAddressAsACopiedImageKeepsTheCopy() {
+    NoteEntity note = kept("hello", null);
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L)))
+        .thenReturn(List.of(copied("https://m.example/1.png", "a cat")));
+
+    recorder()
+        .revise(
+            42L,
+            900L,
+            RemoteNoteFixtures.revision(
+                "hello again",
+                null,
+                false,
+                Instant.parse("2026-10-07T02:00:00Z"),
+                List.of(
+                    new RemoteNotes.Media(
+                        "https://m.example/1.png", "a cat", "image/png", 1200, 900)),
+                "en"));
+
+    assertThat(note.getBody()).isEqualTo("hello again");
+    verify(media, never()).deleteAllByNoteId(any());
+    verify(media, never()).saveAll(any());
+    verifyNoInteractions(copies);
+  }
+
+  @Test
+  void anUpdateThatChangesImagesHandsTheNewRowsOnToBeCopied() {
+    NoteEntity note = kept("hello", null);
+    when(store.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L)))
+        .thenReturn(List.of(copied("https://m.example/1.png", "a cat")));
+    NoteMediaEntity saved = image("https://m.example/2.png", "a dog");
+    when(media.saveAll(any())).thenReturn(List.of(saved));
+
+    recorder()
+        .revise(
+            42L,
+            900L,
+            RemoteNoteFixtures.revision(
+                "hello",
+                null,
+                false,
+                Instant.parse("2026-10-07T02:00:00Z"),
+                List.of(
+                    new RemoteNotes.Media(
+                        "https://m.example/2.png", "a dog", "image/png", 1200, 900)),
+                "en"));
+
+    verify(media).deleteAllByNoteId(900L);
+    verify(copies).request(List.of(saved));
   }
 
   @Test

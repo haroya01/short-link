@@ -56,6 +56,7 @@ class CrossModuleSqlRatchetTest {
           entry("post_read_milestone", "post"),
           entry("post_tag", "post"),
           entry("remote_dwell", "federation"),
+          entry("remote_media", "note"),
           entry("remote_note_reach", "federation"),
           entry("remote_seen", "federation"),
           entry("room_invitation", "room"),

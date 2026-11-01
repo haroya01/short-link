@@ -89,6 +89,13 @@ short-link:
     sweep-delay: PT10M
     backfill-enabled: ${IMAGE_VARIANTS_BACKFILL_ENABLED:false}
     backfill-interval: ${IMAGE_VARIANTS_BACKFILL_INTERVAL:PT1S}
+  remote-media:
+    enabled: ${REMOTE_MEDIA_CACHE_ENABLED:false}
+    queue: 100
+    max-bytes: 10485760
+    keep-for: 30d
+    sweep-batch: 200
+    sweep-delay: PT10M
   pow:
     difficulty: ${POW_DIFFICULTY:3}
     enforce: ${POW_ENFORCE:true}
