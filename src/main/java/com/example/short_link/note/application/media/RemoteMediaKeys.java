@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
 
 public final class RemoteMediaKeys {
@@ -25,6 +26,10 @@ public final class RemoteMediaKeys {
 
   public static boolean copyable(String url, String contentType) {
     return url != null && url.regionMatches(true, 0, "https://", 0, 8) && type(contentType) != null;
+  }
+
+  public static List<String> keysOf(String url) {
+    return List.of(keyOf(url, PublicImageFetcher.JPEG), keyOf(url, PublicImageFetcher.PNG));
   }
 
   public static String keyOf(String url, String type) {

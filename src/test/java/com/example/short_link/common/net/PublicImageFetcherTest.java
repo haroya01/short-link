@@ -94,7 +94,7 @@ class PublicImageFetcherTest {
             "https://user:secret@93.184.216.34/a.png",
             "ftp://93.184.216.34/a.png",
             "not a url")) {
-      assertThat(production.fetch(url, "image/png", CAP)).as(url).isInstanceOf(Refused.class);
+      assertThat(production.fetch(url, CAP)).as(url).isInstanceOf(Refused.class);
     }
     assertThat(hits).hasValue(0);
   }
@@ -111,36 +111,39 @@ class PublicImageFetcherTest {
             Duration.ofSeconds(2),
             Duration.ofSeconds(5));
 
-    assertThat(httpsOnly.fetch(url("/a.png"), "image/png", CAP))
+    assertThat(httpsOnly.fetch(url("/a.png"), CAP))
         .isEqualTo(new Refused("not a public https address"));
-    assertThat(
-            fetcher().fetch("http://user:secret@media.test:" + port() + "/a.png", "image/png", CAP))
+    assertThat(fetcher().fetch("http://user:secret@media.test:" + port() + "/a.png", CAP))
         .isEqualTo(new Refused("not a public http address"));
     assertThat(hits).hasValue(0);
   }
 
   @Test
-  void aPngOrJpegServedAsItselfComesBackWhole() {
-    assertThat(((Image) fetcher().fetch(url("/a.png"), "image/png", CAP)).bytes()).isEqualTo(PNG);
-    assertThat(((Image) fetcher().fetch(url("/a.jpg"), "image/jpeg", CAP)).bytes()).isEqualTo(JPEG);
+  void aPngOrJpegServedAsItselfComesBackWholeWithItsType() {
+    Image png = (Image) fetcher().fetch(url("/a.png"), CAP);
+    Image jpeg = (Image) fetcher().fetch(url("/a.jpg"), CAP);
+
+    assertThat(png.bytes()).isEqualTo(PNG);
+    assertThat(png.type()).isEqualTo("image/png");
+    assertThat(jpeg.bytes()).isEqualTo(JPEG);
+    assertThat(jpeg.type()).isEqualTo("image/jpeg");
   }
 
   @Test
-  void anImageServedUnderAnotherTypeIsRefused() {
-    assertThat(refusal("/webp", "image/png")).isEqualTo("served as image/webp");
-    assertThat(refusal("/octet", "image/png")).isEqualTo("served as application/octet-stream");
-    assertThat(refusal("/a.jpg", "image/png")).isEqualTo("served as image/jpeg");
+  void anythingServedAsOtherThanJpegOrPngIsRefused() {
+    assertThat(refusal("/webp")).isEqualTo("served as image/webp");
+    assertThat(refusal("/octet")).isEqualTo("served as application/octet-stream");
   }
 
   @Test
   void bytesThatAreNotTheServedTypeAreRefused() {
-    assertThat(refusal("/jpeg-as-png", "image/png")).isEqualTo("bytes are not image/png");
-    assertThat(refusal("/html-as-png", "image/png")).isEqualTo("bytes are not image/png");
+    assertThat(refusal("/jpeg-as-png")).isEqualTo("bytes are not image/png");
+    assertThat(refusal("/html-as-png")).isEqualTo("bytes are not image/png");
   }
 
   @Test
   void anAnswerOtherThanOkIsRefused() {
-    assertThat(refusal("/missing", "image/png")).isEqualTo("HTTP 404");
+    assertThat(refusal("/missing")).isEqualTo("HTTP 404");
   }
 
   @Test
@@ -148,7 +151,7 @@ class PublicImageFetcherTest {
   void aDeclaredLengthOverTheCapIsRefusedWithoutWaitingForTheBody() {
     long started = System.nanoTime();
 
-    assertThat(refusal("/declared-too-long", "image/png")).isEqualTo("larger than 65536 bytes");
+    assertThat(refusal("/declared-too-long")).isEqualTo("larger than 65536 bytes");
     assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(2000);
   }
 
@@ -157,7 +160,7 @@ class PublicImageFetcherTest {
   void aBodyWithoutALengthIsCutOffAtTheCapAndNotDrained() {
     long started = System.nanoTime();
 
-    assertThat(refusal("/endless", "image/png")).isEqualTo("larger than 65536 bytes");
+    assertThat(refusal("/endless")).isEqualTo("larger than 65536 bytes");
     assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(2000);
     assertThat(written.get()).isLessThan(32L * 1024 * 1024);
   }
@@ -167,7 +170,7 @@ class PublicImageFetcherTest {
   void aBodySlowerThanTheDeadlineIsAbandoned() {
     long started = System.nanoTime();
 
-    Result result = fetcher(Duration.ofMillis(400)).fetch(url("/slow"), "image/png", CAP);
+    Result result = fetcher(Duration.ofMillis(400)).fetch(url("/slow"), CAP);
 
     assertThat(result).isEqualTo(new Refused("slower than the deadline"));
     assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(3000);
@@ -175,23 +178,23 @@ class PublicImageFetcherTest {
 
   @Test
   void aRedirectIsFollowedOnlyToAnAllowedAddressAndOnlyAFewTimes() {
-    assertThat(fetcher().fetch(url("/hop"), "image/png", CAP)).isInstanceOf(Image.class);
-    assertThat(refusal("/away", "image/png")).isEqualTo("not a public http address");
-    assertThat(refusal("/loop", "image/png")).isEqualTo("too many redirects");
+    assertThat(fetcher().fetch(url("/hop"), CAP)).isInstanceOf(Image.class);
+    assertThat(refusal("/away")).isEqualTo("not a public http address");
+    assertThat(refusal("/loop")).isEqualTo("too many redirects");
   }
 
   @Test
   void noCookieOrCredentialIsSentAndTheRequestNamesTheTypeItWants() {
-    assertThat(fetcher().fetch(url("/cookie"), "image/png", CAP)).isInstanceOf(Image.class);
+    assertThat(fetcher().fetch(url("/cookie"), CAP)).isInstanceOf(Image.class);
 
     Map<String, List<String>> headers = seen.get("/echo.png");
     assertThat(headers).doesNotContainKeys("Cookie", "Authorization", "Proxy-authorization");
-    assertThat(headers.get("Accept")).containsExactly("image/png");
+    assertThat(headers.get("Accept")).containsExactly("image/jpeg, image/png");
     assertThat(headers.get("User-agent").getFirst()).startsWith("kurl-media/");
   }
 
-  private String refusal(String path, String type) {
-    Result result = fetcher().fetch(url(path), type, CAP);
+  private String refusal(String path) {
+    Result result = fetcher().fetch(url(path), CAP);
     assertThat(result).isInstanceOf(Refused.class);
     return ((Refused) result).reason();
   }
