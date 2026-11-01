@@ -41,6 +41,7 @@ class LocalTimeBucketQueriesIntegrationTest {
   private static final int FRIDAY = 6;
   private static final int EVENING = 20;
   private static final Instant SINCE = Instant.parse("2026-11-01T00:00:00Z");
+  private static final Instant BEFORE_SINCE = Instant.parse("2026-10-25T03:00:00Z");
 
   @Autowired private UserRepository users;
   @Autowired private LinkRepository links;
@@ -114,11 +115,13 @@ class LocalTimeBucketQueriesIntegrationTest {
 
   @Test
   void adminDailySignupsAndLinksCountACreationOnItsLocalDay() {
+    createdAt("users", owner.getId(), BEFORE_SINCE);
+    createdAt("link", link.getId(), BEFORE_SINCE);
     Map<LocalDate, Long> signupsBefore = days(() -> adminMetrics.dailySignupsSince(SINCE, SEOUL));
     Map<LocalDate, Long> linksBefore = days(() -> adminMetrics.dailyLinksSince(SINCE, SEOUL));
 
-    createdAt("users", owner.getId());
-    createdAt("link", link.getId());
+    createdAt("users", owner.getId(), SEOUL_EVENING);
+    createdAt("link", link.getId(), SEOUL_EVENING);
 
     assertThat(change(signupsBefore, days(() -> adminMetrics.dailySignupsSince(SINCE, SEOUL))))
         .containsExactly(Map.entry(SEOUL_DAY, 1L));
@@ -131,10 +134,10 @@ class LocalTimeBucketQueriesIntegrationTest {
     em.flush();
   }
 
-  private void createdAt(String table, Long id) {
+  private void createdAt(String table, Long id, Instant at) {
     em.createNativeQuery(
             "UPDATE " + table + " SET created_at = FROM_UNIXTIME(:epoch) WHERE id = :id")
-        .setParameter("epoch", SEOUL_EVENING.getEpochSecond())
+        .setParameter("epoch", at.getEpochSecond())
         .setParameter("id", id)
         .executeUpdate();
   }
