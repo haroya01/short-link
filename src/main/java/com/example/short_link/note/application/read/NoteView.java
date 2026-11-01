@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.read;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
@@ -41,7 +42,8 @@ public record NoteView(
     Boolean canReply,
     boolean hidden,
     Remote remote,
-    Room room) {
+    Room room,
+    List<CustomEmoji> emojis) {
 
   public record Media(
       String url, String altText, String contentType, Integer width, Integer height) {
@@ -89,7 +91,8 @@ public record NoteView(
       NoteAuthor author,
       List<Media> media,
       String contentWarning,
-      boolean sensitive) {}
+      boolean sensitive,
+      List<CustomEmoji> emojis) {}
 
   record Origin(Long id, NoteAuthor author, Instant createdAt, Instant editedAt, Remote remote) {}
 
@@ -98,7 +101,8 @@ public record NoteView(
       List<String> mentions,
       String contentWarning,
       boolean sensitive,
-      String language) {}
+      String language,
+      List<CustomEmoji> emojis) {}
 
   record Reach(String visibility, String replyPolicy, Room room) {}
 
@@ -169,7 +173,8 @@ public record NoteView(
         mine.canReply(),
         standing.hidden(),
         origin.remote(),
-        reach.room());
+        reach.room(),
+        text.emojis());
   }
 
   NoteView withRepostedBy(NoteAuthor reposter) {
@@ -183,7 +188,7 @@ public record NoteView(
   private NoteView shownAs(InFeed inFeed) {
     return compose(
         new Origin(id, author, createdAt, editedAt, remote),
-        new Text(body, mentions, contentWarning, sensitive, language),
+        new Text(body, mentions, contentWarning, sensitive, language, emojis),
         new Reach(visibility, replyPolicy, room),
         new Standing(inReplyToId, pinned, hidden),
         new Attached(media, quotedPost, quotedNote, linkPreview, poll),

@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -58,6 +59,28 @@ class RemoteActorParserTest {
     var unclear = RemoteActorParser.parse(document, from, key).orElseThrow();
     assertThat(unclear.discoverable()).isFalse();
     assertThat(unclear.indexable()).isFalse();
+  }
+
+  @Test
+  void theEmojisInAnAccountsNameComeFromItsEmojiTags() {
+    ObjectNode document = (ObjectNode) read(RemoteActorFixtures.MASTODON);
+    URI from = URI.create("https://mastodon.example/users/alice");
+    String key = "https://mastodon.example/users/alice#main-key";
+    assertThat(RemoteActorParser.parse(document, from, key).orElseThrow().emojis()).isEmpty();
+
+    document.put("name", "Alice :verified:");
+    document.set(
+        "tag",
+        read(
+            """
+            [{"type":"Emoji","name":":verified:",
+              "icon":{"type":"Image","url":"https://files.mastodon.example/emoji/verified.png"}},
+             {"type":"Emoji","name":":insecure:","icon":{"url":"http://files.mastodon.example/i.png"}},
+             {"type":"Hashtag","name":"#cats"}]"""));
+
+    assertThat(RemoteActorParser.parse(document, from, key).orElseThrow().emojis())
+        .containsExactly(
+            new CustomEmoji("verified", "https://files.mastodon.example/emoji/verified.png"));
   }
 
   @Test

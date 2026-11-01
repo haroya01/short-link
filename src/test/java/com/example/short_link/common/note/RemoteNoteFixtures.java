@@ -15,6 +15,14 @@ public final class RemoteNoteFixtures {
       List<RemoteNotes.Media> media,
       String language) {
     return new RemoteNotes.Revision(
-        body, contentWarning, sensitive, editedAt, media, language, RemoteNotes.Shape.NOTE, null);
+        body,
+        contentWarning,
+        sensitive,
+        editedAt,
+        media,
+        language,
+        RemoteNotes.Shape.NOTE,
+        null,
+        List.of());
   }
 }

@@ -93,7 +93,8 @@ class FederationQueueIntegrationTest {
                     null,
                     null,
                     false,
-                    false),
+                    false,
+                    List.of()),
                 NOW));
     ReflectionTestUtils.getField(saved, "id");
 

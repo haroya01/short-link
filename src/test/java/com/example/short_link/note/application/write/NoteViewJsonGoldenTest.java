@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
@@ -76,7 +77,12 @@ class NoteViewJsonGoldenTest {
   private static final NoteAuthor MINA = new NoteAuthor(9L, "mina", null);
   private static final NoteAuthor ALICE =
       NoteAuthor.remote(
-          42L, "alice@m.example", "https://m.example/a.png", "Alice", "https://m.example/@alice");
+          42L,
+          "alice@m.example",
+          "https://m.example/a.png",
+          "Alice :verified:",
+          "https://m.example/@alice",
+          List.of(new CustomEmoji("verified", "https://m.example/emoji/verified.png")));
 
   @Mock private NoteRepository notes;
   @Mock private NotePageReader pages;
@@ -184,6 +190,8 @@ class NoteViewJsonGoldenTest {
     NoteEntity question = remote(4L, "gopher://m.example/4", 25);
     question.pollElsewhere(
         List.of("yes", "no"), NOW.plusSeconds(3600), false, List.of(3L, 1L), 4, null);
+    question.useRemoteEmojis(
+        List.of(new CustomEmoji("blobcat", "https://m.example/emoji/blobcat.png")));
     NoteEntity inRoom = note(5L, 7L, "방에서", 20);
     inRoom.postIn(30L);
     inRoom.showTo(NoteVisibility.ROOM);

@@ -137,7 +137,8 @@ class DirectorySyncTest {
                 null,
                 null,
                 true,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(actor, "id", id);
     return actor;

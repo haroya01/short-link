@@ -65,7 +65,8 @@ class NoteAddressingTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         Instant.parse("2026-10-06T00:00:00Z"));
   }
 

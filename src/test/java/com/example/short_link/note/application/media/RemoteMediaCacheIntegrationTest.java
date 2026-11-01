@@ -190,7 +190,8 @@ class RemoteMediaCacheIntegrationTest {
             List.of(new RemoteNotes.Media(photo, "alt", "image/png")),
             null,
             RemoteNotes.Shape.NOTE,
-            null));
+            null,
+            List.of()));
     settle();
 
     assertThat(row(note, 0).get("url")).isEqualTo("https://cdn.example/" + key(photo));
@@ -270,7 +271,8 @@ class RemoteMediaCacheIntegrationTest {
                 null,
                 RemoteNotes.Shape.NOTE,
                 false,
-                null))
+                null,
+                List.of()))
         .orElseThrow();
   }
 

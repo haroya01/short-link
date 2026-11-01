@@ -66,7 +66,8 @@ class InboxVerifierTest {
             null,
             null,
             false,
-            false),
+            false,
+            List.of()),
         fetchedAt);
   }
 

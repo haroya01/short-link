@@ -1,5 +1,6 @@
 package com.example.short_link.federation.domain;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -56,6 +57,9 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
 
+  @Column(columnDefinition = "json")
+  private String emojis;
+
   @Column(nullable = false)
   private boolean discoverable;
 
@@ -105,6 +109,7 @@ public class RemoteActorEntity extends BaseTimeEntity {
     this.profileUrl = document.profileUrl();
     this.displayName = document.displayName();
     this.avatarUrl = document.avatarUrl();
+    this.emojis = CustomEmoji.column(document.emojis());
     this.discoverable = document.discoverable();
     this.indexable = document.indexable();
     this.fetchedAt = fetchedAt;

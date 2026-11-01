@@ -78,7 +78,8 @@ class OutboxBackfillTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(actor, "id", 42L);
     return actor;

@@ -80,7 +80,8 @@ class RemoteFollowingTest {
                 "Alice",
                 "https://files.mastodon.example/a.png",
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(alice, "id", 42L);
     lenient().when(remoteActors.findById(42L)).thenReturn(Optional.of(alice));
@@ -162,7 +163,8 @@ class RemoteFollowingTest {
                 null,
                 null,
                 false,
-                false),
+                false,
+                List.of()),
             NOW);
     ReflectionTestUtils.setField(bare, "id", 43L);
     when(remoteActors.findById(43L)).thenReturn(Optional.of(bare));

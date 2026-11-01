@@ -1,5 +1,6 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteAuthor;
@@ -77,7 +78,7 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
     for (Object raw :
         em.createNativeQuery(
                 "SELECT id, username, domain, avatar_url, display_name,"
-                    + " COALESCE(profile_url, actor_uri) FROM federation_remote_actor ra"
+                    + " COALESCE(profile_url, actor_uri), emojis FROM federation_remote_actor ra"
                     + " WHERE ra.id IN (:ids) AND NOT "
                     + ServerBlockSql.suspended("ra.id")
                     + HeardSql.unblockedRemote("ra.id"))
@@ -95,7 +96,8 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
               username == null ? domain : username + "@" + domain,
               (String) columns[3],
               (String) columns[4],
-              (String) columns[5]));
+              (String) columns[5],
+              CustomEmoji.fromColumn(columns[6] == null ? null : columns[6].toString())));
     }
     return authors;
   }

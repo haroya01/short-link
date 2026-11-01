@@ -2,6 +2,7 @@ package com.example.short_link.federation.application.trends;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -114,7 +115,8 @@ class TrendingStatusReaderTest {
                 "https://mastodon.example/avatar.png",
                 "Name",
                 null,
-                "https://mastodon.example/@alice"));
+                "https://mastodon.example/@alice",
+                List.of()));
     assertThat(note.media())
         .containsExactly(
             new RemoteNotes.Media("https://files.example/a.png", "a cat", "image/jpeg", 800, 600),
@@ -133,6 +135,50 @@ class TrendingStatusReaderTest {
     assertThat(note.url()).isEqualTo("https://mastodon.example/@alice/1");
     assertThat(note.servers()).containsExactly(SERVER);
     assertThat(note.sourceHost()).isEqualTo(SERVER);
+  }
+
+  @Test
+  void aPostAndItsAuthorsNameShowTheirCustomEmojisAsStillPicturesAndKeepThemWhenKept() {
+    ObjectNode status = status("https://mastodon.example/users/alice/statuses/1", "alice");
+    status.put("content", "<p>\"Wait, it has pockets ...\" :neoghost:</p>");
+    status.set(
+        "emojis",
+        JSON.readTree(
+            """
+            [{"shortcode":"neoghost","url":"https://files.example/neoghost.gif",
+              "static_url":"https://files.example/neoghost.png","visible_in_picker":true},
+             {"shortcode":"bad-name","url":"https://files.example/bad.png"}]"""));
+    ((ObjectNode) status.get("account")).put("display_name", "Ged :verified:");
+    ((ObjectNode) status.get("account"))
+        .set(
+            "emojis",
+            JSON.readTree(
+                """
+                [{"shortcode":"verified","url":"https://files.example/verified.png"}]"""));
+
+    TrendingStatusReader.Read read = read(status).orElseThrow();
+
+    assertThat(read.note().emojis())
+        .containsExactly(new CustomEmoji("neoghost", "https://files.example/neoghost.png"));
+    assertThat(read.note().author().emojis())
+        .containsExactly(new CustomEmoji("verified", "https://files.example/verified.png"));
+    assertThat(read.note().author().known(4L).emojis()).isEqualTo(read.note().author().emojis());
+    assertThat(
+            new RemoteNoteParser(
+                    new FederationUrls(
+                        new FederationProperties("https://kurl.me", "https://blog.kurl.me")))
+                .parse(read.object(), read.object())
+                .emojis())
+        .isEqualTo(read.note().emojis());
+    TrendingNote moved = read.note().on(List.of(SERVER, "other.example"), 9, 9, 9);
+    assertThat(moved.emojis()).isEqualTo(read.note().emojis());
+    assertThat(moved.by(moved.author().known(4L)).emojis()).isEqualTo(read.note().emojis());
+    assertThat(moved.seenBy(true).emojis()).isEqualTo(read.note().emojis());
+
+    TrendingStatusReader.Read plain =
+        read(status("https://mastodon.example/users/alice/statuses/2", "alice")).orElseThrow();
+    assertThat(plain.note().emojis()).isEmpty();
+    assertThat(plain.note().author().emojis()).isEmpty();
   }
 
   @Test
