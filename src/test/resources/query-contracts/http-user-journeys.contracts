@@ -349,7 +349,8 @@
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
 @junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
 @junit | link-bulk-import | 10 | 10 | 4 | 0 | 24
-@junit | link-claim-anonymous | 2 | 0 | 1 | 0 | 3
+# Claiming counts the account's links once something matched, so a claim stops at the link quota.
+@junit | link-claim-anonymous | 3 | 0 | 1 | 0 | 4
 @junit | link-claim-replay | 2 | 0 | 0 | 0 | 2
 @junit | link-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | link-countries-block | 3 | 0 | 2 | 0 | 5

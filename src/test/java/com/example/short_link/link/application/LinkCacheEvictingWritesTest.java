@@ -47,7 +47,7 @@ class LinkCacheEvictingWritesTest {
     when(links.findAllByClaimTokenInAndUserIdIsNull(List.of("t1", "t2")))
         .thenReturn(List.of(link(1L, "claim01", null), link(2L, "claim02", null)));
     ClaimAnonymousLinksUseCase claim =
-        new ClaimAnonymousLinksUseCase(links, new SimpleMeterRegistry(), cache);
+        new ClaimAnonymousLinksUseCase(links, new SimpleMeterRegistry(), cache, 200);
 
     claim.execute(ClaimAnonymousLinksCommand.of(9L, List.of("t1", "t2")));
 
