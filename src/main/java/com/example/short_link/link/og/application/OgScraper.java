@@ -1,24 +1,17 @@
 package com.example.short_link.link.og.application;
 
 import com.example.short_link.common.net.HttpFetcher;
-import com.example.short_link.common.net.HttpFetcher.Request;
 import com.example.short_link.common.net.HttpFetcher.Response;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.OgMetadata;
+import com.example.short_link.link.og.application.OgPageFetcher.Landing;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -30,19 +23,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class OgScraper {
 
-  private static final Duration CONNECT_TIMEOUT = Duration.ofMillis(3_000);
-  private static final Duration READ_TIMEOUT = Duration.ofMillis(5_000);
-  private static final int MAX_BODY_BYTES = 1_024 * 1_024;
-  private static final int MAX_REDIRECTS = 3;
-  private static final Set<Integer> REDIRECTS = Set.of(301, 302, 303, 307, 308);
-  private static final String USER_AGENT = "kurl-link-preview/1.0 (+https://kurl.me/bot)";
-
-  private final HttpFetcher httpFetcher;
+  private final OgPageFetcher pages;
   private final MeterRegistry meterRegistry;
 
   @Autowired
   public OgScraper(HttpFetcher httpFetcher, MeterRegistry meterRegistry) {
-    this.httpFetcher = httpFetcher;
+    this.pages = new OgPageFetcher(httpFetcher);
     this.meterRegistry = meterRegistry;
   }
 
@@ -52,91 +38,46 @@ public class OgScraper {
       return OgMetadata.empty();
     }
     Timer.Sample sample = meterRegistry == null ? null : Timer.start(meterRegistry);
-    AtomicReference<String> resultTag = new AtomicReference<>("exception");
+    String resultTag = "exception";
     try {
-      Landing landing = follow(resolved);
-      if (landing.refusal() != null) {
-        resultTag.set(landing.refusal());
-        return OgMetadata.empty();
-      }
-      Response response = landing.response();
-      String baseUrl = landing.uri().toString();
-      if (response.status() >= 400) {
-        resultTag.set("non_2xx");
-        return OgMetadata.empty();
-      }
-      String contentType = response.header("Content-Type");
-      if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("text/html")) {
-        resultTag.set("non_html");
-        return OgMetadata.empty();
-      }
-      if (response.body().length == 0) {
-        resultTag.set("non_html");
-        return OgMetadata.empty();
-      }
-      Document doc = Jsoup.parse(new String(response.body(), StandardCharsets.UTF_8), baseUrl);
-      resultTag.set("ok");
-      return parseDocument(doc, baseUrl);
+      Scraped scraped = scrape(pages.fetch(resolved));
+      resultTag = scraped.result();
+      return scraped.og();
     } catch (RuntimeException e) {
       log.warn("OG fetch unexpected error for {}", url, e);
       return OgMetadata.empty();
     } finally {
       if (sample != null) {
         sample.stop(
-            meterRegistry.timer("outbound.http", "client", "og_fetch", "result", resultTag.get()));
+            meterRegistry.timer("outbound.http", "client", "og_fetch", "result", resultTag));
       }
     }
   }
 
-  private Landing follow(Resolved first) {
-    Map<String, String> headers = new LinkedHashMap<>();
-    headers.put("User-Agent", USER_AGENT);
-    headers.put("Accept", "text/html,application/xhtml+xml");
-    headers.put("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
-    Resolved current = first;
-    Set<URI> visited = new HashSet<>();
-    for (int hop = 0; ; hop++) {
-      visited.add(current.uri());
-      Response response =
-          httpFetcher.fetch(
-              Request.getNoRedirects(
-                  current, headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
-      if (!REDIRECTS.contains(response.status())) {
-        return new Landing(current.uri(), response, null);
-      }
-      if (hop == MAX_REDIRECTS) {
-        return Landing.refused("too_many_redirects");
-      }
-      URI next = location(current.uri(), response.header("Location"));
-      if (next == null) {
-        return Landing.refused("redirect_invalid");
-      }
-      if (visited.contains(next)) {
-        return Landing.refused("redirect_loop");
-      }
-      Optional<Resolved> target = PublicHttpUrlGuard.resolve(next.toString());
-      if (target.isEmpty()) {
-        return Landing.refused("redirect_blocked");
-      }
-      current = target.get();
+  private static Scraped scrape(Landing landing) {
+    if (landing.refusal() != null) {
+      return Scraped.empty(landing.refusal());
     }
+    Response response = landing.response();
+    if (response.status() >= 400) {
+      return Scraped.empty("non_2xx");
+    }
+    String contentType = response.header("Content-Type");
+    if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("text/html")) {
+      return Scraped.empty("non_html");
+    }
+    if (response.body().length == 0) {
+      return Scraped.empty("non_html");
+    }
+    String baseUrl = landing.uri().toString();
+    Document doc = Jsoup.parse(new String(response.body(), StandardCharsets.UTF_8), baseUrl);
+    return new Scraped(parseDocument(doc, baseUrl), "ok");
   }
 
-  private static URI location(URI from, String header) {
-    if (header == null || header.isBlank()) {
-      return null;
-    }
-    try {
-      return from.resolve(header.strip());
-    } catch (IllegalArgumentException malformed) {
-      return null;
-    }
-  }
+  private record Scraped(OgMetadata og, String result) {
 
-  private record Landing(URI uri, Response response, String refusal) {
-
-    static Landing refused(String refusal) {
-      return new Landing(null, null, refusal);
+    static Scraped empty(String result) {
+      return new Scraped(OgMetadata.empty(), result);
     }
   }
 

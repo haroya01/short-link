@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 
@@ -269,7 +270,8 @@ class OgScraperFetchTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"", "https://www.you tube.com/watch"})
+  @NullAndEmptySource
+  @ValueSource(strings = {"https://www.you tube.com/watch"})
   void refusesARedirectWithoutAUsableLocation(String location) {
     Pages pages = new Pages().redirect(SHARE, 302, location);
 
@@ -311,7 +313,9 @@ class OgScraperFetchTest {
     }
 
     Pages redirect(String url, int status, String location) {
-      return page(url, new Response(status, Map.of("Location", List.of(location)), new byte[0]));
+      Map<String, List<String>> headers =
+          location == null ? Map.of() : Map.of("Location", List.of(location));
+      return page(url, new Response(status, headers, new byte[0]));
     }
 
     List<String> requested() {
