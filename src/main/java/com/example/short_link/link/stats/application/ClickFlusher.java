@@ -112,7 +112,6 @@ public class ClickFlusher {
     }
   }
 
-  // 실패한 일괄 저장이 앞쪽 엔티티에 남긴 id 로 다시 save 하면 롤백된 행으로 merge 되어 버려진다.
   private List<ClickEventEntity> persistIndividually(List<Assembled> batch) {
     List<ClickEventEntity> saved = new ArrayList<>(batch.size());
     for (Assembled assembled : batch) {
