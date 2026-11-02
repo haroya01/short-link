@@ -143,7 +143,7 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
                     (String) row[3],
                     (String) row[4],
                     (String) row[5],
-                    emojis(row[6]),
+                    CustomEmoji.fromColumn(row[6]),
                     RemoteAccountMatch.Relation.NONE))
         .toList();
   }
@@ -207,12 +207,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
         (String) row[3],
         (String) row[4],
         (String) row[5],
-        emojis(row[6]),
+        CustomEmoji.fromColumn(row[6]),
         new RemoteAccountMatch.Relation(flag(row[7]), flag(row[8]), flag(row[9])));
-  }
-
-  private static List<CustomEmoji> emojis(Object column) {
-    return CustomEmoji.fromColumn(column == null ? null : column.toString());
   }
 
   private static boolean flag(Object value) {
