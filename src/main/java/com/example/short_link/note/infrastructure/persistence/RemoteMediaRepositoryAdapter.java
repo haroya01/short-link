@@ -37,8 +37,9 @@ class RemoteMediaRepositoryAdapter implements RemoteMediaRepository {
             .executeUpdate();
     if (shown > 0) {
       em.createNativeQuery(
-              "INSERT IGNORE INTO remote_media (storage_key, remote_url, cached_at)"
-                  + " VALUES (:key, :remote, :at)")
+              "INSERT INTO remote_media (storage_key, remote_url, cached_at)"
+                  + " VALUES (:key, :remote, :at)"
+                  + " ON DUPLICATE KEY UPDATE cached_at = GREATEST(cached_at, :at)")
           .setParameter("key", key)
           .setParameter("remote", remoteUrl)
           .setParameter("at", cachedAt)

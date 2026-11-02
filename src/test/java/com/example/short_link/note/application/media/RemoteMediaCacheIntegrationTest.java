@@ -228,6 +228,26 @@ class RemoteMediaCacheIntegrationTest {
   }
 
   @Test
+  void aNoteThatPicksUpAnAgingCopyKeepsShowingItAfterTheNextSweep() {
+    String photo = picture("again.png");
+    when(fetcher.fetch(photo, MAX_BYTES)).thenReturn(new Image(PNG, "image/png"));
+    long first = receive("first", List.of(new RemoteNotes.Media(photo, null, "image/png")));
+    awaitShown(first, 0);
+    jdbc.update(
+        "UPDATE remote_media SET cached_at = cached_at - INTERVAL 31 DAY WHERE storage_key = ?",
+        key(photo));
+
+    long second = receive("second", List.of(new RemoteNotes.Media(photo, null, "image/png")));
+    awaitShown(second, 0);
+    assertThat(queue.sweep()).isTrue();
+    settle();
+
+    assertThat(row(second, 0).get("url")).isEqualTo("https://cdn.example/" + key(photo));
+    assertThat(copies(key(photo))).isOne();
+    verify(fetcher, times(1)).fetch(photo, MAX_BYTES);
+  }
+
+  @Test
   void aCopyGoesWhenNoNoteShowsItAnyMore() {
     String shared = picture("both.png");
     String alone = picture("alone.png");
