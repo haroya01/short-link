@@ -80,4 +80,11 @@ class UtmExtractorTest {
     assertThat(utm.source()).isNull();
     assertThat(utm.medium()).isEqualTo("cpc");
   }
+
+  @Test
+  void valuesFitTheUtmColumns() {
+    UtmParams utm = UtmExtractor.extract("https://example.com?utm_content=" + "x".repeat(300));
+
+    assertThat(utm.content()).hasSize(255);
+  }
 }

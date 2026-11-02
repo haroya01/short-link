@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserAgentClassifier {
 
+  private static final int MAX_NAME_LENGTH = 64;
+
   private final UserAgentAnalyzer analyzer;
 
   public UserAgentInfo classify(String ua) {
@@ -36,6 +38,7 @@ public class UserAgentClassifier {
   }
 
   private static String nullIfUnknown(String v) {
-    return (v == null || v.isBlank() || v.equals("Unknown")) ? null : v;
+    if (v == null || v.isBlank() || v.equals("Unknown")) return null;
+    return v.length() > MAX_NAME_LENGTH ? v.substring(0, MAX_NAME_LENGTH) : v;
   }
 }

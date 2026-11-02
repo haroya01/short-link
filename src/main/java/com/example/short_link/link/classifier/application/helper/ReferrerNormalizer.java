@@ -7,6 +7,7 @@ import java.util.Locale;
 public final class ReferrerNormalizer {
 
   private static final int MAX_LENGTH = 512;
+  private static final int MAX_HOST_LENGTH = 255;
 
   private ReferrerNormalizer() {}
 
@@ -37,7 +38,11 @@ public final class ReferrerNormalizer {
     }
     try {
       String host = new URI(referrer.trim()).getHost();
-      return host == null ? null : host.toLowerCase(Locale.ROOT);
+      if (host == null) {
+        return null;
+      }
+      String lower = host.toLowerCase(Locale.ROOT);
+      return lower.length() > MAX_HOST_LENGTH ? lower.substring(0, MAX_HOST_LENGTH) : lower;
     } catch (URISyntaxException e) {
       return null;
     }

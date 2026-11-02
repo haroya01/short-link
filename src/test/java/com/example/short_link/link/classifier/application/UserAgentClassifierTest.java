@@ -74,4 +74,15 @@ class UserAgentClassifierTest {
 
     assertThat(info.osName()).isNull();
   }
+
+  @Test
+  void namesFitTheUserAgentColumns() {
+    UserAgentInfo info =
+        classifier.classify(
+            "Mozilla/5.0 (compatible; " + "Z".repeat(120) + "bot/1.0; +https://x.example/bot)");
+
+    assertThat(info.bot()).isTrue();
+    assertThat(info.browserName()).hasSize(64);
+    assertThat(info.botName()).hasSize(64);
+  }
 }

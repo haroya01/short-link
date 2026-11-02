@@ -7,6 +7,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 public final class UtmExtractor {
 
+  private static final int MAX_LENGTH = 255;
+
   private UtmExtractor() {}
 
   public static UtmParams extract(String url) {
@@ -31,7 +33,8 @@ public final class UtmExtractor {
       return null;
     }
     try {
-      return URLDecoder.decode(value, StandardCharsets.UTF_8);
+      String decoded = URLDecoder.decode(value, StandardCharsets.UTF_8);
+      return decoded.length() > MAX_LENGTH ? decoded.substring(0, MAX_LENGTH) : decoded;
     } catch (IllegalArgumentException e) {
       return null;
     }
