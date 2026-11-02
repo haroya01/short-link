@@ -59,6 +59,7 @@ public class LinkEventsService {
         c.getClickedAt(),
         c.getCountryCode(),
         c.getRegionName(),
+        c.getRegionCode(),
         c.getCityName(),
         c.getDeviceClass(),
         c.getOsName(),

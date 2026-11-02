@@ -242,10 +242,10 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
 
   @Query(
       value =
-          "SELECT x AS region, CAST(SUM(n) AS SIGNED) AS count FROM ("
-              + "SELECT region_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND region_name IS NOT NULL"
+          "SELECT x AS region, MAX(rc) AS regionCode, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT region_name AS x, MAX(region_code) AS rc, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND region_name IS NOT NULL"
               + RAW
-              + " GROUP BY region_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + " GROUP BY region_name UNION ALL SELECT value, MAX(region_code), SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.REGION
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",

@@ -90,6 +90,9 @@ public class ClickEventEntity {
   @Column(name = "region_name", length = 128)
   private String regionName;
 
+  @Column(name = "region_code", length = 6)
+  private String regionCode;
+
   @Column(name = "city_name", length = 128)
   private String cityName;
 
@@ -140,6 +143,7 @@ public class ClickEventEntity {
       String botName,
       String countryCode,
       String regionName,
+      String regionCode,
       String cityName,
       String language,
       String visitorHash,
@@ -168,6 +172,7 @@ public class ClickEventEntity {
     this.botName = botName;
     this.countryCode = countryCode;
     this.regionName = regionName;
+    this.regionCode = regionCode;
     this.cityName = cityName;
     this.language = language;
     this.visitorHash = visitorHash;
