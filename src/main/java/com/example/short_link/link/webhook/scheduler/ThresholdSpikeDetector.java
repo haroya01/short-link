@@ -21,8 +21,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // Counts committed human clicks in the rolling window. A fired hook stays in cooldown for
-// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts; the cooldown is stored in its own
-// short transaction once the alert has gone out.
+// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts. Clicks run this concurrently, so the
+// cooldown is claimed with one conditional UPDATE before sending and only the task that won it
+// sends.
 @Slf4j
 @Component
 public class ThresholdSpikeDetector {
@@ -85,9 +86,13 @@ public class ThresholdSpikeDetector {
     ThresholdSpikePayload payload =
         new ThresholdSpikePayload(
             link.getShortCode(), windowMinutes + "m", count, threshold, topReferrer);
+    if (!claim(hook, now, since)) return;
     deliveryClient.deliver(hook, new WebhookNotification.SpikeAlert(payload));
-    transaction.executeWithoutResult(
-        status -> hooks.findById(hook.getId()).ifPresent(fired -> fired.markSpikeFired(now)));
+  }
+
+  private boolean claim(LinkWebhookEntity hook, Instant now, Instant cooldownStart) {
+    return Boolean.TRUE.equals(
+        transaction.execute(status -> hooks.claimSpikeAlert(hook.getId(), now, cooldownStart)));
   }
 
   private static boolean inCooldown(LinkWebhookEntity hook, Instant now, int windowMinutes) {

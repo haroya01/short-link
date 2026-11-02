@@ -1,9 +1,9 @@
 package com.example.short_link.link.webhook.scheduler;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 class ThresholdSpikeDetectorTest {
 
@@ -56,6 +57,7 @@ class ThresholdSpikeDetectorTest {
     lenient()
         .when(clickAlerts.findTopReferrerHostByLinkIdSince(anyLong(), any(Instant.class)))
         .thenReturn(Optional.empty());
+    lenient().when(hooks.claimSpikeAlert(any(), any(), any())).thenReturn(true);
   }
 
   private LinkWebhookEntity hookWithSpike(int threshold, int windowMinutes) {
@@ -131,16 +133,30 @@ class ThresholdSpikeDetectorTest {
   }
 
   @Test
-  void marksSpikeFiredAfterDelivery() {
+  void claimsTheWindowBeforeDelivering() {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(hook));
-    when(hooks.findById(hook.getId())).thenReturn(Optional.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
 
     detector.onClickRecorded(click());
 
-    assertThat(hook.getSpikeLastFiredAt()).isEqualTo(now);
+    InOrder order = inOrder(hooks, deliveryClient);
+    order.verify(hooks).claimSpikeAlert(hook.getId(), now, now.minusSeconds(10 * 60));
+    order.verify(deliveryClient).deliver(eq(hook), any(WebhookNotification.SpikeAlert.class));
+  }
+
+  @Test
+  void doesNotDeliverWhenAnotherClickAlreadyClaimedTheWindow() {
+    LinkWebhookEntity hook = hookWithSpike(50, 10);
+    when(hooks.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(hook));
+    when(links.findById(1L)).thenReturn(Optional.of(link()));
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
+    when(hooks.claimSpikeAlert(any(), any(), any())).thenReturn(false);
+
+    detector.onClickRecorded(click());
+
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test

@@ -3,6 +3,7 @@ package com.example.short_link.link.webhook.infrastructure.persistence;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -55,5 +56,10 @@ class LinkWebhookRepositoryAdapter implements LinkWebhookRepository {
   public List<LinkWebhookEntity> findAllEnabledByDeliveryModes(
       Collection<WebhookDeliveryMode> modes) {
     return modes.isEmpty() ? List.of() : jpa.findAllEnabledByDeliveryModes(modes);
+  }
+
+  @Override
+  public boolean claimSpikeAlert(Long id, Instant firedAt, Instant lastFiredNoLaterThan) {
+    return jpa.claimSpikeAlert(id, firedAt, lastFiredNoLaterThan) == 1;
   }
 }
