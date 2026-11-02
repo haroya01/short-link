@@ -3,6 +3,7 @@ package com.example.short_link.cta.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -91,5 +92,17 @@ class UpdateCtaUseCaseTest {
         .isInstanceOf(CtaException.class)
         .extracting(e -> ((CtaException) e).errorCode())
         .isEqualTo(CtaErrorCode.CTA_DELETED);
+  }
+
+  @Test
+  void aDeletedCtaGetsNoTrackingLinkForItsNewAddress() {
+    CtaEntity cta = owned();
+    cta.softDelete();
+    when(ctaOwnership.requireOwned(7L, 42L)).thenReturn(cta);
+
+    assertThatThrownBy(
+            () -> useCase.execute(new UpdateCtaCommand(7L, 42L, null, "https://new", null, null)))
+        .isInstanceOf(CtaException.class);
+    verify(linkTracker, never()).trackingCodeFor(any(), any());
   }
 }
