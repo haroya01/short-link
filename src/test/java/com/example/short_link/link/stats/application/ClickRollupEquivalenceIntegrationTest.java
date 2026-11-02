@@ -231,6 +231,34 @@ class ClickRollupEquivalenceIntegrationTest {
     assertThat(statementsFor(linkId)).isEqualTo(rawOnly + 2);
   }
 
+  @Test
+  void aRegionStaysOneRowWithItsCodeWhetherItsClicksAreRolledUpOrCarryNoCode() {
+    Instant now = Instant.now();
+    Long owner = owner("Asia/Tokyo");
+    Long linkId = link(owner, now.minus(Duration.ofDays(120)));
+    Instant old = now.minus(Duration.ofDays(100)).truncatedTo(ChronoUnit.SECONDS);
+    Instant recent = now.minus(Duration.ofDays(1)).truncatedTo(ChronoUnit.SECONDS);
+    insertRegionClick(linkId, old, "Tokyo", "JP-13");
+    insertRegionClick(linkId, old.plusSeconds(1), "Tokyo", "JP-13");
+    insertRegionClick(linkId, old.plusSeconds(2), "Tokyo", null);
+    insertRegionClick(linkId, old.plusSeconds(3), "Osaka", null);
+    insertRegionClick(linkId, old.plusSeconds(4), "Hyōgo", "JP-28");
+    insertRegionClick(linkId, recent, "Tokyo", null);
+    insertRegionClick(linkId, recent.plusSeconds(1), "Osaka", "JP-27");
+    List<LinkStats.RegionClick> expected =
+        List.of(
+            new LinkStats.RegionClick("Tokyo", "JP-13", 4),
+            new LinkStats.RegionClick("Osaka", "JP-27", 2),
+            new LinkStats.RegionClick("Hyōgo", "JP-28", 1));
+    assertThat(stats(linkId).regionClicks()).containsExactlyInAnyOrderElementsOf(expected);
+
+    rollup.rollUp(now);
+    rollup.deleteRolledUp();
+
+    assertThat(rawClickTimes(linkId)).hasSize(2);
+    assertThat(stats(linkId).regionClicks()).containsExactlyInAnyOrderElementsOf(expected);
+  }
+
   private long statementsFor(Long linkId) {
     Statistics statistics = emf.unwrap(SessionFactory.class).getStatistics();
     statistics.clear();
@@ -442,6 +470,14 @@ class ClickRollupEquivalenceIntegrationTest {
           "https://x.com/someone/status/1",
           "https://blog.example.org/post/2");
 
+  private static final List<String[]> REGIONS =
+      List.of(
+          new String[] {null, null},
+          new String[] {"Seoul", "KR-11"},
+          new String[] {"Seoul", null},
+          new String[] {"Tokyo", "JP-13"},
+          new String[] {"Tokyo", null});
+
   private void seedClicks(
       Long linkId, Instant created, Instant now, int count, Long post, Random random) {
     long span = Duration.between(created, now).minusHours(1).getSeconds();
@@ -452,6 +488,7 @@ class ClickRollupEquivalenceIntegrationTest {
       String referrer = pick(random, REFERRERS);
       String visitor =
           VisitorHasher.hash(linkId, "10.0.0." + random.nextInt(40), "Mozilla/5.0 test");
+      String[] region = pick(random, REGIONS);
       rows.add(
           new Object[] {
             linkId,
@@ -478,7 +515,8 @@ class ClickRollupEquivalenceIntegrationTest {
             pick(random, java.util.Arrays.asList(null, "profile-links", "qr")),
             pick(random, java.util.Arrays.asList(null, 9_100_001L, 9_100_002L)),
             pick(random, java.util.Arrays.asList(null, "KR", "JP", "US")),
-            pick(random, java.util.Arrays.asList(null, "Seoul", "Tokyo")),
+            region[0],
+            region[1],
             pick(random, java.util.Arrays.asList(null, "Gangnam", "Shibuya")),
             pick(random, java.util.Arrays.asList(null, "ko", "ja", "en")),
             random.nextInt(4) == 0 ? null : visitor,
@@ -489,9 +527,9 @@ class ClickRollupEquivalenceIntegrationTest {
         "INSERT INTO click_event (link_id, clicked_at, is_bot, bot_name, referrer, referrer_host,"
             + " device_class, os_name, browser_name, utm_campaign, utm_source, utm_medium,"
             + " utm_content, utm_term, client_app, fetch_site, post_id, source_channel,"
-            + " destination_id, country_code, region_name, city_name, language, visitor_hash,"
-            + " asn, asn_org) VALUES (?, FROM_UNIXTIME(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
-            + " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE ? WHEN 4766 THEN 'Korea Telecom'"
+            + " destination_id, country_code, region_name, region_code, city_name, language,"
+            + " visitor_hash, asn, asn_org) VALUES (?, FROM_UNIXTIME(?), ?, ?, ?, ?, ?, ?, ?, ?, ?,"
+            + " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE ? WHEN 4766 THEN 'Korea Telecom'"
             + " WHEN 16509 THEN 'AMAZON-02' END)",
         rows.stream()
             .map(
@@ -501,6 +539,16 @@ class ClickRollupEquivalenceIntegrationTest {
                   return withOrg;
                 })
             .toList());
+  }
+
+  private void insertRegionClick(Long linkId, Instant at, String region, String regionCode) {
+    jdbc.update(
+        "INSERT INTO click_event (link_id, clicked_at, is_bot, country_code, region_name,"
+            + " region_code) VALUES (?, FROM_UNIXTIME(?), 0, 'JP', ?, ?)",
+        linkId,
+        at.getEpochSecond(),
+        region,
+        regionCode);
   }
 
   private void insertClick(Long linkId, Instant at) {

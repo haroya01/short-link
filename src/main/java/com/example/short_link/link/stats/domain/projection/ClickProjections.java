@@ -181,6 +181,8 @@ public final class ClickProjections {
   public interface RegionClickRow {
     String getRegion();
 
+    String getRegionCode();
+
     Long getCount();
   }
 

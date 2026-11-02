@@ -2,3 +2,4 @@
 # 형식: YYYY-MM-DD | <지표> | <옛값> -> <새값> | <이유>
 # 지표 이름은 RatchetsOnlyComeDownTest 실패 메시지에 나온 그대로 쓴다. 이 파일은 줄을 더하기만 한다.
 2026-06-11 | ArchitectureRulesTest.SPRING_BOOT_CONTROLLER_TEST_BASELINE | 36 -> 37 | #541이 MobileAuthControllerTest(@SpringBootTest)를 더하며 올렸다. 당시 이유 기록이 없어 2026-10-30 기록에서 찾아 남긴다.
+2026-11-02 | pmd:ExcessiveParameterList | 387 -> 388 | #1019 가 click_event 에 region_code 를 더해 ClickEventEntity 빌더 생성자 매개변수가 28 -> 29. 이 생성자는 평평한 클릭 행의 컬럼을 하나씩 받아서 컬럼 하나에 매개변수 하나가 는다. 국가·지역 이름·지역 코드·도시를 GeoLocation 하나로 받으면 26으로 줄지만, 빌더 호출 29곳(22개 파일)을 바꾸는 별도 리팩터링이라 이번엔 올린다.

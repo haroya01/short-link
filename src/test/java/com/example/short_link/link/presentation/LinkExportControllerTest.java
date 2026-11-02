@@ -45,6 +45,8 @@ class LinkExportControllerTest {
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
             .countryCode("KR")
+            .regionName("Seoul")
+            .regionCode("KR-11")
             .cityName("Seoul")
             .bot(false)
             .build());
@@ -62,9 +64,10 @@ class LinkExportControllerTest {
     String body = result.getResponse().getContentAsString();
     assertThat(body)
         .startsWith(
-            "clicked_at,country,region,city,device,os,browser,channel,referrer_host,language,is_bot,bot_name");
+            "clicked_at,country,region,city,device,os,browser,channel,referrer_host,language,is_bot,bot_name,region_code\n");
     assertThat(body).contains("KR");
     assertThat(body).contains("Seoul");
+    assertThat(body.lines().skip(1).findFirst().orElseThrow()).endsWith(",false,,KR-11");
   }
 
   @Test

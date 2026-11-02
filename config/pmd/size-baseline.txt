@@ -206,7 +206,7 @@ ExcessiveParameterList|src/main/java/com/example/short_link/link/destination/app
 ExcessiveParameterList|src/main/java/com/example/short_link/link/destination/application/write/UpdateDestinationUseCase.java|update#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/link/presentation/MyLinksController.java|myLinks#1=11
 ExcessiveParameterList|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handlePreview#1=10
-ExcessiveParameterList|src/main/java/com/example/short_link/link/stats/domain/ClickEventEntity.java|ClickEventEntity#1=28
+ExcessiveParameterList|src/main/java/com/example/short_link/link/stats/domain/ClickEventEntity.java|ClickEventEntity#1=29
 ExcessiveParameterList|src/main/java/com/example/short_link/note/application/write/NoteDraft.java|NoteDraft#1=11
 ExcessiveParameterList|src/main/java/com/example/short_link/note/application/write/NoteDraft.java|NoteDraft#2=10
 ExcessiveParameterList|src/main/java/com/example/short_link/note/presentation/request/CreateNoteRequest.java|CreateNoteRequest#1=11

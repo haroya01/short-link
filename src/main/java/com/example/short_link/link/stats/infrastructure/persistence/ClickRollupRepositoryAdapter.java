@@ -29,7 +29,12 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       GROUP BY c.link_id, hour_start, age_day
       """;
 
-  private record Dimension(int code, String value, String num, boolean keepNull, boolean bots) {
+  private record Dimension(
+      int code, String value, String num, boolean keepNull, boolean bots, String regionCode) {
+
+    Dimension(int code, String value, String num, boolean keepNull, boolean bots) {
+      this(code, value, num, keepNull, bots, "NULL");
+    }
 
     String insert() {
       String v = value == null ? "NULL" : value;
@@ -46,7 +51,7 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       String groupBy =
           value != null && num != null ? value + ", " + num : value != null ? value : num;
       return "INSERT INTO click_daily_dim "
-          + "(link_id, dim, day_start, is_bot, value_key, value, num, clicks, first_at) "
+          + "(link_id, dim, day_start, is_bot, value_key, value, num, region_code, clicks, first_at) "
           + "SELECT c.link_id, "
           + code
           + ", FROM_UNIXTIME(:dayStart), c.is_bot, "
@@ -55,6 +60,8 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
           + (value == null ? "NULL" : "LEFT(" + value + ", 2048)")
           + ", "
           + n
+          + ", "
+          + regionCode
           + ", COUNT(*), MIN(c.clicked_at) FROM click_event c "
           + "WHERE c.clicked_at >= FROM_UNIXTIME(:dayStart) AND c.clicked_at < FROM_UNIXTIME(:dayEnd)"
           + (bots ? "" : " AND c.is_bot = 0")
@@ -83,7 +90,8 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
               new Dimension(ClickRollup.SOURCE_CHANNEL, "c.source_channel", null, false, false),
               new Dimension(ClickRollup.DESTINATION, null, "c.destination_id", true, false),
               new Dimension(ClickRollup.COUNTRY, "c.country_code", null, true, false),
-              new Dimension(ClickRollup.REGION, "c.region_name", null, false, false),
+              new Dimension(
+                  ClickRollup.REGION, "c.region_name", null, false, false, "MAX(c.region_code)"),
               new Dimension(ClickRollup.CITY, "c.city_name", null, false, false),
               new Dimension(ClickRollup.LANGUAGE, "c.language", null, false, false),
               new Dimension(ClickRollup.ASN, "c.asn_org", "c.asn", false, true))

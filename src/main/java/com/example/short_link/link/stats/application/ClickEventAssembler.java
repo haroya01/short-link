@@ -55,6 +55,7 @@ public class ClickEventAssembler {
         .botName(visit.bot().botName())
         .countryCode(visit.geo().countryCode())
         .regionName(visit.geo().region())
+        .regionCode(visit.geo().regionCode())
         .cityName(visit.geo().city())
         .language(visit.language())
         .visitorHash(visit.visitorHash())

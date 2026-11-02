@@ -114,7 +114,7 @@ public record LinkStats(
 
   public record CountryClick(String country, long count) {}
 
-  public record RegionClick(String region, long count) {}
+  public record RegionClick(String region, String regionCode, long count) {}
 
   public record CityClick(String city, long count) {}
 

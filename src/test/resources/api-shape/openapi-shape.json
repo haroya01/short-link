@@ -5217,7 +5217,8 @@
       "os" : "string",
       "referrer" : "string",
       "referrerHost" : "string",
-      "region" : "string"
+      "region" : "string",
+      "regionCode" : "string"
     },
     "LinkEventsPage" : {
       "items" : "[#LinkEventResponse]",
@@ -6291,7 +6292,8 @@
     },
     "RegionClick" : {
       "count" : "integer(int64)",
-      "region" : "string"
+      "region" : "string",
+      "regionCode" : "string"
     },
     "RegisterDeviceRequest" : {
       "platform" : "string required",
