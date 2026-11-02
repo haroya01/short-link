@@ -10,20 +10,37 @@ import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.OgMetadata;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 
 class OgScraperFetchTest {
 
   private static final String URL = "https://example.com/article";
+  private static final String SHARE = "https://youtu.be/dQw4w9WgXcQ?si=abc";
+  private static final String PUBLIC_IP = "https://203.0.113.10/s/dQw4w9WgXcQ";
+  private static final String WATCH =
+      "https://www.youtube.com/watch?si=abc&v=dQw4w9WgXcQ&feature=youtu.be";
+  private static final String WATCH_HTML =
+      """
+      <html><head>
+        <meta property="og:title" content="Never Gonna Give You Up">
+        <meta property="og:description" content="Rick Astley">
+        <meta property="og:image" content="/vi/dQw4w9WgXcQ/maxresdefault.jpg">
+      </head></html>
+      """;
 
   @Test
   void parsesHtmlOnSuccess() {
@@ -74,6 +91,241 @@ class OgScraperFetchTest {
     try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
       guard.when(() -> PublicHttpUrlGuard.resolve(URL)).thenReturn(Optional.empty());
       assertThat(scraper.fetch(URL).hasAny()).isFalse();
+    }
+  }
+
+  @Test
+  void followsShareLinkRedirectToTheWatchPage() {
+    Pages pages =
+        new Pages().redirect(SHARE, 303, WATCH).page(WATCH, response(200, "text/html", WATCH_HTML));
+
+    Fetched fetched = fetch(pages, SHARE, List.of(SHARE, WATCH));
+
+    assertThat(fetched.og().title()).isEqualTo("Never Gonna Give You Up");
+    assertThat(fetched.og().description()).isEqualTo("Rick Astley");
+    assertThat(fetched.og().image())
+        .isEqualTo("https://www.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg");
+    assertThat(fetched.result()).isEqualTo("ok");
+    assertThat(pages.requested()).containsExactly(SHARE, WATCH);
+    assertThat(pages.requests)
+        .allSatisfy(
+            request -> {
+              assertThat(request.followRedirects()).isFalse();
+              assertThat(request.maxBodyBytes()).isEqualTo(1_024 * 1_024);
+            });
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {301, 302, 307, 308})
+  void followsEveryRedirectStatus(int status) {
+    Pages pages =
+        new Pages()
+            .redirect(SHARE, status, WATCH)
+            .page(WATCH, response(200, "text/html", WATCH_HTML));
+
+    assertThat(fetch(pages, SHARE, List.of(SHARE, WATCH)).og().title())
+        .isEqualTo("Never Gonna Give You Up");
+  }
+
+  @Test
+  void resolvesARelativeLocationAgainstTheHopThatSentIt() {
+    String apex = "https://example.com/a";
+    String www = "https://www.example.com/posts/2026/draft";
+    String published = "https://www.example.com/posts/2026/final?ref=old";
+    Pages pages =
+        new Pages()
+            .redirect(apex, 301, www)
+            .redirect(www, 302, "final?ref=old")
+            .page(published, response(200, "text/html", WATCH_HTML));
+
+    Fetched fetched = fetch(pages, apex, List.of(apex, www, published));
+
+    assertThat(pages.requested()).containsExactly(apex, www, published);
+    assertThat(fetched.og().image())
+        .isEqualTo("https://www.example.com/vi/dQw4w9WgXcQ/maxresdefault.jpg");
+  }
+
+  @Test
+  void followsThreeRedirects() {
+    Pages pages =
+        new Pages()
+            .redirect("https://a.example/", 301, "https://b.example/")
+            .redirect("https://b.example/", 301, "https://c.example/")
+            .redirect("https://c.example/", 301, "https://d.example/")
+            .page("https://d.example/", response(200, "text/html", WATCH_HTML));
+
+    Fetched fetched =
+        fetch(
+            pages,
+            "https://a.example/",
+            List.of(
+                "https://a.example/",
+                "https://b.example/",
+                "https://c.example/",
+                "https://d.example/"));
+
+    assertThat(fetched.result()).isEqualTo("ok");
+    assertThat(fetched.og().title()).isEqualTo("Never Gonna Give You Up");
+  }
+
+  @Test
+  void refusesAFourthRedirect() {
+    Pages pages =
+        new Pages()
+            .redirect("https://a.example/", 301, "https://b.example/")
+            .redirect("https://b.example/", 301, "https://c.example/")
+            .redirect("https://c.example/", 301, "https://d.example/")
+            .redirect("https://d.example/", 301, "https://e.example/");
+
+    Fetched fetched =
+        fetch(
+            pages,
+            "https://a.example/",
+            List.of(
+                "https://a.example/",
+                "https://b.example/",
+                "https://c.example/",
+                "https://d.example/",
+                "https://e.example/"));
+
+    assertThat(fetched.og().hasAny()).isFalse();
+    assertThat(fetched.result()).isEqualTo("too_many_redirects");
+    assertThat(pages.requested())
+        .containsExactly(
+            "https://a.example/", "https://b.example/", "https://c.example/", "https://d.example/");
+  }
+
+  @Test
+  void followsARedirectBetweenPublicAddressesThroughTheRealGuard() {
+    String next = "https://198.51.100.7/watch?v=dQw4w9WgXcQ";
+    Pages pages =
+        new Pages()
+            .redirect(PUBLIC_IP, 302, next)
+            .page(next, response(200, "text/html", WATCH_HTML));
+
+    Fetched fetched = scrape(pages, PUBLIC_IP);
+
+    assertThat(fetched.result()).isEqualTo("ok");
+    assertThat(pages.requested()).containsExactly(PUBLIC_IP, next);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+        "http://127.0.0.1:8080/actuator/env",
+        "http://10.0.0.5/",
+        "http://192.168.1.1/",
+        "http://[::1]/",
+        "http://[::ffff:10.0.0.1]/"
+      })
+  void refusesARedirectIntoTheInternalNetwork(String internal) {
+    Pages pages = new Pages().redirect(PUBLIC_IP, 302, internal);
+
+    Fetched fetched = scrape(pages, PUBLIC_IP);
+
+    assertThat(fetched.og().hasAny()).isFalse();
+    assertThat(fetched.result()).isEqualTo("redirect_blocked");
+    assertThat(pages.requested()).containsExactly(PUBLIC_IP);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "file:///etc/passwd",
+        "ftp://example.com/pub",
+        "gopher://example.com:70/_",
+        "javascript:alert(1)"
+      })
+  void refusesARedirectToANonHttpScheme(String target) {
+    Pages pages = new Pages().redirect(PUBLIC_IP, 302, target);
+
+    Fetched fetched = scrape(pages, PUBLIC_IP);
+
+    assertThat(fetched.og().hasAny()).isFalse();
+    assertThat(fetched.result()).isEqualTo("redirect_blocked");
+    assertThat(pages.requested()).containsExactly(PUBLIC_IP);
+  }
+
+  @Test
+  void stopsAtARedirectLoop() {
+    Pages pages = new Pages().redirect(SHARE, 302, WATCH).redirect(WATCH, 302, SHARE);
+
+    Fetched fetched = fetch(pages, SHARE, List.of(SHARE, WATCH));
+
+    assertThat(fetched.og().hasAny()).isFalse();
+    assertThat(fetched.result()).isEqualTo("redirect_loop");
+    assertThat(pages.requested()).containsExactly(SHARE, WATCH);
+  }
+
+  @Test
+  void stopsAtARedirectToItself() {
+    Pages pages = new Pages().redirect(SHARE, 307, "/dQw4w9WgXcQ?si=abc");
+
+    Fetched fetched = fetch(pages, SHARE, List.of(SHARE));
+
+    assertThat(fetched.result()).isEqualTo("redirect_loop");
+    assertThat(pages.requested()).containsExactly(SHARE);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", "https://www.you tube.com/watch"})
+  void refusesARedirectWithoutAUsableLocation(String location) {
+    Pages pages = new Pages().redirect(SHARE, 302, location);
+
+    Fetched fetched = fetch(pages, SHARE, List.of(SHARE));
+
+    assertThat(fetched.og().hasAny()).isFalse();
+    assertThat(fetched.result()).isEqualTo("redirect_invalid");
+    assertThat(pages.requested()).containsExactly(SHARE);
+  }
+
+  private static Fetched fetch(Pages pages, String url, List<String> publicUrls) {
+    try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
+      for (String publicUrl : publicUrls) {
+        Resolved resolved = new Resolved(URI.create(publicUrl), List.<InetAddress>of());
+        guard.when(() -> PublicHttpUrlGuard.resolve(publicUrl)).thenReturn(Optional.of(resolved));
+      }
+      return scrape(pages, url);
+    }
+  }
+
+  private static Fetched scrape(Pages pages, String url) {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    OgMetadata og = new OgScraper(pages, registry).fetch(url);
+    String result =
+        registry.find("outbound.http").tag("client", "og_fetch").timer().getId().getTag("result");
+    return new Fetched(og, result);
+  }
+
+  private record Fetched(OgMetadata og, String result) {}
+
+  private static final class Pages implements HttpFetcher {
+
+    private final Map<URI, Response> responses = new HashMap<>();
+    private final List<Request> requests = new ArrayList<>();
+
+    Pages page(String url, Response response) {
+      responses.put(URI.create(url), response);
+      return this;
+    }
+
+    Pages redirect(String url, int status, String location) {
+      return page(url, new Response(status, Map.of("Location", List.of(location)), new byte[0]));
+    }
+
+    List<String> requested() {
+      return requests.stream().map(request -> request.uri().toString()).toList();
+    }
+
+    @Override
+    public Response fetch(Request request) {
+      requests.add(request);
+      Response response = responses.get(request.uri());
+      if (response == null) {
+        throw new AssertionError("fetched an unexpected address " + request.uri());
+      }
+      return response;
     }
   }
 

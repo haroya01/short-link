@@ -12,9 +12,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -30,6 +33,8 @@ public class OgScraper {
   private static final Duration CONNECT_TIMEOUT = Duration.ofMillis(3_000);
   private static final Duration READ_TIMEOUT = Duration.ofMillis(5_000);
   private static final int MAX_BODY_BYTES = 1_024 * 1_024;
+  private static final int MAX_REDIRECTS = 3;
+  private static final Set<Integer> REDIRECTS = Set.of(301, 302, 303, 307, 308);
   private static final String USER_AGENT = "kurl-link-preview/1.0 (+https://kurl.me/bot)";
 
   private final HttpFetcher httpFetcher;
@@ -48,15 +53,14 @@ public class OgScraper {
     }
     Timer.Sample sample = meterRegistry == null ? null : Timer.start(meterRegistry);
     AtomicReference<String> resultTag = new AtomicReference<>("exception");
-    String baseUrl = resolved.uri().toString();
     try {
-      Map<String, String> headers = new LinkedHashMap<>();
-      headers.put("User-Agent", USER_AGENT);
-      headers.put("Accept", "text/html,application/xhtml+xml");
-      headers.put("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
-      Response response =
-          httpFetcher.fetch(
-              Request.get(resolved, headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
+      Landing landing = follow(resolved);
+      if (landing.refusal() != null) {
+        resultTag.set(landing.refusal());
+        return OgMetadata.empty();
+      }
+      Response response = landing.response();
+      String baseUrl = landing.uri().toString();
       if (response.status() >= 400) {
         resultTag.set("non_2xx");
         return OgMetadata.empty();
@@ -81,6 +85,58 @@ public class OgScraper {
         sample.stop(
             meterRegistry.timer("outbound.http", "client", "og_fetch", "result", resultTag.get()));
       }
+    }
+  }
+
+  private Landing follow(Resolved first) {
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put("User-Agent", USER_AGENT);
+    headers.put("Accept", "text/html,application/xhtml+xml");
+    headers.put("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
+    Resolved current = first;
+    Set<URI> visited = new HashSet<>();
+    for (int hop = 0; ; hop++) {
+      visited.add(current.uri());
+      Response response =
+          httpFetcher.fetch(
+              Request.getNoRedirects(
+                  current, headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
+      if (!REDIRECTS.contains(response.status())) {
+        return new Landing(current.uri(), response, null);
+      }
+      if (hop == MAX_REDIRECTS) {
+        return Landing.refused("too_many_redirects");
+      }
+      URI next = location(current.uri(), response.header("Location"));
+      if (next == null) {
+        return Landing.refused("redirect_invalid");
+      }
+      if (visited.contains(next)) {
+        return Landing.refused("redirect_loop");
+      }
+      Optional<Resolved> target = PublicHttpUrlGuard.resolve(next.toString());
+      if (target.isEmpty()) {
+        return Landing.refused("redirect_blocked");
+      }
+      current = target.get();
+    }
+  }
+
+  private static URI location(URI from, String header) {
+    if (header == null || header.isBlank()) {
+      return null;
+    }
+    try {
+      return from.resolve(header.strip());
+    } catch (IllegalArgumentException malformed) {
+      return null;
+    }
+  }
+
+  private record Landing(URI uri, Response response, String refusal) {
+
+    static Landing refused(String refusal) {
+      return new Landing(null, null, refusal);
     }
   }
 
