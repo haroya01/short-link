@@ -144,6 +144,40 @@ class ImageVariantGeneratorTest {
   }
 
   @Test
+  void aSlowStorageCallDoesNotHoldUpTheOtherThreadsDecode() throws Exception {
+    ImageVariantRenderer renderer = mock(ImageVariantRenderer.class);
+    ImageVariantGenerator shared = new ImageVariantGenerator(storage, renderer, ledger);
+    CountDownLatch fetching = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AtomicBoolean secondDecoded = new AtomicBoolean();
+    when(storage.getObject(KEY))
+        .thenAnswer(
+            call -> {
+              fetching.countDown();
+              release.await(10, TimeUnit.SECONDS);
+              return Optional.empty();
+            });
+    doAnswer(
+            call -> {
+              secondDecoded.set(true);
+              throw new java.io.IOException("stop here");
+            })
+        .when(renderer)
+        .render(any(), anyBoolean(), anyLong());
+
+    Thread first = Thread.ofPlatform().start(() -> shared.generate(KEY));
+    assertThat(fetching.await(5, TimeUnit.SECONDS)).isTrue();
+    Thread second =
+        Thread.ofPlatform()
+            .start(() -> shared.storeWithVariants("note-images/remote/ab.jpg", new byte[] {1}, 1));
+    second.join(5000);
+
+    assertThat(secondDecoded).isTrue();
+    release.countDown();
+    first.join(5000);
+  }
+
+  @Test
   void aStorageOutageLeavesNoRecordSoTheSweepTriesAgain() {
     when(storage.getObject(KEY)).thenReturn(Optional.of(ImageFixtures.photo(800, 600)));
     org.mockito.Mockito.doThrow(new ObjectStorageException("down", null))
