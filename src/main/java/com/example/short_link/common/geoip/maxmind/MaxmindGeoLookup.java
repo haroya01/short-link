@@ -8,6 +8,7 @@ import com.example.short_link.common.geoip.GeoLookup;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.model.AsnResponse;
 import com.maxmind.geoip2.model.CityResponse;
+import com.maxmind.geoip2.record.Subdivision;
 import java.net.InetAddress;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -55,9 +56,14 @@ public class MaxmindGeoLookup implements GeoLookup {
 
   private static GeoLocation toLocation(CityResponse r) {
     String country = r.getCountry() != null ? r.getCountry().getIsoCode() : null;
-    String region =
-        r.getMostSpecificSubdivision() != null ? r.getMostSpecificSubdivision().getName() : null;
+    Subdivision subdivision = r.getMostSpecificSubdivision();
+    String region = subdivision != null ? subdivision.getName() : null;
     String city = r.getCity() != null ? r.getCity().getName() : null;
-    return new GeoLocation(country, region, city);
+    return new GeoLocation(country, region, city, regionCode(country, subdivision));
+  }
+
+  private static String regionCode(String country, Subdivision subdivision) {
+    if (country == null || subdivision == null || subdivision.getIsoCode() == null) return null;
+    return country + "-" + subdivision.getIsoCode();
   }
 }

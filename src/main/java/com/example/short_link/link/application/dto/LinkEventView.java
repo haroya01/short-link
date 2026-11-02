@@ -6,6 +6,7 @@ public record LinkEventView(
     Instant clickedAt,
     String country,
     String region,
+    String regionCode,
     String city,
     String device,
     String os,

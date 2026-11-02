@@ -51,7 +51,8 @@ public class LinkExportService {
         "referrer_host",
         "language",
         "is_bot",
-        "bot_name");
+        "bot_name",
+        "region_code");
 
     int written = 0;
     Long cursorId = null;
@@ -80,7 +81,8 @@ public class LinkExportService {
             c.getReferrerHost(),
             c.getLanguage(),
             c.isBot(),
-            c.getBotName());
+            c.getBotName(),
+            c.getRegionCode());
         written++;
       }
       ClickEventEntity last = rows.get(rows.size() - 1);

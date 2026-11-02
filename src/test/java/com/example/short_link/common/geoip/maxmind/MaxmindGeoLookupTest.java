@@ -31,6 +31,7 @@ class MaxmindGeoLookupTest {
     when(country.getIsoCode()).thenReturn("KR");
     Subdivision subdivision = mock(Subdivision.class);
     when(subdivision.getName()).thenReturn("Seoul");
+    when(subdivision.getIsoCode()).thenReturn("11");
     City cityRec = mock(City.class);
     when(cityRec.getName()).thenReturn("Gangnam");
     CityResponse cityResp = mock(CityResponse.class);
@@ -43,7 +44,37 @@ class MaxmindGeoLookupTest {
 
     assertThat(loc.countryCode()).isEqualTo("KR");
     assertThat(loc.region()).isEqualTo("Seoul");
+    assertThat(loc.regionCode()).isEqualTo("KR-11");
     assertThat(loc.city()).isEqualTo("Gangnam");
+  }
+
+  @Test
+  void theRegionCodeNeedsTheCountryAndTheSubdivisionCode() throws Exception {
+    GeoIpDatabaseHolder city = mock(GeoIpDatabaseHolder.class);
+    AsnDatabaseHolder asn = mock(AsnDatabaseHolder.class);
+    DatabaseReader reader = mock(DatabaseReader.class);
+    when(city.get()).thenReturn(reader);
+    Country country = mock(Country.class);
+    when(country.getIsoCode()).thenReturn("JP");
+    Subdivision uncoded = mock(Subdivision.class);
+    when(uncoded.getName()).thenReturn("Tokyo");
+    CityResponse withoutCode = mock(CityResponse.class);
+    when(withoutCode.getCountry()).thenReturn(country);
+    when(withoutCode.getMostSpecificSubdivision()).thenReturn(uncoded);
+    CityResponse withoutSubdivision = mock(CityResponse.class);
+    when(withoutSubdivision.getCountry()).thenReturn(country);
+    when(reader.tryCity(any()))
+        .thenReturn(Optional.of(withoutCode))
+        .thenReturn(Optional.of(withoutSubdivision));
+    MaxmindGeoLookup lookup = new MaxmindGeoLookup(city, asn);
+
+    GeoLocation named = lookup.lookupLocation("8.8.8.8");
+    GeoLocation countryOnly = lookup.lookupLocation("8.8.8.8");
+
+    assertThat(named.region()).isEqualTo("Tokyo");
+    assertThat(named.regionCode()).isNull();
+    assertThat(countryOnly.countryCode()).isEqualTo("JP");
+    assertThat(countryOnly.regionCode()).isNull();
   }
 
   @Test
@@ -73,6 +104,7 @@ class MaxmindGeoLookupTest {
     GeoLocation loc = new MaxmindGeoLookup(city, asn).lookupLocation("8.8.8.8");
     assertThat(loc.countryCode()).isNull();
     assertThat(loc.region()).isNull();
+    assertThat(loc.regionCode()).isNull();
     assertThat(loc.city()).isNull();
   }
 

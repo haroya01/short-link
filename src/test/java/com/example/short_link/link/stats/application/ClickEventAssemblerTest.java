@@ -188,12 +188,13 @@ class ClickEventAssemblerTest {
   @Test
   void persistsResolvedGeoLocation() {
     when(geoIpResolver.resolve("8.8.8.8"))
-        .thenReturn(new GeoLocation("US", "California", "Mountain View"));
+        .thenReturn(new GeoLocation("US", "California", "Mountain View", "US-CA"));
 
     ClickEventEntity event = assemble(ctx(null, "8.8.8.8", "ko-KR,ko;q=0.9"));
 
     assertThat(event.getCountryCode()).isEqualTo("US");
     assertThat(event.getRegionName()).isEqualTo("California");
+    assertThat(event.getRegionCode()).isEqualTo("US-CA");
     assertThat(event.getCityName()).isEqualTo("Mountain View");
     assertThat(event.getLanguage()).isEqualTo("ko-KR");
     assertThat(event.getVisitorHash()).hasSize(64);
