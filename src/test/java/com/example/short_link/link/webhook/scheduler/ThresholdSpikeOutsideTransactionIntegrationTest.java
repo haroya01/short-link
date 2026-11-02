@@ -100,18 +100,15 @@ class ThresholdSpikeOutsideTransactionIntegrationTest {
             false,
             null));
 
-    assertThat(firedWithin(Duration.ofSeconds(10))).isNotNull();
-    assertThat(sent).containsExactly("outside");
+    assertThat(sentWithin(Duration.ofSeconds(10))).containsExactly("outside");
+    assertThat(hooks.findById(hook.getId()).orElseThrow().getSpikeLastFiredAt()).isNotNull();
   }
 
-  private Instant firedWithin(Duration timeout) {
+  private List<String> sentWithin(Duration timeout) {
     Instant deadline = Instant.now().plus(timeout);
-    Instant fired;
-    do {
-      fired = hooks.findById(hook.getId()).orElseThrow().getSpikeLastFiredAt();
-      if (fired != null) return fired;
+    while (sent.isEmpty() && Instant.now().isBefore(deadline)) {
       Thread.onSpinWait();
-    } while (Instant.now().isBefore(deadline));
-    return fired;
+    }
+    return sent;
   }
 }

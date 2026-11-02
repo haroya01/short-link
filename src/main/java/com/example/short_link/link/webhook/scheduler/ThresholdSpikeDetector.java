@@ -21,9 +21,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // Counts committed human clicks in the rolling window. A fired hook stays in cooldown for
-// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts. Clicks run this concurrently, so the
-// cooldown is claimed with one conditional UPDATE before sending and only the task that won it
-// sends.
+// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts. Clicks run this concurrently, so
+// only the one whose conditional UPDATE claims the cooldown sends.
 @Slf4j
 @Component
 public class ThresholdSpikeDetector {
