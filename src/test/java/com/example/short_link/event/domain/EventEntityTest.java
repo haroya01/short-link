@@ -214,6 +214,31 @@ class EventEntityTest {
   }
 
   @Test
+  void registrationClosureNamesTheStrongestReason() {
+    EventEntity open = event(1, null);
+    assertThat(open.registrationClosure(NOW)).isNull();
+
+    EventEntity full = event(1, null);
+    ReflectionTestUtils.setField(full, "registrationCount", 1);
+    assertThat(full.registrationClosure(NOW)).isEqualTo(RegistrationClosure.FULL);
+
+    EventEntity deadline = event(1, NOW);
+    ReflectionTestUtils.setField(deadline, "registrationCount", 1);
+    assertThat(deadline.registrationClosure(NOW)).isEqualTo(RegistrationClosure.DEADLINE);
+
+    EventEntity closed = event(1, NOW);
+    closed.close();
+    assertThat(closed.registrationClosure(NOW)).isEqualTo(RegistrationClosure.CLOSED);
+
+    EventEntity ended = timed(NOW.minus(2, ChronoUnit.DAYS), NOW, NOW);
+    ended.close();
+    assertThat(ended.registrationClosure(NOW)).isEqualTo(RegistrationClosure.ENDED);
+
+    ended.cancel();
+    assertThat(ended.registrationClosure(NOW)).isEqualTo(RegistrationClosure.CANCELED);
+  }
+
+  @Test
   void spotsLeft_nullWithoutCapacity() {
     assertThat(event(null, null).spotsLeft()).isNull();
     assertThat(event(5, null).spotsLeft()).isEqualTo(5);

@@ -11,6 +11,7 @@ import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class EventLifecycleE2ETest {
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
   @Autowired private JwtTokenService jwt;
+  @Autowired private EntityManager entityManager;
 
   private String createEvent(String token, int capacity) throws Exception {
     String body =
@@ -207,40 +209,92 @@ class EventLifecycleE2ETest {
         .andExpect(jsonPath("$.field").value("closeAt"));
   }
 
-  @Test
-  void endedEvent_isShownClosedAndRejectsRegistration() throws Exception {
-    UserEntity organizer =
-        userRepository.save(new UserEntity("ev-org4@x.com", "google", "g-ev-org4"));
-    String token = jwt.createAccessToken(organizer.getId(), "USER");
-    Instant now = Instant.now();
+  private String createTimedEvent(String token, Instant startsAt, Instant endsAt) throws Exception {
+    return mvc.perform(
+            post("/api/v1/events")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(timedEventBody(startsAt, endsAt, null)))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+  }
 
-    String ended =
-        JsonPath.read(
-            mvc.perform(
-                    post("/api/v1/events")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                            timedEventBody(
-                                now.minus(5, ChronoUnit.DAYS),
-                                now.minus(4, ChronoUnit.DAYS),
-                                null)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(),
-            "$.slug");
-
-    mvc.perform(get("/api/v1/public/events/" + ended))
+  private void assertEndedAndRejectsRegistration(String slug) throws Exception {
+    mvc.perform(get("/api/v1/public/events/" + slug))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("OPEN"))
-        .andExpect(jsonPath("$.acceptingRegistrations").value(false));
+        .andExpect(jsonPath("$.acceptingRegistrations").value(false))
+        .andExpect(jsonPath("$.registrationClosedReason").value("ENDED"));
     mvc.perform(
-            post("/api/v1/public/events/" + ended + "/registrations")
+            post("/api/v1/public/events/" + slug + "/registrations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"참가자\",\"contact\":\"late@x.com\"}"))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("EVENT_REGISTRATION_CLOSED"));
+  }
+
+  @Test
+  void openEvent_reportsNoClosureReason() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org7@x.com", "google", "g-ev-org7"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    String slug = JsonPath.read(createEvent(token, 10), "$.slug");
+
+    mvc.perform(get("/api/v1/public/events/" + slug))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.acceptingRegistrations").value(true))
+        .andExpect(jsonPath("$.registrationClosedReason").doesNotExist());
+  }
+
+  @Test
+  void eventPastItsEnd_isShownEndedAndRejectsRegistration() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org4@x.com", "google", "g-ev-org4"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    Instant now = Instant.now();
+    String created =
+        createTimedEvent(token, now.minus(5, ChronoUnit.DAYS), now.minus(4, ChronoUnit.DAYS));
+
+    assertEndedAndRejectsRegistration(JsonPath.read(created, "$.slug"));
+  }
+
+  @Test
+  void eventWithoutEndPastItsStart_isShownEndedAndRejectsRegistration() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org5@x.com", "google", "g-ev-org5"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    String created = createTimedEvent(token, Instant.now().minus(1, ChronoUnit.HOURS), null);
+
+    assertEndedAndRejectsRegistration(JsonPath.read(created, "$.slug"));
+  }
+
+  @Test
+  void storedEndBeforeStart_stillReadsAndRejectsRegistration() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org6@x.com", "google", "g-ev-org6"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    Instant starts = Instant.now().minus(80, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+    Instant storedEnd = starts.minus(3, ChronoUnit.DAYS);
+    String created = createTimedEvent(token, starts, null);
+    String slug = JsonPath.read(created, "$.slug");
+    int eventId = JsonPath.read(created, "$.id");
+    entityManager
+        .createQuery("UPDATE EventEntity e SET e.endsAt = :endsAt WHERE e.id = :id")
+        .setParameter("endsAt", storedEnd)
+        .setParameter("id", (long) eventId)
+        .executeUpdate();
+    entityManager.clear();
+
+    mvc.perform(get("/api/v1/public/events/" + slug))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.startsAt").value(starts.toString()))
+        .andExpect(jsonPath("$.endsAt").value(storedEnd.toString()));
+    mvc.perform(get("/api/v1/events/" + eventId).header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.endsAt").value(storedEnd.toString()));
+    assertEndedAndRejectsRegistration(slug);
   }
 
   @Test

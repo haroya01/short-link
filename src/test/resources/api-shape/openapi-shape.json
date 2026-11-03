@@ -6025,6 +6025,7 @@
       "organizerAvatarUrl" : "string",
       "organizerName" : "string",
       "questions" : "[#EventQuestionView]",
+      "registrationClosedReason" : "string",
       "slug" : "string",
       "spotsLeft" : "integer(int32)",
       "startsAt" : "string(date-time)",

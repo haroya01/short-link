@@ -119,25 +119,33 @@ public class EventEntity extends BaseTimeEntity {
   }
 
   public boolean acceptsRegistrations(Instant now) {
-    return registrationClosureReason(now) == null
-        && (capacity == null || registrationCount < capacity);
+    return registrationClosure(now) == null;
   }
 
-  // 상태와 마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다.
+  public RegistrationClosure registrationClosure(Instant now) {
+    RegistrationClosure reason = registrationClosureReason(now);
+    if (reason == null && capacity != null && registrationCount >= capacity) {
+      return RegistrationClosure.FULL;
+    }
+    return reason;
+  }
+
+  // 상태·종료·마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다.
   public void requireRegistrationOpen(Instant now) {
-    EventErrorCode reason = registrationClosureReason(now);
+    RegistrationClosure reason = registrationClosureReason(now);
+    if (reason == RegistrationClosure.CANCELED) {
+      throw new EventException(EventErrorCode.EVENT_CANCELED, id);
+    }
     if (reason != null) {
-      throw new EventException(reason, id);
+      throw new EventException(EventErrorCode.EVENT_REGISTRATION_CLOSED, id);
     }
   }
 
-  private EventErrorCode registrationClosureReason(Instant now) {
-    if (status == EventStatus.CANCELED) return EventErrorCode.EVENT_CANCELED;
-    if (status != EventStatus.OPEN
-        || (closeAt != null && !now.isBefore(closeAt))
-        || !now.isBefore(effectiveEnd())) {
-      return EventErrorCode.EVENT_REGISTRATION_CLOSED;
-    }
+  private RegistrationClosure registrationClosureReason(Instant now) {
+    if (status == EventStatus.CANCELED) return RegistrationClosure.CANCELED;
+    if (!now.isBefore(effectiveEnd())) return RegistrationClosure.ENDED;
+    if (status != EventStatus.OPEN) return RegistrationClosure.CLOSED;
+    if (closeAt != null && !now.isBefore(closeAt)) return RegistrationClosure.DEADLINE;
     return null;
   }
 
