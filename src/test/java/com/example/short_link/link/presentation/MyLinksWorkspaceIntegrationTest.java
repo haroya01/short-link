@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -288,6 +289,40 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
                 .orElseThrow()
                 .getExpiresAt())
         .isNull();
+  }
+
+  @Test
+  void listItemsCarryTheFetchedAndOverriddenOgTitlesLikeTheDetail() throws Exception {
+    List<LinkEntity> made = makeLinks(3);
+    made.get(0).applyOgMetadata("Fetched title", null, null, NOW);
+    made.get(1).applyOgMetadata("Fetched title", null, null, NOW);
+    made.get(1).changeOgOverride("Owner title", null, null);
+    em.flush();
+    em.clear();
+
+    String body =
+        mvc.perform(get("/api/v1/links/me").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertThat(item(body, "work000"))
+        .containsEntry("ogTitle", "Fetched title")
+        .containsEntry("ogTitleOverride", null);
+    assertThat(item(body, "work001"))
+        .containsEntry("ogTitle", "Fetched title")
+        .containsEntry("ogTitleOverride", "Owner title");
+    assertThat(item(body, "work002"))
+        .containsEntry("ogTitle", null)
+        .containsEntry("ogTitleOverride", null);
+  }
+
+  private static Map<String, Object> item(String body, String code) {
+    List<Map<String, Object>> found =
+        JsonPath.read(body, "$.items[?(@.shortCode == '" + code + "')]");
+    assertThat(found).hasSize(1);
+    return found.getFirst();
   }
 
   private List<LinkEntity> makeLinks(int count) {

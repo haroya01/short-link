@@ -5499,6 +5499,8 @@
       "expiresAt" : "string(date-time)",
       "humanClickCount" : "integer(int64)",
       "note" : "string",
+      "ogTitle" : "string",
+      "ogTitleOverride" : "string",
       "originalUrl" : "string",
       "shortCode" : "string",
       "shortUrl" : "string",
