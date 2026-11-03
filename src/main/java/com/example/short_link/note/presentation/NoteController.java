@@ -1,9 +1,11 @@
 package com.example.short_link.note.presentation;
 
 import com.example.short_link.common.federation.RemoteHistory;
+import com.example.short_link.common.page.Keyset;
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
+import com.example.short_link.note.application.read.NoteRepliesView;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PageAsk;
@@ -124,8 +126,9 @@ public class NoteController {
       @AuthenticationPrincipal Long viewerId,
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    return query.room(viewerId, id, new PageAsk(page, size));
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "0") long after) {
+    return query.room(viewerId, id, after, new PageAsk(page, size));
   }
 
   @GetMapping("/api/v1/rooms/feed")
@@ -159,8 +162,23 @@ public class NoteController {
   }
 
   @GetMapping("/api/v1/public/notes/{id}")
-  public NoteThreadView thread(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
-    return query.thread(viewerId, id);
+  public NoteThreadView thread(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(required = false) Integer replies) {
+    return query.thread(
+        viewerId,
+        id,
+        Keyset.limit(replies, NoteQueryService.MAX_REPLIES, NoteQueryService.MAX_REPLIES));
+  }
+
+  @GetMapping("/api/v1/public/notes/{id}/replies")
+  public NoteRepliesView replies(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") long after,
+      @RequestParam(required = false) Integer limit) {
+    return query.replies(viewerId, id, after, Keyset.limit(limit, 20, PageAsk.MAX_SIZE));
   }
 
   @GetMapping("/api/v1/public/notes/{id}/hidden-replies")

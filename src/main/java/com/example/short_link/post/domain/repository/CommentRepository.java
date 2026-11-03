@@ -34,4 +34,15 @@ public interface CommentRepository {
   int deleteAllByPostId(Long postId);
 
   long latestId(Long postId);
+
+  List<CommentEntity> heardThreads(
+      Long postId, Long viewerId, long cursor, int limit, boolean tombstones);
+
+  List<CommentEntity> heardRepliesTo(
+      Long postId, Collection<Long> parentIds, Long viewerId, boolean tombstones);
+
+  List<CommentEntity> heardAfter(
+      Long postId, Long viewerId, long after, int limit, boolean tombstones);
+
+  List<CommentEntity> findAllOnPost(Long postId, Collection<Long> ids);
 }

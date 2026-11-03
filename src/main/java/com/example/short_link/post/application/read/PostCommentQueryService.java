@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.page.Keyset;
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostViewer;
@@ -10,10 +11,14 @@ import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,11 +46,79 @@ public class PostCommentQueryService {
         comments(reader.viewerId(), postId, tombstones), !PostAccessPolicy.isOpen(post));
   }
 
+  public PostScoped<CommentsView> page(
+      Long postId, PostViewer reader, boolean tombstones, long cursor, int limit) {
+    return readablePage(
+        postId,
+        reader,
+        () -> {
+          Keyset<CommentEntity> threads =
+              Keyset.of(
+                  commentRepository.heardThreads(
+                      postId, reader.viewerId(), cursor, limit + 1, tombstones),
+                  limit,
+                  CommentEntity::getId);
+          List<CommentEntity> page = new ArrayList<>(threads.rows());
+          page.addAll(
+              commentRepository.heardRepliesTo(
+                  postId,
+                  threads.rows().stream().map(CommentEntity::getId).toList(),
+                  reader.viewerId(),
+                  tombstones));
+          page.sort(Comparator.comparing(CommentEntity::getId));
+          return new Keyset<>(page, threads.next());
+        });
+  }
+
+  public PostScoped<CommentsView> newer(
+      Long postId, PostViewer reader, boolean tombstones, long after, int limit) {
+    return readablePage(
+        postId,
+        reader,
+        () -> {
+          Keyset<CommentEntity> newer =
+              Keyset.of(
+                  commentRepository.heardAfter(
+                      postId, reader.viewerId(), after, limit + 1, tombstones),
+                  limit,
+                  CommentEntity::getId);
+          Set<Long> present =
+              newer.rows().stream().map(CommentEntity::getId).collect(Collectors.toSet());
+          Set<Long> missingParents =
+              newer.rows().stream()
+                  .map(CommentEntity::getParentId)
+                  .filter(parent -> parent != null && !present.contains(parent))
+                  .collect(Collectors.toSet());
+          List<CommentEntity> withParents = new ArrayList<>(newer.rows());
+          commentRepository.findAllOnPost(postId, missingParents).stream()
+              .filter(parent -> tombstones || !parent.isDeleted())
+              .forEach(withParents::add);
+          withParents.sort(Comparator.comparing(CommentEntity::getId));
+          return new Keyset<>(withParents, newer.next());
+        });
+  }
+
+  private PostScoped<CommentsView> readablePage(
+      Long postId, PostViewer reader, Supplier<Keyset<CommentEntity>> rows) {
+    PostEntity post = postRepository.findById(postId).orElse(null);
+    if (post == null || !access.readable(post, reader)) {
+      return new PostScoped<>(new CommentsView(List.of(), null, "0"), false);
+    }
+    Keyset<CommentEntity> found = rows.get();
+    return new PostScoped<>(
+        new CommentsView(
+            views(found.rows()), found.next(), String.valueOf(commentRepository.latestId(postId))),
+        !PostAccessPolicy.isOpen(post));
+  }
+
   private List<CommentView> comments(Long viewerId, Long postId, boolean tombstones) {
-    List<CommentEntity> comments =
+    return views(
         tombstones
             ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)
-            : commentRepository.findHeardByPostId(postId, viewerId);
+            : commentRepository.findHeardByPostId(postId, viewerId));
+  }
+
+  private List<CommentView> views(List<CommentEntity> comments) {
     List<CommentEntity> live = comments.stream().filter(c -> !c.isDeleted()).toList();
     List<Long> authorIds = live.stream().map(CommentEntity::getUserId).distinct().toList();
     Map<Long, Long> likeCounts =

@@ -21,10 +21,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.DoubleSupplier;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
@@ -34,12 +37,17 @@ public class LiveStreams implements SmartLifecycle {
 
   static final int MAX_ITEMS = 20;
   static final int RETRY_AFTER_SECONDS = 60;
+  static final Duration ROTATE_RETRY_MIN = Duration.ofSeconds(1);
+  static final Duration ROTATE_RETRY_MAX = Duration.ofSeconds(5);
+  static final Duration RESTART_RETRY_MIN = Duration.ofSeconds(15);
+  static final Duration RESTART_RETRY_MAX = Duration.ofSeconds(75);
 
   private static final LiveEvent HEARTBEAT = new LiveEvent.Heartbeat();
 
   private final LiveProperties props;
   private final Clock clock;
   private final MeterRegistry meters;
+  private final DoubleSupplier draws;
   private final ScheduledThreadPoolExecutor worker;
   private final Map<LiveTopic, Set<LiveSubscriber>> watchers = new ConcurrentHashMap<>();
   private final Map<Long, Set<LiveSubscriber>> byUser = new HashMap<>();
@@ -49,10 +57,16 @@ public class LiveStreams implements SmartLifecycle {
   private volatile boolean running;
   private ScheduledFuture<?> heartbeat;
 
+  @Autowired
   public LiveStreams(LiveProperties props, Clock clock, MeterRegistry meters) {
+    this(props, clock, meters, () -> ThreadLocalRandom.current().nextDouble());
+  }
+
+  LiveStreams(LiveProperties props, Clock clock, MeterRegistry meters, DoubleSupplier draws) {
     this.props = props;
     this.clock = clock;
     this.meters = meters;
+    this.draws = draws;
     this.worker =
         new ScheduledThreadPoolExecutor(
             1, work -> Thread.ofPlatform().name("kurl-live").daemon().unstarted(work));
@@ -81,6 +95,7 @@ public class LiveStreams implements SmartLifecycle {
         meters.counter("live.streams.rejected").increment();
         return false;
       }
+      subscriber.closeAt(clock.instant().plus(props.lifetimeAt(draws.getAsDouble())));
       byUser.computeIfAbsent(subscriber.userId(), user -> new LinkedHashSet<>()).add(subscriber);
       watchers
           .computeIfAbsent(subscriber.topic(), topic -> ConcurrentHashMap.newKeySet())
@@ -131,14 +146,18 @@ public class LiveStreams implements SmartLifecycle {
     meters.counter("live.streams.crowded-out").increment();
   }
 
-  public void start(LiveSubscriber subscriber, long latest, Long since) {
+  public void start(LiveSubscriber subscriber, long latest, Long since, String streamToken) {
     synchronized (subscriber) {
       subscriber.advance(latest);
       LiveTopic topic = subscriber.topic();
       if (!deliver(
           subscriber,
           new LiveEvent.Ready(
-              topic.scope().apiName(), topic.id(), String.valueOf(subscriber.cursor())))) {
+              topic.scope().apiName(),
+              topic.id(),
+              String.valueOf(subscriber.cursor()),
+              streamToken,
+              retry(ROTATE_RETRY_MIN, ROTATE_RETRY_MAX)))) {
         return;
       }
       subscriber.markReady();
@@ -204,8 +223,14 @@ public class LiveStreams implements SmartLifecycle {
   }
 
   void beat() {
+    Instant now = clock.instant();
+    List<LiveSubscriber> due = new ArrayList<>();
     for (Set<LiveSubscriber> watching : watchers.values()) {
       for (LiveSubscriber subscriber : watching) {
+        if (!now.isBefore(subscriber.closeAt())) {
+          due.add(subscriber);
+          continue;
+        }
         synchronized (subscriber) {
           if (subscriber.ready()) {
             deliver(subscriber, HEARTBEAT);
@@ -213,6 +238,7 @@ public class LiveStreams implements SmartLifecycle {
         }
       }
     }
+    due.forEach(subscriber -> sayBye(subscriber, "rotate", ROTATE_RETRY_MIN, ROTATE_RETRY_MAX));
   }
 
   private void end(LiveRevoke revoke) {
@@ -308,7 +334,19 @@ public class LiveStreams implements SmartLifecycle {
     } finally {
       admission.unlock();
     }
-    all.forEach(this::drop);
+    all.forEach(subscriber -> sayBye(subscriber, "restart", RESTART_RETRY_MIN, RESTART_RETRY_MAX));
+  }
+
+  private void sayBye(LiveSubscriber subscriber, String reason, Duration min, Duration max) {
+    synchronized (subscriber) {
+      deliver(subscriber, new LiveEvent.Bye(reason, retry(min, max)));
+    }
+    drop(subscriber);
+    meters.counter("live.streams.bye", "reason", reason).increment();
+  }
+
+  private long retry(Duration min, Duration max) {
+    return min.toMillis() + Math.round((max.toMillis() - min.toMillis()) * draws.getAsDouble());
   }
 
   @Override

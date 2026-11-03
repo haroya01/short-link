@@ -259,14 +259,14 @@ class RemoteBlockMuteIntegrationTest {
     mute(muter, alice, true, null);
 
     for (Long viewer : List.of(blocker, muter)) {
-      assertThat(ids(feeds.replies(mine, viewer, 50))).containsExactly(others);
+      assertThat(ids(feeds.replies(mine, viewer, 0L, 50))).containsExactly(others);
       assertThat(ids(feeds.hiddenReplies(mine, viewer, 50))).isEmpty();
       assertThat(ids(feeds.quotesOf(mine, viewer, 0, 50))).isEmpty();
       assertThat(ids(feeds.quotesOfPost(post, viewer, 0, 50))).isEmpty();
       assertThat(feeds.countQuotesOfPost(post, viewer)).isZero();
       assertThat(ids(pages.heardAmong(List.of(reply, others), viewer))).containsExactly(others);
     }
-    assertThat(ids(feeds.replies(mine, stranger, 50))).containsExactly(reply, others);
+    assertThat(ids(feeds.replies(mine, stranger, 0L, 50))).containsExactly(reply, others);
     assertThat(ids(feeds.hiddenReplies(mine, stranger, 50))).containsExactly(hidden);
     assertThat(ids(feeds.quotesOf(mine, stranger, 0, 50))).containsExactly(quote);
     assertThat(ids(feeds.quotesOfPost(post, stranger, 0, 50))).containsExactly(quote);

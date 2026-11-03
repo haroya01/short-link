@@ -2,6 +2,7 @@ package com.example.short_link.live.application;
 
 import com.example.short_link.common.live.LiveScope;
 import com.example.short_link.common.live.LiveTopic;
+import java.time.Instant;
 
 public final class LiveSubscriber {
 
@@ -12,6 +13,7 @@ public final class LiveSubscriber {
   private long cursor;
   private boolean ready;
   private boolean missed;
+  private Instant closeAt = Instant.MAX;
 
   public LiveSubscriber(long userId, LiveTopic topic, LiveScope scope, LiveChannel channel) {
     this.userId = userId;
@@ -46,6 +48,14 @@ public final class LiveSubscriber {
 
   boolean missed() {
     return missed;
+  }
+
+  Instant closeAt() {
+    return closeAt;
+  }
+
+  void closeAt(Instant at) {
+    closeAt = at;
   }
 
   void advance(long latest) {

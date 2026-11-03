@@ -375,14 +375,15 @@ class HeardRuleIntegrationTest {
     for (String handle : all()) {
       long id = note(writer(handle), null);
       if (BLOCKED.contains(handle)) {
-        assertThatThrownBy(() -> notes.thread(viewer, id))
+        assertThatThrownBy(() -> notes.thread(viewer, id, NoteQueryService.MAX_REPLIES))
             .isInstanceOf(NoteException.class)
             .extracting(e -> ((NoteException) e).errorCode())
             .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
       } else {
-        assertThat(notes.thread(viewer, id).note().id()).isEqualTo(id);
+        assertThat(notes.thread(viewer, id, NoteQueryService.MAX_REPLIES).note().id())
+            .isEqualTo(id);
       }
-      assertThat(notes.thread(null, id).note().id()).isEqualTo(id);
+      assertThat(notes.thread(null, id, NoteQueryService.MAX_REPLIES).note().id()).isEqualTo(id);
     }
 
     long blockerParent = note(writer("hr-blocker"), null);
@@ -391,12 +392,13 @@ class HeardRuleIntegrationTest {
     long underMuted = note(writer("hr-normal"), mutedParent);
     long mutedReply = note(writer("hr-mutedlater"), underMuted);
 
-    assertThat(notes.thread(viewer, underBlocker).parent()).isNull();
-    assertThat(notes.thread(null, underBlocker).parent().id()).isEqualTo(blockerParent);
-    NoteThreadView signedIn = notes.thread(viewer, underMuted);
+    assertThat(notes.thread(viewer, underBlocker, NoteQueryService.MAX_REPLIES).parent()).isNull();
+    assertThat(notes.thread(null, underBlocker, NoteQueryService.MAX_REPLIES).parent().id())
+        .isEqualTo(blockerParent);
+    NoteThreadView signedIn = notes.thread(viewer, underMuted, NoteQueryService.MAX_REPLIES);
     assertThat(signedIn.parent().id()).isEqualTo(mutedParent);
     assertThat(signedIn.replies()).isEmpty();
-    assertThat(notes.thread(null, underMuted).replies())
+    assertThat(notes.thread(null, underMuted, NoteQueryService.MAX_REPLIES).replies())
         .extracting(NoteView::id)
         .containsExactly(mutedReply);
   }

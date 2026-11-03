@@ -14,6 +14,7 @@ import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.security.ClickStreamTokenService;
 import com.example.short_link.live.exception.LiveErrorCode;
 import com.example.short_link.live.exception.LiveException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,14 +33,19 @@ class LiveStreamServiceTest {
   @BeforeEach
   void setUp() {
     when(notes.scope()).thenReturn(LiveTopic.Scope.NOTE);
-    live = new LiveStreamService(List.of(notes), tokens, streams);
+    live =
+        new LiveStreamService(
+            List.of(notes),
+            tokens,
+            streams,
+            new LiveProperties(null, 0, null, null, null, null, null, null));
   }
 
   @Test
   void aReaderWithRoomGetsATokenBoundToTheScope() {
     when(notes.open(10L, 2L, "1.2.3.4")).thenReturn(Optional.of(SCOPE));
     when(streams.admits(2L)).thenReturn(true);
-    when(tokens.createStreamToken(2L, "live:note:10")).thenReturn("signed");
+    when(tokens.createStreamToken(2L, "live:note:10", Duration.ofMinutes(10))).thenReturn("signed");
 
     assertThat(live.issueToken(THREAD, 2L, "1.2.3.4")).isEqualTo("signed");
   }
@@ -52,7 +58,7 @@ class LiveStreamServiceTest {
         .isInstanceOf(LiveException.class)
         .extracting(e -> ((LiveException) e).errorCode())
         .isEqualTo(LiveErrorCode.LIVE_SCOPE_NOT_FOUND);
-    verify(tokens, never()).createStreamToken(any(), any());
+    verify(tokens, never()).createStreamToken(any(), any(), any());
   }
 
   @Test
@@ -93,10 +99,12 @@ class LiveStreamServiceTest {
   void beginningAStreamReadsTheLatestItemOnceAndHandsItOn() {
     LiveSubscriber subscriber = new LiveSubscriber(2L, THREAD, SCOPE, new RecordingChannel());
     when(notes.latest(10L)).thenReturn(120L);
+    when(tokens.createStreamToken(2L, "live:note:10", Duration.ofMinutes(10)))
+        .thenReturn("renewed");
 
     live.begin(subscriber, 100L);
 
-    verify(streams).start(subscriber, 120L, 100L);
+    verify(streams).start(subscriber, 120L, 100L, "renewed");
   }
 
   @Test

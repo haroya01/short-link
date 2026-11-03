@@ -11,7 +11,8 @@ public record LiveProperties(
     Duration heartbeat,
     Duration window,
     Duration windowPerStream,
-    Duration maxWindow) {
+    Duration maxWindow,
+    Duration tokenTtl) {
 
   public LiveProperties {
     maxStreams = maxStreams == null ? 500 : Math.max(0, maxStreams);
@@ -21,6 +22,15 @@ public record LiveProperties(
     window = window == null ? Duration.ofMillis(300) : window;
     windowPerStream = windowPerStream == null ? Duration.ofMillis(20) : windowPerStream;
     maxWindow = maxWindow == null ? Duration.ofSeconds(10) : maxWindow;
+    tokenTtl = tokenTtl == null ? Duration.ofMinutes(10) : tokenTtl;
+  }
+
+  Duration lifetimeAt(double draw) {
+    return Duration.ofMillis(Math.round(lifetime.toMillis() * (0.8 + 0.4 * draw)));
+  }
+
+  public Duration hardLimit() {
+    return lifetime.multipliedBy(6).dividedBy(5).plus(heartbeat.multipliedBy(2));
   }
 
   Duration windowFor(int openStreams) {

@@ -19,7 +19,7 @@ public interface NoteFeedReader {
 
   List<NoteEntity> withMediaByAuthor(Long authorId, Long viewerId, int offset, int limit);
 
-  List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit);
+  List<NoteEntity> inRoom(Long roomId, Long viewerId, long after, int offset, int limit);
 
   List<NoteEntity> inRoomsOf(Long viewerId, int offset, int limit);
 
@@ -43,7 +43,7 @@ public interface NoteFeedReader {
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
-  List<NoteEntity> replies(Long noteId, Long viewerId, int limit);
+  List<NoteEntity> replies(Long noteId, Long viewerId, long after, int limit);
 
   List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit);
 
