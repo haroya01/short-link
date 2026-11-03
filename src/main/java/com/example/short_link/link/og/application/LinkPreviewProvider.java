@@ -21,4 +21,9 @@ class LinkPreviewProvider implements LinkPreviewReader {
     return Optional.of(
         new Preview(preview.url(), preview.title(), preview.description(), preview.image()));
   }
+
+  @Override
+  public void forget(String url) {
+    previews.forget(url);
+  }
 }

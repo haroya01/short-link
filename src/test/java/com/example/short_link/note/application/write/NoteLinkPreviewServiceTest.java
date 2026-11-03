@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -31,7 +32,7 @@ class NoteLinkPreviewServiceTest {
     Preview card = new Preview("https://a.example", "Title", null, "https://a.example/i.png");
     when(reader.read("https://a.example")).thenReturn(Optional.of(card));
 
-    service.refresh(1L, "https://a.example");
+    assertThat(service.refresh(1L, "https://a.example")).isTrue();
 
     verify(previews).put(1L, card, Instant.parse("2026-10-06T00:00:00.123456Z"));
   }
@@ -39,8 +40,8 @@ class NoteLinkPreviewServiceTest {
   @Test
   void anAddressWithNothingToShowOrNoAddressClearsTheCard() {
     when(reader.read("https://bare.example")).thenReturn(Optional.empty());
-    service.refresh(1L, "https://bare.example");
-    service.refresh(2L, null);
+    assertThat(service.refresh(1L, "https://bare.example")).isFalse();
+    assertThat(service.refresh(2L, null)).isFalse();
 
     verify(previews).remove(1L);
     verify(previews).remove(2L);
@@ -53,7 +54,7 @@ class NoteLinkPreviewServiceTest {
     when(reader.read("https://a.example")).thenReturn(Optional.of(card));
     doThrow(new DataIntegrityViolationException("fk")).when(previews).put(any(), any(), any());
 
-    service.refresh(1L, "https://a.example");
+    assertThat(service.refresh(1L, "https://a.example")).isFalse();
 
     verify(previews, never()).remove(any());
   }

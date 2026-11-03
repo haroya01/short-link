@@ -44,6 +44,7 @@ class CrossModuleSqlRatchetTest {
           entry("local_seen", "federation"),
           entry("note_conversation_mute", "note"),
           entry("note_feed_preference", "note"),
+          entry("note_link_preview_refill", "note"),
           entry("note_list_member", "note"),
           entry("note_poll_remote_vote", "note"),
           entry("note_poll_vote", "note"),

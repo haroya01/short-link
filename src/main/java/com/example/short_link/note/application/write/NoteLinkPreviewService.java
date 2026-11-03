@@ -18,16 +18,18 @@ public class NoteLinkPreviewService {
   private final NoteLinkPreviewRepository previews;
   private final Clock clock;
 
-  public void refresh(Long noteId, String url) {
+  public boolean refresh(Long noteId, String url) {
     var preview = url == null ? null : reader.read(url).orElse(null);
     if (preview == null) {
       previews.remove(noteId);
-      return;
+      return false;
     }
     try {
       previews.put(noteId, preview, clock.instant().truncatedTo(ChronoUnit.MICROS));
+      return true;
     } catch (DataIntegrityViolationException deleted) {
       log.debug("note {} was deleted before its link preview landed", noteId);
+      return false;
     }
   }
 }

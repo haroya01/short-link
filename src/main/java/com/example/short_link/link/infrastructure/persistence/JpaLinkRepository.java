@@ -195,6 +195,13 @@ public interface JpaLinkRepository
       @Param("fetchedAt") Instant fetchedAt,
       @Param("status") String status);
 
+  @Transactional
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogFetchStatus = :retry, l.ogFetchAttempts = 0 "
+          + "WHERE l.ogFetchStatus = :gaveUp")
+  int reopenOgFetches(@Param("gaveUp") String gaveUp, @Param("retry") String retry);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkEntity l WHERE l.userId = :userId")
   int deleteByUserId(@Param("userId") Long userId);

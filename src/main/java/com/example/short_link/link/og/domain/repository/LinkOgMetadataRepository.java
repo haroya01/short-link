@@ -8,4 +8,6 @@ public interface LinkOgMetadataRepository {
   Optional<LinkOgMetadataEntity> findById(Long id);
 
   LinkOgMetadataEntity save(LinkOgMetadataEntity metadata);
+
+  int reopenGivenUpFetches();
 }

@@ -125,6 +125,12 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public int reopenGivenUpOgFetches() {
+    return jpa.reopenOgFetches(
+        LinkEntity.ogFetchFailedStatus(false), LinkEntity.ogFetchFailedStatus(true));
+  }
+
+  @Override
   public List<LinkEntity> findStaleOgCandidates(Instant before, int limit) {
     return jpa.findStaleOgCandidates(before, PageRequest.ofSize(limit));
   }
