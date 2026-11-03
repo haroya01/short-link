@@ -19,8 +19,8 @@ public record LiveProperties(
     lifetime = lifetime == null ? Duration.ofMinutes(5) : lifetime;
     heartbeat = heartbeat == null ? Duration.ofSeconds(25) : heartbeat;
     window = window == null ? Duration.ofMillis(300) : window;
-    windowPerStream = windowPerStream == null ? Duration.ofMillis(10) : windowPerStream;
-    maxWindow = maxWindow == null ? Duration.ofSeconds(5) : maxWindow;
+    windowPerStream = windowPerStream == null ? Duration.ofMillis(20) : windowPerStream;
+    maxWindow = maxWindow == null ? Duration.ofSeconds(10) : maxWindow;
   }
 
   Duration windowFor(int openStreams) {

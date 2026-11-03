@@ -23,11 +23,11 @@ class LivePropertiesTest {
   }
 
   @Test
-  void theWindowGrowsWithEveryOpenStreamSoAllRefetchesStayNearAHundredASecond() {
+  void theWindowGrowsWithEveryOpenStreamSoAllRefetchesStayNearFiftyASecond() {
     assertThat(defaults.windowFor(1)).isEqualTo(Duration.ofMillis(300));
-    assertThat(defaults.windowFor(30)).isEqualTo(Duration.ofMillis(300));
-    assertThat(defaults.windowFor(100)).isEqualTo(Duration.ofSeconds(1));
-    assertThat(defaults.windowFor(500)).isEqualTo(Duration.ofSeconds(5));
-    assertThat(defaults.windowFor(5000)).isEqualTo(Duration.ofSeconds(5));
+    assertThat(defaults.windowFor(15)).isEqualTo(Duration.ofMillis(300));
+    assertThat(defaults.windowFor(50)).isEqualTo(Duration.ofSeconds(1));
+    assertThat(defaults.windowFor(500)).isEqualTo(Duration.ofSeconds(10));
+    assertThat(defaults.windowFor(5000)).isEqualTo(Duration.ofSeconds(10));
   }
 }
