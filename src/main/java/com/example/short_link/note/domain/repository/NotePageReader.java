@@ -25,4 +25,6 @@ public interface NotePageReader {
   NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds);
 
   long latestReply(Long noteId);
+
+  long countReplies(Long noteId, Long viewerId, Collection<Long> leftOut);
 }

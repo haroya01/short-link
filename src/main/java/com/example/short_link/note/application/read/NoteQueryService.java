@@ -467,7 +467,7 @@ public class NoteQueryService {
         answered.next(),
         String.valueOf(pages.latestReply(noteId)),
         others.size() < answered.rows().size(),
-        feeds.countReplies(noteId, viewerId, chain));
+        pages.countReplies(noteId, viewerId, chain));
   }
 
   private boolean writesThread(Long viewerId, NoteEntity note, NoteEntity parent) {
