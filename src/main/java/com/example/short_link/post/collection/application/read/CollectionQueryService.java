@@ -6,7 +6,6 @@ import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -46,12 +45,12 @@ public class CollectionQueryService {
   private final CollectionUnlistedUrls unlistedUrls;
 
   public CollectionSummaryView createdSummary(CollectionEntity saved) {
-    return CollectionSummaryView.afterCreation(saved).withUnlistedUrl(unlistedUrls.of(saved));
+    return CollectionSummaryView.afterCreation(saved, unlistedUrls.of(saved));
   }
 
   public CollectionSummaryView editedSummary(CollectionEntity saved) {
     long count = connectionRepository.countByCollectionId(saved.getId());
-    return CollectionSummaryView.afterWrite(saved, count).withUnlistedUrl(unlistedUrls.of(saved));
+    return CollectionSummaryView.afterWrite(saved, count, unlistedUrls.of(saved));
   }
 
   public List<CollectionSummaryView> publicCollectionsContaining(
@@ -203,12 +202,12 @@ public class CollectionQueryService {
         .map(
             collection ->
                 CollectionSummaryView.inList(
-                        collection,
-                        connectionRepository.countByCollectionId(collection.getId()),
-                        previews.getOrDefault(collection.getId(), List.of()),
-                        owner,
-                        connections.get(collection.getId()))
-                    .withUnlistedUrl(unlistedUrls.of(collection)))
+                    collection,
+                    connectionRepository.countByCollectionId(collection.getId()),
+                    previews.getOrDefault(collection.getId(), List.of()),
+                    owner,
+                    connections.get(collection.getId()),
+                    unlistedUrls.of(collection)))
         .toList();
   }
 
@@ -239,6 +238,7 @@ public class CollectionQueryService {
                     connectionRepository.countByCollectionId(collection.getId()),
                     previews.getOrDefault(collection.getId(), List.of()),
                     owner,
+                    null,
                     null))
         .toList();
   }
@@ -259,7 +259,6 @@ public class CollectionQueryService {
         collection.getTitle(),
         collection.getDescription(),
         collection.getVisibility().name(),
-        CollectionKind.of(collection.isOrdered()).name(),
         collection.isOrdered(),
         curator.map(UserSummary::username).orElse(null),
         curator.map(UserSummary::id).orElse(null),

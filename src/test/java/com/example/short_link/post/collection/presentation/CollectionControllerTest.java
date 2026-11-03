@@ -63,7 +63,7 @@ class CollectionControllerTest {
   void createReturns201WithSummary() throws Exception {
     when(command.create(any())).thenReturn(collection(10L));
     when(query.createdSummary(any()))
-        .thenAnswer(inv -> CollectionSummaryView.afterCreation(inv.getArgument(0)));
+        .thenAnswer(inv -> CollectionSummaryView.afterCreation(inv.getArgument(0), null));
 
     mvc.perform(
             post("/api/v1/collections")
@@ -98,7 +98,7 @@ class CollectionControllerTest {
     CollectionEntity saved = collection(10L);
     saved.order(ordered);
     when(command.create(any())).thenReturn(saved);
-    when(query.createdSummary(saved)).thenReturn(CollectionSummaryView.afterCreation(saved));
+    when(query.createdSummary(saved)).thenReturn(CollectionSummaryView.afterCreation(saved, null));
 
     mvc.perform(
             post("/api/v1/collections")
@@ -119,7 +119,7 @@ class CollectionControllerTest {
   void editPassesOrderedOnlyWhenSent() throws Exception {
     CollectionEntity saved = collection(10L);
     when(command.edit(any())).thenReturn(saved);
-    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L));
+    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L, null));
 
     mvc.perform(
             put("/api/v1/collections/10")
@@ -165,7 +165,7 @@ class CollectionControllerTest {
   void editReturnsUpdatedSummary() throws Exception {
     CollectionEntity saved = collection(10L);
     when(command.edit(any())).thenReturn(saved);
-    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L));
+    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L, null));
 
     mvc.perform(
             put("/api/v1/collections/10")
@@ -255,22 +255,14 @@ class CollectionControllerTest {
     when(query.detail(USER_ID, 10L, null))
         .thenReturn(
             new CollectionDetailView(
-                10L,
-                "느린 사고",
-                "오래 머문 글",
-                "PUBLIC",
-                "COLLECTION",
-                false,
-                "curator",
-                3L,
-                List.of(post),
-                null));
+                10L, "느린 사고", "오래 머문 글", "PUBLIC", false, "curator", 3L, List.of(post), null));
 
     mvc.perform(
             get("/api/v1/collections/10").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.curatorUsername").value("curator"))
         .andExpect(jsonPath("$.curatorUserId").value(3))
+        .andExpect(jsonPath("$.kind").value("COLLECTION"))
         .andExpect(jsonPath("$.connections[0].blockType").value("POST"))
         .andExpect(jsonPath("$.connections[0].title").value("글 제목"));
   }
