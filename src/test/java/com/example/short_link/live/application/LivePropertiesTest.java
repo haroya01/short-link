@@ -23,7 +23,7 @@ class LivePropertiesTest {
   }
 
   @Test
-  void theWindowGrowsWithTheCrowdSoRefetchesStayNearAHundredASecond() {
+  void theWindowGrowsWithEveryOpenStreamSoAllRefetchesStayNearAHundredASecond() {
     assertThat(defaults.windowFor(1)).isEqualTo(Duration.ofMillis(300));
     assertThat(defaults.windowFor(30)).isEqualTo(Duration.ofMillis(300));
     assertThat(defaults.windowFor(100)).isEqualTo(Duration.ofSeconds(1));

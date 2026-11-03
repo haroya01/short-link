@@ -102,7 +102,7 @@ short-link:
     lifetime: 5m
     heartbeat: 25s
     window: 300ms
-    window-per-watcher: 10ms
+    window-per-stream: 10ms
     max-window: 5s
   pow:
     difficulty: ${POW_DIFFICULTY:3}

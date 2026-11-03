@@ -99,6 +99,35 @@ class LiveStreamsTest {
   }
 
   @Test
+  void aBusierServerWaitsLongerBeforeTellingSoRefetchesStayBounded() {
+    streams.stop();
+    streams =
+        new LiveStreams(
+            new LiveProperties(
+                500,
+                4,
+                Duration.ofMinutes(5),
+                Duration.ofSeconds(25),
+                Duration.ofMillis(50),
+                Duration.ofMillis(200),
+                Duration.ofSeconds(5)),
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            new SimpleMeterRegistry());
+    RecordingChannel watching = watch(2L, THREAD, OPEN);
+    for (long id = 20; id < 29; id++) {
+      watch(3L + id, LiveTopic.note(id), OPEN);
+    }
+
+    streams.offer(reply(101));
+
+    await()
+        .during(Duration.ofMillis(700))
+        .atMost(Duration.ofSeconds(1))
+        .until(() -> watching.changes().isEmpty());
+    await().atMost(Duration.ofSeconds(5)).until(() -> !watching.changes().isEmpty());
+  }
+
+  @Test
   void aChangeNobodyWatchesIsDroppedAtOnce() {
     RecordingChannel elsewhere = watch(2L, LiveTopic.note(99L), OPEN);
 

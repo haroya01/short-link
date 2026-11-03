@@ -160,7 +160,7 @@ public class LiveStreams implements SmartLifecycle {
           return next;
         });
     if (opened[0]) {
-      later(() -> flush(change.topic()), props.windowFor(watching.size()));
+      later(() -> flush(change.topic()), props.windowFor(open.get()));
     }
   }
 

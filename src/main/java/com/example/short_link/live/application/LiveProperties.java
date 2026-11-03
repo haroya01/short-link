@@ -10,7 +10,7 @@ public record LiveProperties(
     Duration lifetime,
     Duration heartbeat,
     Duration window,
-    Duration windowPerWatcher,
+    Duration windowPerStream,
     Duration maxWindow) {
 
   public LiveProperties {
@@ -19,12 +19,12 @@ public record LiveProperties(
     lifetime = lifetime == null ? Duration.ofMinutes(5) : lifetime;
     heartbeat = heartbeat == null ? Duration.ofSeconds(25) : heartbeat;
     window = window == null ? Duration.ofMillis(300) : window;
-    windowPerWatcher = windowPerWatcher == null ? Duration.ofMillis(10) : windowPerWatcher;
+    windowPerStream = windowPerStream == null ? Duration.ofMillis(10) : windowPerStream;
     maxWindow = maxWindow == null ? Duration.ofSeconds(5) : maxWindow;
   }
 
-  Duration windowFor(int watchers) {
-    Duration scaled = windowPerWatcher.multipliedBy(watchers);
+  Duration windowFor(int openStreams) {
+    Duration scaled = windowPerStream.multipliedBy(openStreams);
     if (scaled.compareTo(window) < 0) {
       return window;
     }
