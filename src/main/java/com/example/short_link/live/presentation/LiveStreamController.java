@@ -2,7 +2,6 @@ package com.example.short_link.live.presentation;
 
 import com.example.short_link.common.live.LiveScope;
 import com.example.short_link.common.live.LiveTopic;
-import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.live.application.LiveProperties;
 import com.example.short_link.live.application.LiveStreamService;
@@ -34,7 +33,6 @@ public class LiveStreamController {
   private final LiveProperties props;
   private final MeterRegistry meters;
 
-  @OpenToSuspended
   @PostMapping("/notes/{id}/stream-token")
   public LiveStreamTokenResponse noteToken(
       @AuthenticationPrincipal Long userId, @PathVariable long id, HttpServletRequest req) {
@@ -52,7 +50,6 @@ public class LiveStreamController {
     return stream(LiveTopic.note(id), streamToken, since, lastEventId, req, res);
   }
 
-  @OpenToSuspended
   @PostMapping("/posts/{id}/comments/stream-token")
   public LiveStreamTokenResponse commentsToken(
       @AuthenticationPrincipal Long userId, @PathVariable long id, HttpServletRequest req) {
@@ -70,7 +67,6 @@ public class LiveStreamController {
     return stream(LiveTopic.post(id), streamToken, since, lastEventId, req, res);
   }
 
-  @OpenToSuspended
   @PostMapping("/rooms/{id}/stream-token")
   public LiveStreamTokenResponse roomToken(
       @AuthenticationPrincipal Long userId, @PathVariable long id, HttpServletRequest req) {
