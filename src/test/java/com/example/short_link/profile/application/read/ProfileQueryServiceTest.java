@@ -106,7 +106,7 @@ class ProfileQueryServiceTest {
                     "https://a",
                     null,
                     null,
-                    0,
+                    0L,
                     false),
                 PublicProfile.ProfileEntry.link(
                     new ShortCode("later"),
@@ -114,7 +114,7 @@ class ProfileQueryServiceTest {
                     "https://b",
                     null,
                     null,
-                    0,
+                    0L,
                     false),
                 PublicProfile.ProfileEntry.link(
                     new ShortCode("gone1"),
@@ -122,7 +122,7 @@ class ProfileQueryServiceTest {
                     "https://c",
                     null,
                     null,
-                    0,
+                    0L,
                     false),
                 PublicProfile.ProfileEntry.text(9L, "hello")),
             0L,
@@ -162,7 +162,7 @@ class ProfileQueryServiceTest {
                     "https://a",
                     null,
                     null,
-                    1,
+                    1L,
                     false),
                 PublicProfile.ProfileEntry.link(
                     new ShortCode("room1"),
@@ -170,7 +170,7 @@ class ProfileQueryServiceTest {
                     "https://b",
                     null,
                     null,
-                    1,
+                    1L,
                     false),
                 PublicProfile.ProfileEntry.link(
                     new ShortCode("free1"),
@@ -178,7 +178,7 @@ class ProfileQueryServiceTest {
                     "https://c",
                     null,
                     null,
-                    0,
+                    0L,
                     false)),
             0L,
             false);

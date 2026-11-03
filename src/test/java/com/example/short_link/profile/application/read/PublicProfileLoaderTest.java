@@ -14,6 +14,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.PublicProfileSnapshot;
 import com.example.short_link.profile.application.PublicProfileSnapshot.LinkWindow;
@@ -68,6 +69,8 @@ class PublicProfileLoaderTest {
 
   private record Row(LinkEntity getLink, Instant getOpensAt, Boolean getPasswordRequired)
       implements ProfileLinkRow {}
+
+  private record Count(Long getLinkId, Long getCount) implements LinkClickCount {}
 
   private UserEntity alice() {
     UserEntity u = new UserEntity("u@x.com", "google", "g-7");
@@ -138,7 +141,6 @@ class PublicProfileLoaderTest {
         .thenReturn(List.of(new Row(profileLink(1L, "abc", 1), null, false)));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L))
         .thenReturn(List.of(divider, textBlock));
-    when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
     when(urlBuilder.build(new ShortCode("abc"))).thenReturn("https://kurl/abc");
 
     PublicProfileSnapshot snapshot = loader.load("alice");
@@ -152,6 +154,30 @@ class PublicProfileLoaderTest {
   }
 
   @Test
+  void aLinkShowsItsClickCountOnlyWhenItsStatsArePublic() {
+    alice();
+    LinkEntity shared = profileLink(1L, "pub0001", 1);
+    shared.changeStatsVisibility(true);
+    LinkEntity quiet = profileLink(2L, "prv0001", 2);
+    LinkEntity locked = profileLink(3L, "pwd0003", 3);
+    when(linkRepository.findPublicProfileLinks(7L))
+        .thenReturn(
+            List.of(
+                new Row(shared, null, false),
+                new Row(quiet, null, false),
+                new Row(locked, null, true)));
+    when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of());
+    when(clickRepository.countsByLinkIds(List.of(1L))).thenReturn(List.of(new Count(1L, 29L)));
+    when(urlBuilder.build(any())).thenAnswer(i -> "https://kurl.me/" + i.getArgument(0));
+
+    List<PublicProfile.ProfileEntry> entries = loader.load("alice").profile().entries();
+
+    assertThat(entries)
+        .extracting(PublicProfile.ProfileEntry::clickCount)
+        .containsExactly(29L, null, null);
+  }
+
+  @Test
   void aPasswordLinkKeepsOnlyItsShortUrlAndTheOwnersTitle() {
     alice();
     LinkEntity scraped = profileLink(1L, "pwd0001", 1);
@@ -162,7 +188,6 @@ class PublicProfileLoaderTest {
     when(linkRepository.findPublicProfileLinks(7L))
         .thenReturn(List.of(new Row(scraped, null, true), new Row(titled, null, true)));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of());
-    when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
     when(urlBuilder.build(any())).thenAnswer(i -> "https://kurl.me/" + i.getArgument(0));
 
     List<PublicProfile.ProfileEntry> entries = loader.load("alice").profile().entries();
@@ -199,7 +224,6 @@ class PublicProfileLoaderTest {
                 new Row(counted, null, false),
                 new Row(plain, null, false)));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of());
-    when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
     when(urlBuilder.build(any())).thenAnswer(i -> "https://kurl.me/" + i.getArgument(0));
 
     PublicProfileSnapshot snapshot = loader.load("alice");

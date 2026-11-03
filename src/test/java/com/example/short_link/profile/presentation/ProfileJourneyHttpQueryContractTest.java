@@ -303,6 +303,26 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
             null,
             200);
     assertThat(visible.body()).contains(link.getShortCode().value(), "https://example.com/profile");
+    assertThat(body(visible).path("entries").get(0).path("clickCount").isNull()).isTrue();
+    assertThat(visible.headers().firstValue("Cache-Control"))
+        .hasValueSatisfying(value -> assertThat(value).contains("no-store"));
+    String publicPath = "/api/v1/public/profiles/" + owner.getUsername();
+    for (var reader :
+        List.of(
+            call("profile-public-read-by-member", "GET", publicPath, null, strangerToken, 200),
+            call("profile-public-read-by-owner", "GET", publicPath, null, token, 200))) {
+      assertThat(body(reader).path("entries").get(0).path("clickCount").isNull()).isTrue();
+    }
+    call(
+        "profile-link-stats-public",
+        "PATCH",
+        "/api/v1/links/" + link.getShortCode().value() + "/visibility",
+        Map.of("statsPublic", true),
+        token,
+        200);
+    var withPublicStats =
+        body(call("profile-public-with-public-stats-link", "GET", publicPath, null, null, 200));
+    assertThat(withPublicStats.path("entries").get(0).path("clickCount").isNumber()).isTrue();
     call("profile-link-hide", "PUT", path, Map.of("show", false), token, 200);
     assertThat(
             count("select count(*) from link where id=? and profile_order is null", link.getId()))
