@@ -3,6 +3,7 @@ package com.example.short_link.note.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteRepliesView;
@@ -15,7 +16,9 @@ import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.exception.NoteException;
 import com.example.short_link.room.application.write.RoomCommandService;
 import com.example.short_link.room.domain.repository.RoomRepository;
+import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -38,6 +41,7 @@ class NoteReplyPagesIntegrationTest {
   @Autowired private NoteThreadControls threads;
   @Autowired private NoteQueryService query;
   @Autowired private UserRepository userRepository;
+  @Autowired private BlockRepository blocks;
   @Autowired private RoomCommandService rooms;
   @Autowired private RoomRepository roomRepository;
   @PersistenceContext private EntityManager em;
@@ -91,6 +95,30 @@ class NoteReplyPagesIntegrationTest {
     assertThat(newer.continued()).isTrue();
     assertThat(newer.latest()).isEqualTo(String.valueOf(fresh));
     assertThat(query.replies(null, root, continued, 20).continued()).isFalse();
+  }
+
+  @Test
+  void theTotalCountsTheRepliesTheViewerWouldPageThroughAndNothingElse() {
+    long root = post(writer, "누가 답할까요", null, null);
+    post(alice, "보이는 답", root, null);
+    long hidden = post(alice, "가릴 답", root, null);
+    post(bob, "막힌 사람 답", root, null);
+    post(bob, "팔로워만 보는 답", root, null, "private");
+    post(writer, "작성자가 이어서", root, null);
+    post(alice, "또 보이는 답", root, null);
+    threads.setReplyHidden(writer, hidden, true);
+    blocks.save(new UserBlockEntity(BlockEdge.blocker(alice).blocked(bob)));
+    flush();
+
+    for (Long viewer : java.util.Arrays.asList(alice, writer, null)) {
+      NoteRepliesView all = query.replies(viewer, root, 0L, 50);
+      NoteRepliesView first = query.replies(viewer, root, 0L, 1);
+
+      assertThat(first.total()).as("viewer %s", viewer).isEqualTo(all.items().size());
+      assertThat(all.total()).isEqualTo(all.items().size());
+    }
+    assertThat(query.replies(alice, root, 0L, 1).total()).isEqualTo(2);
+    assertThat(query.replies(null, root, 0L, 1).total()).isEqualTo(3);
   }
 
   @Test

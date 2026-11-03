@@ -102,12 +102,15 @@ public class PostCommentQueryService {
       Long postId, PostViewer reader, Supplier<Keyset<CommentEntity>> rows) {
     PostEntity post = postRepository.findById(postId).orElse(null);
     if (post == null || !access.readable(post, reader)) {
-      return new PostScoped<>(new CommentsView(List.of(), null, "0"), false);
+      return new PostScoped<>(new CommentsView(List.of(), null, "0", 0L), false);
     }
     Keyset<CommentEntity> found = rows.get();
     return new PostScoped<>(
         new CommentsView(
-            views(found.rows()), found.next(), String.valueOf(commentRepository.latestId(postId))),
+            views(found.rows()),
+            found.next(),
+            String.valueOf(commentRepository.latestId(postId)),
+            commentRepository.countHeard(postId, reader.viewerId())),
         !PostAccessPolicy.isOpen(post));
   }
 

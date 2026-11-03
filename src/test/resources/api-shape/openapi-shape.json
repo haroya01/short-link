@@ -4546,7 +4546,8 @@
     "CommentsView" : {
       "items" : "[#CommentView]",
       "latest" : "string",
-      "next" : "string"
+      "next" : "string",
+      "total" : "integer(int64)"
     },
     "CommitCoverRequest" : {
       "key" : "string"
@@ -5696,7 +5697,8 @@
       "continued" : "boolean",
       "items" : "[#NoteView]",
       "latest" : "string",
-      "next" : "string"
+      "next" : "string",
+      "total" : "integer(int64)"
     },
     "NoteSeriesNavView" : {
       "next" : "#ItemLink",

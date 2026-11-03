@@ -129,6 +129,7 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
       assertThat(newReplies.path("items").get(0).path("id").asLong()).isEqualTo(replyId);
       assertThat(newReplies.path("items")).hasSize(1);
       assertThat(newReplies.path("latest").asText()).isEqualTo(String.valueOf(replyId));
+      assertThat(newReplies.path("total").asLong()).isEqualTo(1);
       JsonNode newComments =
           step(
               "live-comments-after",
@@ -148,6 +149,7 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
               null,
               200);
       assertThat(firstPage.path("latest").asText()).isEqualTo(String.valueOf(commentId));
+      assertThat(firstPage.path("total").asLong()).isEqualTo(1);
       JsonNode newRoomNotes =
           step(
               "live-room-notes-after",

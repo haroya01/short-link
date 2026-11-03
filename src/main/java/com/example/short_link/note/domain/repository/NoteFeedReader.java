@@ -45,6 +45,8 @@ public interface NoteFeedReader {
 
   List<NoteEntity> replies(Long noteId, Long viewerId, long after, int limit);
 
+  long countReplies(Long noteId, Long viewerId, Collection<Long> leftOut);
+
   List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit);
 
   List<NoteEntity> byRemoteActor(Long remoteActorId, Long viewerId, int offset, int limit);

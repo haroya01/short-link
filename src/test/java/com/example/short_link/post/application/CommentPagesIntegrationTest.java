@@ -152,6 +152,30 @@ class CommentPagesIntegrationTest {
   }
 
   @Test
+  void theTotalCountsWhatTheFullListShowsTheViewerWithoutEmptiedPlaces() {
+    long kept = comment(alice, null, "남는 댓글");
+    comment(alice, kept, "남는 답글");
+    long blocked = comment(bob, null, "막힌 사람 댓글");
+    comment(alice, blocked, "막힌 댓글에 단 답글");
+    long emptied = comment(alice, null, "지울 댓글");
+    comment(owner, emptied, "지운 댓글의 답글");
+    deleteComment.execute(new DeleteCommentCommand(alice, emptied));
+    blockRepository.save(new UserBlockEntity(BlockEdge.blocker(owner).blocked(bob)));
+    flush();
+
+    for (PostViewer reader : List.of(PostViewer.of(owner), PostViewer.of(null))) {
+      int listed = comments.listForPost(post, reader, false).body().size();
+      CommentsView page = comments.page(post, reader, true, 0L, 1).body();
+      CommentsView newer = comments.newer(post, reader, true, 0L, 1).body();
+
+      assertThat(page.total()).isEqualTo(listed);
+      assertThat(newer.total()).isEqualTo(listed);
+    }
+    assertThat(comments.page(post, PostViewer.of(owner), false, 0L, 1).body().total()).isEqualTo(3);
+    assertThat(comments.page(post, PostViewer.of(null), false, 0L, 1).body().total()).isEqualTo(5);
+  }
+
+  @Test
   void aPostTheViewerCannotReadAnswersWithAnEmptyPageAsTheListDoes() {
     PostEntity draft = new PostEntity(owner, "cp-draft-" + UUID.randomUUID(), "초안", "ko");
     long hidden = postRepository.save(draft).getId();
@@ -161,6 +185,7 @@ class CommentPagesIntegrationTest {
     assertThat(page.items()).isEmpty();
     assertThat(page.next()).isNull();
     assertThat(page.latest()).isEqualTo("0");
+    assertThat(page.total()).isZero();
   }
 
   private void flush() {

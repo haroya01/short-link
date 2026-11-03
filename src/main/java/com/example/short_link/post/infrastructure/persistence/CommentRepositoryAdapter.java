@@ -214,6 +214,18 @@ class CommentRepositoryAdapter implements CommentRepository {
   }
 
   @Override
+  public long countHeard(Long postId, Long viewerId) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM comment c WHERE c.post_id = :postId AND " + heard(false))
+                .setParameter("postId", postId)
+                .setParameter("viewer", HeardSql.viewer(viewerId))
+                .setParameter("now", Instant.now())
+                .getSingleResult())
+        .longValue();
+  }
+
+  @Override
   public List<CommentEntity> findAllOnPost(Long postId, Collection<Long> ids) {
     if (ids.isEmpty()) {
       return List.of();

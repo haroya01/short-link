@@ -45,4 +45,6 @@ public interface CommentRepository {
       Long postId, Long viewerId, long after, int limit, boolean tombstones);
 
   List<CommentEntity> findAllOnPost(Long postId, Collection<Long> ids);
+
+  long countHeard(Long postId, Long viewerId);
 }

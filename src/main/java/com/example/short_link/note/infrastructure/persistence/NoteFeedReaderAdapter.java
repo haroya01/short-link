@@ -444,6 +444,28 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   }
 
   @Override
+  public long countReplies(Long noteId, Long viewerId, Collection<Long> leftOut) {
+    Query count =
+        em.createNativeQuery(
+                "SELECT COUNT(*) FROM note n WHERE n.in_reply_to_id = :noteId"
+                    + " AND n.reply_hidden_at IS NULL"
+                    + heardNote("n")
+                    + " AND "
+                    + NoteAccessSql.readable("n")
+                    + " AND (n.user_id IS NULL OR EXISTS (SELECT 1 FROM users au"
+                    + " WHERE au.id = n.user_id AND au.deleted_at IS NULL"
+                    + " AND au.username IS NOT NULL))"
+                    + (leftOut.isEmpty() ? "" : " AND n.id NOT IN (:leftOut)"))
+            .setParameter("noteId", noteId)
+            .setParameter("viewer", viewer(viewerId))
+            .setParameter("now", Instant.now());
+    if (!leftOut.isEmpty()) {
+      count.setParameter("leftOut", leftOut);
+    }
+    return ((Number) count.getSingleResult()).longValue();
+  }
+
+  @Override
   public List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit) {
     return answers(noteId, viewerId, 0L, limit, true);
   }
