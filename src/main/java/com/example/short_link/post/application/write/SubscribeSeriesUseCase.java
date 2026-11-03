@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.post.application.access.SeriesSubscriberCount;
 import com.example.short_link.post.application.read.SeriesSubscriptionStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.SeriesRepository;
@@ -20,6 +21,7 @@ public class SubscribeSeriesUseCase {
   private final SeriesRepository seriesRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
   private final ApplicationEventPublisher events;
+  private final SeriesSubscriberCount subscriberCount;
 
   @Transactional
   public SeriesSubscriptionStatus subscribe(Long userId, Long seriesId) {
@@ -37,7 +39,8 @@ public class SubscribeSeriesUseCase {
                 Instant.now()));
       }
     }
-    return new SeriesSubscriptionStatus(true, subscriptionRepository.countBySeriesId(seriesId));
+    return new SeriesSubscriptionStatus(
+        true, subscriberCount.shownTo(userId, seriesId, series.getUserId()));
   }
 
   @Transactional
@@ -45,7 +48,7 @@ public class SubscribeSeriesUseCase {
     subscriptionRepository
         .findByUserIdAndSeriesId(userId, seriesId)
         .ifPresent(subscriptionRepository::delete);
-    return new SeriesSubscriptionStatus(false, subscriptionRepository.countBySeriesId(seriesId));
+    return new SeriesSubscriptionStatus(false, subscriberCount.shownTo(userId, seriesId));
   }
 
   private SeriesEntity requireSeries(Long seriesId) {
