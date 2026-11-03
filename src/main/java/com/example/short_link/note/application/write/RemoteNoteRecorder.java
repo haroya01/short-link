@@ -155,7 +155,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (!received.notifies()) {
       return stored;
     }
-    NoteLiveChanges.of(noteId, answered, null).ifPresent(events::publishEvent);
+    NoteLiveChanges.of(noteId, answered, null, visibility.direct()).ifPresent(events::publishEvent);
     String excerpt = Excerpt.of(received.body());
     if (parent != null && parent.getUserId() != null) {
       events.publishEvent(

@@ -147,7 +147,7 @@ public class LiveStreams implements SmartLifecycle {
 
   public void offer(LiveChange change) {
     Set<LiveSubscriber> watching = watchers.get(change.topic());
-    if (watching == null || watching.isEmpty()) {
+    if (change.direct() || watching == null || watching.isEmpty()) {
       return;
     }
     boolean[] opened = {false};

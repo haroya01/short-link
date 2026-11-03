@@ -89,6 +89,16 @@ class LiveStreamsTest {
   }
 
   @Test
+  void aDirectItemNeverFansOutToTheScope() {
+    RecordingChannel channel = watch(2L, THREAD, OPEN);
+
+    streams.offer(new LiveChange(THREAD, LiveChange.Kind.REPLY, 101L, null, true));
+    streams.flush(THREAD);
+
+    assertThat(channel.changes()).isEmpty();
+  }
+
+  @Test
   void aChangeNobodyWatchesIsDroppedAtOnce() {
     RecordingChannel elsewhere = watch(2L, LiveTopic.note(99L), OPEN);
 

@@ -116,6 +116,20 @@ class NotePublicationTest {
   }
 
   @Test
+  void aDirectReplyIsMarkedSoTheThreadsWatchersAreNotWoken() {
+    NoteEntity parent = note(50L, 9L, "질문", null);
+    NoteEntity direct = note(100L, 7L, "@mina 몰래", parent);
+    direct.showTo(NoteVisibility.DIRECT);
+    NoteEntity followers = note(101L, 7L, "팔로워만", parent);
+    followers.showTo(NoteVisibility.PRIVATE);
+
+    assertThat(told(direct, parent, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 100L, null, true));
+    assertThat(told(followers, parent, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 101L, null, false));
+  }
+
+  @Test
   void aNoteOutsideAnyRoomAndThreadWakesNoStream() {
     NoteEntity alone = note(50L, 9L, "혼자", null);
 

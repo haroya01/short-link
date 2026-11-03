@@ -8,14 +8,14 @@ final class NoteLiveChanges {
 
   private NoteLiveChanges() {}
 
-  static Optional<LiveChange> of(Long noteId, Long parentId, Long roomId) {
+  static Optional<LiveChange> of(Long noteId, Long parentId, Long roomId, boolean direct) {
     if (parentId != null) {
       return Optional.of(
-          new LiveChange(LiveTopic.note(parentId), LiveChange.Kind.REPLY, noteId, roomId));
+          new LiveChange(LiveTopic.note(parentId), LiveChange.Kind.REPLY, noteId, roomId, direct));
     }
     if (roomId != null) {
       return Optional.of(
-          new LiveChange(LiveTopic.room(roomId), LiveChange.Kind.NOTE, noteId, roomId));
+          new LiveChange(LiveTopic.room(roomId), LiveChange.Kind.NOTE, noteId, roomId, direct));
     }
     return Optional.empty();
   }

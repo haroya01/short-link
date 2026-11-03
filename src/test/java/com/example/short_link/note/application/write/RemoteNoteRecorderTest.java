@@ -177,6 +177,8 @@ class RemoteNoteRecorderTest {
                 null,
                 null,
                 5L));
+    verify(events)
+        .publishEvent(new LiveChange(LiveTopic.note(5L), LiveChange.Kind.REPLY, 901L, null, true));
   }
 
   @Test
