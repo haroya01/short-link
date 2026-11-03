@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -406,6 +407,36 @@ class ApnsPushSenderTest {
     assertThat(root.get("text").asString()).isEqualTo("hi");
     assertThat(root.get("context").asString()).isEqualTo("노트에서 멘션");
     assertThat(root.has("actorUsername")).isFalse();
+  }
+
+  @Test
+  void aConversationTooLongForApnsLosesOnlyTheEndOfWhatWasSaid() {
+    String handle = "g".repeat(255) + "@" + "m".repeat(255);
+    String name = "이름".repeat(127);
+    String said = "가".repeat(2000);
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "제".repeat(200),
+                    handle + "님이 노트에서 회원님을 언급했습니다",
+                    "NOTE_MENTION",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute(null, "me", null, null, null, null, null, 5L),
+                    new PushActor(null, 42L, handle, name, null, new PushSpeech(said, "도쿄 모임")),
+                    "note:5"));
+
+    assertThat(payload.getBytes(StandardCharsets.UTF_8).length).isBetween(4090, 4096);
+    JsonNode root = jsonMapper.readTree(payload);
+    String text = root.get("text").asString();
+    assertThat(text).endsWith("…").hasSizeGreaterThan(100);
+    assertThat(said).startsWith(text.substring(0, text.length() - 1));
+    assertThat(root.get("context").asString()).isEqualTo("도쿄 모임");
+    assertThat(root.get("actor").get("displayName").asString()).isEqualTo(name);
+    assertThat(root.get("actor").get("username").asString()).isEqualTo(handle);
+    assertThat(root.get("aps").get("alert").get("subtitle").asString()).isEqualTo("제".repeat(200));
   }
 
   @Test

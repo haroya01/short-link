@@ -34,6 +34,8 @@ public class ApnsPushSender implements PushSender {
 
   // 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다.
   private static final String LINK_STATS_CATEGORY = "LINK_STATS";
+  private static final int PAYLOAD_LIMIT_BYTES = 4096;
+  private static final String ELLIPSIS = "…";
 
   private final ApnsProperties props;
   private final DevicePushTargets deviceTokens;
@@ -190,7 +192,29 @@ public class ApnsPushSender implements PushSender {
       if (route.noteId() != null) root.put("noteId", route.noteId());
     }
     root.putAll(senderKeys(message));
-    return jsonMapper.writeValueAsString(root);
+    return fitted(root);
+  }
+
+  private String fitted(Map<String, Object> root) {
+    String json = jsonMapper.writeValueAsString(root);
+    int overflow = json.getBytes(StandardCharsets.UTF_8).length - PAYLOAD_LIMIT_BYTES;
+    while (overflow > 0 && root.get("text") instanceof String text && !text.isEmpty()) {
+      root.put("text", cut(text, overflow));
+      json = jsonMapper.writeValueAsString(root);
+      overflow = json.getBytes(StandardCharsets.UTF_8).length - PAYLOAD_LIMIT_BYTES;
+    }
+    return json;
+  }
+
+  private static String cut(String text, int overflow) {
+    int end = text.length();
+    int removed = 0;
+    while (end > 0 && removed < overflow + ELLIPSIS.getBytes(StandardCharsets.UTF_8).length) {
+      int codePoint = text.codePointBefore(end);
+      end -= Character.charCount(codePoint);
+      removed += new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8).length;
+    }
+    return end == 0 ? "" : text.substring(0, end) + ELLIPSIS;
   }
 
   private static Map<String, Object> conversationKeys(PushMessage message) {
