@@ -161,6 +161,7 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(response.statusCode())
         .as("%s %s: %s", method, path, response.body())
         .isLessThan(300);
+    awaitAsyncWork();
     return response.body().isBlank() ? json.nullNode() : json.readTree(response.body());
   }
 
