@@ -6,6 +6,7 @@ import com.example.short_link.common.live.LiveScope;
 import com.example.short_link.common.live.LiveTopic;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +47,7 @@ public class LiveStreams implements SmartLifecycle {
   private final ReentrantLock admission = new ReentrantLock();
   private final AtomicInteger open = new AtomicInteger();
   private volatile boolean running;
+  private ScheduledFuture<?> heartbeat;
 
   public LiveStreams(LiveProperties props, Clock clock, MeterRegistry meters) {
     this.props = props;
@@ -287,14 +290,17 @@ public class LiveStreams implements SmartLifecycle {
   @Override
   public void start() {
     long every = props.heartbeat().toMillis();
-    worker.scheduleAtFixedRate(guarded(this::beat), every, every, TimeUnit.MILLISECONDS);
+    heartbeat =
+        worker.scheduleAtFixedRate(guarded(this::beat), every, every, TimeUnit.MILLISECONDS);
     running = true;
   }
 
   @Override
   public void stop() {
     running = false;
-    worker.shutdownNow();
+    if (heartbeat != null) {
+      heartbeat.cancel(false);
+    }
     List<LiveSubscriber> all = new ArrayList<>();
     admission.lock();
     try {
@@ -308,6 +314,12 @@ public class LiveStreams implements SmartLifecycle {
   @Override
   public boolean isRunning() {
     return running;
+  }
+
+  @PreDestroy
+  void shutdown() {
+    stop();
+    worker.shutdownNow();
   }
 
   private static final class Batch {

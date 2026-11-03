@@ -26,7 +26,7 @@ class LiveStreamsTest {
 
   @AfterEach
   void stop() {
-    streams.stop();
+    streams.shutdown();
   }
 
   private static LiveStreams streams(int max, int perUser, Duration window) {
@@ -76,7 +76,7 @@ class LiveStreamsTest {
 
   @Test
   void theWorkerFlushesTheWindowOnItsOwn() {
-    streams.stop();
+    streams.shutdown();
     streams = streams(500, 4, Duration.ofMillis(50));
     RecordingChannel channel = watch(2L, THREAD, OPEN);
 
@@ -100,7 +100,7 @@ class LiveStreamsTest {
 
   @Test
   void aBusierServerWaitsLongerBeforeTellingSoRefetchesStayBounded() {
-    streams.stop();
+    streams.shutdown();
     streams =
         new LiveStreams(
             new LiveProperties(
@@ -225,7 +225,7 @@ class LiveStreamsTest {
 
   @Test
   void theServerHoldsAtMostItsShare() {
-    streams.stop();
+    streams.shutdown();
     streams = streams(2, 4, Duration.ofHours(1));
     watch(2L, THREAD, OPEN);
     watch(3L, THREAD, OPEN);
@@ -238,7 +238,7 @@ class LiveStreamsTest {
 
   @Test
   void aFullServerStillLetsSomeoneSwapTheirOwnStreams() {
-    streams.stop();
+    streams.shutdown();
     streams = streams(2, 2, Duration.ofHours(1));
     watch(2L, THREAD, OPEN);
     watch(2L, LiveTopic.note(11L), OPEN);
@@ -251,7 +251,7 @@ class LiveStreamsTest {
 
   @Test
   void zeroStreamsSendsEveryoneBackToRefreshing() {
-    streams.stop();
+    streams.shutdown();
     streams = streams(0, 4, Duration.ofHours(1));
 
     assertThat(streams.admits(2L)).isFalse();
@@ -313,6 +313,25 @@ class LiveStreamsTest {
 
     await().atMost(Duration.ofSeconds(5)).until(() -> watching.closed);
     assertThat(watching.names()).containsExactly("Ready");
+  }
+
+  @Test
+  void aPausedHubStartsAgainWithItsHeartbeat() {
+    streams.shutdown();
+    streams =
+        new LiveStreams(
+            new LiveProperties(
+                500, 4, Duration.ofMinutes(5), Duration.ofMillis(50), null, null, null),
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            new SimpleMeterRegistry());
+    streams.start();
+    streams.stop();
+
+    streams.start();
+    RecordingChannel channel = watch(2L, THREAD, OPEN);
+
+    assertThat(streams.isRunning()).isTrue();
+    await().atMost(Duration.ofSeconds(5)).until(() -> channel.names().contains("Heartbeat"));
   }
 
   @Test
