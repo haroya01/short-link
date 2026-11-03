@@ -210,7 +210,7 @@ public class ApnsPushSender implements PushSender {
     if (actor.avatarUrl() != null) from.put("avatarUrl", actor.avatarUrl());
     var keys = new LinkedHashMap<String, Object>();
     keys.put("actor", from);
-    if (message.communication()) keys.put("communication", true);
+    if (actor.speaking()) keys.put("communication", true);
     return keys;
   }
 

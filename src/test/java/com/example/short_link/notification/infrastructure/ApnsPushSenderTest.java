@@ -339,9 +339,8 @@ class ApnsPushSenderTest {
                     PushApp.BLOG,
                     PushRoute.toNote("alice", "alice", 815L),
                     new PushActor(
-                        7L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/7/a.jpg"),
-                    "room:3",
-                    true));
+                        7L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/7/a.jpg", true),
+                    "room:3"));
 
     assertThat(payload)
         .isEqualTo(
@@ -366,9 +365,8 @@ class ApnsPushSenderTest {
                     null,
                     PushApp.BLOG,
                     PushRoute.toPost("yuki", "me", "my-post", null, null),
-                    new PushActor(2L, null, "yuki", null, null),
-                    "post:10",
-                    false));
+                    new PushActor(2L, null, "yuki", null, null, false),
+                    "post:10"));
 
     assertThat(payload)
         .isEqualTo(
@@ -391,9 +389,8 @@ class ApnsPushSenderTest {
                     null,
                     PushApp.BLOG,
                     new PushRoute(null, "me", null, null, null, null, null, 5L),
-                    new PushActor(null, 42L, "ged@m.example", "Ged", null),
-                    "note:5",
-                    true));
+                    new PushActor(null, 42L, "ged@m.example", "Ged", null, true),
+                    "note:5"));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("actor").toString())
@@ -416,8 +413,7 @@ class ApnsPushSenderTest {
                     PushApp.BLOG,
                     PushRoute.toPost(null, "me", "my-post", null, null),
                     null,
-                    "post:10",
-                    true));
+                    "post:10"));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("aps").get("thread-id").asString()).isEqualTo("post:10");

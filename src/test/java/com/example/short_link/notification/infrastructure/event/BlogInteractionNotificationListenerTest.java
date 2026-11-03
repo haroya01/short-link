@@ -80,8 +80,8 @@ class BlogInteractionNotificationListenerTest {
 
     assertThat(stored.faces())
         .containsExactly(
-            new Face("LIKE", new PushActor(2L, null, "alice", null, null), "post:10", false),
-            new Face("LIKE", new PushActor(3L, null, "bob", null, null), "post:10", false));
+            new Face("LIKE", new PushActor(2L, null, "alice", null, null, false), "post:10"),
+            new Face("LIKE", new PushActor(3L, null, "bob", null, null, false), "post:10"));
   }
 
   @Test
@@ -94,12 +94,13 @@ class BlogInteractionNotificationListenerTest {
     listener()
         .onBlogInteraction(BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "tokyo", "Tokyo", AT));
 
-    PushActor alice = new PushActor(2L, null, "alice", null, null);
+    PushActor speaking = new PushActor(2L, null, "alice", null, null, true);
+    PushActor acting = new PushActor(2L, null, "alice", null, null, false);
     assertThat(stored.faces())
         .containsExactly(
-            new Face("COMMENT", alice, "post:10", true),
-            new Face("FOLLOW", alice, null, false),
-            new Face("SERIES_SUBSCRIBE", alice, "series:4", false));
+            new Face("COMMENT", speaking, "post:10"),
+            new Face("FOLLOW", acting, null),
+            new Face("SERIES_SUBSCRIBE", acting, "series:4"));
   }
 
   @Test

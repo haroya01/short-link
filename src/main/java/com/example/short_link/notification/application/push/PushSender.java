@@ -17,12 +17,7 @@ public interface PushSender {
       PushApp app,
       PushRoute route,
       PushActor actor,
-      String threadId,
-      boolean communication) {
-
-    public PushMessage {
-      communication = communication && actor != null;
-    }
+      String threadId) {
 
     public PushMessage(String title, String subtitle, String body) {
       this(title, subtitle, body, null, null, PushApp.BLOG, null);
@@ -41,7 +36,7 @@ public interface PushSender {
         String shortCode,
         PushApp app,
         PushRoute route) {
-      this(title, subtitle, body, type, shortCode, app, route, null, null, false);
+      this(title, subtitle, body, type, shortCode, app, route, null, null);
     }
   }
 }

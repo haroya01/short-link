@@ -57,7 +57,7 @@ final class StoredNotices {
 
   record Push(List<Long> recipients, String type, PushRoute route) {}
 
-  record Face(String type, PushActor actor, String threadId, boolean communication) {}
+  record Face(String type, PushActor actor, String threadId) {}
 
   private static final Instant NOW = Instant.parse("2026-10-27T03:00:00Z");
 
@@ -254,7 +254,7 @@ final class StoredNotices {
     }
 
     private Face face(PushMessage message) {
-      return new Face(message.type(), message.actor(), message.threadId(), message.communication());
+      return new Face(message.type(), message.actor(), message.threadId());
     }
   }
 

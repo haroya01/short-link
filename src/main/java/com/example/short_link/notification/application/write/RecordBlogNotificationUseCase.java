@@ -303,9 +303,8 @@ public class RecordBlogNotificationUseCase {
         null,
         PushApp.BLOG,
         route(type, actorUsername, recipientUsername, payload),
-        PushActor.of(shown),
-        threadId,
-        type.inMentions());
+        PushActor.of(shown, type.inMentions()),
+        threadId);
   }
 
   private static String thread(NotificationTarget payload) {

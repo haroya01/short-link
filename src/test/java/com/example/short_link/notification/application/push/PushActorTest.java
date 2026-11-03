@@ -23,9 +23,10 @@ class PushActorTest {
             "  앨리스 ",
             List.of());
 
-    assertThat(PushActor.of(alice))
+    assertThat(PushActor.of(alice, true))
         .isEqualTo(
-            new PushActor(2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg"));
+            new PushActor(
+                2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg", true));
   }
 
   @Test
@@ -34,7 +35,8 @@ class PushActorTest {
         new NotificationActor(
             2L, "alice", "http://cdn.kurl.example/avatars/2/a.jpg", null, null, " ", List.of());
 
-    assertThat(PushActor.of(plain)).isEqualTo(new PushActor(2L, null, "alice", null, null));
+    assertThat(PushActor.of(plain, false))
+        .isEqualTo(new PushActor(2L, null, "alice", null, null, false));
   }
 
   @Test
@@ -51,14 +53,15 @@ class PushActorTest {
                 new CustomEmoji("new_l", "https://files.m.example/l.png"),
                 new CustomEmoji("verified", "https://files.m.example/v.png")));
 
-    assertThat(PushActor.of(ged))
-        .isEqualTo(new PushActor(null, 42L, "ged@m.example", "Ged :unknown:", null));
+    assertThat(PushActor.of(ged, true))
+        .isEqualTo(new PushActor(null, 42L, "ged@m.example", "Ged :unknown:", null, true));
   }
 
   @Test
   void nobodyOrAMemberWithoutAUsernameHasNoFaceToShow() {
-    assertThat(PushActor.of(null)).isNull();
-    assertThat(PushActor.of(new NotificationActor(2L, null, "https://cdn.kurl.example/a.jpg")))
+    assertThat(PushActor.of(null, true)).isNull();
+    assertThat(
+            PushActor.of(new NotificationActor(2L, null, "https://cdn.kurl.example/a.jpg"), true))
         .isNull();
   }
 
@@ -74,6 +77,6 @@ class PushActorTest {
             ZWSP + ":blobcat:" + ZWSP,
             List.of(new CustomEmoji("blobcat", "https://files.m.example/b.png")));
 
-    assertThat(PushActor.of(emojiOnly).displayName()).isNull();
+    assertThat(PushActor.of(emojiOnly, false).displayName()).isNull();
   }
 }

@@ -541,16 +541,21 @@ class RecordBlogNotificationUseCaseTest {
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
     org.mockito.Mockito.verify(pushSender)
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
-    assertThat(pushed.getValue().actor()).isEqualTo(new PushActor(2L, null, "yuki", null, null));
-    assertThat(pushed.getValue().communication())
+    assertThat(pushed.getValue().actor())
         .isEqualTo(
-            EnumSet.of(
-                    NotificationType.COMMENT,
-                    NotificationType.REPLY,
-                    NotificationType.MENTION,
-                    NotificationType.NOTE_REPLY,
-                    NotificationType.NOTE_MENTION)
-                .contains(type));
+            new PushActor(
+                2L,
+                null,
+                "yuki",
+                null,
+                null,
+                EnumSet.of(
+                        NotificationType.COMMENT,
+                        NotificationType.REPLY,
+                        NotificationType.MENTION,
+                        NotificationType.NOTE_REPLY,
+                        NotificationType.NOTE_MENTION)
+                    .contains(type)));
   }
 
   @Test
@@ -565,7 +570,6 @@ class RecordBlogNotificationUseCaseTest {
     org.mockito.Mockito.verify(pushSender)
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
     assertThat(pushed.getValue().actor()).isNull();
-    assertThat(pushed.getValue().communication()).isFalse();
   }
 
   @Test

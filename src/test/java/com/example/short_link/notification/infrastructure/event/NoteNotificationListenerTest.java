@@ -188,11 +188,10 @@ class NoteNotificationListenerTest {
                 41L));
 
     PushActor alice =
-        new PushActor(2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg");
+        new PushActor(2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg", true);
     assertThat(stored.faces())
         .containsExactly(
-            new Face("NOTE_REPLY", alice, "room:3", true),
-            new Face("NOTE_REPLY", alice, "note:41", true));
+            new Face("NOTE_REPLY", alice, "room:3"), new Face("NOTE_REPLY", alice, "note:41"));
   }
 
   @Test
@@ -221,10 +220,9 @@ class NoteNotificationListenerTest {
         .containsExactly(
             new Face(
                 "NOTE_LIKE",
-                new PushActor(null, 7L, "ged@m.example", "Ged", null),
-                "note:40",
-                false),
-            new Face("NOTE_QUOTE", new PushActor(2L, null, "alice", null, null), "note:40", false));
+                new PushActor(null, 7L, "ged@m.example", "Ged", null, false),
+                "note:40"),
+            new Face("NOTE_QUOTE", new PushActor(2L, null, "alice", null, null, false), "note:40"));
   }
 
   @Test
@@ -235,9 +233,9 @@ class NoteNotificationListenerTest {
 
     assertThat(stored.faces())
         .containsExactly(
-            new Face("NOTE_POLL", null, "note:5", false),
+            new Face("NOTE_POLL", null, "note:5"),
             new Face(
-                "NOTE_POLL", new PushActor(7L, null, "pollster", null, null), "note:5", false));
+                "NOTE_POLL", new PushActor(7L, null, "pollster", null, null, false), "note:5"));
   }
 
   @Test
@@ -264,7 +262,7 @@ class NoteNotificationListenerTest {
     assertThat(stored.pushes()).extracting(Push::recipients).containsExactly(List.of(10L, 11L));
     assertThat(stored.faces())
         .containsExactly(
-            new Face("NOTE_POST", new PushActor(7L, null, "writer", null, null), "note:5", false));
+            new Face("NOTE_POST", new PushActor(7L, null, "writer", null, null, false), "note:5"));
   }
 
   @Test
