@@ -119,6 +119,15 @@ class LinkPreviewRendererTest {
   }
 
   @Test
+  void aCardWithoutAPublicCountPutsNoCountInItsAddress() {
+    LinkEntity link = link("https://example.com/article");
+
+    String html = renderer.render(link, "https://kurl.me/abcdefg", null);
+
+    assertThat(html).contains("https://kurl.me/abcdefg/og.png\"").doesNotContain("og.png?c=");
+  }
+
+  @Test
   void usesDestinationImageWhenPresent() {
     LinkEntity link = link("https://example.com/article");
     link.applyOgMetadata(null, null, "https://example.com/hero.jpg", Instant.now());

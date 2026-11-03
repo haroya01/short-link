@@ -22,6 +22,7 @@ public final class CachedLinkFixture {
   private List<CachedLink.Variant> variants = List.of();
   private CachedLink.VisitOptions visitOptions = CachedLink.VisitOptions.NONE;
   private boolean disabled;
+  private boolean statsPublic;
 
   private CachedLinkFixture(LinkId linkId, String originalUrl) {
     this.linkId = linkId;
@@ -89,6 +90,11 @@ public final class CachedLinkFixture {
     return this;
   }
 
+  public CachedLinkFixture statsPublic(boolean statsPublic) {
+    this.statsPublic = statsPublic;
+    return this;
+  }
+
   public CachedLinkFixture disabled(boolean disabled) {
     this.disabled = disabled;
     return this;
@@ -110,6 +116,7 @@ public final class CachedLinkFixture {
         expiredMessage,
         variants,
         visitOptions,
-        disabled);
+        disabled,
+        statsPublic);
   }
 }

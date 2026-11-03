@@ -186,6 +186,11 @@ class CachedLinkLoaderTest {
       public Boolean getDisabled() {
         return disabled;
       }
+
+      @Override
+      public Boolean getStatsPublic() {
+        return false;
+      }
     };
   }
 }

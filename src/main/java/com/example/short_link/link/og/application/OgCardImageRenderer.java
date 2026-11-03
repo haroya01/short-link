@@ -42,7 +42,7 @@ public class OgCardImageRenderer {
     }
   }
 
-  public byte[] render(String shortUrl, long clickCount) throws IOException {
+  public byte[] render(String shortUrl, Long clickCount) throws IOException {
     BufferedImage img = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = img.createGraphics();
     try {
@@ -63,12 +63,13 @@ public class OgCardImageRenderer {
       int wordmarkBaseline = markTopY + markHeight - 2;
       g.drawString("kurl", PADDING + markWidth + 14, wordmarkBaseline);
 
-      String headline = formatCount(clickCount) + (clickCount == 1 ? " click" : " clicks");
-      Font headlineFont = pickHeadlineFont(g, headline);
-      g.setFont(headlineFont);
-      g.setColor(INK_HEADLINE);
       int headlineY = HEIGHT / 2 + 50;
-      g.drawString(headline, PADDING, headlineY);
+      if (clickCount != null) {
+        String headline = formatCount(clickCount) + (clickCount == 1 ? " click" : " clicks");
+        g.setFont(pickHeadlineFont(g, headline));
+        g.setColor(INK_HEADLINE);
+        g.drawString(headline, PADDING, headlineY);
+      }
 
       g.setFont(BODY_FONT);
       g.setColor(INK_BODY);

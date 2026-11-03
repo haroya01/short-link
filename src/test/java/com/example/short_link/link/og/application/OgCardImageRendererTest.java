@@ -65,4 +65,13 @@ class OgCardImageRendererTest {
   void nullShortUrlDoesNotThrow() throws IOException {
     assertThat(renderer.render(null, 100L)).isNotEmpty();
   }
+
+  @Test
+  void aCardWithoutACountIsStillAPng() throws Exception {
+    byte[] withCount = renderer.render("https://kurl.me/abc", 42L);
+    byte[] withoutCount = renderer.render("https://kurl.me/abc", null);
+
+    assertThat(ImageIO.read(new ByteArrayInputStream(withoutCount))).isNotNull();
+    assertThat(withoutCount).isNotEqualTo(withCount);
+  }
 }
