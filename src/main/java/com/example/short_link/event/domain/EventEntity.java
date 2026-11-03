@@ -98,6 +98,7 @@ public class EventEntity extends BaseTimeEntity {
       ContactField contactField) {
     validateDetails(
         title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
+    validateSchedule(startsAt, endsAt, closeAt);
     this.userId = userId;
     this.slug = slug;
     this.title = title;
@@ -132,7 +133,9 @@ public class EventEntity extends BaseTimeEntity {
 
   private EventErrorCode registrationClosureReason(Instant now) {
     if (status == EventStatus.CANCELED) return EventErrorCode.EVENT_CANCELED;
-    if (status != EventStatus.OPEN || (closeAt != null && !now.isBefore(closeAt))) {
+    if (status != EventStatus.OPEN
+        || (closeAt != null && !now.isBefore(closeAt))
+        || !now.isBefore(effectiveEnd())) {
       return EventErrorCode.EVENT_REGISTRATION_CLOSED;
     }
     return null;
@@ -161,6 +164,7 @@ public class EventEntity extends BaseTimeEntity {
     requireEditable();
     validateDetails(
         title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
+    validateSchedule(startsAt, endsAt, closeAt);
     this.title = title;
     this.descriptionMd = descriptionMd;
     this.startsAt = startsAt;
@@ -234,6 +238,17 @@ public class EventEntity extends BaseTimeEntity {
     requireMaxLength(locationText, 200, "locationText");
     requireMaxLength(locationUrl, 2048, "locationUrl");
     requireMaxLength(onlineUrl, 2048, "onlineUrl");
+  }
+
+  private static void validateSchedule(Instant startsAt, Instant endsAt, Instant closeAt) {
+    if (endsAt != null && endsAt.isBefore(startsAt)) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "endsAt before startsAt")
+          .with("field", "endsAt");
+    }
+    if (closeAt != null && closeAt.isAfter(endsAt != null ? endsAt : startsAt)) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "closeAt after event end")
+          .with("field", "closeAt");
+    }
   }
 
   private static void requireText(String value, int maxLength, String field) {

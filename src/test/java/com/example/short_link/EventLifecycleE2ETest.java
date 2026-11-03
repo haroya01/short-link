@@ -2,6 +2,7 @@ package com.example.short_link;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,6 +11,8 @@ import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,11 +41,11 @@ class EventLifecycleE2ETest {
                     .content(
                         """
                         {"title":"도쿄 개발자 스터디","descriptionMd":"매주 수요일 모임",
-                         "startsAt":"2026-08-05T10:00:00Z","timezone":"Asia/Tokyo",
+                         "startsAt":"%s","timezone":"Asia/Tokyo",
                          "locationText":"시부야","capacity":%d,"contactField":"EMAIL",
                          "questions":[{"type":"SHORT_TEXT","label":"어떤 주제에 관심 있나요?","required":false}]}
                         """
-                            .formatted(capacity)))
+                            .formatted(Instant.now().plus(7, ChronoUnit.DAYS), capacity)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.slug").isNotEmpty())
             .andExpect(jsonPath("$.links").isArray())
@@ -138,6 +141,106 @@ class EventLifecycleE2ETest {
             get("/api/v1/events/" + eventId + "/attendees")
                 .header("Authorization", "Bearer " + strangerToken))
         .andExpect(status().isForbidden());
+  }
+
+  private String timedEventBody(Instant startsAt, Instant endsAt, Instant closeAt) {
+    return """
+        {"title":"모임","startsAt":"%s","endsAt":%s,"closeAt":%s,"timezone":"Asia/Tokyo"}
+        """
+        .formatted(startsAt, quoted(endsAt), quoted(closeAt));
+  }
+
+  private static String quoted(Instant instant) {
+    return instant == null ? "null" : "\"" + instant + "\"";
+  }
+
+  @Test
+  void createAndUpdate_rejectEndBeforeStartAndDeadlineAfterEnd() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org3@x.com", "google", "g-ev-org3"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    Instant starts = Instant.now().plus(10, ChronoUnit.DAYS);
+
+    mvc.perform(
+            post("/api/v1/events")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(timedEventBody(starts, starts.minus(3, ChronoUnit.DAYS), null)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_EVENT_DETAILS"))
+        .andExpect(jsonPath("$.field").value("endsAt"));
+    mvc.perform(
+            post("/api/v1/events")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(timedEventBody(starts, null, starts.plusSeconds(60))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_EVENT_DETAILS"))
+        .andExpect(jsonPath("$.field").value("closeAt"));
+
+    String created =
+        mvc.perform(
+                post("/api/v1/events")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(timedEventBody(starts, starts.plusSeconds(3600), starts)))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    int eventId = JsonPath.read(created, "$.id");
+
+    mvc.perform(
+            patch("/api/v1/events/" + eventId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(timedEventBody(starts, starts.minusSeconds(1), null)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.field").value("endsAt"));
+    mvc.perform(
+            patch("/api/v1/events/" + eventId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    timedEventBody(starts, starts.plusSeconds(3600), starts.plusSeconds(3601))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.field").value("closeAt"));
+  }
+
+  @Test
+  void endedEvent_isShownClosedAndRejectsRegistration() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org4@x.com", "google", "g-ev-org4"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    Instant now = Instant.now();
+
+    String ended =
+        JsonPath.read(
+            mvc.perform(
+                    post("/api/v1/events")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                            timedEventBody(
+                                now.minus(5, ChronoUnit.DAYS),
+                                now.minus(4, ChronoUnit.DAYS),
+                                null)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            "$.slug");
+
+    mvc.perform(get("/api/v1/public/events/" + ended))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("OPEN"))
+        .andExpect(jsonPath("$.acceptingRegistrations").value(false));
+    mvc.perform(
+            post("/api/v1/public/events/" + ended + "/registrations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"참가자\",\"contact\":\"late@x.com\"}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("EVENT_REGISTRATION_CLOSED"));
   }
 
   @Test
