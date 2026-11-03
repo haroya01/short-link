@@ -28,12 +28,12 @@ public class LinkHtmlRenderer {
   private static final String STYLE =
       """
       *{box-sizing:border-box}
-      :root{color-scheme:light;--bg:#fff;--ink:rgb(19 26 22);--muted:rgb(109 117 112);\
-      --line:rgb(208 213 210);--focus:rgb(19 26 22);--green:#059669;--link:#047857;--link-hover:#065f46;\
-      --fill:#047857;--fill-hover:#065f46;--danger:#dc2626;--ease:cubic-bezier(.16,1,.3,1)}
+      :root{color-scheme:light;--bg:#fff;--ink:rgb(19 26 22);--ink-soft:rgb(59 66 62);\
+      --muted:rgb(109 117 112);--line:rgb(208 213 210);--green:#059669;--on-ink:#fff;\
+      --ink-press:rgb(36 43 39);--danger:#dc2626;--ease:cubic-bezier(.16,1,.3,1)}
       @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:rgb(15 20 18);--ink:rgb(230 234 231);\
-      --muted:rgb(154 163 158);--line:rgb(54 62 57);--focus:rgb(216 221 218);--green:#10b981;\
-      --link:#34d399;--link-hover:#6ee7b7;--danger:#f87171}}
+      --ink-soft:rgb(194 201 197);--muted:rgb(154 163 158);--line:rgb(54 62 57);--green:#10b981;\
+      --on-ink:rgb(15 20 18);--ink-press:rgb(216 221 218);--danger:#f87171}}
       body{margin:0;min-height:100vh;min-height:100svh;display:grid;place-items:center;\
       padding:40px 16px calc(40px + 10vh);background:var(--bg);color:var(--ink);\
       font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;\
@@ -51,17 +51,17 @@ public class LinkHtmlRenderer {
       min-height:48px;margin-top:28px}
       .row::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line);\
       transition:background-color .2s var(--ease)}
-      .field:focus-within::after{background:var(--focus)}
+      .field:focus-within::after{background:var(--ink)}
       input{flex:1;min-width:0;height:48px;padding:0;border:0;border-radius:0;background:none;color:var(--ink);\
       font:inherit;font-size:16px;outline:none}
       input::placeholder{color:var(--muted);opacity:1}
       button,.go{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:0 0 0 8px;\
-      border:0;background:none;color:var(--link);font:inherit;font-size:15px;font-weight:600;\
+      border:0;background:none;color:var(--ink);font:inherit;font-size:15px;font-weight:600;\
       text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .2s var(--ease)}
-      button:hover,.go:hover{color:var(--link-hover)}
+      button:hover,.go:hover{color:var(--ink-soft)}
       button span,.go span{transition:transform .2s var(--ease)}
       button:hover span,.go:hover span{transform:translateX(2px)}
-      a:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+      a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
       .miss{animation:nudge .28s var(--ease)}
       .miss::after{animation:flash 1.2s var(--ease)}
       @keyframes nudge{30%{transform:translateX(-4px)}70%{transform:translateX(4px)}}
@@ -73,17 +73,18 @@ public class LinkHtmlRenderer {
       transform-origin:left;animation:draw .64s var(--ease) .06s backwards}
       @keyframes draw{from{transform:scaleX(0)}}
       .count,.pow{font-size:13px;line-height:1.5;color:var(--muted)}
-      .pow b{color:var(--link);font-weight:600}
+      .pow b{color:var(--ink);font-weight:600}
       p.count{margin-top:16px}
       .stay{display:inline-flex;align-items:center;min-height:44px;margin-top:16px;font-size:15px;font-weight:600;\
-      color:var(--link);text-decoration:none;transition:color .2s var(--ease)}
-      .stay:hover{color:var(--link-hover)}
+      color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;\
+      transition:text-decoration-color .2s var(--ease)}
+      .stay:hover{text-decoration-color:var(--ink)}
       .splash .msg{font-size:17px;font-weight:500;line-height:1.55;letter-spacing:-.01em;color:var(--ink)}
       .splash .btn{display:inline-flex;align-items:center;min-height:44px;margin-top:20px;padding:0 20px;\
-      border-radius:8px;background:var(--fill);color:#fff;font-size:15px;font-weight:600;text-decoration:none;\
+      border-radius:8px;background:var(--ink);color:var(--on-ink);font-size:15px;font-weight:600;text-decoration:none;\
       transition:background-color .2s var(--ease)}
-      .splash .btn:hover{background:var(--fill-hover)}
-      .splash .line{animation-timing-function:linear;animation-delay:0s}
+      .splash .btn:hover{background:var(--ink-press)}
+      .splash .line{background:var(--muted);animation-timing-function:linear;animation-delay:0s}
       .splash .row .count{padding:12px 0}
       .splash .stay{display:flex;width:max-content;margin-top:8px;font-size:13px;font-weight:500;color:var(--muted);\
       text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}

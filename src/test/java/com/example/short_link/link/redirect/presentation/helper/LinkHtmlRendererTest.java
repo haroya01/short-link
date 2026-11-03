@@ -183,6 +183,20 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void greenIsOnlyTheMarkAndTheLineThatOpensALink() {
+    String html = renderer.unlockedPage(KO, "https://example.com");
+    String style = html.substring(html.indexOf("<style>") + 7, html.indexOf("</style>"));
+    List<String> green =
+        java.util.regex.Pattern.compile("([^{}]+)\\{[^{}]*var\\(--green\\)[^{}]*\\}")
+            .matcher(style)
+            .results()
+            .map(m -> m.group(1).trim())
+            .toList();
+    assertThat(green).containsExactlyInAnyOrder(".mark", ".line");
+    assertThat(style).contains(".splash .line{background:var(--muted)");
+  }
+
+  @Test
   void unlockedPage_escapesScriptInjectionInDestination() {
     String evil = "https://x/\"></script><script>alert(1)</script>";
     String body = new String(renderer.unlockedPageResponse(KO, evil).getBody());
