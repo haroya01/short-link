@@ -122,7 +122,7 @@ public class LinkInsights {
     }
     double share = (double) inApp / humanClicks;
     if (share < IN_APP_SHARE_THRESHOLD) return Optional.empty();
-    String message = msg("insight.IN_APP_BROWSER", appName(top.app()), pct(share));
+    String message = msg("insight.IN_APP_BROWSER", pct(share));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("topApp", top.app());
     data.put("topAppClicks", top.count());
@@ -147,10 +147,6 @@ public class LinkInsights {
     data.put("returnRatio", round3(best.returnRatio()));
     data.put("returningVisitors", best.returningVisitors());
     return Optional.of(new LinkStats.Insight("CHANNEL_LOYALTY", "info", message, data));
-  }
-
-  private String appName(String app) {
-    return messages.getMessage("clientApp." + app, null, app, LocaleContextHolder.getLocale());
   }
 
   private String msg(String code, Object... args) {
