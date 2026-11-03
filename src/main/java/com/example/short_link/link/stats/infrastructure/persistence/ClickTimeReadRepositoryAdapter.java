@@ -3,7 +3,6 @@ package com.example.short_link.link.stats.infrastructure.persistence;
 import com.example.short_link.link.stats.application.read.ClickTimeReader;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.math.BigDecimal;
@@ -37,18 +36,6 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReader {
   public List<DailyClickRow> findDailyClicks(
       Long linkId, Instant from, Instant until, String timezone) {
     return jpa.findDailyClicks(linkId, from, until, timezone);
-  }
-
-  @Override
-  public List<HourClickRow> findHourlyClicks(
-      Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findHourlyClicks(linkId, epoch(from), epoch(until), timezone);
-  }
-
-  @Override
-  public List<DayOfWeekClickRow> findDayOfWeekClicks(
-      Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findDayOfWeekClicks(linkId, epoch(from), epoch(until), timezone);
   }
 
   @Override

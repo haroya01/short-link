@@ -4,7 +4,6 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.ClickRollup;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.math.BigDecimal;
@@ -61,40 +60,6 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("linkId") Long linkId,
       @Param("from") Instant from,
       @Param("until") Instant until,
-      @Param("tz") String timezone);
-
-  @Query(
-      value =
-          "SELECT h AS hour, CAST(SUM(n) AS SIGNED) AS count FROM ("
-              + "SELECT HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS h, COUNT(*) AS n FROM click_event "
-              + "WHERE link_id = :linkId AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
-              + RAW
-              + " GROUP BY h UNION ALL "
-              + "SELECT HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS h, SUM(humans) FROM click_hourly "
-              + "WHERE link_id = :linkId AND humans > 0 AND hour_start > TIMESTAMPADD(HOUR, -1, FROM_UNIXTIME(:from)) AND hour_start < FROM_UNIXTIME(:until) GROUP BY h"
-              + ") u GROUP BY h ORDER BY h",
-      nativeQuery = true)
-  List<HourClickRow> findHourlyClicks(
-      @Param("linkId") Long linkId,
-      @Param("from") BigDecimal from,
-      @Param("until") BigDecimal until,
-      @Param("tz") String timezone);
-
-  @Query(
-      value =
-          "SELECT d AS dow, CAST(SUM(n) AS SIGNED) AS count FROM ("
-              + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS d, COUNT(*) AS n FROM click_event "
-              + "WHERE link_id = :linkId AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
-              + RAW
-              + " GROUP BY d UNION ALL "
-              + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS d, SUM(humans) FROM click_hourly "
-              + "WHERE link_id = :linkId AND humans > 0 AND hour_start > TIMESTAMPADD(HOUR, -1, FROM_UNIXTIME(:from)) AND hour_start < FROM_UNIXTIME(:until) GROUP BY d"
-              + ") u GROUP BY d ORDER BY d",
-      nativeQuery = true)
-  List<DayOfWeekClickRow> findDayOfWeekClicks(
-      @Param("linkId") Long linkId,
-      @Param("from") BigDecimal from,
-      @Param("until") BigDecimal until,
       @Param("tz") String timezone);
 
   @Query(

@@ -5,9 +5,7 @@ import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,14 +44,21 @@ class LinkStatsTimeBucketsReader {
             .sorted(Map.Entry.comparingByKey())
             .map(e -> new LinkStats.DailyClick(e.getKey(), e.getValue()))
             .toList();
-    List<LinkStats.HourClick> hourly =
+    Map<DowHour, Long> cells =
         sum(
-                lifetime,
-                p -> clickTime.findHourlyClicks(id, p.from(), p.until(), p.offset()),
-                HourClickRow::getHour,
-                HourClickRow::getCount)
-            .entrySet()
-            .stream()
+            lifetime,
+            p -> clickTime.findHeatmap(id, p.from(), p.until(), p.offset()),
+            r -> new DowHour(r.getDow(), r.getHour()),
+            HeatmapRow::getCount);
+    Map<Integer, Long> hours = new HashMap<>();
+    Map<Integer, Long> days = new HashMap<>();
+    cells.forEach(
+        (cell, count) -> {
+          hours.merge(cell.hour(), count, Long::sum);
+          days.merge(cell.dow(), count, Long::sum);
+        });
+    List<LinkStats.HourClick> hourly =
+        hours.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .map(e -> new LinkStats.HourClick(e.getKey(), e.getValue()))
             .toList();
@@ -63,24 +68,12 @@ class LinkStatsTimeBucketsReader {
             .map(LinkStats.HourClick::hour)
             .orElse(null);
     List<LinkStats.DayOfWeekClick> dayOfWeek =
-        sum(
-                lifetime,
-                p -> clickTime.findDayOfWeekClicks(id, p.from(), p.until(), p.offset()),
-                DayOfWeekClickRow::getDow,
-                DayOfWeekClickRow::getCount)
-            .entrySet()
-            .stream()
+        days.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .map(e -> new LinkStats.DayOfWeekClick(mapDayOfWeek(e.getKey()), e.getValue()))
             .toList();
     List<HeatmapCell> heatmap =
-        sum(
-                lifetime,
-                p -> clickTime.findHeatmap(id, p.from(), p.until(), p.offset()),
-                r -> new DowHour(r.getDow(), r.getHour()),
-                HeatmapRow::getCount)
-            .entrySet()
-            .stream()
+        cells.entrySet().stream()
             .sorted(Map.Entry.comparingByKey(DowHour.ORDER))
             .map(
                 e ->

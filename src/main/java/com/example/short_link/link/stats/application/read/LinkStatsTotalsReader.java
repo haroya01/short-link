@@ -24,8 +24,7 @@ class LinkStatsTotalsReader {
     var unique = clickTotals.uniqueVisitorsByLinkId(linkId.value());
     Instant firstClickAt = clickTotals.findFirstClickAt(linkId.value());
     Instant lastClickAt = clickTotals.findLastClickAt(linkId.value());
-    long previewClicks = clickTotals.countPreviewByLinkId(linkId.value());
-    long profileClicks = clickTotals.countProfileChannelByLinkId(linkId.value());
+    ClickTotalsReader.ClickFlags flags = clickTotals.countFlagsByLinkId(linkId.value());
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
@@ -36,8 +35,10 @@ class LinkStatsTotalsReader {
         bot,
         unique.count(),
         unique.rawSince(),
-        previewClicks,
-        profileClicks,
+        flags.preview(),
+        flags.profile(),
+        flags.direct(),
+        flags.datacenter(),
         firstClickAt,
         lastClickAt,
         timeToFirstClickMinutes);
@@ -61,6 +62,8 @@ class LinkStatsTotalsReader {
       Instant rawSince,
       long previewClicks,
       long profileClicks,
+      long directClicks,
+      long datacenterClicks,
       Instant firstClickAt,
       Instant lastClickAt,
       Long timeToFirstClickMinutes) {}

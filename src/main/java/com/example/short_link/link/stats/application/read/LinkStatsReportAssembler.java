@@ -33,10 +33,11 @@ class LinkStatsReportAssembler {
     LinkStatsTimeBucketsReader.TimeBuckets time =
         timeReader.read(linkId, link.getCreatedAt(), reportZone, reportTime);
     LinkStatsDimensionBreakdownsReader.ChannelBreakdowns channels =
-        dimensionsReader.channels(linkId);
+        dimensionsReader.channels(linkId, totals.directClicks());
     LinkStatsDimensionBreakdownsReader.DeviceBreakdowns devices = dimensionsReader.devices(linkId);
     LinkStatsDimensionBreakdownsReader.UtmBreakdowns utm = dimensionsReader.utm(linkId);
-    LinkStatsDimensionBreakdownsReader.GeoBreakdowns geo = dimensionsReader.geo(linkId);
+    LinkStatsDimensionBreakdownsReader.GeoBreakdowns geo =
+        dimensionsReader.geo(linkId, totals.datacenterClicks());
     List<LinkStats.DestinationClick> destinations = dimensionsReader.destinations(link);
     List<LinkStats.ClientAppClick> clientApps = dimensionsReader.clientApps(linkId);
     List<LinkStats.FetchSiteClick> fetchSites = dimensionsReader.fetchSites(linkId);
