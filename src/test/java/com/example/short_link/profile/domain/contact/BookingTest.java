@@ -126,4 +126,72 @@ class BookingTest {
         .map(Booking.Provider::id)
         .contains("catchtable");
   }
+
+  @Test
+  void resolvesJapaneseReservationPages() {
+    assertThat(Booking.Provider.resolve("https://beauty.hotpepper.jp/slnH000537382/"))
+        .map(Booking.Provider::id)
+        .contains("hotpepper_beauty");
+    assertThat(Booking.Provider.resolve("https://www.hotpepper.jp/strJ000024328/yoyaku/"))
+        .map(Booking.Provider::id)
+        .contains("hotpepper_gourmet");
+    assertThat(Booking.Provider.resolve("https://tabelog.com/tokyo/A1301/A130101/13001234/"))
+        .map(Booking.Provider::id)
+        .contains("tabelog");
+    assertThat(Booking.Provider.resolve("https://s.tabelog.com/tokyo/A1301/A130101/13001234/"))
+        .map(Booking.Provider::id)
+        .contains("tabelog");
+    assertThat(Booking.Provider.resolve("https://www.tablecheck.com/ja/shops/series/reserve"))
+        .map(Booking.Provider::id)
+        .contains("tablecheck");
+    assertThat(Booking.Provider.resolve("https://tablecheck.com/ja/shops/series/reserve"))
+        .map(Booking.Provider::id)
+        .contains("tablecheck");
+    assertThat(Booking.Provider.resolve("https://airrsv.net/netin/calendar"))
+        .map(Booking.Provider::id)
+        .contains("airreserve");
+    assertThat(Booking.Provider.resolve("https://reserva.be/cocomano"))
+        .map(Booking.Provider::id)
+        .contains("reserva");
+    assertThat(Booking.Provider.resolve("https://coubic.com/atsalon"))
+        .map(Booking.Provider::id)
+        .contains("stores_reserve");
+    assertThat(Booking.Provider.resolve("https://lsgqavna01biggwfmvnb.stores.jp/reserve/atsalon"))
+        .map(Booking.Provider::id)
+        .contains("stores_reserve");
+    assertThat(Booking.Provider.resolve("https://restaurant.ikyu.com/122619"))
+        .map(Booking.Provider::id)
+        .contains("ikyu_restaurant");
+  }
+
+  @Test
+  void acceptsAStoresSubdomainOnlyOnItsReservationPages() {
+    assertThat(Booking.Provider.resolve("https://lsgqavna01biggwfmvnb.stores.jp/items/123"))
+        .isEmpty();
+    assertThat(Booking.Provider.resolve("https://stores.jp/reserve/features")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://evilstores.jp/reserve/atsalon")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp.evil.example/reserve/atsalon"))
+        .isEmpty();
+    assertThat(Booking.Provider.resolve("https://evil.example/x.stores.jp/reserve/atsalon"))
+        .isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/RESERVE/atsalon")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/%72eserve/atsalon")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/reserve%2Fatsalon")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/reserve/../items/1")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/reserve/%2e%2e/items/1")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp/reserve")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://shop.stores.jp")).isEmpty();
+    assertThatThrownBy(() -> Booking.normalize("{\"url\":\"https://shop.stores.jp/items/123\"}"))
+        .isInstanceOf(ProfileException.class);
+    assertThat(Booking.normalize("{\"url\":\"https://shop.stores.jp/reserve/atsalon\"}"))
+        .contains("shop.stores.jp/reserve/atsalon");
+  }
+
+  @Test
+  void rejectsLookalikesOfTheJapaneseHosts() {
+    assertThat(Booking.Provider.resolve("https://tabelog.com.evil.example/x")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://beauty.hotpepper.jp.evil.example/x")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://evil-airrsv.net/x/calendar")).isEmpty();
+    assertThat(Booking.Provider.resolve("https://reserva.be.evil.example/x")).isEmpty();
+  }
 }

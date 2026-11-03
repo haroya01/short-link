@@ -44,6 +44,8 @@ class LinkEventsControllerTest {
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
             .countryCode("KR")
+            .regionName("Seoul")
+            .regionCode("KR-11")
             .cityName("Seoul")
             .bot(false)
             .build());
@@ -53,6 +55,8 @@ class LinkEventsControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items.length()").value(1))
         .andExpect(jsonPath("$.items[0].country").value("KR"))
+        .andExpect(jsonPath("$.items[0].region").value("Seoul"))
+        .andExpect(jsonPath("$.items[0].regionCode").value("KR-11"))
         .andExpect(jsonPath("$.items[0].city").value("Seoul"))
         .andExpect(jsonPath("$.items[0].ipMasked").value("1.2.3.*"))
         .andExpect(jsonPath("$.nextCursor").doesNotExist());

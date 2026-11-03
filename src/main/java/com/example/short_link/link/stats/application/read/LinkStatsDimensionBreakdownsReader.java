@@ -126,7 +126,7 @@ class LinkStatsDimensionBreakdownsReader {
             .toList();
     List<LinkStats.RegionClick> regions =
         clickDimensions.findTopRegionClicks(linkId.value(), TOP_SIZE).stream()
-            .map(r -> new LinkStats.RegionClick(r.getRegion(), r.getCount()))
+            .map(r -> new LinkStats.RegionClick(r.getRegion(), r.getRegionCode(), r.getCount()))
             .toList();
     List<LinkStats.CityClick> cities =
         clickDimensions.findTopCityClicks(linkId.value(), TOP_SIZE).stream()

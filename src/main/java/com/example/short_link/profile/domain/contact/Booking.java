@@ -73,14 +73,30 @@ public record Booking(String url, String title, String description, String ctaLa
         Set.of("outlook.office.com", "outlook.office365.com", "bookwithme.microsoft.com")),
     TIDYCAL("tidycal", Set.of("tidycal.com", "www.tidycal.com")),
     ACUITY("acuity", Set.of("app.acuityscheduling.com")),
-    CATCHTABLE("catchtable", Set.of("app.catchtable.co.kr", "catchtable.co.kr"));
+    CATCHTABLE("catchtable", Set.of("app.catchtable.co.kr", "catchtable.co.kr")),
+    HOTPEPPER_BEAUTY("hotpepper_beauty", Set.of("beauty.hotpepper.jp")),
+    HOTPEPPER_GOURMET("hotpepper_gourmet", Set.of("www.hotpepper.jp")),
+    TABELOG("tabelog", Set.of("tabelog.com", "s.tabelog.com")),
+    TABLECHECK("tablecheck", Set.of("www.tablecheck.com", "tablecheck.com")),
+    AIRRESERVE("airreserve", Set.of("airrsv.net")),
+    RESERVA("reserva", Set.of("reserva.be")),
+    STORES_RESERVE("stores_reserve", Set.of("coubic.com"), ".stores.jp", "/reserve/"),
+    IKYU_RESTAURANT("ikyu_restaurant", Set.of("restaurant.ikyu.com"));
 
     private final String id;
     private final Set<String> hosts;
+    private final String subdomainOf;
+    private final String subdomainPath;
 
     Provider(String id, Set<String> hosts) {
+      this(id, hosts, null, null);
+    }
+
+    Provider(String id, Set<String> hosts, String subdomainOf, String subdomainPath) {
       this.id = id;
       this.hosts = hosts;
+      this.subdomainOf = subdomainOf;
+      this.subdomainPath = subdomainPath;
     }
 
     public String id() {
@@ -103,9 +119,16 @@ public record Booking(String url, String title, String description, String ctaLa
       if (host == null || host.isBlank()) return Optional.empty();
       String h = host.toLowerCase(Locale.ROOT);
       for (Provider p : values()) {
-        if (p.hosts.contains(h)) return Optional.of(p);
+        if (p.serves(h, uri)) return Optional.of(p);
       }
       return Optional.empty();
+    }
+
+    private boolean serves(String host, URI uri) {
+      if (hosts.contains(host)) return true;
+      if (subdomainOf == null || !host.endsWith(subdomainOf)) return false;
+      String path = uri.normalize().getRawPath();
+      return path.startsWith(subdomainPath) && !path.contains("%");
     }
   }
 }
