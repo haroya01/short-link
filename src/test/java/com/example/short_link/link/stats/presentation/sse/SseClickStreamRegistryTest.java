@@ -7,7 +7,10 @@ import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -131,6 +134,38 @@ class SseClickStreamRegistryTest {
     CountingEmitter second = new CountingEmitter();
     assertThat(registry.register(new LinkId(8L), second)).isTrue();
     assertThat(registry.activeStreams(new LinkId(8L))).isEqualTo(1);
+  }
+
+  @Test
+  void heartbeatKeepsEveryLinkAndAccountStreamTalkingAndDropsDeadOnes() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    FrameEmitter link = new FrameEmitter();
+    FrameEmitter account = new FrameEmitter();
+    registry.register(new LinkId(3L), link);
+    registry.register(new LinkId(3L), new ThrowingEmitter());
+    registry.registerForUser(1L, account);
+
+    registry.heartbeat();
+
+    assertThat(link.frames).containsExactly(":\n\n");
+    assertThat(account.frames).containsExactly(":\n\n");
+    assertThat(registry.activeStreams(new LinkId(3L))).isEqualTo(1);
+  }
+
+  private static class FrameEmitter extends SseEmitter {
+    final List<String> frames = new ArrayList<>();
+
+    FrameEmitter() {
+      super(10_000L);
+    }
+
+    @Override
+    public void send(SseEventBuilder builder) {
+      frames.add(
+          builder.build().stream()
+              .map(item -> String.valueOf(item.getData()))
+              .collect(Collectors.joining()));
+    }
   }
 
   private static class CountingEmitter extends SseEmitter {

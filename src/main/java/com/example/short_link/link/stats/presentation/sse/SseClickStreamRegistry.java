@@ -11,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -121,6 +122,23 @@ public class SseClickStreamRegistry {
                     "deviceClass", nullToEmpty(event.deviceClass()),
                     "channel", nullToEmpty(event.referrerHost()),
                     "bot", event.bot())));
+  }
+
+  @Scheduled(fixedRate = 25_000, initialDelay = 25_000)
+  public void heartbeat() {
+    emittersByLinkId.values().forEach(SseClickStreamRegistry::beat);
+    emittersByUserId.values().forEach(SseClickStreamRegistry::beat);
+  }
+
+  private static void beat(List<SseEmitter> bucket) {
+    for (SseEmitter emitter : bucket) {
+      try {
+        emitter.send(SseEmitter.event().comment(""));
+      } catch (IOException | IllegalStateException e) {
+        emitter.completeWithError(e);
+        bucket.remove(emitter);
+      }
+    }
   }
 
   private void broadcast(List<SseEmitter> bucket, SseEmitter.SseEventBuilder built) {

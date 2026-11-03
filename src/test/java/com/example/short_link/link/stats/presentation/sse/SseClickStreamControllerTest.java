@@ -88,6 +88,7 @@ class SseClickStreamControllerTest {
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
+    verify(response).setHeader("X-Accel-Buffering", "no");
   }
 
   @Test
