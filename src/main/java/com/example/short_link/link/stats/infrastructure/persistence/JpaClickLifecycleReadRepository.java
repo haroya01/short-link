@@ -91,22 +91,4 @@ public interface JpaClickLifecycleReadRepository
       nativeQuery = true)
   List<com.example.short_link.link.stats.domain.projection.ClickProjections.ChannelDepthRow>
       findChannelDepth(@Param("linkId") Long linkId, @Param("limit") int limit);
-
-  @Override
-  @Query(
-      value =
-          "SELECT referrer_host AS host, UNIX_TIMESTAMP(MIN(first_at)) AS firstSeenEpoch "
-              + "FROM (SELECT referrer_host, MIN(clicked_at) AS first_at FROM click_event "
-              + "      WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
-              + "        AND referrer_host <> ''"
-              + RAW
-              + "      GROUP BY referrer_host UNION ALL "
-              + "      SELECT value, MIN(first_at) FROM click_daily_dim WHERE link_id = :linkId "
-              + "        AND dim = "
-              + ClickRollup.REFERRER_HOST
-              + " AND is_bot = 0 AND value <> '' GROUP BY value) r "
-              + "GROUP BY referrer_host ORDER BY firstSeenEpoch",
-      nativeQuery = true)
-  List<com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow>
-      findFirstSeenByReferrerHost(@Param("linkId") Long linkId);
 }

@@ -12,7 +12,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.stats.application.LinkInsights;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -35,7 +34,6 @@ class LinkStatsQueryServiceIntegrationTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkVisibilityService visibilityService;
   @Autowired private LinkStatsLifecycleReader lifecycleReader;
-  @Autowired private LinkInsights insights;
   @Autowired private LinkStatsDimensionBreakdownsReader dimensionsReader;
 
   @Test
@@ -151,20 +149,6 @@ class LinkStatsQueryServiceIntegrationTest {
         .isInstanceOf(LinkException.class);
   }
 
-  private void hostClick(LinkEntity link, String host, java.time.Instant at) {
-    clickRepository.save(
-        ClickEventEntity.builder()
-            .linkId(link.linkId())
-            .userAgent("ua")
-            .clientIp("9.9.9.9")
-            .deviceClass("mobile")
-            .referrer("https://" + host + "/x")
-            .referrerHost(host)
-            .clickedAt(at)
-            .bot(false)
-            .build());
-  }
-
   private void referrerClick(LinkEntity link, String host, String path) {
     clickRepository.save(
         ClickEventEntity.builder()
@@ -200,46 +184,31 @@ class LinkStatsQueryServiceIntegrationTest {
   }
 
   @Test
-  void channelJump_detectsHostThatAppearsLongAfterOrigin() {
-    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj"));
+  void reportCarriesJournalFactsComputedFromTheStoredClicks() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-jf1"));
     LinkEntity link =
-        linkRepository.save(new LinkEntity("https://example.com", "stcjmp", owner.getId(), null));
-    java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(3));
-    hostClick(link, "instagram.com", t0);
-    hostClick(
-        link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(30))); // 30분 — gap<3600, 건너뜀
-    hostClick(link, "reddit.com", t0.plus(java.time.Duration.ofHours(2))); // 2시간 — gap≥3600, 점프
+        linkRepository.save(new LinkEntity("https://example.com", "stjfac", owner.getId(), null));
+    for (int i = 0; i < 10; i++) {
+      clickRepository.save(
+          ClickEventEntity.builder()
+              .linkId(link.linkId())
+              .clientIp("1.1.2." + i)
+              .clientApp(i < 3 ? "kakaotalk" : null)
+              .bot(false)
+              .build());
+    }
 
-    var insight = insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()));
+    LinkStats stats = service.stats(owner.getId(), new ShortCode("stjfac"));
 
-    assertThat(insight).isPresent();
-    assertThat(insight.get().type()).isEqualTo("CHANNEL_JUMP");
-    assertThat(insight.get().data())
-        .containsEntry("origin", "instagram.com")
-        .containsEntry("jumpedTo", "reddit.com");
-  }
-
-  @Test
-  void channelJump_emptyWhenSingleHost() {
-    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj1"));
-    LinkEntity link =
-        linkRepository.save(new LinkEntity("https://example.com", "stcj1h", owner.getId(), null));
-    hostClick(link, "instagram.com", java.time.Instant.now().minus(java.time.Duration.ofHours(1)));
-
-    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
-  }
-
-  @Test
-  void channelJump_emptyWhenAllHostsWithinAnHour() {
-    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj2"));
-    LinkEntity link =
-        linkRepository.save(new LinkEntity("https://example.com", "stcj2h", owner.getId(), null));
-    java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(2));
-    hostClick(link, "instagram.com", t0);
-    hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20)));
-
-    // 두 host 지만 1시간 안에 다 나타나 채널 점프로 보지 않는다(루프가 점프 없이 끝나는 갈래).
-    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
+    assertThat(stats.insights())
+        .filteredOn(insight -> "inAppBrowser".equals(insight.code()))
+        .singleElement()
+        .satisfies(
+            insight -> {
+              assertThat(insight.params()).containsEntry("percent", 30L);
+              assertThat(insight.evidence()).isEqualTo("clientApps");
+              assertThat(insight.type()).isEqualTo("IN_APP_BROWSER");
+            });
   }
 
   @Test

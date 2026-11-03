@@ -2,7 +2,6 @@ package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow;
 import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -46,10 +45,6 @@ class LinkStatsLifecycleReader {
                   Math.round(ratio * 1000.0) / 1000.0);
             })
         .toList();
-  }
-
-  List<HostFirstSeenRow> channelFirstSeen(LinkId linkId) {
-    return clickLifecycle.findFirstSeenByReferrerHost(linkId.value());
   }
 
   LinkStats.Lifecycle lifecycle(LinkId linkId) {

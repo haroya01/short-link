@@ -5070,9 +5070,14 @@
       "skipped" : "integer(int32)"
     },
     "Insight" : {
+      "code" : "string",
       "data" : "map<object>",
+      "evidence" : "string",
       "message" : "string",
+      "params" : "map<object>",
+      "ratio" : "number(double)",
       "severity" : "string",
+      "spark" : "[integer(int64)]",
       "type" : "string"
     },
     "InviteToRoomRequest" : {

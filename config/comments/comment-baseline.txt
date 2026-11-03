@@ -324,7 +324,6 @@ src/main/java/com/example/short_link/link/stats/application/ClickBuffer.java=1
 src/main/java/com/example/short_link/link/stats/application/ClickContext.java=2
 src/main/java/com/example/short_link/link/stats/application/ClickFlusher.java=4
 src/main/java/com/example/short_link/link/stats/application/ClickRetentionProperties.java=1
-src/main/java/com/example/short_link/link/stats/application/LinkInsights.java=3
 src/main/java/com/example/short_link/link/stats/application/VisitorSketch.java=1
 src/main/java/com/example/short_link/link/stats/application/read/LinkStatsDimensionBreakdownsReader.java=2
 src/main/java/com/example/short_link/link/stats/application/read/LinkStatsLifecycleReader.java=1
