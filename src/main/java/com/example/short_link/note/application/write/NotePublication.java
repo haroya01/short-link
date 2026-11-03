@@ -105,7 +105,8 @@ final class NotePublication {
                 note.excerpt(),
                 null,
                 null,
-                note.conversation()));
+                note.conversation(),
+                note.getRoomId()));
       }
     }
     return told;

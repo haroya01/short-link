@@ -23,7 +23,11 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
   @Test
   void likeNotificationKeepsItsPostButHidesTheActorAfterAccountDeletion() throws Exception {
     String avatarUrl = "https://example.com/actor-" + stranger.getId() + ".png";
-    jdbc.update("UPDATE users SET avatar_url = ? WHERE id = ?", avatarUrl, stranger.getId());
+    jdbc.update(
+        "UPDATE users SET avatar_url = ?, display_name = ? WHERE id = ?",
+        avatarUrl,
+        "낯선 이",
+        stranger.getId());
     long postId =
         body(call(
                 "notification-actor-post-create",
@@ -72,6 +76,11 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
     assertThat(before.get(0).path("actorId").asLong()).isEqualTo(stranger.getId());
     assertThat(before.get(0).path("actorUsername").asText()).isEqualTo(stranger.getUsername());
     assertThat(before.get(0).path("actorAvatarUrl").asText()).isEqualTo(avatarUrl);
+    assertThat(before.get(0).path("actorDisplayName").asString()).isEqualTo("낯선 이");
+    assertThat(before.get(0).path("actorEmojis").isArray()).isTrue();
+    assertThat(before.get(0).path("actorEmojis")).isEmpty();
+    assertThat(before.get(0).path("actors").get(0).path("displayName").asString())
+        .isEqualTo("낯선 이");
 
     call(
         "notification-actor-account-delete",
@@ -102,6 +111,7 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
     assertThat(retained.path("actorId").isNull()).isTrue();
     assertThat(retained.path("actorUsername").isNull()).isTrue();
     assertThat(retained.path("actorAvatarUrl").isNull()).isTrue();
+    assertThat(retained.path("actorDisplayName").isNull()).isTrue();
     assertThat(retained.path("read").asBoolean()).isFalse();
   }
 
@@ -164,6 +174,8 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
     assertThat(requests).hasSize(1);
     assertThat(requests.get(0).path("actorUserId").asLong()).isEqualTo(stranger.getId());
     assertThat(requests.get(0).path("username").asString()).isEqualTo(stranger.getUsername());
+    assertThat(requests.get(0).path("displayName").isNull()).isTrue();
+    assertThat(requests.get(0).path("emojis").isArray()).isTrue();
     assertThat(requests.get(0).path("count").asLong()).isEqualTo(1);
 
     call(

@@ -6,7 +6,9 @@ import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.infrastructure.event.StoredNotices.Face;
 import com.example.short_link.notification.infrastructure.event.StoredNotices.Row;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -66,6 +68,38 @@ class BlogInteractionNotificationListenerTest {
         .containsExactly(
             new Row(9L, NotificationType.FOLLOW, 2L, null, null, "FOLLOW:2:null:" + today()),
             new Row(9L, NotificationType.FOLLOW, 3L, null, null, "FOLLOW:3:null:" + today()));
+  }
+
+  @Test
+  void eachLikeInAGroupPushesItsOwnLikerAndAgainNeverPushesTwice() {
+    stored.user(2L, "alice").user(3L, "bob");
+
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "my-post", "Hi", AT));
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "my-post", "Hi", AT));
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 3L, 10L, "my-post", "Hi", AT));
+
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face("LIKE", new PushActor(2L, null, "alice", null, null), "post:10", false),
+            new Face("LIKE", new PushActor(3L, null, "bob", null, null), "post:10", false));
+  }
+
+  @Test
+  void aCommentIsAConversationOnItsPostAndAFollowHasNoConversation() {
+    stored.user(2L, "alice");
+
+    listener()
+        .onBlogInteraction(BlogInteractionEvent.comment(9L, 2L, 10L, "my-post", "Hi", 55L, AT));
+    listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
+    listener()
+        .onBlogInteraction(BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "tokyo", "Tokyo", AT));
+
+    PushActor alice = new PushActor(2L, null, "alice", null, null);
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face("COMMENT", alice, "post:10", true),
+            new Face("FOLLOW", alice, null, false),
+            new Face("SERIES_SUBSCRIBE", alice, "series:4", false));
   }
 
   @Test

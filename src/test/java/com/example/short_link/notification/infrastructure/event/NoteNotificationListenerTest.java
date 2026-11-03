@@ -10,9 +10,12 @@ import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
+import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
+import com.example.short_link.notification.infrastructure.event.StoredNotices.Face;
 import com.example.short_link.notification.infrastructure.event.StoredNotices.Push;
 import com.example.short_link.notification.infrastructure.event.StoredNotices.Row;
 import java.time.LocalDate;
@@ -155,6 +158,89 @@ class NoteNotificationListenerTest {
   }
 
   @Test
+  void aReplyComesAsAMessageFromItsWriterInTheRoomOrThreadItBelongsTo() {
+    stored.member(
+        new NotificationActor(
+            2L, "alice", "https://cdn.kurl.example/avatars/2/a.jpg", null, null, "앨리스", List.of()));
+
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.REPLY,
+                9L,
+                Actor.member(2L),
+                5L,
+                "hi",
+                12L,
+                "me too",
+                40L,
+                3L));
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.REPLY,
+                9L,
+                Actor.member(2L),
+                6L,
+                "hey",
+                13L,
+                "same",
+                41L));
+
+    PushActor alice =
+        new PushActor(2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg");
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face("NOTE_REPLY", alice, "room:3", true),
+            new Face("NOTE_REPLY", alice, "note:41", true));
+  }
+
+  @Test
+  void aLikeOrQuoteShowsWhoDidItWithoutBeingAMessage() {
+    stored.remote(
+        new NotificationActor(
+            null,
+            "ged@m.example",
+            "https://files.m.example/ged.png",
+            "https://m.example/@ged",
+            7L,
+            "Ged",
+            List.of()));
+    stored.user(2L, "alice");
+
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.LIKE, 9L, Actor.remote(7L), 5L, "hi", null, null, 40L));
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.QUOTE, 9L, Actor.member(2L), 5L, "hi", 14L, "this", 40L));
+
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face(
+                "NOTE_LIKE",
+                new PushActor(null, 7L, "ged@m.example", "Ged", null),
+                "note:40",
+                false),
+            new Face("NOTE_QUOTE", new PushActor(2L, null, "alice", null, null), "note:40", false));
+  }
+
+  @Test
+  void anEndedPollShowsItsAuthorToVotersButNotToThemselves() {
+    stored.user(7L, "pollster").user(10L, "voter");
+
+    listener().onPollEnded(new NotePollEndedEvent(5L, 7L, "어디서 볼까?", List.of(7L, 10L)));
+
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face("NOTE_POLL", null, "note:5", false),
+            new Face(
+                "NOTE_POLL", new PushActor(7L, null, "pollster", null, null), "note:5", false));
+  }
+
+  @Test
   void aNewNoteTellsTheFollowersWhoAskedToHearOfIt() {
     when(followers.noteSubscribersOf(7L)).thenReturn(List.of(10L, 11L));
 
@@ -166,6 +252,19 @@ class NoteNotificationListenerTest {
             new Row(10L, NotificationType.NOTE_POST, 7L, null, note, null),
             new Row(11L, NotificationType.NOTE_POST, 7L, null, note, null));
     assertThat(stored.silenceChecks()).isZero();
+  }
+
+  @Test
+  void aNewNoteIsPushedToEveryFollowerOnceWithItsAuthorsFace() {
+    stored.user(7L, "writer").user(10L, "a").user(11L, "b");
+    when(followers.noteSubscribersOf(7L)).thenReturn(List.of(10L, 11L));
+
+    listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
+
+    assertThat(stored.pushes()).extracting(Push::recipients).containsExactly(List.of(10L, 11L));
+    assertThat(stored.faces())
+        .containsExactly(
+            new Face("NOTE_POST", new PushActor(7L, null, "writer", null, null), "note:5", false));
   }
 
   @Test

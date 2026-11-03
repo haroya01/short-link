@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
@@ -122,6 +123,36 @@ class NotePublicationTest {
         .extracting(event -> ((NoteInteractionEvent) event).type())
         .containsExactly(NoteInteractionEvent.Type.MENTION);
     assertThat(events).noneMatch(NoteBroadcastEvent.class::isInstance);
+  }
+
+  @Test
+  void aReplyOrMentionInARoomCarriesTheRoomAndTheThreadItsRootStarted() {
+    NoteEntity parent = note(50L, 9L, "방 질문", null);
+    parent.postIn(3L);
+    NoteEntity inRoom = note(100L, 7L, "@bob 방에서", parent);
+    inRoom.showTo(NoteVisibility.ROOM);
+    NoteEntity question = note(60L, 9L, "질문", null);
+    NoteEntity outside = note(101L, 7L, "@bob 밖에서", question);
+
+    List<Object> roomEvents =
+        told(inRoom, parent, null, null, List.of(BOB), Set.of(8L, 9L), false, List.of());
+    List<Object> outsideEvents =
+        told(outside, question, null, null, List.of(BOB), null, false, List.of());
+
+    assertThat(roomEvents)
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .extracting(
+            event -> ((NoteInteractionEvent) event).type(),
+            event -> ((NoteInteractionEvent) event).conversationId(),
+            event -> ((NoteInteractionEvent) event).roomId())
+        .containsExactly(
+            tuple(NoteInteractionEvent.Type.REPLY, 50L, 3L),
+            tuple(NoteInteractionEvent.Type.MENTION, 50L, 3L));
+    assertThat(outsideEvents)
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .extracting(event -> ((NoteInteractionEvent) event).roomId())
+        .hasSize(2)
+        .containsOnlyNulls();
   }
 
   @Test

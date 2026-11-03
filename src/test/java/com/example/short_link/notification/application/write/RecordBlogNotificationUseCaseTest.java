@@ -12,6 +12,7 @@ import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
@@ -31,12 +32,15 @@ import com.example.short_link.notification.domain.repository.NotificationUserRea
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -114,6 +118,11 @@ class RecordBlogNotificationUseCaseTest {
                     true,
                     false,
                     false));
+  }
+
+  private void member(long id, String username) {
+    when(actorReader.resolve(Set.of(id)))
+        .thenReturn(Map.of(id, new NotificationActor(id, username, null)));
   }
 
   private RecordBlogNotificationUseCase useCase() {
@@ -276,8 +285,7 @@ class RecordBlogNotificationUseCaseTest {
   void aReplyPushOpensTheReplyUnderItsWriter() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -339,9 +347,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushMirrorsEveryTypeWithActorName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
 
     Map<NotificationType, String> expected =
         Map.ofEntries(
@@ -396,8 +402,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushCarriesTypeAndRouteOfTheTarget() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -452,8 +457,7 @@ class RecordBlogNotificationUseCaseTest {
   void highlightReplyPushPointsAtTheHighlight() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -475,8 +479,7 @@ class RecordBlogNotificationUseCaseTest {
   void quotesAcrossPostsAndNotesOpenTheActorsWork() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -506,8 +509,7 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void fannedOutNewPostRoutesToTheActorsPost() {
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findAllByIdIn(List.of(7L, 8L)))
         .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ko")));
 
@@ -524,6 +526,66 @@ class RecordBlogNotificationUseCaseTest {
         .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
     assertThat(pushed.getValue().route())
         .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null, null));
+  }
+
+  @ParameterizedTest
+  @EnumSource(NotificationType.class)
+  void onlySomeoneAddressingTheRecipientIsPushedAsAConversation(NotificationType type) {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+
+    useCase().record(9L, type, Actor.member(2L), null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().actor()).isEqualTo(new PushActor(2L, null, "yuki", null, null));
+    assertThat(pushed.getValue().communication())
+        .isEqualTo(
+            EnumSet.of(
+                    NotificationType.COMMENT,
+                    NotificationType.REPLY,
+                    NotificationType.MENTION,
+                    NotificationType.NOTE_REPLY,
+                    NotificationType.NOTE_MENTION)
+                .contains(type));
+  }
+
+  @Test
+  void aConversationWithNobodyToShowIsAPlainPush() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().actor()).isNull();
+    assertThat(pushed.getValue().communication()).isFalse();
+  }
+
+  @Test
+  void aFanOutLooksItsActorUpOnceHoweverManyLanguagesItIsPushedIn() {
+    member(2L, "yuki");
+    when(userRepository.findAllByIdIn(List.of(7L, 8L)))
+        .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ja")));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 8L),
+            NotificationType.NEW_POST,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "fresh", "새 글", null));
+
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .sendToAll(
+            org.mockito.ArgumentMatchers.anyCollection(),
+            org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
+    org.mockito.Mockito.verify(actorReader).resolve(Set.of(2L));
   }
 
   @Test
@@ -563,9 +625,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushIsLocalizedToRecipientLocale() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
     NotificationUser recipient = org.mockito.Mockito.mock(NotificationUser.class);
     when(recipient.locale()).thenReturn("ja");
     when(userRepository.findById(9L)).thenReturn(Optional.of(recipient));
@@ -587,9 +647,7 @@ class RecordBlogNotificationUseCaseTest {
 
     useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
-    NotificationUser nameless = org.mockito.Mockito.mock(NotificationUser.class);
-    when(nameless.username()).thenReturn(null);
-    when(userRepository.findById(3L)).thenReturn(Optional.of(nameless));
+    member(3L, null);
 
     useCase().record(9L, NotificationType.FOLLOW, Actor.member(3L), null);
 
@@ -745,9 +803,7 @@ class RecordBlogNotificationUseCaseTest {
   void connectedSerializesCollectionRefAndSubtitlesWithCollectionName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
 
     useCase()
         .record(
@@ -884,8 +940,7 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void aReplyTrippingAWarnFilterIsPushedWithoutItsText() {
     filtersOf(9L, new KeywordFilter("스포일러", false, false));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
 
     replyFrom2To9("결말 스포일러 있음");
 

@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.user.application.push.DevicePushTargets;
@@ -13,7 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
@@ -168,6 +171,7 @@ public class ApnsPushSender implements PushSender {
     aps.put("alert", alert);
     aps.put("sound", "default");
     if (message.shortCode() != null) aps.put("category", LINK_STATS_CATEGORY);
+    aps.putAll(conversationKeys(message));
 
     var root = new java.util.LinkedHashMap<String, Object>();
     root.put("aps", aps);
@@ -184,7 +188,30 @@ public class ApnsPushSender implements PushSender {
       if (route.highlightId() != null) root.put("highlightId", route.highlightId());
       if (route.noteId() != null) root.put("noteId", route.noteId());
     }
+    root.putAll(senderKeys(message));
     return jsonMapper.writeValueAsString(root);
+  }
+
+  private static Map<String, Object> conversationKeys(PushMessage message) {
+    var keys = new LinkedHashMap<String, Object>();
+    if (message.actor() != null) keys.put("mutable-content", 1);
+    if (message.threadId() != null) keys.put("thread-id", message.threadId());
+    return keys;
+  }
+
+  private static Map<String, Object> senderKeys(PushMessage message) {
+    PushActor actor = message.actor();
+    if (actor == null) return Map.of();
+    var from = new LinkedHashMap<String, Object>();
+    if (actor.id() != null) from.put("id", actor.id());
+    if (actor.remoteId() != null) from.put("remoteId", actor.remoteId());
+    from.put("username", actor.username());
+    if (actor.displayName() != null) from.put("displayName", actor.displayName());
+    if (actor.avatarUrl() != null) from.put("avatarUrl", actor.avatarUrl());
+    var keys = new LinkedHashMap<String, Object>();
+    keys.put("actor", from);
+    if (message.communication()) keys.put("communication", true);
+    return keys;
   }
 
   private static String tail(String token) {

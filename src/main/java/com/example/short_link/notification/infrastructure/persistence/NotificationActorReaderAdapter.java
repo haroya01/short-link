@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.persistence;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import jakarta.persistence.EntityManager;
@@ -23,7 +24,8 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
     }
     List<?> rows =
         em.createNativeQuery(
-                "SELECT id, username, avatar_url FROM users WHERE id IN (:ids) AND deleted_at IS NULL")
+                "SELECT id, username, avatar_url, display_name FROM users"
+                    + " WHERE id IN (:ids) AND deleted_at IS NULL")
             .setParameter("ids", userIds)
             .getResultList();
     Map<Long, NotificationActor> resolved = new HashMap<>();
@@ -32,7 +34,9 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
       Long id = ((Number) cols[0]).longValue();
       String username = cols[1] == null ? null : cols[1].toString();
       String avatarUrl = cols[2] == null ? null : cols[2].toString();
-      resolved.put(id, new NotificationActor(id, username, avatarUrl));
+      String displayName = cols[3] == null ? null : cols[3].toString();
+      resolved.put(
+          id, new NotificationActor(id, username, avatarUrl, null, null, displayName, List.of()));
     }
     return resolved;
   }
@@ -44,8 +48,8 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
     }
     List<?> rows =
         em.createNativeQuery(
-                "SELECT id, username, domain, avatar_url, profile_url, actor_uri"
-                    + " FROM federation_remote_actor WHERE id IN (:ids)")
+                "SELECT id, username, domain, avatar_url, profile_url, actor_uri, display_name,"
+                    + " emojis FROM federation_remote_actor WHERE id IN (:ids)")
             .setParameter("ids", remoteActorIds)
             .getResultList();
     Map<Long, NotificationActor> resolved = new HashMap<>();
@@ -56,7 +60,11 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
       String handle = cols[1] == null ? domain : cols[1] + "@" + domain;
       String avatarUrl = cols[3] == null ? null : cols[3].toString();
       String profileUrl = cols[4] == null ? cols[5].toString() : cols[4].toString();
-      resolved.put(id, new NotificationActor(null, handle, avatarUrl, profileUrl, id));
+      String displayName = cols[6] == null ? null : cols[6].toString();
+      List<CustomEmoji> emojis =
+          CustomEmoji.fromColumn(cols[7] == null ? null : cols[7].toString());
+      resolved.put(
+          id, new NotificationActor(null, handle, avatarUrl, profileUrl, id, displayName, emojis));
     }
     return resolved;
   }
