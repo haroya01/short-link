@@ -7,6 +7,7 @@ import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.push.PushActor;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.infrastructure.event.StoredNotices.Face;
 import com.example.short_link.notification.infrastructure.event.StoredNotices.Row;
@@ -80,8 +81,8 @@ class BlogInteractionNotificationListenerTest {
 
     assertThat(stored.faces())
         .containsExactly(
-            new Face("LIKE", new PushActor(2L, null, "alice", null, null, false), "post:10"),
-            new Face("LIKE", new PushActor(3L, null, "bob", null, null, false), "post:10"));
+            new Face("LIKE", new PushActor(2L, null, "alice", null, null, null), "post:10"),
+            new Face("LIKE", new PushActor(3L, null, "bob", null, null, null), "post:10"));
   }
 
   @Test
@@ -94,8 +95,9 @@ class BlogInteractionNotificationListenerTest {
     listener()
         .onBlogInteraction(BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "tokyo", "Tokyo", AT));
 
-    PushActor speaking = new PushActor(2L, null, "alice", null, null, true);
-    PushActor acting = new PushActor(2L, null, "alice", null, null, false);
+    PushActor speaking =
+        new PushActor(2L, null, "alice", null, null, new PushSpeech("댓글을 남겼습니다", "Hi"));
+    PushActor acting = new PushActor(2L, null, "alice", null, null, null);
     assertThat(stored.faces())
         .containsExactly(
             new Face("COMMENT", speaking, "post:10"),

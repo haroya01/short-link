@@ -4,6 +4,7 @@ import com.example.short_link.notification.application.push.ApnsProperties;
 import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
 import java.net.URI;
@@ -210,7 +211,12 @@ public class ApnsPushSender implements PushSender {
     if (actor.avatarUrl() != null) from.put("avatarUrl", actor.avatarUrl());
     var keys = new LinkedHashMap<String, Object>();
     keys.put("actor", from);
-    if (actor.speaking()) keys.put("communication", true);
+    PushSpeech speech = actor.speech();
+    if (speech != null) {
+      keys.put("communication", true);
+      keys.put("text", speech.text());
+      keys.put("context", speech.context());
+    }
     return keys;
   }
 

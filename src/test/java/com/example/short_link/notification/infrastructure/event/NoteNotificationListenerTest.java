@@ -12,6 +12,7 @@ import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
@@ -162,6 +163,7 @@ class NoteNotificationListenerTest {
     stored.member(
         new NotificationActor(
             2L, "alice", "https://cdn.kurl.example/avatars/2/a.jpg", null, null, "앨리스", List.of()));
+    stored.room(3L, "도쿄 모임");
 
     listener()
         .onNoteInteraction(
@@ -187,11 +189,17 @@ class NoteNotificationListenerTest {
                 "same",
                 41L));
 
-    PushActor alice =
-        new PushActor(2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg", true);
+    String avatar = "https://cdn.kurl.example/avatars/2/a.jpg";
     assertThat(stored.faces())
         .containsExactly(
-            new Face("NOTE_REPLY", alice, "room:3"), new Face("NOTE_REPLY", alice, "note:41"));
+            new Face(
+                "NOTE_REPLY",
+                new PushActor(2L, null, "alice", "앨리스", avatar, new PushSpeech("me too", "도쿄 모임")),
+                "room:3"),
+            new Face(
+                "NOTE_REPLY",
+                new PushActor(2L, null, "alice", "앨리스", avatar, new PushSpeech("same", "내 노트에 답글")),
+                "note:41"));
   }
 
   @Test
@@ -220,9 +228,9 @@ class NoteNotificationListenerTest {
         .containsExactly(
             new Face(
                 "NOTE_LIKE",
-                new PushActor(null, 7L, "ged@m.example", "Ged", null, false),
+                new PushActor(null, 7L, "ged@m.example", "Ged", null, null),
                 "note:40"),
-            new Face("NOTE_QUOTE", new PushActor(2L, null, "alice", null, null, false), "note:40"));
+            new Face("NOTE_QUOTE", new PushActor(2L, null, "alice", null, null, null), "note:40"));
   }
 
   @Test
@@ -234,8 +242,7 @@ class NoteNotificationListenerTest {
     assertThat(stored.faces())
         .containsExactly(
             new Face("NOTE_POLL", null, "note:5"),
-            new Face(
-                "NOTE_POLL", new PushActor(7L, null, "pollster", null, null, false), "note:5"));
+            new Face("NOTE_POLL", new PushActor(7L, null, "pollster", null, null, null), "note:5"));
   }
 
   @Test
@@ -262,7 +269,7 @@ class NoteNotificationListenerTest {
     assertThat(stored.pushes()).extracting(Push::recipients).containsExactly(List.of(10L, 11L));
     assertThat(stored.faces())
         .containsExactly(
-            new Face("NOTE_POST", new PushActor(7L, null, "writer", null, null, false), "note:5"));
+            new Face("NOTE_POST", new PushActor(7L, null, "writer", null, null, null), "note:5"));
   }
 
   @Test

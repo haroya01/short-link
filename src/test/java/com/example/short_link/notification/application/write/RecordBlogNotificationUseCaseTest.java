@@ -16,6 +16,7 @@ import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -28,6 +29,7 @@ import com.example.short_link.notification.domain.repository.NotificationActorRe
 import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import com.example.short_link.notification.domain.repository.NotificationRoomReader;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -75,6 +77,9 @@ class RecordBlogNotificationUseCaseTest {
   private NotificationKeywordFilterReader keywordFilters;
 
   @Mock private UserBlockChecker blocks;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private NotificationRoomReader rooms;
 
   private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
@@ -138,6 +143,7 @@ class RecordBlogNotificationUseCaseTest {
         policies,
         keywordFilters,
         blocks,
+        rooms,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -541,21 +547,88 @@ class RecordBlogNotificationUseCaseTest {
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
     org.mockito.Mockito.verify(pushSender)
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
-    assertThat(pushed.getValue().actor())
+    PushActor actor = pushed.getValue().actor();
+    assertThat(actor.id()).isEqualTo(2L);
+    assertThat(actor.username()).isEqualTo("yuki");
+    assertThat(actor.speech() != null)
         .isEqualTo(
-            new PushActor(
-                2L,
-                null,
-                "yuki",
-                null,
-                null,
-                EnumSet.of(
-                        NotificationType.COMMENT,
-                        NotificationType.REPLY,
-                        NotificationType.MENTION,
-                        NotificationType.NOTE_REPLY,
-                        NotificationType.NOTE_MENTION)
-                    .contains(type)));
+            EnumSet.of(
+                    NotificationType.COMMENT,
+                    NotificationType.REPLY,
+                    NotificationType.MENTION,
+                    NotificationType.NOTE_REPLY,
+                    NotificationType.NOTE_MENTION)
+                .contains(type));
+  }
+
+  @Test
+  void aReplySpeaksItsWordsUnderTheRoomItWasWrittenIn() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+    when(rooms.name(3L)).thenReturn(Optional.of("도쿄 모임"));
+
+    NotificationNoteRef reply = new NotificationNoteRef(5L, "내 노트", 12L, "나도 그래");
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, 3L);
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, 4L);
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(3))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(message -> message.actor().speech(), PushSender.PushMessage::threadId)
+        .containsExactly(
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "도쿄 모임"), "room:3"),
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "내 노트에 답글"), "room:4"),
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "내 노트에 답글"), "note:40"));
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::body)
+        .containsOnly("yuki님이 노트에 답글을 남겼습니다");
+  }
+
+  @Test
+  void aCommentWhoseWordsNoPushCarriesSaysWhatHappenedUnderThePostsTitle() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ja")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.COMMENT,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "tokyo", "도쿄 산책", null, 55L, null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_MENTION,
+            Actor.member(2L),
+            new NotificationNoteRef(6L, "@me 여기", null, null));
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(message -> message.actor().speech())
+        .containsExactly(
+            new PushSpeech("コメントしました", "도쿄 산책"), new PushSpeech("@me 여기", "ノートでのメンション"));
+  }
+
+  @Test
+  void onlyAConversationShownWithItsSpeakerLooksUpTheRoomsName() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    NotificationNoteRef note = new NotificationNoteRef(5L, "내 노트", null, null);
+
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), note, null, 40L, 3L);
+    member(2L, "yuki");
+    useCase().record(9L, NotificationType.NOTE_LIKE, Actor.member(2L), note, null, 40L, 3L);
+
+    org.mockito.Mockito.verifyNoInteractions(rooms);
   }
 
   @Test
@@ -958,6 +1031,8 @@ class RecordBlogNotificationUseCaseTest {
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
     assertThat(pushed.getValue().subtitle()).isNull();
     assertThat(pushed.getValue().body()).isEqualTo("yuki님이 노트에 답글을 남겼습니다");
+    assertThat(pushed.getValue().actor().speech())
+        .isEqualTo(new PushSpeech("노트에 답글을 남겼습니다", "내 노트에 답글"));
   }
 
   @Test

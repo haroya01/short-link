@@ -69,6 +69,7 @@ final class StoredNotices {
   private final Map<Long, NotificationUser> users = new HashMap<>();
   private final Map<Long, NotificationActor> members = new HashMap<>();
   private final Map<Long, NotificationActor> remotes = new HashMap<>();
+  private final Map<Long, String> rooms = new HashMap<>();
   private final Set<List<Object>> silenced = new HashSet<>();
   private int userLookups;
   private int silenceChecks;
@@ -169,6 +170,7 @@ final class StoredNotices {
             new AcceptingPolicies(),
             (userIds, now) -> Map.of(),
             blocks,
+            roomId -> Optional.ofNullable(rooms.get(roomId)),
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -184,6 +186,10 @@ final class StoredNotices {
     users.put(actor.userId(), new NotificationUser(actor.userId(), actor.username(), "ko"));
     members.put(actor.userId(), actor);
     return this;
+  }
+
+  void room(long id, String name) {
+    rooms.put(id, name);
   }
 
   StoredNotices remote(NotificationActor actor) {

@@ -16,6 +16,7 @@ import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
@@ -339,7 +340,12 @@ class ApnsPushSenderTest {
                     PushApp.BLOG,
                     PushRoute.toNote("alice", "alice", 815L),
                     new PushActor(
-                        7L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/7/a.jpg", true),
+                        7L,
+                        null,
+                        "alice",
+                        "앨리스",
+                        "https://cdn.kurl.example/avatars/7/a.jpg",
+                        new PushSpeech("나도 그래", "도쿄 모임")),
                     "room:3"));
 
     assertThat(payload)
@@ -349,7 +355,7 @@ class ApnsPushSenderTest {
                 + "\"thread-id\":\"room:3\"},\"type\":\"NOTE_REPLY\",\"actorUsername\":\"alice\","
                 + "\"ownerUsername\":\"alice\",\"noteId\":815,\"actor\":{\"id\":7,\"username\":\"alice\","
                 + "\"displayName\":\"앨리스\",\"avatarUrl\":\"https://cdn.kurl.example/avatars/7/a.jpg\"},"
-                + "\"communication\":true}");
+                + "\"communication\":true,\"text\":\"나도 그래\",\"context\":\"도쿄 모임\"}");
   }
 
   @Test
@@ -365,7 +371,7 @@ class ApnsPushSenderTest {
                     null,
                     PushApp.BLOG,
                     PushRoute.toPost("yuki", "me", "my-post", null, null),
-                    new PushActor(2L, null, "yuki", null, null, false),
+                    new PushActor(2L, null, "yuki", null, null, null),
                     "post:10"));
 
     assertThat(payload)
@@ -389,13 +395,16 @@ class ApnsPushSenderTest {
                     null,
                     PushApp.BLOG,
                     new PushRoute(null, "me", null, null, null, null, null, 5L),
-                    new PushActor(null, 42L, "ged@m.example", "Ged", null, true),
+                    new PushActor(
+                        null, 42L, "ged@m.example", "Ged", null, new PushSpeech("hi", "노트에서 멘션")),
                     "note:5"));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("actor").toString())
         .isEqualTo("{\"remoteId\":42,\"username\":\"ged@m.example\",\"displayName\":\"Ged\"}");
     assertThat(root.get("communication").asBoolean()).isTrue();
+    assertThat(root.get("text").asString()).isEqualTo("hi");
+    assertThat(root.get("context").asString()).isEqualTo("노트에서 멘션");
     assertThat(root.has("actorUsername")).isFalse();
   }
 

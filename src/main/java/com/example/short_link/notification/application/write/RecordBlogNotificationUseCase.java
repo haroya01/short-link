@@ -15,6 +15,7 @@ import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -26,6 +27,7 @@ import com.example.short_link.notification.domain.repository.NotificationActorRe
 import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import com.example.short_link.notification.domain.repository.NotificationRoomReader;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -60,14 +62,17 @@ public class RecordBlogNotificationUseCase {
   private final NotificationPolicyRepository policies;
   private final NotificationKeywordFilterReader keywordFilters;
   private final UserBlockChecker blocks;
+  private final NotificationRoomReader rooms;
   private final Clock clock;
+
+  private record Conversation(String threadId, Long roomId) {}
 
   // A recipient who silences the actor, their server or the conversation hears nothing of it.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Actor actor, NotificationTarget payload) {
     if (!silenced(SilenceCheck.of(recipientUserId, actor))) {
-      write(recipientUserId, type, actor, payload, null, thread(payload));
+      write(recipientUserId, type, actor, payload, null, conversation(payload));
     }
   }
 
@@ -79,7 +84,7 @@ public class RecordBlogNotificationUseCase {
       NotificationTarget payload,
       String groupKey) {
     if (!silenced(SilenceCheck.of(recipientUserId, actor))) {
-      write(recipientUserId, type, actor, payload, groupKey, thread(payload));
+      write(recipientUserId, type, actor, payload, groupKey, conversation(payload));
     }
   }
 
@@ -94,7 +99,12 @@ public class RecordBlogNotificationUseCase {
       Long roomId) {
     if (!silenced(SilenceCheck.of(recipientUserId, actor).inConversation(conversationId))) {
       write(
-          recipientUserId, type, actor, payload, groupKey, thread(conversationId, roomId, payload));
+          recipientUserId,
+          type,
+          actor,
+          payload,
+          groupKey,
+          conversation(conversationId, roomId, payload));
     }
   }
 
@@ -112,7 +122,7 @@ public class RecordBlogNotificationUseCase {
       Actor actor,
       NotificationTarget payload,
       String groupKey,
-      String threadId) {
+      Conversation conversation) {
     NotificationPolicyLevel verdict = verdict(recipientUserId, type, actor, payload);
     if (verdict == NotificationPolicyLevel.DROP) {
       return;
@@ -155,7 +165,7 @@ public class RecordBlogNotificationUseCase {
             Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
             recipient.map(NotificationUser::username).orElse(null),
             shownTo(recipientUserId, sender),
-            threadId));
+            conversation));
   }
 
   private static NotificationActor shownTo(Long recipientUserId, NotificationActor sender) {
@@ -249,7 +259,7 @@ public class RecordBlogNotificationUseCase {
                         user -> keywords.get(user.id()) != KeywordVerdict.WARN,
                         Collectors.mapping(NotificationUser::id, Collectors.toList()))));
     NotificationActor sender = byLocale.isEmpty() ? null : resolve(actor);
-    String threadId = thread(payload);
+    Conversation conversation = conversation(payload);
     byLocale.forEach(
         (tag, byQuote) ->
             byQuote.forEach(
@@ -265,7 +275,7 @@ public class RecordBlogNotificationUseCase {
                             Locale.forLanguageTag(tag),
                             null,
                             sender,
-                            threadId));
+                            conversation));
                   }
                 }));
   }
@@ -287,7 +297,7 @@ public class RecordBlogNotificationUseCase {
       Locale locale,
       String recipientUsername,
       NotificationActor shown,
-      String threadId) {
+      Conversation conversation) {
     String actorUsername = sender == null || sender.userId() == null ? null : sender.username();
     String actorName = sender != null && sender.username() != null ? sender.username() : "kurl";
     String subtitle = payload == null || !quoted ? null : payload.pushSubtitle();
@@ -303,8 +313,55 @@ public class RecordBlogNotificationUseCase {
         null,
         PushApp.BLOG,
         route(type, actorUsername, recipientUsername, payload),
-        PushActor.of(shown, type.inMentions()),
-        threadId);
+        PushActor.of(
+            shown, shown == null ? null : speech(type, payload, quoted, locale, conversation)),
+        conversation.threadId());
+  }
+
+  private PushSpeech speech(
+      NotificationType type,
+      NotificationTarget payload,
+      boolean quoted,
+      Locale locale,
+      Conversation conversation) {
+    if (!type.inMentions()) {
+      return null;
+    }
+    String said =
+        quoted && payload instanceof NotificationNoteRef note ? note.pushSubtitle() : null;
+    String text =
+        said != null && !said.isBlank() ? said : pushText("notification.push.text.", type, locale);
+    return new PushSpeech(text, context(type, payload, locale, conversation));
+  }
+
+  private String context(
+      NotificationType type, NotificationTarget payload, Locale locale, Conversation conversation) {
+    Optional<String> room =
+        conversation.roomId() == null ? Optional.empty() : rooms.name(conversation.roomId());
+    if (room.isPresent()) {
+      return room.get();
+    }
+    return payload instanceof NotificationPostRef post && post.title() != null
+        ? post.title()
+        : pushText("notification.push.context.", type, locale);
+  }
+
+  private String pushText(String prefix, NotificationType type, Locale locale) {
+    return messageSource.getMessage(prefix + type.name(), null, locale);
+  }
+
+  private static Conversation conversation(NotificationTarget payload) {
+    return new Conversation(thread(payload), null);
+  }
+
+  private static Conversation conversation(
+      Long conversationId, Long roomId, NotificationTarget payload) {
+    if (roomId != null) {
+      return new Conversation(thread("room", roomId), roomId);
+    }
+    return conversationId != null
+        ? new Conversation(thread("note", conversationId), null)
+        : conversation(payload);
   }
 
   private static String thread(NotificationTarget payload) {
@@ -315,13 +372,6 @@ public class RecordBlogNotificationUseCase {
       case NotificationNoteRef note -> thread("note", note.noteId());
       case null -> null;
     };
-  }
-
-  private static String thread(Long conversationId, Long roomId, NotificationTarget payload) {
-    if (roomId != null) {
-      return thread("room", roomId);
-    }
-    return conversationId != null ? thread("note", conversationId) : thread(payload);
   }
 
   private static String thread(String kind, Long id) {

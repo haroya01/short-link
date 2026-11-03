@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 class PushActorTest {
 
   private static final String ZWSP = String.valueOf((char) 0x200B);
+  private static final PushSpeech SAID = new PushSpeech("나도 그래", "내 노트에 답글");
 
   @Test
   void aMemberIsSentWithTheNameTheyChoseAndTheAvatarTheyUploaded() {
@@ -23,10 +24,10 @@ class PushActorTest {
             "  앨리스 ",
             List.of());
 
-    assertThat(PushActor.of(alice, true))
+    assertThat(PushActor.of(alice, SAID))
         .isEqualTo(
             new PushActor(
-                2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg", true));
+                2L, null, "alice", "앨리스", "https://cdn.kurl.example/avatars/2/a.jpg", SAID));
   }
 
   @Test
@@ -35,8 +36,8 @@ class PushActorTest {
         new NotificationActor(
             2L, "alice", "http://cdn.kurl.example/avatars/2/a.jpg", null, null, " ", List.of());
 
-    assertThat(PushActor.of(plain, false))
-        .isEqualTo(new PushActor(2L, null, "alice", null, null, false));
+    assertThat(PushActor.of(plain, null))
+        .isEqualTo(new PushActor(2L, null, "alice", null, null, null));
   }
 
   @Test
@@ -53,15 +54,15 @@ class PushActorTest {
                 new CustomEmoji("new_l", "https://files.m.example/l.png"),
                 new CustomEmoji("verified", "https://files.m.example/v.png")));
 
-    assertThat(PushActor.of(ged, true))
-        .isEqualTo(new PushActor(null, 42L, "ged@m.example", "Ged :unknown:", null, true));
+    assertThat(PushActor.of(ged, SAID))
+        .isEqualTo(new PushActor(null, 42L, "ged@m.example", "Ged :unknown:", null, SAID));
   }
 
   @Test
   void nobodyOrAMemberWithoutAUsernameHasNoFaceToShow() {
-    assertThat(PushActor.of(null, true)).isNull();
+    assertThat(PushActor.of(null, SAID)).isNull();
     assertThat(
-            PushActor.of(new NotificationActor(2L, null, "https://cdn.kurl.example/a.jpg"), true))
+            PushActor.of(new NotificationActor(2L, null, "https://cdn.kurl.example/a.jpg"), SAID))
         .isNull();
   }
 
@@ -77,6 +78,6 @@ class PushActorTest {
             ZWSP + ":blobcat:" + ZWSP,
             List.of(new CustomEmoji("blobcat", "https://files.m.example/b.png")));
 
-    assertThat(PushActor.of(emojiOnly, false).displayName()).isNull();
+    assertThat(PushActor.of(emojiOnly, null).displayName()).isNull();
   }
 }

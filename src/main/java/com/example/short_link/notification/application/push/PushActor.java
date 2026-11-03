@@ -9,15 +9,15 @@ public record PushActor(
     String username,
     String displayName,
     String avatarUrl,
-    boolean speaking) {
+    PushSpeech speech) {
 
-  public static PushActor of(NotificationActor actor, boolean speaking) {
+  public static PushActor of(NotificationActor actor, PushSpeech speech) {
     if (actor == null || actor.username() == null) {
       return null;
     }
     if (actor.remoteId() != null) {
       return new PushActor(
-          null, actor.remoteId(), actor.username(), plainName(actor), null, speaking);
+          null, actor.remoteId(), actor.username(), plainName(actor), null, speech);
     }
     String avatar = actor.avatarUrl();
     return new PushActor(
@@ -26,7 +26,7 @@ public record PushActor(
         actor.username(),
         plainName(actor),
         avatar != null && avatar.startsWith("https://") ? avatar : null,
-        speaking);
+        speech);
   }
 
   private static String plainName(NotificationActor actor) {
