@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.ActivePerDayRow;
+import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository.CohortActivityRow;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.DailyRow;
 import com.example.short_link.admin.infrastructure.persistence.JpaAdminAnalyticsRepository;
 import com.example.short_link.admin.infrastructure.persistence.JpaAdminMetricsRepository;
@@ -38,6 +39,10 @@ class LocalTimeBucketQueriesIntegrationTest {
   private static final String SEOUL = "+09:00";
   private static final Instant SEOUL_EVENING = Instant.parse("2026-11-06T11:00:00Z");
   private static final LocalDate SEOUL_DAY = LocalDate.parse("2026-11-06");
+  private static final Instant SEOUL_EARLY_MORNING = Instant.parse("2026-11-06T18:00:00Z");
+  private static final LocalDate SEOUL_NEXT_DAY = LocalDate.parse("2026-11-07");
+  private static final Instant UTC_SUNDAY_NIGHT = Instant.parse("2026-11-08T23:00:00Z");
+  private static final int UTC_WEEK = 202645;
   private static final int FRIDAY = 6;
   private static final int EVENING = 20;
   private static final Instant SINCE = Instant.parse("2026-11-01T00:00:00Z");
@@ -114,19 +119,48 @@ class LocalTimeBucketQueriesIntegrationTest {
   }
 
   @Test
+  void createdAtIsWrittenAsUtcWallClockTextLikeTheBackdate() {
+    assertThat(createdAtDrift("users", owner.getId(), owner.getCreatedAt())).isBetween(-1L, 1L);
+    assertThat(createdAtDrift("link", link.getId(), link.getCreatedAt())).isBetween(-1L, 1L);
+  }
+
+  @Test
   void adminDailySignupsAndLinksCountACreationOnItsLocalDay() {
     createdAt("users", owner.getId(), BEFORE_SINCE);
     createdAt("link", link.getId(), BEFORE_SINCE);
     Map<LocalDate, Long> signupsBefore = days(() -> adminMetrics.dailySignupsSince(SINCE, SEOUL));
     Map<LocalDate, Long> linksBefore = days(() -> adminMetrics.dailyLinksSince(SINCE, SEOUL));
 
-    createdAt("users", owner.getId(), SEOUL_EVENING);
-    createdAt("link", link.getId(), SEOUL_EVENING);
+    createdAt("users", owner.getId(), SEOUL_EARLY_MORNING);
+    createdAt("link", link.getId(), SEOUL_EARLY_MORNING);
 
     assertThat(change(signupsBefore, days(() -> adminMetrics.dailySignupsSince(SINCE, SEOUL))))
-        .containsExactly(Map.entry(SEOUL_DAY, 1L));
+        .containsExactly(Map.entry(SEOUL_NEXT_DAY, 1L));
     assertThat(change(linksBefore, days(() -> adminMetrics.dailyLinksSince(SINCE, SEOUL))))
-        .containsExactly(Map.entry(SEOUL_DAY, 1L));
+        .containsExactly(Map.entry(SEOUL_NEXT_DAY, 1L));
+  }
+
+  @Test
+  void aCohortAndItsActivityAreWeeksOfTheSameClock() {
+    createdAt("users", owner.getId(), BEFORE_SINCE);
+    Map<List<Integer>, Long> before = cohorts();
+
+    createdAt("users", owner.getId(), UTC_SUNDAY_NIGHT);
+    click(UTC_SUNDAY_NIGHT.plusSeconds(1_800));
+
+    assertThat(change(before, cohorts()))
+        .containsExactly(Map.entry(List.of(UTC_WEEK, UTC_WEEK), 1L));
+  }
+
+  @Test
+  void aClickBeforeTheSignupIsNotCohortActivity() {
+    createdAt("users", owner.getId(), BEFORE_SINCE);
+    Map<List<Integer>, Long> before = cohorts();
+
+    createdAt("users", owner.getId(), SEOUL_EVENING);
+    click(SEOUL_EVENING.minusSeconds(21_600));
+
+    assertThat(change(before, cohorts())).isEmpty();
   }
 
   private void click(Instant at) {
@@ -136,10 +170,33 @@ class LocalTimeBucketQueriesIntegrationTest {
 
   private void createdAt(String table, Long id, Instant at) {
     em.createNativeQuery(
-            "UPDATE " + table + " SET created_at = FROM_UNIXTIME(:epoch) WHERE id = :id")
+            "UPDATE "
+                + table
+                + " SET created_at = TIMESTAMPADD(SECOND, :epoch, '1970-01-01') WHERE id = :id")
         .setParameter("epoch", at.getEpochSecond())
         .setParameter("id", id)
         .executeUpdate();
+  }
+
+  private long createdAtDrift(String table, Long id, Instant written) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT TIMESTAMPDIFF(SECOND, TIMESTAMPADD(SECOND, :epoch, '1970-01-01'),"
+                        + " created_at) FROM "
+                        + table
+                        + " WHERE id = :id")
+                .setParameter("epoch", written.getEpochSecond())
+                .setParameter("id", id)
+                .getSingleResult())
+        .longValue();
+  }
+
+  private Map<List<Integer>, Long> cohorts() {
+    return adminAnalytics.cohortActivity(SINCE).stream()
+        .collect(
+            Collectors.toMap(
+                row -> List.of(row.getCohortKey(), row.getActivityKey()),
+                CohortActivityRow::getActiveUsers));
   }
 
   private Map<LocalDate, Long> active() {
@@ -151,8 +208,7 @@ class LocalTimeBucketQueriesIntegrationTest {
     return query.get().stream().collect(Collectors.toMap(DailyRow::getDay, DailyRow::getCount));
   }
 
-  private static Map<LocalDate, Long> change(
-      Map<LocalDate, Long> before, Map<LocalDate, Long> after) {
+  private static <K> Map<K, Long> change(Map<K, Long> before, Map<K, Long> after) {
     return after.entrySet().stream()
         .filter(e -> !e.getValue().equals(before.getOrDefault(e.getKey(), 0L)))
         .collect(

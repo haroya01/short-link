@@ -19,7 +19,7 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
         (link_id, hour_start, age_day, humans, bots, first_human_at, last_human_at, last_at)
       SELECT c.link_id,
         FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 3600) * 3600) AS hour_start,
-        COALESCE(TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at), -1) AS age_day,
+        COALESCE(%s, -1) AS age_day,
         SUM(c.is_bot = 0), SUM(c.is_bot = 1),
         FROM_UNIXTIME(MIN(CASE WHEN c.is_bot = 0 THEN UNIX_TIMESTAMP(c.clicked_at) END)),
         FROM_UNIXTIME(MAX(CASE WHEN c.is_bot = 0 THEN UNIX_TIMESTAMP(c.clicked_at) END)),
@@ -27,7 +27,8 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       FROM click_event c LEFT JOIN link l ON l.id = c.link_id
       WHERE c.clicked_at >= FROM_UNIXTIME(:dayStart) AND c.clicked_at < FROM_UNIXTIME(:dayEnd)
       GROUP BY c.link_id, hour_start, age_day
-      """;
+      """
+          .formatted(ClickRollup.AGE_DAY);
 
   private record Dimension(
       int code, String value, String num, boolean keepNull, boolean bots, String regionCode) {
