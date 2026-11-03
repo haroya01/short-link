@@ -29,6 +29,21 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       GROUP BY c.link_id, hour_start, age_day
       """;
 
+  private static final String RECENT_QUARTERS =
+      """
+      INSERT INTO click_recent_quarter
+        (link_id, quarter_start, age_day, humans, bots, first_human_at, last_human_at)
+      SELECT c.link_id,
+        FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 900) * 900) AS quarter_start,
+        COALESCE(TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at), -1) AS age_day,
+        SUM(c.is_bot = 0), SUM(c.is_bot = 1),
+        FROM_UNIXTIME(MIN(CASE WHEN c.is_bot = 0 THEN UNIX_TIMESTAMP(c.clicked_at) END)),
+        FROM_UNIXTIME(MAX(CASE WHEN c.is_bot = 0 THEN UNIX_TIMESTAMP(c.clicked_at) END))
+      FROM click_event c LEFT JOIN link l ON l.id = c.link_id
+      WHERE c.clicked_at >= FROM_UNIXTIME(:dayStart) AND c.clicked_at < FROM_UNIXTIME(:dayEnd)
+      GROUP BY c.link_id, quarter_start, age_day
+      """;
+
   private record Dimension(
       int code, String value, String num, boolean keepNull, boolean bots, String regionCode) {
 
@@ -36,7 +51,7 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       this(code, value, num, keepNull, bots, "NULL");
     }
 
-    String insert() {
+    String insert(String table) {
       String v = value == null ? "NULL" : value;
       String n = num == null ? "NULL" : num;
       String key =
@@ -50,7 +65,9 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       String present = value != null ? value : num;
       String groupBy =
           value != null && num != null ? value + ", " + num : value != null ? value : num;
-      return "INSERT INTO click_daily_dim "
+      return "INSERT INTO "
+          + table
+          + " "
           + "(link_id, dim, day_start, is_bot, value_key, value, num, region_code, clicks, first_at) "
           + "SELECT c.link_id, "
           + code
@@ -71,33 +88,36 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
     }
   }
 
-  private static final List<String> DIMENSIONS =
+  private static final List<Dimension> DIMENSIONS =
       List.of(
-              new Dimension(ClickRollup.REFERRER, "c.referrer", null, true, false),
-              new Dimension(ClickRollup.REFERRER_HOST, "c.referrer_host", null, false, false),
-              new Dimension(ClickRollup.DEVICE, "c.device_class", null, true, false),
-              new Dimension(ClickRollup.OS, "c.os_name", null, true, false),
-              new Dimension(ClickRollup.BROWSER, "c.browser_name", null, true, false),
-              new Dimension(ClickRollup.BOT_NAME, "c.bot_name", null, true, true),
-              new Dimension(ClickRollup.UTM_CAMPAIGN, "c.utm_campaign", null, false, false),
-              new Dimension(ClickRollup.UTM_SOURCE, "c.utm_source", null, false, false),
-              new Dimension(ClickRollup.UTM_MEDIUM, "c.utm_medium", null, false, false),
-              new Dimension(ClickRollup.UTM_CONTENT, "c.utm_content", null, false, false),
-              new Dimension(ClickRollup.UTM_TERM, "c.utm_term", null, false, false),
-              new Dimension(ClickRollup.CLIENT_APP, "c.client_app", null, true, false),
-              new Dimension(ClickRollup.FETCH_SITE, "c.fetch_site", null, false, false),
-              new Dimension(ClickRollup.POST, null, "c.post_id", false, false),
-              new Dimension(ClickRollup.SOURCE_CHANNEL, "c.source_channel", null, false, false),
-              new Dimension(ClickRollup.DESTINATION, null, "c.destination_id", true, false),
-              new Dimension(ClickRollup.COUNTRY, "c.country_code", null, true, false),
-              new Dimension(
-                  ClickRollup.REGION, "c.region_name", null, false, false, "MAX(c.region_code)"),
-              new Dimension(ClickRollup.CITY, "c.city_name", null, false, false),
-              new Dimension(ClickRollup.LANGUAGE, "c.language", null, false, false),
-              new Dimension(ClickRollup.ASN, "c.asn_org", "c.asn", false, true))
-          .stream()
-          .map(Dimension::insert)
-          .toList();
+          new Dimension(ClickRollup.REFERRER, "c.referrer", null, true, false),
+          new Dimension(ClickRollup.REFERRER_HOST, "c.referrer_host", null, false, false),
+          new Dimension(ClickRollup.DEVICE, "c.device_class", null, true, false),
+          new Dimension(ClickRollup.OS, "c.os_name", null, true, false),
+          new Dimension(ClickRollup.BROWSER, "c.browser_name", null, true, false),
+          new Dimension(ClickRollup.BOT_NAME, "c.bot_name", null, true, true),
+          new Dimension(ClickRollup.UTM_CAMPAIGN, "c.utm_campaign", null, false, false),
+          new Dimension(ClickRollup.UTM_SOURCE, "c.utm_source", null, false, false),
+          new Dimension(ClickRollup.UTM_MEDIUM, "c.utm_medium", null, false, false),
+          new Dimension(ClickRollup.UTM_CONTENT, "c.utm_content", null, false, false),
+          new Dimension(ClickRollup.UTM_TERM, "c.utm_term", null, false, false),
+          new Dimension(ClickRollup.CLIENT_APP, "c.client_app", null, true, false),
+          new Dimension(ClickRollup.FETCH_SITE, "c.fetch_site", null, false, false),
+          new Dimension(ClickRollup.POST, null, "c.post_id", false, false),
+          new Dimension(ClickRollup.SOURCE_CHANNEL, "c.source_channel", null, false, false),
+          new Dimension(ClickRollup.DESTINATION, null, "c.destination_id", true, false),
+          new Dimension(ClickRollup.COUNTRY, "c.country_code", null, true, false),
+          new Dimension(
+              ClickRollup.REGION, "c.region_name", null, false, false, "MAX(c.region_code)"),
+          new Dimension(ClickRollup.CITY, "c.city_name", null, false, false),
+          new Dimension(ClickRollup.LANGUAGE, "c.language", null, false, false),
+          new Dimension(ClickRollup.ASN, "c.asn_org", "c.asn", false, true));
+
+  private static final List<String> DAILY_DIMENSIONS =
+      DIMENSIONS.stream().map(d -> d.insert("click_daily_dim")).toList();
+
+  private static final List<String> RECENT_DIMENSIONS =
+      DIMENSIONS.stream().map(d -> d.insert("click_recent_dim")).toList();
 
   @PersistenceContext private EntityManager em;
 
@@ -106,6 +126,14 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
     return epoch(
         em.createNativeQuery(
                 "SELECT UNIX_TIMESTAMP(rolled_until) FROM click_rollup_state WHERE id = 1")
+            .getSingleResult());
+  }
+
+  @Override
+  public Instant aggregatedUntil() {
+    return epoch(
+        em.createNativeQuery(
+                "SELECT UNIX_TIMESTAMP(aggregated_until) FROM click_rollup_state WHERE id = 1")
             .getSingleResult());
   }
 
@@ -125,12 +153,51 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
         .setParameter("dayStart", dayStart.getEpochSecond())
         .setParameter("dayEnd", dayEnd.getEpochSecond())
         .executeUpdate();
-    for (String sql : DIMENSIONS) {
+    for (String sql : DAILY_DIMENSIONS) {
       em.createNativeQuery(sql)
           .setParameter("dayStart", dayStart.getEpochSecond())
           .setParameter("dayEnd", dayEnd.getEpochSecond())
           .executeUpdate();
     }
+  }
+
+  @Override
+  public void aggregateDay(Instant dayStart, Instant dayEnd) {
+    deleteRecent(dayStart, dayEnd);
+    em.createNativeQuery(RECENT_QUARTERS)
+        .setParameter("dayStart", dayStart.getEpochSecond())
+        .setParameter("dayEnd", dayEnd.getEpochSecond())
+        .executeUpdate();
+    for (String sql : RECENT_DIMENSIONS) {
+      em.createNativeQuery(sql)
+          .setParameter("dayStart", dayStart.getEpochSecond())
+          .setParameter("dayEnd", dayEnd.getEpochSecond())
+          .executeUpdate();
+    }
+  }
+
+  @Override
+  public void advanceAggregatedTo(Instant aggregatedUntil) {
+    em.createNativeQuery(
+            "UPDATE click_rollup_state SET aggregated_until = "
+                + "GREATEST(aggregated_until, FROM_UNIXTIME(:until)) WHERE id = 1")
+        .setParameter("until", aggregatedUntil.getEpochSecond())
+        .executeUpdate();
+  }
+
+  private void deleteRecent(Instant from, Instant until) {
+    em.createNativeQuery(
+            "DELETE FROM click_recent_quarter WHERE quarter_start >= FROM_UNIXTIME(:from) "
+                + "AND quarter_start < FROM_UNIXTIME(:until)")
+        .setParameter("from", from.getEpochSecond())
+        .setParameter("until", until.getEpochSecond())
+        .executeUpdate();
+    em.createNativeQuery(
+            "DELETE FROM click_recent_dim WHERE day_start >= FROM_UNIXTIME(:from) "
+                + "AND day_start < FROM_UNIXTIME(:until)")
+        .setParameter("from", from.getEpochSecond())
+        .setParameter("until", until.getEpochSecond())
+        .executeUpdate();
   }
 
   @Override
@@ -162,8 +229,10 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
 
   @Override
   public void advanceTo(Instant rolledUntil) {
+    deleteRecent(Instant.EPOCH, rolledUntil);
     em.createNativeQuery(
-            "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(:until) WHERE id = 1")
+            "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(:until), "
+                + "aggregated_until = GREATEST(aggregated_until, FROM_UNIXTIME(:until)) WHERE id = 1")
         .setParameter("until", rolledUntil.getEpochSecond())
         .executeUpdate();
   }
@@ -181,7 +250,13 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
   public int deleteByLinkIds(Collection<Long> linkIds) {
     if (linkIds.isEmpty()) return 0;
     int deleted = 0;
-    for (String table : List.of("click_hourly", "click_daily_dim", "click_daily_visitors")) {
+    for (String table :
+        List.of(
+            "click_hourly",
+            "click_daily_dim",
+            "click_daily_visitors",
+            "click_recent_quarter",
+            "click_recent_dim")) {
       deleted +=
           em.createNativeQuery("DELETE FROM " + table + " WHERE link_id IN (:ids)")
               .setParameter("ids", linkIds)

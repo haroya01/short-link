@@ -31,7 +31,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaClickDimensionReadRepository extends Repository<ClickEventEntity, Long> {
 
-  String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
+  String RAW = " AND clicked_at >= " + ClickRollup.AGGREGATED_UNTIL;
 
   @Query(
       value =
@@ -39,6 +39,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT referrer AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND referrer IS NOT NULL"
               + RAW
               + " GROUP BY referrer UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REFERRER
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.REFERRER
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -51,6 +54,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT referrer_host AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL"
               + RAW
               + " GROUP BY referrer_host UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REFERRER_HOST
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.REFERRER_HOST
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -66,6 +72,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY device_class UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.DEVICE
+              + " AND is_bot = 0 GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.DEVICE
               + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<DeviceClickRow> findDeviceClicks(@Param("linkId") Long linkId);
@@ -76,6 +85,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT os_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
               + RAW
               + " GROUP BY os_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.OS
+              + " AND is_bot = 0 GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.OS
               + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -90,6 +102,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY browser_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.BROWSER
+              + " AND is_bot = 0 GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.BROWSER
               + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<BrowserClickRow> findBrowserClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -100,6 +115,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT bot_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 1"
               + RAW
               + " GROUP BY bot_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.BOT_NAME
+              + " AND is_bot = 1 GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.BOT_NAME
               + " AND is_bot = 1 GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -114,6 +132,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY utm_campaign UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.UTM_CAMPAIGN
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_CAMPAIGN
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<UtmCampaignClickRow> findUtmCampaignClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -124,6 +145,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT utm_source AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_source IS NOT NULL"
               + RAW
               + " GROUP BY utm_source UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_SOURCE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.UTM_SOURCE
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -138,6 +162,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY utm_medium UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.UTM_MEDIUM
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_MEDIUM
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<UtmMediumClickRow> findUtmMediumClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -150,6 +177,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY utm_content UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.UTM_CONTENT
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_CONTENT
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -160,6 +190,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT utm_term AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND utm_term IS NOT NULL"
               + RAW
               + " GROUP BY utm_term UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.UTM_TERM
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.UTM_TERM
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -175,6 +208,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY client_app UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.CLIENT_APP
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.CLIENT_APP
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<ClientAppClickRow> findClientAppClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -185,6 +221,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT fetch_site AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND fetch_site IS NOT NULL"
               + RAW
               + " GROUP BY fetch_site UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.FETCH_SITE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.FETCH_SITE
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -199,6 +238,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY post_id UNION ALL SELECT num, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.POST
+              + " AND is_bot = 0 AND num IS NOT NULL GROUP BY num UNION ALL SELECT num, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.POST
               + " AND is_bot = 0 AND num IS NOT NULL GROUP BY num) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<PostClickRow> findPostClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -209,6 +251,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT source_channel AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND source_channel IS NOT NULL"
               + RAW
               + " GROUP BY source_channel UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.SOURCE_CHANNEL
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.SOURCE_CHANNEL
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -224,6 +269,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY destination_id UNION ALL SELECT num, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.DESTINATION
+              + " AND is_bot = 0 GROUP BY num UNION ALL SELECT num, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.DESTINATION
               + " AND is_bot = 0 GROUP BY num) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<DestinationClickRow> findDestinationClicks(@Param("linkId") Long linkId);
@@ -234,6 +282,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT country_code AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0"
               + RAW
               + " GROUP BY country_code UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.COUNTRY
+              + " AND is_bot = 0 GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.COUNTRY
               + " AND is_bot = 0 GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -248,6 +299,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY region_name UNION ALL SELECT value, MAX(region_code), SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.REGION
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, MAX(region_code), SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REGION
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<RegionClickRow> findRegionClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -258,6 +312,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + "SELECT city_name AS x, COUNT(*) AS n FROM click_event WHERE link_id = :linkId AND is_bot = 0 AND city_name IS NOT NULL"
               + RAW
               + " GROUP BY city_name UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.CITY
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.CITY
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
@@ -272,6 +329,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + " GROUP BY language UNION ALL SELECT value, SUM(clicks) FROM click_daily_dim "
               + "WHERE link_id = :linkId AND dim = "
               + ClickRollup.LANGUAGE
+              + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value UNION ALL SELECT value, SUM(clicks) FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim = "
+              + ClickRollup.LANGUAGE
               + " AND is_bot = 0 AND value IS NOT NULL GROUP BY value) u GROUP BY x ORDER BY count DESC",
       nativeQuery = true)
   List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
@@ -284,6 +344,9 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
               + RAW
               + " GROUP BY asn, asn_org UNION ALL SELECT num, value, SUM(clicks) "
               + "FROM click_daily_dim WHERE link_id = :linkId AND dim = "
+              + ClickRollup.ASN
+              + " GROUP BY num, value UNION ALL SELECT num, value, SUM(clicks) "
+              + "FROM click_recent_dim WHERE link_id = :linkId AND dim = "
               + ClickRollup.ASN
               + " GROUP BY num, value) u GROUP BY asn, organization ORDER BY count DESC",
       nativeQuery = true)

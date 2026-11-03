@@ -37,6 +37,8 @@ class CrossModuleSqlRatchetTest {
           entry("author_post_number", "post"),
           entry("click_daily_dim", "link"),
           entry("click_daily_visitors", "link"),
+          entry("click_recent_dim", "link"),
+          entry("click_recent_quarter", "link"),
           entry("federation_relayed_note", "federation"),
           entry("follow_suggestion_dismissal", "user"),
           entry("image_variant", "common"),

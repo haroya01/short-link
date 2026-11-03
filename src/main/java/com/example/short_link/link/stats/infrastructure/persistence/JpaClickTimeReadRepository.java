@@ -7,7 +7,6 @@ import com.example.short_link.link.stats.domain.projection.ClickProjections.Dail
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -16,6 +15,15 @@ import org.springframework.data.repository.query.Param;
 public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity, Long> {
 
   String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
+
+  String FIRST_QUARTER_END = "FROM_UNIXTIME(CEIL(:from / 900) * 900)";
+
+  String RECENT_OR_FIRST_QUARTER =
+      " AND (clicked_at >= "
+          + ClickRollup.AGGREGATED_UNTIL
+          + " OR clicked_at < "
+          + FIRST_QUARTER_END
+          + ")";
 
   // Boundaries come from the owner's ZoneId, including historical daylight-saving offsets.
   @Query(
@@ -50,16 +58,22 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("until") BigDecimal until);
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
-          + "COUNT(c) AS count "
-          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.clickedAt >= :from AND c.clickedAt < :until "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
-          + "ORDER BY day")
+      value =
+          "SELECT d AS day, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT DATE(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS d, COUNT(*) AS n FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
+              + RECENT_OR_FIRST_QUARTER
+              + " GROUP BY d UNION ALL "
+              + "SELECT DATE(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(quarter_start)), '1970-01-01'), '+00:00', :tz)) AS d, SUM(humans) FROM click_recent_quarter "
+              + "WHERE link_id = :linkId AND humans > 0 AND quarter_start >= "
+              + FIRST_QUARTER_END
+              + " AND quarter_start < FROM_UNIXTIME(:until) GROUP BY d"
+              + ") u GROUP BY d ORDER BY d",
+      nativeQuery = true)
   List<DailyClickRow> findDailyClicks(
       @Param("linkId") Long linkId,
-      @Param("from") Instant from,
-      @Param("until") Instant until,
+      @Param("from") BigDecimal from,
+      @Param("until") BigDecimal until,
       @Param("tz") String timezone);
 
   @Query(
@@ -68,9 +82,14 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
               + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS d, HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS h, COUNT(*) AS n FROM click_event "
               + "WHERE link_id = :linkId AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
               + RAW
+              + RECENT_OR_FIRST_QUARTER
               + " GROUP BY d, h UNION ALL "
               + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS d, HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS h, SUM(humans) FROM click_hourly "
-              + "WHERE link_id = :linkId AND humans > 0 AND hour_start > TIMESTAMPADD(HOUR, -1, FROM_UNIXTIME(:from)) AND hour_start < FROM_UNIXTIME(:until) GROUP BY d, h"
+              + "WHERE link_id = :linkId AND humans > 0 AND hour_start > TIMESTAMPADD(HOUR, -1, FROM_UNIXTIME(:from)) AND hour_start < FROM_UNIXTIME(:until) GROUP BY d, h UNION ALL "
+              + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(quarter_start)), '1970-01-01'), '+00:00', :tz)) AS d, HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(quarter_start)), '1970-01-01'), '+00:00', :tz)) AS h, SUM(humans) FROM click_recent_quarter "
+              + "WHERE link_id = :linkId AND humans > 0 AND quarter_start >= "
+              + FIRST_QUARTER_END
+              + " AND quarter_start < FROM_UNIXTIME(:until) GROUP BY d, h"
               + ") u GROUP BY d, h ORDER BY d, h",
       nativeQuery = true)
   List<HeatmapRow> findHeatmap(

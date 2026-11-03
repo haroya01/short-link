@@ -6,6 +6,7 @@ import com.example.short_link.link.stats.application.ClickRollupService;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,14 +34,18 @@ public class ClickRollupJob {
     }
     try {
       long started = System.nanoTime();
-      int days = rollup.rollUp(clock.instant());
+      Instant now = clock.instant();
+      int days = rollup.rollUp(now);
       long deleted = rollup.deleteRolledUp();
+      int summed = rollup.aggregate(now);
       meterRegistry.counter("cleanup.click_rollup_days").increment(days);
       meterRegistry.counter("cleanup.click_event").increment(deleted);
+      meterRegistry.counter("cleanup.click_recent_days").increment(summed);
       log.info(
-          "click rollup folded {} days and deleted {} raw clicks in {} ms",
+          "click rollup folded {} days, deleted {} raw clicks and summed {} recent days in {} ms",
           days,
           deleted,
+          summed,
           (System.nanoTime() - started) / 1_000_000);
     } finally {
       lock.release(LOCK_KEY);

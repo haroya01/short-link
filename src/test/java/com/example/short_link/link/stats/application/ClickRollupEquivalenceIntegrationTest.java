@@ -94,7 +94,11 @@ class ClickRollupEquivalenceIntegrationTest {
     jdbc.update("DELETE FROM click_hourly");
     jdbc.update("DELETE FROM click_daily_dim");
     jdbc.update("DELETE FROM click_daily_visitors");
-    jdbc.update("UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1) WHERE id = 1");
+    jdbc.update("DELETE FROM click_recent_quarter");
+    jdbc.update("DELETE FROM click_recent_dim");
+    jdbc.update(
+        "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1),"
+            + " aggregated_until = FROM_UNIXTIME(1) WHERE id = 1");
   }
 
   @AfterEach
@@ -147,6 +151,9 @@ class ClickRollupEquivalenceIntegrationTest {
     assertThat(days).isPositive();
     assertThat(deleted).isPositive();
     assertThat(rawRowsBefore(rolledUntil)).isZero();
+    assertThat(snapshot(post, seoul, now)).isEqualTo(before);
+    assertThat(uniques()).isEqualTo(uniqueBefore);
+    assertThat(rollup.aggregate(now)).isPositive();
     assertThat(snapshot(post, seoul, now)).isEqualTo(before);
     assertThat(uniques()).isEqualTo(uniqueBefore);
     for (Long linkId : linkIds) {

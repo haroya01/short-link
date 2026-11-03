@@ -35,7 +35,7 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReader {
   @Override
   public List<DailyClickRow> findDailyClicks(
       Long linkId, Instant from, Instant until, String timezone) {
-    return jpa.findDailyClicks(linkId, from, until, timezone);
+    return jpa.findDailyClicks(linkId, epoch(from), epoch(until), timezone);
   }
 
   @Override
