@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class CampaignEntityTest {
 
@@ -247,5 +248,28 @@ class CampaignEntityTest {
             CampaignException.class,
             e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD));
     assertThat(campaign.getEndsAt()).isEqualTo(start.plusSeconds(60));
+  }
+
+  @Test
+  void anEmptyUrlIsStoredAsNoUrl() {
+    Instant start = Instant.parse("2026-05-22T00:00:00Z");
+    CampaignEntity campaign =
+        new CampaignEntity(
+            1L, "Sample", start, start.plusSeconds(3600), "", CampaignPostEndAction.EXPIRE, "", "");
+
+    assertThat(ReflectionTestUtils.getField(campaign, "defaultDestinationUrl")).isNull();
+    assertThat(ReflectionTestUtils.getField(campaign, "postEndDestinationUrl")).isNull();
+    assertThat(campaign.getPostEndMessage()).isNull();
+  }
+
+  @Test
+  void aRowSavedWithAnEmptyUrlReadsAsNoUrl() {
+    Instant start = Instant.parse("2026-05-22T00:00:00Z");
+    CampaignEntity campaign = sample(start, start.plusSeconds(3600));
+    ReflectionTestUtils.setField(campaign, "defaultDestinationUrl", "");
+    ReflectionTestUtils.setField(campaign, "postEndDestinationUrl", "  ");
+
+    assertThat(campaign.getDefaultDestinationUrl()).isNull();
+    assertThat(campaign.getPostEndDestinationUrl()).isNull();
   }
 }
