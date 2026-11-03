@@ -1,6 +1,7 @@
 package com.example.short_link.notification.application.write;
 
 import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.room.RoomNameReader;
 import com.example.short_link.common.user.SilenceCheck;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
@@ -27,7 +28,6 @@ import com.example.short_link.notification.domain.repository.NotificationActorRe
 import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
-import com.example.short_link.notification.domain.repository.NotificationRoomReader;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -62,7 +62,7 @@ public class RecordBlogNotificationUseCase {
   private final NotificationPolicyRepository policies;
   private final NotificationKeywordFilterReader keywordFilters;
   private final UserBlockChecker blocks;
-  private final NotificationRoomReader rooms;
+  private final RoomNameReader rooms;
   private final Clock clock;
 
   private record Conversation(String threadId, Long roomId) {}
@@ -337,7 +337,7 @@ public class RecordBlogNotificationUseCase {
   private String context(
       NotificationType type, NotificationTarget payload, Locale locale, Conversation conversation) {
     Optional<String> room =
-        conversation.roomId() == null ? Optional.empty() : rooms.name(conversation.roomId());
+        conversation.roomId() == null ? Optional.empty() : rooms.nameOf(conversation.roomId());
     if (room.isPresent()) {
       return room.get();
     }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.room.RoomNameReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
@@ -29,7 +30,6 @@ import com.example.short_link.notification.domain.repository.NotificationActorRe
 import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
-import com.example.short_link.notification.domain.repository.NotificationRoomReader;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.time.Clock;
 import java.time.Instant;
@@ -79,7 +79,7 @@ class RecordBlogNotificationUseCaseTest {
   @Mock private UserBlockChecker blocks;
 
   @Mock(strictness = Mock.Strictness.LENIENT)
-  private NotificationRoomReader rooms;
+  private RoomNameReader rooms;
 
   private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
@@ -566,7 +566,7 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     member(2L, "yuki");
-    when(rooms.name(3L)).thenReturn(Optional.of("도쿄 모임"));
+    when(rooms.nameOf(3L)).thenReturn(Optional.of("도쿄 모임"));
 
     NotificationNoteRef reply = new NotificationNoteRef(5L, "내 노트", 12L, "나도 그래");
     useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, 3L);
