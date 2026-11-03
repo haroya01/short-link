@@ -32,7 +32,6 @@ src/main/java/com/example/short_link/analytics/domain/BehaviorEventEntity.java=1
 src/main/java/com/example/short_link/analytics/presentation/BehaviorEventBeaconController.java=1
 src/main/java/com/example/short_link/campaign/application/CampaignBatchService.java=2
 src/main/java/com/example/short_link/campaign/application/CampaignRecommendationService.java=5
-src/main/java/com/example/short_link/campaign/application/CampaignStatsService.java=1
 src/main/java/com/example/short_link/campaign/application/dto/CampaignStatsView.java=2
 src/main/java/com/example/short_link/campaign/application/dto/QrOptions.java=1
 src/main/java/com/example/short_link/campaign/domain/CampaignBatchEntity.java=1

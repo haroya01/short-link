@@ -4333,6 +4333,9 @@
     "CampaignRecommendationView" : {
       "avgRatePerHundred" : "number(double)",
       "insufficient" : "boolean",
+      "insufficientCode" : "string enum[TOO_FEW_BATCHES|TOO_FEW_CLICKS]",
+      "insufficientCurrent" : "integer(int32)",
+      "insufficientMinimum" : "integer(int32)",
       "insufficientReason" : "string",
       "recommendations" : "[#BatchRecommendation]",
       "totalClicks" : "integer(int32)",
@@ -4353,6 +4356,7 @@
       "heatmap" : "[#HeatmapCell]",
       "lastTestScanAt" : "string(date-time)",
       "testScans" : "integer(int64)",
+      "timezone" : "string",
       "totalClicks" : "integer(int64)"
     },
     "CampaignSummaryResponse" : {

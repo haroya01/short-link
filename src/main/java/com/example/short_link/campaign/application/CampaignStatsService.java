@@ -8,11 +8,22 @@ import com.example.short_link.campaign.application.dto.CampaignStatsView.DayBuck
 import com.example.short_link.campaign.application.dto.CampaignStatsView.GroupStats;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.HeatmapCell;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.HourBucket;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.TimeBuckets;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.OffsetPeriod;
+import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.stats.application.read.ClickTimeReader;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.DailyClickRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.projection.ClickProjections.HourClickRow;
 import com.example.short_link.link.stats.domain.projection.ClickProjections.LinkClickCount;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -27,22 +38,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CampaignStatsService {
 
-  // 캠페인별 시간대 설정이 없어 한국 시간으로 날짜 경계를 집계한다.
-  private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
-
   private final CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
   private final ClickTotalsReader clickTotals;
   private final ClickTimeReader clickTime;
+  private final UserAccessLookup users;
+  private final Clock clock;
 
   @Transactional(readOnly = true)
   public CampaignStatsView statsFor(Long campaignId, Long ownerId) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
+    ZoneId zone = ownerZone(campaign.getOwnerId());
 
     if (batches.isEmpty()) {
       return new CampaignStatsView(
-          0L, 0L, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+          0L,
+          0L,
+          null,
+          List.of(),
+          List.of(),
+          List.of(),
+          new TimeBuckets(List.of(), List.of(), List.of(), zone.getId()));
     }
 
     List<Long> linkIds = batches.stream().map(b -> b.link().linkId().value()).toList();
@@ -73,23 +90,40 @@ public class CampaignStatsService {
     List<GroupStats> byDistributor = groupBy(byBatch, BatchStats::distributor);
     List<GroupStats> byArea = groupBy(byBatch, BatchStats::area);
 
+    Instant until = clock.instant().truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
+    List<OffsetPeriod> periods = OffsetPeriod.between(zone, campaign.getStartsAt(), until);
     List<HourBucket> byHour =
-        clickTime
-            .findHourlyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+        sum(
+                periods,
+                p -> clickTime.findHourlyClicksByLinkIds(linkIds, p.from(), p.until(), p.offset()),
+                HourClickRow::getHour,
+                HourClickRow::getCount)
+            .entrySet()
             .stream()
-            .map(r -> new HourBucket(r.getHour(), r.getCount()))
+            .sorted(Map.Entry.comparingByKey())
+            .map(e -> new HourBucket(e.getKey(), e.getValue()))
             .toList();
     List<DayBucket> byDay =
-        clickTime
-            .findDailyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+        sum(
+                periods,
+                p -> clickTime.findDailyClicksByLinkIds(linkIds, p.from(), p.until(), p.offset()),
+                DailyClickRow::getDay,
+                DailyClickRow::getCount)
+            .entrySet()
             .stream()
-            .map(r -> new DayBucket(r.getDay(), r.getCount()))
+            .sorted(Map.Entry.comparingByKey())
+            .map(e -> new DayBucket(e.getKey(), e.getValue()))
             .toList();
     List<HeatmapCell> heatmap =
-        clickTime
-            .findHeatmapByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+        sum(
+                periods,
+                p -> clickTime.findHeatmapByLinkIds(linkIds, p.from(), p.until(), p.offset()),
+                r -> new DowHour(r.getDow(), r.getHour()),
+                HeatmapRow::getCount)
+            .entrySet()
             .stream()
-            .map(r -> new HeatmapCell(r.getDow(), r.getHour(), r.getCount()))
+            .sorted(Map.Entry.comparingByKey(DowHour.ORDER))
+            .map(e -> new HeatmapCell(e.getKey().dow(), e.getKey().hour(), e.getValue()))
             .toList();
 
     return new CampaignStatsView(
@@ -101,9 +135,7 @@ public class CampaignStatsService {
         byBatch,
         byDistributor,
         byArea,
-        byHour,
-        byDay,
-        heatmap);
+        new TimeBuckets(byHour, byDay, heatmap, zone.getId()));
   }
 
   @Transactional(readOnly = true)
@@ -115,6 +147,29 @@ public class CampaignStatsService {
       result.add(new CampaignStatsCompareView.CampaignWithStats(id, c.getName(), stats));
     }
     return new CampaignStatsCompareView(result);
+  }
+
+  private ZoneId ownerZone(Long ownerId) {
+    return users.timezone(ownerId).map(ReportZones::zoneOf).orElse(ReportZones.DEFAULT_ZONE);
+  }
+
+  private static <R, K> Map<K, Long> sum(
+      List<OffsetPeriod> periods,
+      Function<OffsetPeriod, List<R>> query,
+      Function<R, K> key,
+      Function<R, Long> count) {
+    Map<K, Long> sums = new HashMap<>();
+    for (OffsetPeriod period : periods) {
+      for (R row : query.apply(period)) {
+        sums.merge(key.apply(row), count.apply(row), Long::sum);
+      }
+    }
+    return sums;
+  }
+
+  private record DowHour(int dow, int hour) {
+    static final Comparator<DowHour> ORDER =
+        Comparator.comparingInt(DowHour::dow).thenComparingInt(DowHour::hour);
   }
 
   private static Map<Long, Long> toMap(List<LinkClickCount> rows) {

@@ -50,9 +50,7 @@ class CampaignReadControllersTest {
         List.of(new CampaignStatsView.BatchStats(1L, "b1", "Kim", "East", 100, null, totalClicks)),
         List.of(),
         List.of(),
-        List.of(),
-        List.of(),
-        List.of());
+        new CampaignStatsView.TimeBuckets(List.of(), List.of(), List.of(), "Asia/Seoul"));
   }
 
   @Test
@@ -64,7 +62,12 @@ class CampaignReadControllersTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalClicks").value(0))
-        .andExpect(jsonPath("$.byBatch.length()").value(1));
+        .andExpect(jsonPath("$.byBatch.length()").value(1))
+        .andExpect(jsonPath("$.timezone").value("Asia/Seoul"))
+        .andExpect(jsonPath("$.byHour").isArray())
+        .andExpect(jsonPath("$.byDay").isArray())
+        .andExpect(jsonPath("$.heatmap").isArray())
+        .andExpect(jsonPath("$.timeBuckets").doesNotExist());
   }
 
   @Test
@@ -115,7 +118,8 @@ class CampaignReadControllersTest {
   @Test
   void recommendationReturnsView() throws Exception {
     when(recommendationService.recommend(anyLong(), eq(USER_ID)))
-        .thenReturn(new CampaignRecommendationView(false, null, 100, 0, 0.0, List.of()));
+        .thenReturn(
+            new CampaignRecommendationView(false, null, null, null, null, 100, 0, 0.0, List.of()));
 
     mvc.perform(
             get("/api/v1/campaigns/42/recommendations")
@@ -123,6 +127,31 @@ class CampaignReadControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalQuantity").value(100))
         .andExpect(jsonPath("$.insufficient").value(false));
+  }
+
+  @Test
+  void insufficientRecommendationCarriesItsCodeAndNumbers() throws Exception {
+    when(recommendationService.recommend(anyLong(), eq(USER_ID)))
+        .thenReturn(
+            new CampaignRecommendationView(
+                true,
+                "legacy",
+                CampaignRecommendationView.InsufficientCode.TOO_FEW_CLICKS,
+                10,
+                4,
+                200,
+                4,
+                0.0,
+                List.of()));
+
+    mvc.perform(
+            get("/api/v1/campaigns/42/recommendations")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.insufficientCode").value("TOO_FEW_CLICKS"))
+        .andExpect(jsonPath("$.insufficientMinimum").value(10))
+        .andExpect(jsonPath("$.insufficientCurrent").value(4))
+        .andExpect(jsonPath("$.insufficientReason").value("legacy"));
   }
 
   @Test

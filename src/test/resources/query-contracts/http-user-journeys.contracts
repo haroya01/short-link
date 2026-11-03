@@ -178,7 +178,7 @@
 @junit | campaign-policy-reapply | 10 | 0 | 6 | 0 | 16
 @junit | campaign-policy-update | 3 | 0 | 1 | 0 | 4
 @junit | campaign-reapplied-visit | 4 | 0 | 0 | 0 | 4
-@junit | campaign-recommendations | 10 | 0 | 0 | 0 | 10
+@junit | campaign-recommendations | 11 | 0 | 0 | 0 | 11
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
 @junit | campaign-scheduled-batch-create | 8 | 6 | 2 | 0 | 16
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
@@ -188,8 +188,8 @@
 @junit | campaign-scheduled-read-active | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-read-ended | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-repeat-tick | 2 | 0 | 0 | 0 | 2
-@junit | campaign-stats | 10 | 0 | 0 | 0 | 10
-@junit | campaign-stats-compare | 12 | 0 | 0 | 0 | 12
+@junit | campaign-stats | 11 | 0 | 0 | 0 | 11
+@junit | campaign-stats-compare | 13 | 0 | 0 | 0 | 13
 @junit | creator-blog-hook-create | 1 | 1 | 0 | 0 | 2
 @junit | creator-blog-hook-delete | 1 | 0 | 0 | 1 | 2
 @junit | creator-blog-hook-denies-other | 1 | 0 | 0 | 0 | 1

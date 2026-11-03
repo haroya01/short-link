@@ -118,47 +118,50 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       value =
           "SELECT h AS hour, CAST(SUM(n) AS SIGNED) AS count FROM ("
               + "SELECT HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS h, COUNT(*) AS n FROM click_event "
-              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:since)"
+              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
               + RAW
               + " GROUP BY h UNION ALL "
               + "SELECT HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS h, SUM(humans) FROM click_hourly "
-              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:since) GROUP BY h"
+              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:from) AND hour_start < FROM_UNIXTIME(:until) GROUP BY h"
               + ") u GROUP BY h ORDER BY h",
       nativeQuery = true)
-  List<HourClickRow> findHourlyClicksByLinkIdsSince(
+  List<HourClickRow> findHourlyClicksByLinkIds(
       @Param("linkIds") List<Long> linkIds,
-      @Param("since") BigDecimal since,
+      @Param("from") BigDecimal from,
+      @Param("until") BigDecimal until,
       @Param("tz") String timezone);
 
   @Query(
       value =
           "SELECT d AS day, CAST(SUM(n) AS SIGNED) AS count FROM ("
               + "SELECT DATE(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS d, COUNT(*) AS n FROM click_event "
-              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:since)"
+              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
               + RAW
               + " GROUP BY d UNION ALL "
               + "SELECT DATE(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS d, SUM(humans) FROM click_hourly "
-              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:since) GROUP BY d"
+              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:from) AND hour_start < FROM_UNIXTIME(:until) GROUP BY d"
               + ") u GROUP BY d ORDER BY d",
       nativeQuery = true)
-  List<DailyClickRow> findDailyClicksByLinkIdsSince(
+  List<DailyClickRow> findDailyClicksByLinkIds(
       @Param("linkIds") List<Long> linkIds,
-      @Param("since") BigDecimal since,
+      @Param("from") BigDecimal from,
+      @Param("until") BigDecimal until,
       @Param("tz") String timezone);
 
   @Query(
       value =
           "SELECT d AS dow, h AS hour, CAST(SUM(n) AS SIGNED) AS count FROM ("
               + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS d, HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS h, COUNT(*) AS n FROM click_event "
-              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:since)"
+              + "WHERE link_id IN (:linkIds) AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:until)"
               + RAW
               + " GROUP BY d, h UNION ALL "
               + "SELECT DAYOFWEEK(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS d, HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(hour_start)), '1970-01-01'), '+00:00', :tz)) AS h, SUM(humans) FROM click_hourly "
-              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:since) GROUP BY d, h"
+              + "WHERE link_id IN (:linkIds) AND humans > 0 AND last_human_at >= FROM_UNIXTIME(:from) AND hour_start < FROM_UNIXTIME(:until) GROUP BY d, h"
               + ") u GROUP BY d, h ORDER BY d, h",
       nativeQuery = true)
-  List<HeatmapRow> findHeatmapByLinkIdsSince(
+  List<HeatmapRow> findHeatmapByLinkIds(
       @Param("linkIds") List<Long> linkIds,
-      @Param("since") BigDecimal since,
+      @Param("from") BigDecimal from,
+      @Param("until") BigDecimal until,
       @Param("tz") String timezone);
 }
