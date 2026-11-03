@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -141,6 +142,47 @@ class LinkStatsRecentRollupEquivalenceIntegrationTest {
     assertThat(summedAgain).isEqualTo(rawOnly);
   }
 
+  @Test
+  void aReportReadsTheSameOnBothSidesOfTheRolledTheSummedAndTheWindowBoundaries() {
+    Instant created = NOW.minus(Duration.ofDays(100)).minusSeconds(777).minusMillis(250);
+    Instant rolledUntil = NOW.minus(Duration.ofDays(90)).truncatedTo(ChronoUnit.DAYS);
+    Instant aggregatedUntil = Instant.parse("2026-10-20T00:00:00Z");
+    List<Instant> edges = List.of(rolledUntil, aggregatedUntil, DAILY_FROM.plusSeconds(467));
+    for (String zone : List.of("Asia/Seoul", "America/New_York", "Asia/Kolkata")) {
+      seedLink(zone, created, new Random(zone.hashCode()), edges, false);
+    }
+    JsonNode rawOnly = summable(reports());
+
+    assertThat(rollup.rollUp(NOW)).isPositive();
+    assertThat(rollup.deleteRolledUp()).isPositive();
+    JsonNode rolled = summable(reports());
+    assertThat(rollup.aggregate(NOW)).isPositive();
+    assertThat(aggregatedUntil()).isEqualTo(aggregatedUntil);
+    JsonNode summed = summable(reports());
+
+    assertThat(rolled).isEqualTo(rawOnly);
+    assertThat(summed).isEqualTo(rawOnly);
+  }
+
+  private static JsonNode summable(JsonNode reports) {
+    reports
+        .properties()
+        .forEach(
+            zone -> {
+              ObjectNode report = (ObjectNode) zone.getValue();
+              report.remove(List.of("uniqueClicks", "rawSince", "returnRate", "insights"));
+              report
+                  .get("channelDepth")
+                  .forEach(
+                      depth ->
+                          ((ObjectNode) depth).remove(List.of("returningVisitors", "returnRatio")));
+              if (zone.getKey().equals("Asia/Kolkata")) {
+                report.remove(List.of("heatmap", "hourClicks", "dayOfWeekClicks", "peakHour"));
+              }
+            });
+    return reports;
+  }
+
   private void reopenFrom(Instant day) {
     jdbc.update(
         "DELETE FROM click_recent_quarter WHERE quarter_start >= FROM_UNIXTIME(?)",
@@ -210,6 +252,11 @@ class LinkStatsRecentRollupEquivalenceIntegrationTest {
   }
 
   private void seedLink(String zone, Instant created, Random random) {
+    seedLink(zone, created, random, List.of(), true);
+  }
+
+  private void seedLink(
+      String zone, Instant backdated, Random random, List<Instant> edges, boolean creationSecond) {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     UserEntity user = new UserEntity("recent-" + suffix + "@x.com", "google", "g-rc" + suffix);
     user.changeTimezone(zone);
@@ -219,8 +266,9 @@ class LinkStatsRecentRollupEquivalenceIntegrationTest {
     LinkEntity link = links.save(new LinkEntity("https://example.com/" + code, code, owner, null));
     jdbc.update(
         "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
-        BigDecimal.valueOf(created.toEpochMilli(), 3),
+        BigDecimal.valueOf(backdated.toEpochMilli(), 3),
         link.getId());
+    Instant created = links.findByShortCode(link.getShortCode()).orElseThrow().getCreatedAt();
     linkIds.add(link.getId());
     owners.put(zone, owner);
     codes.put(zone, link.getShortCode());
@@ -232,8 +280,11 @@ class LinkStatsRecentRollupEquivalenceIntegrationTest {
     for (int i = 0; i < 300; i++) {
       times.add(created.plusSeconds((long) (random.nextDouble() * span)));
     }
-    times.add(created);
+    if (creationSecond) times.add(created);
     times.add(created.plusSeconds(1));
+    for (Instant edge : edges) {
+      times.addAll(List.of(edge.minusSeconds(1), edge, edge.plusSeconds(1)));
+    }
     for (int seconds : new int[] {-1, 0, 1, 466, 467}) {
       times.add(DAILY_FROM.plusSeconds(seconds));
     }

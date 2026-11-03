@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.admin.application.read.AdminMetricReader;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository;
@@ -29,6 +30,8 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManagerFactory;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.RecordComponent;
 import java.time.Duration;
 import java.time.Instant;
@@ -203,6 +206,62 @@ class ClickRollupEquivalenceIntegrationTest {
     assertThat(stats(linkId).humanClicks()).isEqualTo(4);
     assertThat(stats(linkId).firstClickAt()).isEqualTo(day91);
     assertThat(stats(linkId).lastClickAt()).isEqualTo(day89);
+  }
+
+  @Test
+  void aDayMovingFromTheRecentSumsIntoTheRollupsCountsOnceWhenTheMoveFailsOrRunsAgain() {
+    Instant now = Instant.now();
+    Long owner = owner("Asia/Seoul");
+    Long linkId = link(owner, now.minus(Duration.ofDays(120)));
+    Instant created = links.findByShortCode(codeByLink.get(linkId)).orElseThrow().getCreatedAt();
+    seedClicks(linkId, created.plusSeconds(1), now, 400, null, new Random(13));
+    Object rawOnly = normalize(stats(linkId));
+    assertThat(rollup.aggregate(now)).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+
+    ClickRollupService failsOnTheThirdDay =
+        new ClickRollupService(
+            failingAdvanceTo(3), new ClickRetentionProperties(90, true, 1000), transactionManager);
+    assertThatThrownBy(() -> failsOnTheThirdDay.rollUp(now)).hasMessage("roll interrupted");
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(recentRowsBelowRolledUntil()).isZero();
+
+    assertThat(rollup.rollUp(now)).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(rollup.rollUp(now)).isZero();
+    assertThat(rollup.aggregate(now)).isPositive();
+    assertThat(rollup.deleteRolledUp()).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(recentRowsBelowRolledUntil()).isZero();
+  }
+
+  private long recentRowsBelowRolledUntil() {
+    return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM click_recent_quarter, click_rollup_state "
+                + "WHERE id = 1 AND quarter_start < rolled_until",
+            Long.class)
+        + jdbc.queryForObject(
+            "SELECT COUNT(*) FROM click_recent_dim, click_rollup_state "
+                + "WHERE id = 1 AND day_start < rolled_until",
+            Long.class);
+  }
+
+  private ClickRollupRepository failingAdvanceTo(int call) {
+    int[] calls = {0};
+    return (ClickRollupRepository)
+        Proxy.newProxyInstance(
+            ClickRollupRepository.class.getClassLoader(),
+            new Class<?>[] {ClickRollupRepository.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("advanceTo") && ++calls[0] == call) {
+                throw new IllegalStateException("roll interrupted");
+              }
+              try {
+                return method.invoke(rollupRepository, args);
+              } catch (InvocationTargetException e) {
+                throw e.getCause();
+              }
+            });
   }
 
   @Test
