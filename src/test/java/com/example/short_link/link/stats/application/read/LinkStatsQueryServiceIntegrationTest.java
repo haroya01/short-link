@@ -165,6 +165,40 @@ class LinkStatsQueryServiceIntegrationTest {
             .build());
   }
 
+  private void referrerClick(LinkEntity link, String host, String path) {
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.linkId())
+            .userAgent("ua")
+            .clientIp("9.9.9.9")
+            .deviceClass("mobile")
+            .referrer("https://" + host + path)
+            .referrerHost(host)
+            .bot(false)
+            .build());
+  }
+
+  @Test
+  void channelTotalsCountEveryReferrerBeyondTheTopFiftyList() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-chall"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "stchall", owner.getId(), null));
+    for (int i = 0; i < 50; i++) {
+      referrerClick(link, "www.google.com", "/search/" + i);
+      referrerClick(link, "www.google.com", "/search/" + i);
+    }
+    for (int i = 0; i < 60; i++) {
+      referrerClick(link, "www.instagram.com", "/p/" + i);
+    }
+
+    var breakdowns = dimensionsReader.channels(link.linkId());
+
+    assertThat(breakdowns.referrers()).hasSize(50);
+    assertThat(breakdowns.channels())
+        .extracting(LinkStats.ChannelClick::channel, LinkStats.ChannelClick::count)
+        .containsExactly(tuple("search", 100L), tuple("social", 60L));
+  }
+
   @Test
   void channelJump_detectsHostThatAppearsLongAfterOrigin() {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj"));
