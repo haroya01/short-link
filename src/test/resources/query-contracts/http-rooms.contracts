@@ -77,6 +77,9 @@
 @junit | room-request-reject | 3 | 0 | 0 | 1 | 4
 @junit | room-invites | 4 | 0 | 0 | 0 | 4
 @junit | room-invite-disable | 4 | 0 | 1 | 0 | 5
+# A switched-off, expired or used-up code answers 410 with its reason after reading the invite
+# alone: no room, member count, inviter or faces.
+@junit | room-invite-landing-disabled | 1 | 0 | 0 | 0 | 1
 # Removing a member: lock, both memberships, the membership deleted, their invites stopped, the
 # invitations they sent that nobody answered deleted, and the removal kept so no invite lets them
 # back in.

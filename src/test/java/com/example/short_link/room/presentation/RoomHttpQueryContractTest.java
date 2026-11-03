@@ -154,6 +154,17 @@ class RoomHttpQueryContractTest extends OperationalHttpJourneySupport {
         owner,
         null,
         200);
+    var spent =
+        step(
+            "room-invite-landing-disabled",
+            "GET",
+            "/api/v1/public/room-invites/" + invites.get(0).path("code").asText(),
+            null,
+            null,
+            410);
+    assertThat(spent.path("reason").asText()).isEqualTo("disabled");
+    assertThat(spent.has("roomName")).isFalse();
+    assertThat(spent.has("members")).isFalse();
     step(
         "room-member-remove",
         "DELETE",
