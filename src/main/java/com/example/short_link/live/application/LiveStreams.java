@@ -95,7 +95,6 @@ public class LiveStreams implements SmartLifecycle {
         meters.counter("live.streams.rejected").increment();
         return false;
       }
-      subscriber.closeAt(clock.instant().plus(props.lifetimeAt(draws.getAsDouble())));
       byUser.computeIfAbsent(subscriber.userId(), user -> new LinkedHashSet<>()).add(subscriber);
       watchers
           .computeIfAbsent(subscriber.topic(), topic -> ConcurrentHashMap.newKeySet())
@@ -104,6 +103,7 @@ public class LiveStreams implements SmartLifecycle {
     } finally {
       admission.unlock();
     }
+    subscriber.rotation(later(() -> rotate(subscriber), props.lifetimeAt(draws.getAsDouble())));
     if (oldest != null) {
       LiveSubscriber replaced = oldest;
       later(() -> crowdOut(replaced), Duration.ZERO);
@@ -136,6 +136,13 @@ public class LiveStreams implements SmartLifecycle {
       }
     }
     open.decrementAndGet();
+    subscriber.end();
+  }
+
+  private void rotate(LiveSubscriber subscriber) {
+    if (!subscriber.ended()) {
+      sayBye(subscriber, "rotate", ROTATE_RETRY_MIN, ROTATE_RETRY_MAX);
+    }
   }
 
   private void crowdOut(LiveSubscriber subscriber) {
@@ -223,14 +230,8 @@ public class LiveStreams implements SmartLifecycle {
   }
 
   void beat() {
-    Instant now = clock.instant();
-    List<LiveSubscriber> due = new ArrayList<>();
     for (Set<LiveSubscriber> watching : watchers.values()) {
       for (LiveSubscriber subscriber : watching) {
-        if (!now.isBefore(subscriber.closeAt())) {
-          due.add(subscriber);
-          continue;
-        }
         synchronized (subscriber) {
           if (subscriber.ready()) {
             deliver(subscriber, HEARTBEAT);
@@ -238,7 +239,6 @@ public class LiveStreams implements SmartLifecycle {
         }
       }
     }
-    due.forEach(subscriber -> sayBye(subscriber, "rotate", ROTATE_RETRY_MIN, ROTATE_RETRY_MAX));
   }
 
   private void end(LiveRevoke revoke) {
@@ -295,11 +295,12 @@ public class LiveStreams implements SmartLifecycle {
     return mine == null ? 0 : mine.size();
   }
 
-  private void later(Runnable work, Duration delay) {
+  private ScheduledFuture<?> later(Runnable work, Duration delay) {
     try {
-      worker.schedule(guarded(work), delay.toMillis(), TimeUnit.MILLISECONDS);
+      return worker.schedule(guarded(work), delay.toMillis(), TimeUnit.MILLISECONDS);
     } catch (RejectedExecutionException stopping) {
       log.debug("live worker stopped; dropped a delivery");
+      return null;
     }
   }
 

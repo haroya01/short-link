@@ -350,35 +350,58 @@ class LiveStreamsTest {
   @Test
   void eachStreamEndsAtItsOwnTimeWithAByeAndARotateDelay() {
     streams.shutdown();
-    MovingClock clock = new MovingClock(NOW);
     double[] draws = {0.0, 0.0, 1.0, 0.0};
     int[] next = {0};
     streams =
         new LiveStreams(
-            new LiveProperties(500, 4, null, null, Duration.ofHours(1), null, null, null),
-            clock,
+            new LiveProperties(
+                500,
+                4,
+                Duration.ofMillis(500),
+                Duration.ofHours(1),
+                Duration.ofHours(1),
+                null,
+                null,
+                null),
+            Clock.fixed(NOW, ZoneOffset.UTC),
             new SimpleMeterRegistry(),
             () -> next[0] < draws.length ? draws[next[0]++] : 1.0);
     RecordingChannel early = watch(2L, THREAD, OPEN);
     RecordingChannel late = watch(3L, THREAD, OPEN);
 
-    clock.now = NOW.plus(Duration.ofMinutes(4));
-    streams.beat();
-
-    assertThat(early.names()).containsExactly("Ready", "Bye");
-    assertThat(early.closed).isTrue();
-    assertThat(late.names()).containsExactly("Ready", "Heartbeat");
+    await().atMost(Duration.ofSeconds(5)).until(() -> early.closed);
     assertThat(late.closed).isFalse();
+    assertThat(early.names()).containsExactly("Ready", "Bye");
 
-    clock.now = NOW.plus(Duration.ofMinutes(6));
-    streams.beat();
-
-    assertThat(late.names()).containsExactly("Ready", "Heartbeat", "Bye");
+    await().atMost(Duration.ofSeconds(5)).until(() -> late.closed);
     LiveEvent.Bye bye = (LiveEvent.Bye) late.sent.getLast();
     assertThat(bye.reason()).isEqualTo("rotate");
     assertThat(bye.retryMs()).isEqualTo(5_000L);
-    assertThat(late.closed).isTrue();
     assertThat(streams.open()).isZero();
+  }
+
+  @Test
+  void aStreamThatLeavesFirstIsNotRotatedLater() {
+    streams.shutdown();
+    streams =
+        new LiveStreams(
+            new LiveProperties(
+                500, 4, Duration.ofMillis(200), null, Duration.ofHours(1), null, null, null),
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            new SimpleMeterRegistry(),
+            () -> 0.5);
+    RecordingChannel channel = new RecordingChannel();
+    LiveSubscriber subscriber = new LiveSubscriber(2L, THREAD, OPEN, channel);
+    streams.register(subscriber);
+    streams.start(subscriber, 0L, null, "renewed");
+
+    streams.remove(subscriber);
+
+    await()
+        .during(Duration.ofMillis(500))
+        .atMost(Duration.ofSeconds(1))
+        .until(() -> !channel.closed);
+    assertThat(channel.names()).containsExactly("Ready");
   }
 
   @Test
@@ -404,29 +427,6 @@ class LiveStreamsTest {
         clock,
         new SimpleMeterRegistry(),
         () -> draw);
-  }
-
-  private static final class MovingClock extends Clock {
-    private Instant now;
-
-    MovingClock(Instant now) {
-      this.now = now;
-    }
-
-    @Override
-    public ZoneOffset getZone() {
-      return ZoneOffset.UTC;
-    }
-
-    @Override
-    public Clock withZone(java.time.ZoneId zone) {
-      return this;
-    }
-
-    @Override
-    public Instant instant() {
-      return now;
-    }
   }
 
   @Test
