@@ -28,56 +28,68 @@ public class LinkHtmlRenderer {
   private static final String STYLE =
       """
       *{box-sizing:border-box}
-      :root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--muted:#64748b;--border:#e2e8f0;\
-      --brand:#059669;--press:#047857;--danger:#dc2626}
-      @media(prefers-color-scheme:dark){:root{--bg:#000;--card:#0f172a;--ink:#f1f5f9;\
-      --muted:#94a3b8;--border:#1e293b}}
-      body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;\
-      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;\
-      background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-      .card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);\
-      border-radius:16px;padding:28px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.05);\
-      animation:rise .4s cubic-bezier(.16,1,.3,1)}
-      @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-      .mark{display:block;width:26px;height:auto;color:var(--brand);margin-bottom:18px}
-      h1{font-size:17px;margin:0 0 6px;letter-spacing:-.01em;line-height:1.4}
-      p{font-size:14px;line-height:1.6;color:var(--muted);margin:0;white-space:pre-wrap}
-      form{margin-top:18px}
-      label{display:block;font-size:13px;color:var(--muted);margin:0 0 8px}
-      input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;\
-      font-size:16px;background:transparent;color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s}
-      input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(5,150,105,.15)}
-      button{margin-top:14px;width:100%;padding:13px;background:var(--brand);color:#fff;border:0;\
-      border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
-      button:hover{background:var(--press)}
-      .cf{margin-top:14px;display:flex;justify-content:center}
-      .err{color:var(--danger);font-size:13px;margin:10px 0 0;text-align:center}
-      @keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}\
-      30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
-      .shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97)}
-      .shake input{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,.12)}
-      .unlock{text-align:center}
-      .unlock .mark{display:none}
-      .bigmark{display:block;width:92px;height:auto;color:var(--brand);margin:2px auto 18px;\
-      clip-path:inset(0 100% 0 0);animation:wipe .7s cubic-bezier(.16,1,.3,1) .1s forwards}
-      @keyframes wipe{to{clip-path:inset(0 0 0 0)}}
-      .bar{width:130px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin:16px auto 0}
-      .bar span{display:block;height:100%;background:var(--brand);transform-origin:left;\
-      transform:scaleX(0);animation:fill 1.25s linear .3s forwards}
-      @keyframes fill{to{transform:scaleX(1)}}
-      .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
-      .stay{display:inline-block;margin-top:18px;font-size:14px;font-weight:600;color:var(--brand);\
-      text-decoration:none}
-      .splash .msg{font-size:16px;color:var(--ink);word-break:break-word}
-      .splash .btn{display:block;margin-top:18px;padding:13px;border-radius:10px;background:var(--brand);\
-      color:#fff;text-align:center;font-size:15px;font-weight:600;text-decoration:none}
-      .splash .go{display:inline-block;margin-top:14px;font-size:14px;font-weight:600;color:var(--brand);\
-      text-decoration:none}
-      .splash .bar{width:100%;margin:18px 0 0}
-      .splash .bar span{animation-delay:0s}
-      .splash .count{font-size:12px;margin-top:8px}
-      .count{font-size:12px;margin-top:10px}
-      .splash .stay{margin-top:10px;font-size:13px;font-weight:500;color:var(--muted)}
+      :root{color-scheme:light;--bg:#fff;--ink:rgb(19 26 22);--muted:rgb(109 117 112);\
+      --line:rgb(208 213 210);--focus:rgb(19 26 22);--green:#059669;--link:#047857;--link-hover:#065f46;\
+      --fill:#047857;--fill-hover:#065f46;--danger:#dc2626;--ease:cubic-bezier(.16,1,.3,1)}
+      @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:rgb(15 20 18);--ink:rgb(230 234 231);\
+      --muted:rgb(154 163 158);--line:rgb(54 62 57);--focus:rgb(216 221 218);--green:#10b981;\
+      --link:#34d399;--link-hover:#6ee7b7;--danger:#f87171}}
+      body{margin:0;min-height:100vh;min-height:100svh;display:grid;place-items:center;\
+      padding:40px 16px calc(40px + 10vh);background:var(--bg);color:var(--ink);\
+      font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;\
+      -webkit-font-smoothing:antialiased}
+      main{width:100%;max-width:360px;animation:enter .46s var(--ease) both}
+      main.still{animation:none}
+      @keyframes enter{from{opacity:0;transform:translateY(4px)}}
+      :lang(ko){word-break:keep-all}
+      h1,p{overflow-wrap:break-word;line-break:strict;text-wrap:pretty}
+      .mark{display:block;width:22px;height:auto;color:var(--green);margin-bottom:28px}
+      h1{font-size:21px;font-weight:700;line-height:1.35;letter-spacing:-.02em;margin:0 0 8px}
+      p{font-size:15px;line-height:1.6;color:var(--muted);margin:0;white-space:pre-wrap}
+      .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+      .row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;\
+      min-height:48px;margin-top:28px}
+      .row::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line);\
+      transition:background-color .2s var(--ease)}
+      .field:focus-within::after{background:var(--focus)}
+      input{flex:1;min-width:0;height:48px;padding:0;border:0;border-radius:0;background:none;color:var(--ink);\
+      font:inherit;font-size:16px;outline:none}
+      input::placeholder{color:var(--muted);opacity:1}
+      button,.go{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:0 0 0 8px;\
+      border:0;background:none;color:var(--link);font:inherit;font-size:15px;font-weight:600;\
+      text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .2s var(--ease)}
+      button:hover,.go:hover{color:var(--link-hover)}
+      button span,.go span{transition:transform .2s var(--ease)}
+      button:hover span,.go:hover span{transform:translateX(2px)}
+      a:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+      .miss{animation:nudge .28s var(--ease)}
+      .miss::after{animation:flash 1.2s var(--ease)}
+      @keyframes nudge{30%{transform:translateX(-4px)}70%{transform:translateX(4px)}}
+      @keyframes flash{0%,50%{background:var(--danger)}}
+      .err{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;font-weight:500;color:var(--danger)}
+      .err::before{content:"";flex:none;width:14px;height:3px;border-radius:2px;background:currentColor}
+      .cf{margin-top:20px}
+      .line{position:absolute;left:0;right:0;bottom:0;z-index:1;height:2px;border-radius:2px;background:var(--green);\
+      transform-origin:left;animation:draw .64s var(--ease) .06s backwards}
+      @keyframes draw{from{transform:scaleX(0)}}
+      .count,.pow{font-size:13px;line-height:1.5;color:var(--muted)}
+      .pow b{color:var(--link);font-weight:600}
+      p.count{margin-top:16px}
+      .stay{display:inline-flex;align-items:center;min-height:44px;margin-top:16px;font-size:15px;font-weight:600;\
+      color:var(--link);text-decoration:none;transition:color .2s var(--ease)}
+      .stay:hover{color:var(--link-hover)}
+      .splash .msg{font-size:17px;font-weight:500;line-height:1.55;letter-spacing:-.01em;color:var(--ink)}
+      .splash .btn{display:inline-flex;align-items:center;min-height:44px;margin-top:20px;padding:0 20px;\
+      border-radius:8px;background:var(--fill);color:#fff;font-size:15px;font-weight:600;text-decoration:none;\
+      transition:background-color .2s var(--ease)}
+      .splash .btn:hover{background:var(--fill-hover)}
+      .splash .line{animation-timing-function:linear;animation-delay:0s}
+      .splash .row .count{padding:12px 0}
+      .splash .stay{display:flex;width:max-content;margin-top:8px;font-size:13px;font-weight:500;color:var(--muted);\
+      text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+      .splash .stay:hover{color:var(--ink)}
+      .splash .pow{margin-top:8px}
+      @media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important}}
       """;
 
   private static final DateTimeFormatter UTC_TIME =
@@ -86,10 +98,8 @@ public class LinkHtmlRenderer {
   private final MessageSource messages;
 
   /** Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS. */
-  private static String markSvg(String cls) {
-    return "<svg class=\""
-        + cls
-        + "\" viewBox=\"0 0 28 18\" fill=\"currentColor\" aria-hidden=\"true\">"
+  private static String markSvg() {
+    return "<svg class=\"mark\" viewBox=\"0 0 28 18\" fill=\"currentColor\" aria-hidden=\"true\">"
         + "<rect x=\"6\" y=\"1\" width=\"20\" height=\"3.4\" rx=\"1.0\"/>"
         + "<rect x=\"0\" y=\"7.3\" width=\"28\" height=\"3.4\" rx=\"1.0\"/>"
         + "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.0\"/></svg>";
@@ -104,7 +114,7 @@ public class LinkHtmlRenderer {
   }
 
   private String page(
-      Locale locale, String title, String inner, String cardClass, String headExtra) {
+      Locale locale, String title, String inner, String mainClass, String headExtra) {
     return "<!doctype html><html lang=\""
         + locale.getLanguage()
         + "\"><head><meta charset=\"utf-8\">"
@@ -114,10 +124,10 @@ public class LinkHtmlRenderer {
         + escape(title)
         + "</title><style>"
         + STYLE
-        + "</style></head><body><main class=\"card"
-        + cardClass
-        + "\">"
-        + markSvg("mark")
+        + "</style></head><body><main"
+        + (mainClass.isEmpty() ? "" : " class=\"" + mainClass + "\"")
+        + ">"
+        + markSvg()
         + inner
         + "</main></body></html>";
   }
@@ -217,7 +227,12 @@ public class LinkHtmlRenderer {
                 + "\" data-theme=\"auto\"></div></div>"
             : "";
     String error =
-        failed ? "<p class=\"err\">" + escape(text(locale, "visitor.password.wrong")) + "</p>" : "";
+        failed
+            ? "<p class=\"err\" id=\"err\">"
+                + escape(text(locale, "visitor.password.wrong"))
+                + "</p>"
+            : "";
+    String label = escape(text(locale, "visitor.password.label"));
     String inner =
         "<h1>"
             + escape(text(locale, "visitor.password.title"))
@@ -227,22 +242,27 @@ public class LinkHtmlRenderer {
             + "</p>"
             + "<form method=\"post\" action=\"/"
             + shortCode
-            + "\"><label for=\"pw\">"
-            + escape(text(locale, "visitor.password.label"))
+            + "\"><label class=\"sr\" for=\"pw\">"
+            + label
             + "</label>"
-            + "<input id=\"pw\" type=\"password\" name=\"password\" autofocus required autocomplete=\"off\">"
-            + widget
-            + "<button type=\"submit\">"
+            + "<div class=\"row field"
+            + (failed ? " miss" : "")
+            + "\"><input id=\"pw\" type=\"password\" name=\"password\" placeholder=\""
+            + label
+            + "\" autofocus required autocomplete=\"off\""
+            + (failed ? " aria-invalid=\"true\" aria-describedby=\"err\"" : "")
+            + "><button type=\"submit\">"
             + escape(text(locale, "visitor.password.submit"))
-            + "</button>"
+            + "<span aria-hidden=\"true\">→</span></button></div>"
             + error
+            + widget
             + "</form>"
             + script;
     return page(
         locale,
         shortCode + " · " + text(locale, "visitor.password.label"),
         inner,
-        failed ? " shake" : "",
+        failed ? "still" : "",
         "");
   }
 
@@ -252,25 +272,21 @@ public class LinkHtmlRenderer {
     String head =
         safe.isEmpty() ? "" : "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
     String inner =
-        "<div class=\"unlock\">"
-            + markSvg("bigmark")
-            + "<h1>"
+        "<h1>"
             + escape(text(locale, "visitor.unlocked.title"))
             + "</h1>"
             + "<p>"
             + escape(text(locale, "visitor.unlocked.body"))
             + "</p>"
-            + "<div class=\"bar\"><span></span></div>"
-            + "<p class=\"pow\">"
+            + "<div class=\"row\"><span class=\"pow\">"
             + poweredBy(locale)
-            + "</p>"
+            + "</span><span class=\"line\"></span></div>"
             + "<span id=\"d\" data-u=\""
             + safe
             + "\" hidden></span>"
-            + "</div>"
             + "<script>setTimeout(function(){var u=document.getElementById('d').dataset.u;"
             + "if(u){location.replace(u)}},1300)</script>";
-    return page(locale, text(locale, "visitor.unlocked.pageTitle"), inner, " unlock", head);
+    return page(locale, text(locale, "visitor.unlocked.pageTitle"), inner, "still", head);
   }
 
   String splashPage(Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
@@ -297,20 +313,20 @@ public class LinkHtmlRenderer {
             + escape(splash.message())
             + "</p>"
             + cta
+            + "<div class=\"row\"><span class=\"count\" id=\"c\">"
+            + withMarker(
+                locale, "visitor.splash.countdown", "<span id=\"n\">" + seconds + "</span>")
+            + "</span>"
             + (next.isEmpty()
                 ? ""
                 : "<a class=\"go\" href=\""
                     + next
                     + "\">"
                     + escape(text(locale, "visitor.splash.continue"))
-                    + " →</a>")
-            + "<div class=\"bar\"><span style=\"animation-duration:"
+                    + "<span aria-hidden=\"true\">→</span></a>")
+            + "<span class=\"line\" style=\"animation-duration:"
             + seconds
             + "s\"></span></div>"
-            + "<p class=\"count\" id=\"c\">"
-            + withMarker(
-                locale, "visitor.splash.countdown", "<span id=\"n\">" + seconds + "</span>")
-            + "</p>"
             + stay
             + "<p class=\"pow\">"
             + poweredBy(locale)
@@ -324,13 +340,13 @@ public class LinkHtmlRenderer {
             + "\" hidden></span>"
             + "<script>(function(){var d=document.getElementById('d'),s=+d.dataset.s,"
             + "n=document.getElementById('n'),c=document.getElementById('c'),"
-            + "b=document.querySelector('.bar span');"
+            + "b=document.querySelector('.line');"
             + "var t=setInterval(function(){s--;if(s<=0){clearInterval(t);if(d.dataset.u){location.replace(d.dataset.u)}return}"
             + "n.textContent=s},1000);"
             + "function stop(){clearInterval(t);c.textContent=d.dataset.p;if(b){b.style.animationPlayState='paused'}}"
             + "document.addEventListener('pointerdown',stop,{once:true});"
             + "document.addEventListener('keydown',stop,{once:true})})()</script>";
-    return page(locale, text(locale, "visitor.splash.pageTitle"), inner, " splash", "");
+    return page(locale, text(locale, "visitor.splash.pageTitle"), inner, "splash", "");
   }
 
   String notYetOpenPage(Locale locale, Instant opensAt) {
