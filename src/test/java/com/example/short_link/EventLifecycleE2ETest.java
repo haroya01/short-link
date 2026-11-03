@@ -14,6 +14,9 @@ import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -240,11 +243,16 @@ class EventLifecycleE2ETest {
     UserEntity organizer =
         userRepository.save(new UserEntity("ev-org7@x.com", "google", "g-ev-org7"));
     String token = jwt.createAccessToken(organizer.getId(), "USER");
-    String slug = JsonPath.read(createEvent(token, 10), "$.slug");
+    String created = createEvent(token, 10);
+    String slug = JsonPath.read(created, "$.slug");
+    int eventId = JsonPath.read(created, "$.id");
 
     mvc.perform(get("/api/v1/public/events/" + slug))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.acceptingRegistrations").value(true))
+        .andExpect(jsonPath("$.registrationClosedReason").doesNotExist());
+    mvc.perform(get("/api/v1/events/" + eventId).header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
         .andExpect(jsonPath("$.registrationClosedReason").doesNotExist());
   }
 
@@ -256,8 +264,15 @@ class EventLifecycleE2ETest {
     Instant now = Instant.now();
     String created =
         createTimedEvent(token, now.minus(5, ChronoUnit.DAYS), now.minus(4, ChronoUnit.DAYS));
+    int eventId = JsonPath.read(created, "$.id");
 
     assertEndedAndRejectsRegistration(JsonPath.read(created, "$.slug"));
+    mvc.perform(get("/api/v1/events/" + eventId).header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.registrationClosedReason").value("ENDED"));
+    mvc.perform(get("/api/v1/events").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].registrationClosedReason").value("ENDED"));
   }
 
   @Test
@@ -295,6 +310,104 @@ class EventLifecycleE2ETest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.endsAt").value(storedEnd.toString()));
     assertEndedAndRejectsRegistration(slug);
+  }
+
+  private String createFromBody(String token, String body) throws Exception {
+    return mvc.perform(
+            post("/api/v1/events")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+  }
+
+  private void changeStatus(String token, String created, String action) throws Exception {
+    mvc.perform(
+            post("/api/v1/events/" + JsonPath.read(created, "$.id") + "/status")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"" + action + "\"}"))
+        .andExpect(status().isOk());
+  }
+
+  private String getJson(String url, String token) throws Exception {
+    var request = get(url);
+    if (token != null) {
+      request = request.header("Authorization", "Bearer " + token);
+    }
+    return mvc.perform(request)
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+  }
+
+  @Test
+  void ownerListAndDetailReportTheSameClosureReasonAsThePublicView() throws Exception {
+    UserEntity organizer =
+        userRepository.save(new UserEntity("ev-org8@x.com", "google", "g-ev-org8"));
+    String token = jwt.createAccessToken(organizer.getId(), "USER");
+    Instant now = Instant.now();
+    Instant past = now.minus(5, ChronoUnit.DAYS);
+    Map<String, String> expected = new LinkedHashMap<>();
+
+    expected.put(createEvent(token, 10), null);
+
+    String full = createEvent(token, 1);
+    mvc.perform(
+            post("/api/v1/public/events/" + JsonPath.read(full, "$.slug") + "/registrations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"참가자\",\"contact\":\"full@x.com\"}"))
+        .andExpect(status().isCreated());
+    expected.put(full, "FULL");
+
+    expected.put(
+        createFromBody(
+            token,
+            timedEventBody(now.plus(10, ChronoUnit.DAYS), null, now.minus(1, ChronoUnit.HOURS))),
+        "DEADLINE");
+
+    String closed = createEvent(token, 1);
+    changeStatus(token, closed, "close");
+    expected.put(closed, "CLOSED");
+
+    String endedAndClosed = createTimedEvent(token, past, past.plus(1, ChronoUnit.HOURS));
+    changeStatus(token, endedAndClosed, "close");
+    expected.put(endedAndClosed, "ENDED");
+
+    String canceledAfterEnd = createTimedEvent(token, past, past.plus(1, ChronoUnit.HOURS));
+    changeStatus(token, canceledAfterEnd, "cancel");
+    expected.put(canceledAfterEnd, "CANCELED");
+
+    entityManager.flush();
+    entityManager.clear();
+    String list = getJson("/api/v1/events", token);
+
+    for (Map.Entry<String, String> entry : expected.entrySet()) {
+      int id = JsonPath.read(entry.getKey(), "$.id");
+      String slug = JsonPath.read(entry.getKey(), "$.slug");
+      List<Map<String, Object>> listed = JsonPath.read(list, "$[?(@.id == " + id + ")]");
+      Map<String, Object> publicView =
+          JsonPath.read(getJson("/api/v1/public/events/" + slug, null), "$");
+      Map<String, Object> detail = JsonPath.read(getJson("/api/v1/events/" + id, token), "$");
+
+      assertThat(publicView.get("registrationClosedReason"))
+          .as("public %s", slug)
+          .isEqualTo(entry.getValue());
+      assertThat(detail.get("registrationClosedReason"))
+          .as("detail %s", slug)
+          .isEqualTo(entry.getValue());
+      assertThat(listed)
+          .singleElement()
+          .satisfies(
+              item ->
+                  assertThat(item.get("registrationClosedReason"))
+                      .as("list %s", slug)
+                      .isEqualTo(entry.getValue()));
+    }
   }
 
   @Test

@@ -13,6 +13,7 @@ import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
 import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.domain.LinkId;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +35,16 @@ public class EventQueryService {
 
   @Transactional(readOnly = true)
   public List<EventView> listMyEvents(Long userId) {
+    Instant now = Instant.now();
     return eventRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
         .map(
             event ->
                 EventView.from(
-                    event, List.of(), List.of(), coverImageUrls.forKey(event.getCoverImageKey())))
+                    event,
+                    List.of(),
+                    List.of(),
+                    coverImageUrls.forKey(event.getCoverImageKey()),
+                    now))
         .toList();
   }
 
@@ -50,7 +56,11 @@ public class EventQueryService {
             .map(EventQuestionView::from)
             .toList();
     return EventView.from(
-        event, questions, linkViews(eventId), coverImageUrls.forKey(event.getCoverImageKey()));
+        event,
+        questions,
+        linkViews(eventId),
+        coverImageUrls.forKey(event.getCoverImageKey()),
+        Instant.now());
   }
 
   @Transactional(readOnly = true)

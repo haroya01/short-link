@@ -4801,6 +4801,7 @@
       "locationUrl" : "string",
       "onlineUrl" : "string",
       "questions" : "[#EventQuestionView]",
+      "registrationClosedReason" : "string",
       "registrationCount" : "integer(int32)",
       "slug" : "string",
       "startsAt" : "string(date-time)",
