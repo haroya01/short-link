@@ -370,7 +370,8 @@
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
 @junit | link-list-owned | 6 | 0 | 0 | 0 | 6
-@junit | link-og-card | 1 | 0 | 0 | 0 | 1
+# The kurl card counts human clicks only for a link whose stats are public; this one's are not.
+@junit | link-og-card | 0 | 0 | 0 | 0 | 0
 @junit | link-og-override | 4 | 0 | 2 | 0 | 6
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
 @junit | link-pow-challenge | 0 | 0 | 0 | 0 | 0
@@ -712,13 +713,14 @@
 @junit | reader-unlisted-path-absent-from-profile | 2 | 0 | 0 | 0 | 2
 @junit | reader-unlisted-path-direct-link | 8 | 0 | 0 | 0 | 8
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
-# Links with a view limit or country block: a crawler's card reads the link row and human clicks
-# but no event preview, spends no view, and is refused like a person once the limit is spent or its
-# country is blocked. A prefetch of a counted link stops at the custom-domain check.
+# Links with a view limit or country block: a crawler's card reads the link row (human clicks only
+# when the link's stats are public, which these are not) but no event preview, spends no view, and
+# is refused like a person once the limit is spent or its country is blocked. A prefetch of a
+# counted link stops at the custom-domain check.
 @junit | restricted-create-once | 6 | 5 | 2 | 0 | 13
 @junit | restricted-limit-views | 3 | 0 | 2 | 0 | 5
-@junit | restricted-crawler-preview | 5 | 0 | 0 | 0 | 5
-@junit | restricted-crawler-again | 3 | 0 | 0 | 0 | 3
+@junit | restricted-crawler-preview | 4 | 0 | 0 | 0 | 4
+@junit | restricted-crawler-again | 2 | 0 | 0 | 0 | 2
 @junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
 @junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
 @junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
@@ -728,7 +730,7 @@
 @junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
 @junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
 @junit | restricted-create-open | 6 | 5 | 2 | 0 | 13
-@junit | open-crawler-preview | 6 | 0 | 0 | 0 | 6
+@junit | open-crawler-preview | 5 | 0 | 0 | 0 | 5
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-comment-like | 11 | 2 | 0 | 0 | 13
