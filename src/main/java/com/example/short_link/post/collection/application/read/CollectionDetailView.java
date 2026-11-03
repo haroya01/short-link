@@ -11,4 +11,5 @@ public record CollectionDetailView(
     boolean ordered,
     String curatorUsername,
     Long curatorUserId,
-    List<ConnectionView> connections) {}
+    List<ConnectionView> connections,
+    String unlistedUrl) {}

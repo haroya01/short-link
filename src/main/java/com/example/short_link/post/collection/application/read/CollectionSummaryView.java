@@ -18,7 +18,8 @@ public record CollectionSummaryView(
     String curatorUsername,
     String curatorAvatarUrl,
     Integer position,
-    Long connectionId) {
+    Long connectionId,
+    String unlistedUrl) {
 
   public static CollectionSummaryView afterCreation(CollectionEntity collection) {
     return afterWrite(collection, 0);
@@ -62,7 +63,26 @@ public record CollectionSummaryView(
         curator.username(),
         curator.avatarUrl(),
         position,
-        connectionId);
+        connectionId,
+        null);
+  }
+
+  public CollectionSummaryView withUnlistedUrl(String url) {
+    return new CollectionSummaryView(
+        id,
+        title,
+        description,
+        visibility,
+        kind,
+        ordered,
+        count,
+        updatedAt,
+        preview,
+        curatorUsername,
+        curatorAvatarUrl,
+        position,
+        connectionId,
+        url);
   }
 
   public record Curator(String username, String avatarUrl) {

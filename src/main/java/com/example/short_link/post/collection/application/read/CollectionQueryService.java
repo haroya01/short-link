@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.post.collection.application.CollectionUnlistedUrls;
 import com.example.short_link.post.collection.application.read.CollectionSummaryView.Curator;
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
@@ -42,10 +43,15 @@ public class CollectionQueryService {
   private final CollectionConnectionRepository connectionRepository;
   private final CollectionContentReader contentReader;
   private final UserSummaryReader users;
+  private final CollectionUnlistedUrls unlistedUrls;
+
+  public CollectionSummaryView createdSummary(CollectionEntity saved) {
+    return CollectionSummaryView.afterCreation(saved).withUnlistedUrl(unlistedUrls.of(saved));
+  }
 
   public CollectionSummaryView editedSummary(CollectionEntity saved) {
     long count = connectionRepository.countByCollectionId(saved.getId());
-    return CollectionSummaryView.afterWrite(saved, count);
+    return CollectionSummaryView.afterWrite(saved, count).withUnlistedUrl(unlistedUrls.of(saved));
   }
 
   public List<CollectionSummaryView> publicCollectionsContaining(
@@ -197,11 +203,12 @@ public class CollectionQueryService {
         .map(
             collection ->
                 CollectionSummaryView.inList(
-                    collection,
-                    connectionRepository.countByCollectionId(collection.getId()),
-                    previews.getOrDefault(collection.getId(), List.of()),
-                    owner,
-                    connections.get(collection.getId())))
+                        collection,
+                        connectionRepository.countByCollectionId(collection.getId()),
+                        previews.getOrDefault(collection.getId(), List.of()),
+                        owner,
+                        connections.get(collection.getId()))
+                    .withUnlistedUrl(unlistedUrls.of(collection)))
         .toList();
   }
 
@@ -236,12 +243,12 @@ public class CollectionQueryService {
         .toList();
   }
 
-  // PRIVATE 컬렉션은 주인 외에는 존재를 노출하지 않는다.
-  public CollectionDetailView detail(Long viewerId, Long collectionId) {
+  // PRIVATE 컬렉션, 키가 맞지 않는 UNLISTED 컬렉션은 주인 외에는 존재를 노출하지 않는다.
+  public CollectionDetailView detail(Long viewerId, Long collectionId, String key) {
     CollectionEntity collection =
         collectionRepository
             .findById(collectionId)
-            .filter(candidate -> candidate.isVisibleTo(viewerId))
+            .filter(candidate -> candidate.isVisibleTo(viewerId, key))
             .orElseThrow(() -> new PostException(PostErrorCode.COLLECTION_NOT_FOUND, collectionId));
     List<CollectionConnectionEntity> connections =
         connectionRepository.findAllByCollectionIdOrderByPositionAsc(collectionId);
@@ -256,6 +263,7 @@ public class CollectionQueryService {
         collection.isOrdered(),
         curator.map(UserSummary::username).orElse(null),
         curator.map(UserSummary::id).orElse(null),
-        views);
+        views,
+        collection.isOwnedBy(viewerId) ? unlistedUrls.of(collection) : null);
   }
 }

@@ -62,6 +62,8 @@ class CollectionControllerTest {
   @Test
   void createReturns201WithSummary() throws Exception {
     when(command.create(any())).thenReturn(collection(10L));
+    when(query.createdSummary(any()))
+        .thenAnswer(inv -> CollectionSummaryView.afterCreation(inv.getArgument(0)));
 
     mvc.perform(
             post("/api/v1/collections")
@@ -77,7 +79,8 @@ class CollectionControllerTest {
         .andExpect(jsonPath("$.curatorUsername").doesNotExist())
         .andExpect(jsonPath("$.curatorAvatarUrl").doesNotExist())
         .andExpect(jsonPath("$.position").doesNotExist())
-        .andExpect(jsonPath("$.connectionId").doesNotExist());
+        .andExpect(jsonPath("$.connectionId").doesNotExist())
+        .andExpect(jsonPath("$.unlistedUrl").doesNotExist());
   }
 
   @ParameterizedTest
@@ -95,6 +98,7 @@ class CollectionControllerTest {
     CollectionEntity saved = collection(10L);
     saved.order(ordered);
     when(command.create(any())).thenReturn(saved);
+    when(query.createdSummary(saved)).thenReturn(CollectionSummaryView.afterCreation(saved));
 
     mvc.perform(
             post("/api/v1/collections")
@@ -201,6 +205,7 @@ class CollectionControllerTest {
                     "curator",
                     "https://cdn.kurl.me/a.jpg",
                     null,
+                    null,
                     null)));
 
     mvc.perform(
@@ -230,7 +235,8 @@ class CollectionControllerTest {
                     "curator",
                     null,
                     null,
-                    501L)));
+                    501L,
+                    null)));
 
     mvc.perform(
             get("/api/v1/users/me/collections")
@@ -246,7 +252,7 @@ class CollectionControllerTest {
     ConnectionView post =
         ConnectionView.post(
             100L, "왜", Instant.parse("2026-06-12T00:00:00Z"), "글 제목", "발췌", "slug", "alice");
-    when(query.detail(USER_ID, 10L))
+    when(query.detail(USER_ID, 10L, null))
         .thenReturn(
             new CollectionDetailView(
                 10L,
@@ -257,7 +263,8 @@ class CollectionControllerTest {
                 false,
                 "curator",
                 3L,
-                List.of(post)));
+                List.of(post),
+                null));
 
     mvc.perform(
             get("/api/v1/collections/10").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
@@ -270,13 +277,45 @@ class CollectionControllerTest {
 
   @Test
   void detailMissingMapsToNotFoundEnvelope() throws Exception {
-    when(query.detail(USER_ID, 99L))
+    when(query.detail(USER_ID, 99L, null))
         .thenThrow(new PostException(PostErrorCode.COLLECTION_NOT_FOUND, 99L));
 
     mvc.perform(
             get("/api/v1/collections/99").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("COLLECTION_NOT_FOUND"));
+  }
+
+  @Test
+  void detailPassesTheCollectionKeyHeaderAndTreatsABlankOneAsAbsent() throws Exception {
+    when(query.detail(any(), any(), any()))
+        .thenThrow(new PostException(PostErrorCode.COLLECTION_NOT_FOUND, 10L));
+
+    mvc.perform(
+            get("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, 8L)
+                .header("X-Collection-Key", " k3y "))
+        .andExpect(status().isNotFound());
+    mvc.perform(
+            get("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, 8L)
+                .header("X-Collection-Key", "  "))
+        .andExpect(status().isNotFound());
+
+    verify(query).detail(8L, 10L, "k3y");
+    verify(query).detail(8L, 10L, null);
+  }
+
+  @Test
+  void rotatingTheKeyAnswersWithTheNewLink() throws Exception {
+    when(command.rotateUnlistedKey(USER_ID, 10L))
+        .thenReturn("https://blog.kurl.me/collections/10?k=new");
+
+    mvc.perform(
+            post("/api/v1/collections/10/unlisted-key/rotate")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.unlistedUrl").value("https://blog.kurl.me/collections/10?k=new"));
   }
 
   @Test

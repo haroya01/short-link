@@ -232,6 +232,7 @@
 @junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | curation-unlist-path | 2 | 0 | 1 | 0 | 3
+@junit | curation-unlisted-key-rotate | 1 | 0 | 1 | 0 | 2
 @junit | custom-domain-delete | 1 | 0 | 0 | 1 | 2
 @junit | custom-domain-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-list | 1 | 0 | 0 | 0 | 1
@@ -702,7 +703,11 @@
 @junit | reader-tag-unhide | 2 | 0 | 0 | 1 | 3
 @junit | reader-unfollow-author | 4 | 0 | 0 | 1 | 5
 @junit | reader-unlisted-path-absent-from-profile | 2 | 0 | 0 | 0 | 2
+# A link-only path opens for someone else only with its current key; without it, or with a key the
+# owner rotated away, it answers 404 after reading the one row, like a private or missing one.
 @junit | reader-unlisted-path-direct-link | 8 | 0 | 0 | 0 | 8
+@junit | reader-unlisted-path-number-only | 1 | 0 | 0 | 0 | 1
+@junit | reader-unlisted-path-retired-key | 1 | 0 | 0 | 0 | 1
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
 # Links with a view limit or country block: a crawler's card reads the link row and human clicks
 # but no event preview, spends no view, and is refused like a person once the limit is spent or its

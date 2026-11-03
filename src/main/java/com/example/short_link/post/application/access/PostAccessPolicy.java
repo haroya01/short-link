@@ -3,6 +3,7 @@ package com.example.short_link.post.application.access;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.PostLock;
+import com.example.short_link.common.security.UnlistedKeys;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostRoomReader;
@@ -10,8 +11,6 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.application.read.FollowingReader;
 import com.example.short_link.user.domain.FollowEdge;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -150,11 +149,7 @@ public class PostAccessPolicy {
   }
 
   private static boolean keyMatches(PostEntity post, String key) {
-    String expected = post.getUnlistedKey();
-    return key != null
-        && expected != null
-        && MessageDigest.isEqual(
-            key.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
+    return UnlistedKeys.matches(post.getUnlistedKey(), key);
   }
 
   private boolean follows(Long viewerId, Long authorId) {

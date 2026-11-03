@@ -87,4 +87,44 @@ class CollectionEntityTest {
     collection.edit("제목", description, CollectionVisibility.PRIVATE);
     assertThat(collection.getDescription()).isNull();
   }
+
+  @Test
+  void aLinkOnlyCollectionGetsAKeyThatSurvivesGoingPrivateAndBack() {
+    CollectionEntity collection =
+        new CollectionEntity(1L, "느린 사고", null, CollectionVisibility.PRIVATE, false);
+    assertThat(collection.getUnlistedKey()).isNull();
+
+    collection.edit("느린 사고", null, CollectionVisibility.UNLISTED);
+    String key = collection.getUnlistedKey();
+    collection.edit("느린 사고", null, CollectionVisibility.PRIVATE);
+    collection.edit("느린 사고", null, CollectionVisibility.UNLISTED);
+
+    assertThat(key).hasSize(32).matches("[A-Za-z0-9_-]+");
+    assertThat(collection.getUnlistedKey()).isEqualTo(key);
+    assertThat(
+            new CollectionEntity(1L, "길", null, CollectionVisibility.UNLISTED, true)
+                .getUnlistedKey())
+        .hasSize(32)
+        .isNotEqualTo(key);
+  }
+
+  @Test
+  void othersSeeAPublicCollectionAlwaysALinkOnlyOneWithItsKeyAndAPrivateOneNever() {
+    CollectionEntity collection =
+        new CollectionEntity(1L, "느린 사고", null, CollectionVisibility.UNLISTED, false);
+    String key = collection.getUnlistedKey();
+
+    assertThat(collection.isVisibleTo(1L, null)).isTrue();
+    assertThat(collection.isVisibleTo(2L, key)).isTrue();
+    assertThat(collection.isVisibleTo(null, key)).isTrue();
+    assertThat(collection.isVisibleTo(2L, null)).isFalse();
+    assertThat(collection.isVisibleTo(2L, key.substring(1))).isFalse();
+
+    collection.edit("느린 사고", null, CollectionVisibility.PRIVATE);
+    assertThat(collection.isVisibleTo(2L, key)).isFalse();
+    assertThat(collection.isVisibleTo(1L, null)).isTrue();
+
+    collection.edit("느린 사고", null, CollectionVisibility.PUBLIC);
+    assertThat(collection.isVisibleTo(null, null)).isTrue();
+  }
 }

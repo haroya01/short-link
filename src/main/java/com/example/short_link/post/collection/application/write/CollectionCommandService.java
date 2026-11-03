@@ -4,8 +4,10 @@ import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.collection.application.CollectionTargets;
+import com.example.short_link.post.collection.application.CollectionUnlistedUrls;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
@@ -37,6 +39,7 @@ public class CollectionCommandService {
   private final PostHighlightRepository highlightRepository;
   private final NoteBodyReader noteBodies;
   private final ApplicationEventPublisher events;
+  private final CollectionUnlistedUrls unlistedUrls;
 
   @Transactional
   public CollectionEntity create(CreateCollectionCommand cmd) {
@@ -99,8 +102,17 @@ public class CollectionCommandService {
             new CollectionConnectionEntity(
                 collection.getId(), cmd.blockType(), cmd.refId(), why, position));
 
-    publishConnected(collection, cmd, existing);
+    if (collection.getVisibility() == CollectionVisibility.PUBLIC) {
+      publishConnected(collection, cmd, existing);
+    }
     return saved;
+  }
+
+  @Transactional
+  public String rotateUnlistedKey(Long userId, Long collectionId) {
+    CollectionEntity collection = ownedCollection(userId, collectionId);
+    collection.rotateUnlistedKey();
+    return unlistedUrls.of(collection);
   }
 
   // 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.

@@ -1,6 +1,7 @@
 package com.example.short_link.post.collection.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.common.security.UnlistedKeys;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import jakarta.persistence.Column;
@@ -44,6 +45,9 @@ public class CollectionEntity extends BaseTimeEntity {
   @Column(nullable = false)
   private boolean ordered;
 
+  @Column(name = "unlisted_key", length = 32)
+  private String unlistedKey;
+
   // 읽지 않는다. 되돌린 이전 릴리스가 읽을 수 있게 ordered에 맞춰 함께 쓴다.
   @Getter(AccessLevel.NONE)
   @Enumerated(EnumType.STRING)
@@ -65,14 +69,23 @@ public class CollectionEntity extends BaseTimeEntity {
     return ownerId.equals(viewerId);
   }
 
-  public boolean isVisibleTo(Long viewerId) {
-    return isOwnedBy(viewerId) || visibility.isVisibleToOthers();
+  public boolean isVisibleTo(Long viewerId, String key) {
+    return isOwnedBy(viewerId)
+        || visibility == CollectionVisibility.PUBLIC
+        || (visibility == CollectionVisibility.UNLISTED && UnlistedKeys.matches(unlistedKey, key));
   }
 
   public void edit(String title, String description, CollectionVisibility visibility) {
     this.title = normalizeTitle(title);
     this.description = normalizeDescription(description);
     this.visibility = visibility;
+    if (visibility == CollectionVisibility.UNLISTED && unlistedKey == null) {
+      unlistedKey = UnlistedKeys.next();
+    }
+  }
+
+  public void rotateUnlistedKey() {
+    unlistedKey = UnlistedKeys.next();
   }
 
   public void order(boolean ordered) {
