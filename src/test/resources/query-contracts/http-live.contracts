@@ -1,4 +1,5 @@
-# Live streams (note replies, post comments, room notes). Never automatically update on test failure.
+# Live streams (note replies, post comments, room notes), measured against Docker MySQL 2026-11-03 (local
+# httpQueryContractTest, Testcontainers MySQL 8.0.33). Never automatically update on test failure.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 #
 # A token runs the scope's own read check and nothing else: a thread as its history does (the note

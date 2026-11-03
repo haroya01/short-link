@@ -1325,6 +1325,39 @@
         "200" : "[#WebhookSummary]"
       }
     },
+    "GET /api/v1/live/notes/{id}/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/live/posts/{id}/comments/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/live/rooms/{id}/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
     "GET /api/v1/me/saved" : {
       "responses" : {
         "200" : "[#SavedView]"
@@ -3021,6 +3054,30 @@
       "request" : "#LinkWebhookRegisterRequest required",
       "responses" : {
         "200" : "#IssuedWebhook"
+      }
+    },
+    "POST /api/v1/live/notes/{id}/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
+      }
+    },
+    "POST /api/v1/live/posts/{id}/comments/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
+      }
+    },
+    "POST /api/v1/live/rooms/{id}/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
       }
     },
     "POST /api/v1/notes" : {
@@ -5378,6 +5435,9 @@
       "id" : "integer(int64)",
       "memberCount" : "integer(int64)",
       "title" : "string"
+    },
+    "LiveStreamTokenResponse" : {
+      "streamToken" : "string"
     },
     "Locked" : {
       "reason" : "string enum[FOLLOWERS|PASSWORD|REGION|REGION_CHECK]"

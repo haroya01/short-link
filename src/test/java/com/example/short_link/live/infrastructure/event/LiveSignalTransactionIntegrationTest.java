@@ -12,6 +12,9 @@ import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.live.application.LiveBus;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +29,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
@@ -63,15 +65,19 @@ class LiveSignalTransactionIntegrationTest {
   }
 
   @Test
-  void theBusHearsOnlyAfterTheWriteIsCommittedAndOutsideTheTransaction() {
+  void theBusHearsOnlyOnceTheWriteIsVisibleToOtherConnections() {
     List<Object> seen = new ArrayList<>();
     doAnswer(
             invocation -> {
-              seen.add(TransactionSynchronizationManager.isActualTransactionActive());
-              seen.add(
-                  new JdbcTemplate(dataSource)
-                      .queryForObject(
-                          "SELECT COUNT(*) FROM users WHERE email = ?", Long.class, email));
+              try (Connection other = dataSource.getConnection();
+                  PreparedStatement count =
+                      other.prepareStatement("SELECT COUNT(*) FROM users WHERE email = ?")) {
+                count.setString(1, email);
+                try (ResultSet rows = count.executeQuery()) {
+                  rows.next();
+                  seen.add(rows.getLong(1));
+                }
+              }
               return null;
             })
         .when(bus)
@@ -80,7 +86,7 @@ class LiveSignalTransactionIntegrationTest {
     LiveChange change = transactions.execute(status -> writeAndSignal());
 
     verify(bus).publish(change);
-    assertThat(seen).containsExactly(false, 1L);
+    assertThat(seen).containsExactly(1L);
   }
 
   @Test
