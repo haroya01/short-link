@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -89,6 +90,15 @@ class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
   public List<LinkClickCount> countsByLinkIdsSince(List<Long> ids, Instant since) {
     if (ids.isEmpty()) return List.of();
     return jpa.countsByLinkIdsSince(ids, decimal(since));
+  }
+
+  @Override
+  public List<LinkClickCount> countsByLinkIdsEachSince(Map<Long, Instant> sinceByLinkId) {
+    if (sinceByLinkId.isEmpty()) return List.of();
+    StringJoiner pairs = new StringJoiner(",", "[", "]");
+    sinceByLinkId.forEach(
+        (id, since) -> pairs.add("[" + id + "," + decimal(since).toPlainString() + "]"));
+    return jpa.countsByLinkIdsEachSince(pairs.toString());
   }
 
   @Override

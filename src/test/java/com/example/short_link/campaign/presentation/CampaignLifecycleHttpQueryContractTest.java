@@ -126,6 +126,21 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
         "/api/v1/campaigns/stats/compare",
         Map.of("campaignIds", List.of(id, comparisonId)),
         200);
+    var summaries =
+        request("campaign-list-with-batches", owner, "GET", "/api/v1/campaigns", null, 200);
+    assertThat(summaries.size()).isEqualTo(2);
+    for (var summary : summaries) {
+      if (summary.path("id").asLong() == id) {
+        assertThat(summary.path("batchCount").asLong()).isEqualTo(3);
+        assertThat(summary.path("totalQuantity").asLong()).isEqualTo(400);
+        assertThat(summary.path("humanClicks").asLong())
+            .isEqualTo(statistics.path("totalClicks").asLong());
+        assertThat(summary.path("endedAt").isNull()).isTrue();
+      } else {
+        assertThat(summary.path("batchCount").asLong()).isZero();
+        assertThat(summary.path("humanClicks").asLong()).isZero();
+      }
+    }
 
     request(
         "campaign-policy-update",

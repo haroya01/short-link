@@ -34,6 +34,8 @@ public interface ClickTotalsReader {
 
   List<LinkClickCount> countsByLinkIdsSince(List<Long> ids, Instant since);
 
+  List<LinkClickCount> countsByLinkIdsEachSince(Map<Long, Instant> sinceByLinkId);
+
   List<LinkClickCount> countsByLinkIdsBefore(List<Long> ids, Instant before);
 
   Instant findLastClickBeforeByLinkIds(List<Long> ids, Instant before);

@@ -9,6 +9,8 @@ import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.campaign.application.CampaignBatchService;
 import com.example.short_link.campaign.application.CampaignStatsService;
 import com.example.short_link.campaign.application.dto.BatchWithLink;
+import com.example.short_link.campaign.application.dto.CampaignSummary;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
@@ -67,6 +69,7 @@ class ClickRollupEquivalenceIntegrationTest {
   @Autowired private LinkStatsQueryService linkStats;
   @Autowired private CampaignStatsService campaignStats;
   @Autowired private CampaignBatchService batchService;
+  @Autowired private CampaignQueryService campaignQuery;
   @Autowired private CreateCampaignUseCase createCampaign;
   @Autowired private ClickTotalsReader totals;
   @Autowired private ClickEventRepository clickEvents;
@@ -288,6 +291,7 @@ class ClickRollupEquivalenceIntegrationTest {
       s.put(
           "campaign:" + campaignId,
           normalize(campaignStats.statsFor(campaignId, ownerOfCampaign(campaignId))));
+      s.put("campaignSummary:" + campaignId, summaryClicks(campaignId));
     }
     if (post != null) {
       Instant since = now.minus(Duration.ofDays(120)).truncatedTo(ChronoUnit.DAYS);
@@ -342,6 +346,14 @@ class ClickRollupEquivalenceIntegrationTest {
 
   private LinkStats stats(Long linkId) {
     return linkStats.stats(ownerByLink.get(linkId), codeByLink.get(linkId));
+  }
+
+  private long summaryClicks(Long campaignId) {
+    return campaignQuery.summaries(ownerOfCampaign(campaignId)).stream()
+        .filter(summary -> summary.campaign().getId().equals(campaignId))
+        .mapToLong(CampaignSummary::humanClicks)
+        .findFirst()
+        .orElseThrow();
   }
 
   private Long ownerOfCampaign(Long campaignId) {
