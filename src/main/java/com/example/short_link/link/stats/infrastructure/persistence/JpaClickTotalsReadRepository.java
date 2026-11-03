@@ -17,15 +17,6 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   @Query(
       value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(humans + bots), 0) FROM click_hourly "
-              + "WHERE link_id = :linkId)",
-      nativeQuery = true)
-  long countByLinkId(@Param("linkId") Long linkId);
-
-  @Query(
-      value =
           "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 0"
               + RAW
               + ") + (SELECT COALESCE(SUM(humans), 0) FROM click_hourly WHERE link_id = :linkId)",

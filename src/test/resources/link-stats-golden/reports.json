@@ -1,0 +1,4536 @@
+{
+  "Asia/Seoul" : {
+    "timezone" : "Asia/Seoul",
+    "totalClicks" : 348,
+    "humanClicks" : 307,
+    "botClicks" : 41,
+    "uniqueClicks" : 74,
+    "rawRetentionDays" : 90,
+    "rawSince" : "2026-07-22T00:00:00Z",
+    "previewClicks" : 14,
+    "profileClicks" : 117,
+    "firstClickAt" : "2026-03-04T05:43:26Z",
+    "lastClickAt" : "2026-10-19T21:56:17Z",
+    "timeToFirstClickMinutes" : 0,
+    "peakHour" : 0,
+    "returnRate" : {
+      "newVisitors" : 30,
+      "returningVisitors" : 26,
+      "ratio" : 0.4642857142857143
+    },
+    "lifecycle" : {
+      "dayClicks" : [ {
+        "day" : 0,
+        "count" : 2
+      }, {
+        "day" : 1,
+        "count" : 4
+      }, {
+        "day" : 2,
+        "count" : 1
+      }, {
+        "day" : 4,
+        "count" : 1
+      }, {
+        "day" : 6,
+        "count" : 1
+      }, {
+        "day" : 7,
+        "count" : 2
+      }, {
+        "day" : 8,
+        "count" : 2
+      }, {
+        "day" : 9,
+        "count" : 2
+      }, {
+        "day" : 11,
+        "count" : 1
+      }, {
+        "day" : 12,
+        "count" : 3
+      }, {
+        "day" : 13,
+        "count" : 3
+      }, {
+        "day" : 14,
+        "count" : 5
+      }, {
+        "day" : 16,
+        "count" : 1
+      }, {
+        "day" : 18,
+        "count" : 3
+      }, {
+        "day" : 21,
+        "count" : 1
+      }, {
+        "day" : 22,
+        "count" : 1
+      }, {
+        "day" : 23,
+        "count" : 1
+      }, {
+        "day" : 24,
+        "count" : 1
+      }, {
+        "day" : 25,
+        "count" : 2
+      }, {
+        "day" : 26,
+        "count" : 4
+      }, {
+        "day" : 27,
+        "count" : 1
+      }, {
+        "day" : 28,
+        "count" : 1
+      }, {
+        "day" : 29,
+        "count" : 2
+      }, {
+        "day" : 30,
+        "count" : 2
+      } ],
+      "halfLifeDays" : 14
+    },
+    "dailyClicks" : [ {
+      "date" : "2026-09-21",
+      "count" : 1
+    }, {
+      "date" : "2026-09-22",
+      "count" : 2
+    }, {
+      "date" : "2026-09-23",
+      "count" : 1
+    }, {
+      "date" : "2026-09-24",
+      "count" : 2
+    }, {
+      "date" : "2026-09-25",
+      "count" : 1
+    }, {
+      "date" : "2026-09-26",
+      "count" : 3
+    }, {
+      "date" : "2026-09-27",
+      "count" : 1
+    }, {
+      "date" : "2026-09-29",
+      "count" : 1
+    }, {
+      "date" : "2026-10-01",
+      "count" : 1
+    }, {
+      "date" : "2026-10-02",
+      "count" : 1
+    }, {
+      "date" : "2026-10-03",
+      "count" : 1
+    }, {
+      "date" : "2026-10-04",
+      "count" : 1
+    }, {
+      "date" : "2026-10-05",
+      "count" : 4
+    }, {
+      "date" : "2026-10-07",
+      "count" : 1
+    }, {
+      "date" : "2026-10-08",
+      "count" : 2
+    }, {
+      "date" : "2026-10-09",
+      "count" : 1
+    }, {
+      "date" : "2026-10-10",
+      "count" : 1
+    }, {
+      "date" : "2026-10-11",
+      "count" : 1
+    }, {
+      "date" : "2026-10-13",
+      "count" : 3
+    }, {
+      "date" : "2026-10-14",
+      "count" : 1
+    }, {
+      "date" : "2026-10-15",
+      "count" : 10
+    }, {
+      "date" : "2026-10-17",
+      "count" : 2
+    }, {
+      "date" : "2026-10-19",
+      "count" : 2
+    }, {
+      "date" : "2026-10-20",
+      "count" : 1
+    } ],
+    "hourClicks" : [ {
+      "hour" : 0,
+      "count" : 21
+    }, {
+      "hour" : 1,
+      "count" : 7
+    }, {
+      "hour" : 2,
+      "count" : 9
+    }, {
+      "hour" : 3,
+      "count" : 9
+    }, {
+      "hour" : 4,
+      "count" : 7
+    }, {
+      "hour" : 5,
+      "count" : 14
+    }, {
+      "hour" : 6,
+      "count" : 13
+    }, {
+      "hour" : 7,
+      "count" : 14
+    }, {
+      "hour" : 8,
+      "count" : 9
+    }, {
+      "hour" : 9,
+      "count" : 20
+    }, {
+      "hour" : 10,
+      "count" : 15
+    }, {
+      "hour" : 11,
+      "count" : 19
+    }, {
+      "hour" : 12,
+      "count" : 7
+    }, {
+      "hour" : 13,
+      "count" : 15
+    }, {
+      "hour" : 14,
+      "count" : 12
+    }, {
+      "hour" : 15,
+      "count" : 21
+    }, {
+      "hour" : 16,
+      "count" : 13
+    }, {
+      "hour" : 17,
+      "count" : 7
+    }, {
+      "hour" : 18,
+      "count" : 17
+    }, {
+      "hour" : 19,
+      "count" : 12
+    }, {
+      "hour" : 20,
+      "count" : 12
+    }, {
+      "hour" : 21,
+      "count" : 10
+    }, {
+      "hour" : 22,
+      "count" : 10
+    }, {
+      "hour" : 23,
+      "count" : 13
+    } ],
+    "dayOfWeekClicks" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "count" : 32
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "count" : 49
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "count" : 50
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "count" : 28
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "count" : 50
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "count" : 49
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "count" : 48
+    } ],
+    "heatmap" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 5,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 20,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 23,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 0,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 5,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 10,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 9,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 11,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 16,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 17,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 18,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 20,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 0,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 7,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 13,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 18,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 20,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 11,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 23,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 0,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 7,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 10,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 11,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 15,
+      "count" : 9
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 16,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 20,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 23,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 4,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 11,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 18,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 21,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 0,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 3,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 11,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 13,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 19,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 23,
+      "count" : 2
+    } ],
+    "referrerClicks" : [ {
+      "referrer" : "https://blog.example.org/post/2",
+      "count" : 71
+    }, {
+      "referrer" : "https://news.ycombinator.com/item",
+      "count" : 45
+    }, {
+      "referrer" : "https://l.instagram.com",
+      "count" : 38
+    }, {
+      "referrer" : "https://x.com/someone/status/1",
+      "count" : 37
+    }, {
+      "referrer" : "https://www.google.com",
+      "count" : 36
+    } ],
+    "referrerHostClicks" : [ {
+      "host" : "blog.example.org",
+      "count" : 71
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 45
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 38
+    }, {
+      "host" : "x.com",
+      "count" : 37
+    }, {
+      "host" : "www.google.com",
+      "count" : 36
+    } ],
+    "channelClicks" : [ {
+      "channel" : "social",
+      "count" : 120
+    }, {
+      "channel" : "direct",
+      "count" : 80
+    }, {
+      "channel" : "other",
+      "count" : 71
+    }, {
+      "channel" : "search",
+      "count" : 36
+    } ],
+    "deviceClicks" : [ {
+      "device" : "unknown",
+      "count" : 81
+    }, {
+      "device" : "desktop",
+      "count" : 79
+    }, {
+      "device" : "tablet",
+      "count" : 78
+    }, {
+      "device" : "mobile",
+      "count" : 69
+    } ],
+    "osClicks" : [ {
+      "os" : "unknown",
+      "count" : 70
+    }, {
+      "os" : "Windows",
+      "count" : 68
+    }, {
+      "os" : "iOS",
+      "count" : 60
+    }, {
+      "os" : "macOS",
+      "count" : 58
+    }, {
+      "os" : "Android",
+      "count" : 51
+    } ],
+    "browserClicks" : [ {
+      "browser" : "Samsung Internet",
+      "count" : 83
+    }, {
+      "browser" : "unknown",
+      "count" : 83
+    }, {
+      "browser" : "Safari",
+      "count" : 73
+    }, {
+      "browser" : "Chrome",
+      "count" : 68
+    } ],
+    "botClicks2" : [ {
+      "bot" : "datacenter:AWS",
+      "count" : 9
+    }, {
+      "bot" : "unknown",
+      "count" : 8
+    }, {
+      "bot" : "crawler:googlebot",
+      "count" : 5
+    }, {
+      "bot" : "preview:kakaotalk-scrap",
+      "count" : 5
+    }, {
+      "bot" : "preview:slackbot",
+      "count" : 5
+    }, {
+      "bot" : "rate-flood",
+      "count" : 5
+    }, {
+      "bot" : "Preview:Discordbot",
+      "count" : 4
+    } ],
+    "utmCampaignClicks" : [ {
+      "campaign" : "launch",
+      "count" : 71
+    }, {
+      "campaign" : "newsletter",
+      "count" : 68
+    } ],
+    "utmSourceClicks" : [ {
+      "source" : "kakao",
+      "count" : 118
+    }, {
+      "source" : "twitter",
+      "count" : 71
+    } ],
+    "utmMediumClicks" : [ {
+      "medium" : "social",
+      "count" : 92
+    } ],
+    "utmContentClicks" : [ {
+      "content" : "hero",
+      "count" : 110
+    } ],
+    "utmTermClicks" : [ {
+      "term" : "spring",
+      "count" : 110
+    } ],
+    "sourceChannelClicks" : [ {
+      "source" : "Profile-card",
+      "count" : 64
+    }, {
+      "source" : "qr",
+      "count" : 59
+    }, {
+      "source" : "profile-links",
+      "count" : 53
+    } ],
+    "clientAppClicks" : [ {
+      "app" : "kakaotalk",
+      "count" : 76
+    }, {
+      "app" : "instagram",
+      "count" : 66
+    } ],
+    "fetchSiteClicks" : [ {
+      "fetchSite" : "cross-site",
+      "count" : 86
+    }, {
+      "fetchSite" : "none",
+      "count" : 69
+    }, {
+      "fetchSite" : "same-origin",
+      "count" : 67
+    } ],
+    "postClicks" : [ ],
+    "channelDepth" : [ {
+      "host" : "blog.example.org",
+      "count" : 71,
+      "firstSeenAt" : "2026-03-06T04:11:13Z",
+      "returningVisitors" : 3,
+      "returnRatio" : 0.13
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 45,
+      "firstSeenAt" : "2026-03-05T01:05:45Z",
+      "returningVisitors" : 2,
+      "returnRatio" : 0.167
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 38,
+      "firstSeenAt" : "2026-03-04T05:43:26Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    }, {
+      "host" : "x.com",
+      "count" : 37,
+      "firstSeenAt" : "2026-03-11T06:28:34Z",
+      "returningVisitors" : 2,
+      "returnRatio" : 0.133
+    }, {
+      "host" : "www.google.com",
+      "count" : 36,
+      "firstSeenAt" : "2026-03-05T20:14:55Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    } ],
+    "destinationClicks" : [ ],
+    "countryClicks" : [ {
+      "country" : "KR",
+      "count" : 91
+    }, {
+      "country" : "unknown",
+      "count" : 58
+    }, {
+      "country" : "US",
+      "count" : 54
+    }, {
+      "country" : "IN",
+      "count" : 52
+    }, {
+      "country" : "JP",
+      "count" : 52
+    } ],
+    "regionClicks" : [ {
+      "region" : "Seoul",
+      "regionCode" : "KR-11",
+      "count" : 91
+    }, {
+      "region" : "New York",
+      "regionCode" : "US-NY",
+      "count" : 54
+    }, {
+      "region" : "Karnataka",
+      "regionCode" : "IN-KA",
+      "count" : 52
+    }, {
+      "region" : "Tokyo",
+      "regionCode" : "JP-13",
+      "count" : 52
+    } ],
+    "cityClicks" : [ {
+      "city" : "Shibuya",
+      "count" : 83
+    }, {
+      "city" : "Brooklyn",
+      "count" : 73
+    }, {
+      "city" : "Gangnam",
+      "count" : 71
+    } ],
+    "languageClicks" : [ {
+      "language" : "ko",
+      "count" : 98
+    }, {
+      "language" : "ja",
+      "count" : 73
+    }, {
+      "language" : "en",
+      "count" : 66
+    } ],
+    "asnClicks" : [ {
+      "asn" : 4766,
+      "organization" : "Korea Telecom",
+      "count" : 96
+    }, {
+      "asn" : 16509,
+      "organization" : "AMAZON-02",
+      "count" : 91
+    }, {
+      "asn" : 13335,
+      "organization" : "CLOUDFLARENET",
+      "count" : 81
+    } ],
+    "datacenterClicks" : 53,
+    "insights" : [ {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Peak time is Thursday at 15:00 (2.6% of all clicks)",
+      "data" : {
+        "dayOfWeek" : "THURSDAY",
+        "hour" : 15,
+        "count" : 9,
+        "share" : 0.026
+      }
+    }, {
+      "type" : "VISITOR_MIX",
+      "severity" : "info",
+      "message" : "53.6% of visitors are first-timers",
+      "data" : {
+        "newShare" : 0.536,
+        "returningShare" : 0.464
+      }
+    }, {
+      "type" : "WEEK_OVER_WEEK",
+      "severity" : "info",
+      "message" : "Clicks +81.8% over the last 7 days (vs the prior 7)",
+      "data" : {
+        "last7" : 20,
+        "prev7" : 11,
+        "ratio" : 0.818
+      }
+    }, {
+      "type" : "CHANNEL_JUMP",
+      "severity" : "info",
+      "message" : "Started on l.instagram.com but spread to news.ycombinator.com — it jumped beyond its original audience",
+      "data" : {
+        "origin" : "l.instagram.com",
+        "jumpedTo" : "news.ycombinator.com",
+        "gapHours" : 19
+      }
+    }, {
+      "type" : "IN_APP_BROWSER",
+      "severity" : "info",
+      "message" : "Opened inside KakaoTalk — 46.3% of clicks came from in-app browsers",
+      "data" : {
+        "topApp" : "kakaotalk",
+        "topAppClicks" : 76,
+        "inAppClicks" : 142,
+        "share" : 0.463
+      }
+    } ]
+  },
+  "America/New_York" : {
+    "timezone" : "America/New_York",
+    "totalClicks" : 348,
+    "humanClicks" : 287,
+    "botClicks" : 61,
+    "uniqueClicks" : 74,
+    "rawRetentionDays" : 90,
+    "rawSince" : "2026-07-22T00:00:00Z",
+    "previewClicks" : 37,
+    "profileClicks" : 123,
+    "firstClickAt" : "2026-03-05T21:16:27Z",
+    "lastClickAt" : "2026-10-20T03:08:40Z",
+    "timeToFirstClickMinutes" : 1858,
+    "peakHour" : 2,
+    "returnRate" : {
+      "newVisitors" : 31,
+      "returningVisitors" : 20,
+      "ratio" : 0.39215686274509803
+    },
+    "lifecycle" : {
+      "dayClicks" : [ {
+        "day" : 1,
+        "count" : 1
+      }, {
+        "day" : 2,
+        "count" : 1
+      }, {
+        "day" : 3,
+        "count" : 1
+      }, {
+        "day" : 4,
+        "count" : 2
+      }, {
+        "day" : 5,
+        "count" : 1
+      }, {
+        "day" : 6,
+        "count" : 1
+      }, {
+        "day" : 7,
+        "count" : 2
+      }, {
+        "day" : 10,
+        "count" : 1
+      }, {
+        "day" : 11,
+        "count" : 1
+      }, {
+        "day" : 12,
+        "count" : 1
+      }, {
+        "day" : 8,
+        "count" : 1
+      }, {
+        "day" : 13,
+        "count" : 4
+      }, {
+        "day" : 14,
+        "count" : 2
+      }, {
+        "day" : 15,
+        "count" : 3
+      }, {
+        "day" : 16,
+        "count" : 2
+      }, {
+        "day" : 17,
+        "count" : 2
+      }, {
+        "day" : 18,
+        "count" : 3
+      }, {
+        "day" : 19,
+        "count" : 1
+      }, {
+        "day" : 20,
+        "count" : 2
+      }, {
+        "day" : 21,
+        "count" : 1
+      }, {
+        "day" : 23,
+        "count" : 2
+      }, {
+        "day" : 24,
+        "count" : 1
+      }, {
+        "day" : 25,
+        "count" : 2
+      }, {
+        "day" : 27,
+        "count" : 1
+      }, {
+        "day" : 29,
+        "count" : 2
+      } ],
+      "halfLifeDays" : 15
+    },
+    "dailyClicks" : [ {
+      "date" : "2026-09-21",
+      "count" : 1
+    }, {
+      "date" : "2026-09-22",
+      "count" : 1
+    }, {
+      "date" : "2026-09-23",
+      "count" : 1
+    }, {
+      "date" : "2026-09-24",
+      "count" : 1
+    }, {
+      "date" : "2026-09-25",
+      "count" : 1
+    }, {
+      "date" : "2026-09-27",
+      "count" : 1
+    }, {
+      "date" : "2026-09-28",
+      "count" : 1
+    }, {
+      "date" : "2026-09-29",
+      "count" : 1
+    }, {
+      "date" : "2026-09-30",
+      "count" : 1
+    }, {
+      "date" : "2026-10-04",
+      "count" : 1
+    }, {
+      "date" : "2026-10-05",
+      "count" : 1
+    }, {
+      "date" : "2026-10-06",
+      "count" : 2
+    }, {
+      "date" : "2026-10-08",
+      "count" : 1
+    }, {
+      "date" : "2026-10-09",
+      "count" : 1
+    }, {
+      "date" : "2026-10-10",
+      "count" : 3
+    }, {
+      "date" : "2026-10-11",
+      "count" : 3
+    }, {
+      "date" : "2026-10-12",
+      "count" : 1
+    }, {
+      "date" : "2026-10-13",
+      "count" : 1
+    }, {
+      "date" : "2026-10-15",
+      "count" : 12
+    }, {
+      "date" : "2026-10-16",
+      "count" : 3
+    }, {
+      "date" : "2026-10-17",
+      "count" : 5
+    }, {
+      "date" : "2026-10-19",
+      "count" : 3
+    } ],
+    "hourClicks" : [ {
+      "hour" : 0,
+      "count" : 18
+    }, {
+      "hour" : 1,
+      "count" : 8
+    }, {
+      "hour" : 2,
+      "count" : 22
+    }, {
+      "hour" : 3,
+      "count" : 16
+    }, {
+      "hour" : 4,
+      "count" : 15
+    }, {
+      "hour" : 5,
+      "count" : 16
+    }, {
+      "hour" : 6,
+      "count" : 8
+    }, {
+      "hour" : 7,
+      "count" : 7
+    }, {
+      "hour" : 8,
+      "count" : 12
+    }, {
+      "hour" : 9,
+      "count" : 12
+    }, {
+      "hour" : 10,
+      "count" : 15
+    }, {
+      "hour" : 11,
+      "count" : 11
+    }, {
+      "hour" : 12,
+      "count" : 4
+    }, {
+      "hour" : 13,
+      "count" : 4
+    }, {
+      "hour" : 14,
+      "count" : 10
+    }, {
+      "hour" : 15,
+      "count" : 13
+    }, {
+      "hour" : 16,
+      "count" : 11
+    }, {
+      "hour" : 17,
+      "count" : 10
+    }, {
+      "hour" : 18,
+      "count" : 8
+    }, {
+      "hour" : 19,
+      "count" : 15
+    }, {
+      "hour" : 20,
+      "count" : 14
+    }, {
+      "hour" : 21,
+      "count" : 12
+    }, {
+      "hour" : 22,
+      "count" : 12
+    }, {
+      "hour" : 23,
+      "count" : 14
+    } ],
+    "dayOfWeekClicks" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "count" : 36
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "count" : 43
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "count" : 33
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "count" : 35
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "count" : 62
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "count" : 33
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "count" : 45
+    } ],
+    "heatmap" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 5,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 17,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 23,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 15,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 18,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 19,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 20,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 21,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 23,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 0,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 6,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 15,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 2,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 3,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 4,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 11,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 0,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 2,
+      "count" : 10
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 3,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 4,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 5,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 10,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 11,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 21,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 22,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 23,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 6,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 16,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 20,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 0,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 8,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 10,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 11,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 18,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 19,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 20,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 23,
+      "count" : 1
+    } ],
+    "referrerClicks" : [ {
+      "referrer" : "https://blog.example.org/post/2",
+      "count" : 63
+    }, {
+      "referrer" : "https://news.ycombinator.com/item",
+      "count" : 42
+    }, {
+      "referrer" : "https://www.google.com",
+      "count" : 40
+    }, {
+      "referrer" : "https://l.instagram.com",
+      "count" : 37
+    }, {
+      "referrer" : "https://x.com/someone/status/1",
+      "count" : 36
+    } ],
+    "referrerHostClicks" : [ {
+      "host" : "blog.example.org",
+      "count" : 63
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 42
+    }, {
+      "host" : "www.google.com",
+      "count" : 40
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 37
+    }, {
+      "host" : "x.com",
+      "count" : 36
+    } ],
+    "channelClicks" : [ {
+      "channel" : "social",
+      "count" : 115
+    }, {
+      "channel" : "direct",
+      "count" : 69
+    }, {
+      "channel" : "other",
+      "count" : 63
+    }, {
+      "channel" : "search",
+      "count" : 40
+    } ],
+    "deviceClicks" : [ {
+      "device" : "tablet",
+      "count" : 81
+    }, {
+      "device" : "desktop",
+      "count" : 74
+    }, {
+      "device" : "unknown",
+      "count" : 72
+    }, {
+      "device" : "mobile",
+      "count" : 60
+    } ],
+    "osClicks" : [ {
+      "os" : "iOS",
+      "count" : 63
+    }, {
+      "os" : "unknown",
+      "count" : 63
+    }, {
+      "os" : "macOS",
+      "count" : 62
+    }, {
+      "os" : "Windows",
+      "count" : 55
+    }, {
+      "os" : "Android",
+      "count" : 44
+    } ],
+    "browserClicks" : [ {
+      "browser" : "Chrome",
+      "count" : 83
+    }, {
+      "browser" : "Samsung Internet",
+      "count" : 83
+    }, {
+      "browser" : "Safari",
+      "count" : 72
+    }, {
+      "browser" : "unknown",
+      "count" : 49
+    } ],
+    "botClicks2" : [ {
+      "bot" : "Preview:Discordbot",
+      "count" : 17
+    }, {
+      "bot" : "preview:kakaotalk-scrap",
+      "count" : 12
+    }, {
+      "bot" : "unknown",
+      "count" : 9
+    }, {
+      "bot" : "crawler:googlebot",
+      "count" : 8
+    }, {
+      "bot" : "preview:slackbot",
+      "count" : 8
+    }, {
+      "bot" : "datacenter:AWS",
+      "count" : 4
+    }, {
+      "bot" : "rate-flood",
+      "count" : 3
+    } ],
+    "utmCampaignClicks" : [ {
+      "campaign" : "launch",
+      "count" : 91
+    }, {
+      "campaign" : "newsletter",
+      "count" : 70
+    } ],
+    "utmSourceClicks" : [ {
+      "source" : "Kakao",
+      "count" : 121
+    }, {
+      "source" : "twitter",
+      "count" : 50
+    } ],
+    "utmMediumClicks" : [ {
+      "medium" : "social",
+      "count" : 105
+    } ],
+    "utmContentClicks" : [ {
+      "content" : "hero",
+      "count" : 97
+    } ],
+    "utmTermClicks" : [ {
+      "term" : "spring",
+      "count" : 102
+    } ],
+    "sourceChannelClicks" : [ {
+      "source" : "Profile-card",
+      "count" : 62
+    }, {
+      "source" : "profile-links",
+      "count" : 61
+    }, {
+      "source" : "qr",
+      "count" : 46
+    } ],
+    "clientAppClicks" : [ {
+      "app" : "instagram",
+      "count" : 76
+    }, {
+      "app" : "kakaotalk",
+      "count" : 70
+    } ],
+    "fetchSiteClicks" : [ {
+      "fetchSite" : "none",
+      "count" : 82
+    }, {
+      "fetchSite" : "same-origin",
+      "count" : 65
+    }, {
+      "fetchSite" : "cross-site",
+      "count" : 61
+    } ],
+    "postClicks" : [ ],
+    "channelDepth" : [ {
+      "host" : "blog.example.org",
+      "count" : 63,
+      "firstSeenAt" : "2026-03-05T21:16:27Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.059
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 42,
+      "firstSeenAt" : "2026-03-11T13:47:33Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.091
+    }, {
+      "host" : "www.google.com",
+      "count" : 40,
+      "firstSeenAt" : "2026-03-17T11:56:13Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.143
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 37,
+      "firstSeenAt" : "2026-03-10T10:17:06Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    }, {
+      "host" : "x.com",
+      "count" : 36,
+      "firstSeenAt" : "2026-03-08T03:55:31Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    } ],
+    "destinationClicks" : [ ],
+    "countryClicks" : [ {
+      "country" : "KR",
+      "count" : 81
+    }, {
+      "country" : "US",
+      "count" : 57
+    }, {
+      "country" : "unknown",
+      "count" : 57
+    }, {
+      "country" : "IN",
+      "count" : 49
+    }, {
+      "country" : "JP",
+      "count" : 43
+    } ],
+    "regionClicks" : [ {
+      "region" : "Seoul",
+      "regionCode" : "KR-11",
+      "count" : 81
+    }, {
+      "region" : "New York",
+      "regionCode" : "US-NY",
+      "count" : 57
+    }, {
+      "region" : "Karnataka",
+      "regionCode" : "IN-KA",
+      "count" : 49
+    }, {
+      "region" : "Tokyo",
+      "regionCode" : "JP-13",
+      "count" : 43
+    } ],
+    "cityClicks" : [ {
+      "city" : "Brooklyn",
+      "count" : 81
+    }, {
+      "city" : "Gangnam",
+      "count" : 76
+    }, {
+      "city" : "Shibuya",
+      "count" : 73
+    } ],
+    "languageClicks" : [ {
+      "language" : "ko",
+      "count" : 76
+    }, {
+      "language" : "en",
+      "count" : 73
+    }, {
+      "language" : "ja",
+      "count" : 70
+    } ],
+    "asnClicks" : [ {
+      "asn" : 4766,
+      "organization" : "Korea Telecom",
+      "count" : 94
+    }, {
+      "asn" : 13335,
+      "organization" : "CLOUDFLARENET",
+      "count" : 86
+    }, {
+      "asn" : 16509,
+      "organization" : "AMAZON-02",
+      "count" : 84
+    } ],
+    "datacenterClicks" : 41,
+    "insights" : [ {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Peak time is Thursday at 2:00 (2.9% of all clicks)",
+      "data" : {
+        "dayOfWeek" : "THURSDAY",
+        "hour" : 2,
+        "count" : 10,
+        "share" : 0.029
+      }
+    }, {
+      "type" : "VISITOR_MIX",
+      "severity" : "info",
+      "message" : "60.8% of visitors are first-timers",
+      "data" : {
+        "newShare" : 0.608,
+        "returningShare" : 0.392
+      }
+    }, {
+      "type" : "WEEK_OVER_WEEK",
+      "severity" : "info",
+      "message" : "Clicks +180.0% over the last 7 days (vs the prior 7)",
+      "data" : {
+        "last7" : 28,
+        "prev7" : 10,
+        "ratio" : 1.8
+      }
+    }, {
+      "type" : "CHANNEL_JUMP",
+      "severity" : "info",
+      "message" : "Started on blog.example.org but spread to x.com — it jumped beyond its original audience",
+      "data" : {
+        "origin" : "blog.example.org",
+        "jumpedTo" : "x.com",
+        "gapHours" : 54
+      }
+    }, {
+      "type" : "IN_APP_BROWSER",
+      "severity" : "info",
+      "message" : "Opened inside Instagram — 50.9% of clicks came from in-app browsers",
+      "data" : {
+        "topApp" : "instagram",
+        "topAppClicks" : 76,
+        "inAppClicks" : 146,
+        "share" : 0.509
+      }
+    } ]
+  },
+  "Asia/Kolkata" : {
+    "timezone" : "Asia/Kolkata",
+    "totalClicks" : 348,
+    "humanClicks" : 319,
+    "botClicks" : 29,
+    "uniqueClicks" : 72,
+    "rawRetentionDays" : 90,
+    "rawSince" : "2026-07-22T00:00:00Z",
+    "previewClicks" : 10,
+    "profileClicks" : 130,
+    "firstClickAt" : "2026-03-04T05:46:26Z",
+    "lastClickAt" : "2026-10-20T04:54:19Z",
+    "timeToFirstClickMinutes" : 0,
+    "peakHour" : 12,
+    "returnRate" : {
+      "newVisitors" : 29,
+      "returningVisitors" : 31,
+      "ratio" : 0.5166666666666667
+    },
+    "lifecycle" : {
+      "dayClicks" : [ {
+        "day" : 0,
+        "count" : 1
+      }, {
+        "day" : 2,
+        "count" : 1
+      }, {
+        "day" : 4,
+        "count" : 1
+      }, {
+        "day" : 5,
+        "count" : 2
+      }, {
+        "day" : 6,
+        "count" : 1
+      }, {
+        "day" : 7,
+        "count" : 3
+      }, {
+        "day" : 8,
+        "count" : 1
+      }, {
+        "day" : 11,
+        "count" : 2
+      }, {
+        "day" : 12,
+        "count" : 1
+      }, {
+        "day" : 13,
+        "count" : 2
+      }, {
+        "day" : 14,
+        "count" : 1
+      }, {
+        "day" : 16,
+        "count" : 3
+      }, {
+        "day" : 18,
+        "count" : 1
+      }, {
+        "day" : 19,
+        "count" : 1
+      }, {
+        "day" : 21,
+        "count" : 1
+      }, {
+        "day" : 22,
+        "count" : 2
+      }, {
+        "day" : 23,
+        "count" : 3
+      }, {
+        "day" : 24,
+        "count" : 4
+      }, {
+        "day" : 25,
+        "count" : 2
+      }, {
+        "day" : 26,
+        "count" : 1
+      }, {
+        "day" : 27,
+        "count" : 3
+      }, {
+        "day" : 29,
+        "count" : 2
+      }, {
+        "day" : 30,
+        "count" : 1
+      } ],
+      "halfLifeDays" : 18
+    },
+    "dailyClicks" : [ {
+      "date" : "2026-09-21",
+      "count" : 1
+    }, {
+      "date" : "2026-09-22",
+      "count" : 1
+    }, {
+      "date" : "2026-09-23",
+      "count" : 2
+    }, {
+      "date" : "2026-09-25",
+      "count" : 1
+    }, {
+      "date" : "2026-09-26",
+      "count" : 1
+    }, {
+      "date" : "2026-09-27",
+      "count" : 1
+    }, {
+      "date" : "2026-09-28",
+      "count" : 1
+    }, {
+      "date" : "2026-09-29",
+      "count" : 2
+    }, {
+      "date" : "2026-09-30",
+      "count" : 1
+    }, {
+      "date" : "2026-10-01",
+      "count" : 1
+    }, {
+      "date" : "2026-10-02",
+      "count" : 1
+    }, {
+      "date" : "2026-10-03",
+      "count" : 2
+    }, {
+      "date" : "2026-10-04",
+      "count" : 1
+    }, {
+      "date" : "2026-10-07",
+      "count" : 3
+    }, {
+      "date" : "2026-10-08",
+      "count" : 1
+    }, {
+      "date" : "2026-10-10",
+      "count" : 1
+    }, {
+      "date" : "2026-10-11",
+      "count" : 1
+    }, {
+      "date" : "2026-10-12",
+      "count" : 1
+    }, {
+      "date" : "2026-10-14",
+      "count" : 2
+    }, {
+      "date" : "2026-10-15",
+      "count" : 13
+    }, {
+      "date" : "2026-10-16",
+      "count" : 1
+    }, {
+      "date" : "2026-10-17",
+      "count" : 5
+    }, {
+      "date" : "2026-10-18",
+      "count" : 1
+    }, {
+      "date" : "2026-10-20",
+      "count" : 1
+    } ],
+    "hourClicks" : [ {
+      "hour" : 0,
+      "count" : 13
+    }, {
+      "hour" : 1,
+      "count" : 11
+    }, {
+      "hour" : 2,
+      "count" : 17
+    }, {
+      "hour" : 3,
+      "count" : 13
+    }, {
+      "hour" : 4,
+      "count" : 14
+    }, {
+      "hour" : 5,
+      "count" : 16
+    }, {
+      "hour" : 6,
+      "count" : 15
+    }, {
+      "hour" : 7,
+      "count" : 9
+    }, {
+      "hour" : 8,
+      "count" : 16
+    }, {
+      "hour" : 9,
+      "count" : 13
+    }, {
+      "hour" : 10,
+      "count" : 12
+    }, {
+      "hour" : 11,
+      "count" : 16
+    }, {
+      "hour" : 12,
+      "count" : 25
+    }, {
+      "hour" : 13,
+      "count" : 15
+    }, {
+      "hour" : 14,
+      "count" : 13
+    }, {
+      "hour" : 15,
+      "count" : 10
+    }, {
+      "hour" : 16,
+      "count" : 8
+    }, {
+      "hour" : 17,
+      "count" : 14
+    }, {
+      "hour" : 18,
+      "count" : 9
+    }, {
+      "hour" : 19,
+      "count" : 8
+    }, {
+      "hour" : 20,
+      "count" : 12
+    }, {
+      "hour" : 21,
+      "count" : 7
+    }, {
+      "hour" : 22,
+      "count" : 17
+    }, {
+      "hour" : 23,
+      "count" : 15
+    } ],
+    "dayOfWeekClicks" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "count" : 41
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "count" : 34
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "count" : 53
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "count" : 48
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "count" : 48
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "count" : 46
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "count" : 48
+    } ],
+    "heatmap" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 3,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 6,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 8,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 10,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 22,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 4,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 11,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 17,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 18,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 23,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 6,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 7,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 10,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 11,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 12,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 13,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 17,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 18,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 22,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 0,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 3,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 4,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 5,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 9,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 13,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 16,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 20,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 23,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 12,
+      "count" : 15
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 13,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 20,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 23,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 8,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 10,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 11,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 13,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 14,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 22,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 23,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 0,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 2,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 5,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 11,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 9,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 12,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 17,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 18,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 20,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 22,
+      "count" : 3
+    } ],
+    "referrerClicks" : [ {
+      "referrer" : "https://blog.example.org/post/2",
+      "count" : 82
+    }, {
+      "referrer" : "https://www.google.com",
+      "count" : 45
+    }, {
+      "referrer" : "https://x.com/someone/status/1",
+      "count" : 42
+    }, {
+      "referrer" : "https://news.ycombinator.com/item",
+      "count" : 39
+    }, {
+      "referrer" : "https://l.instagram.com",
+      "count" : 30
+    } ],
+    "referrerHostClicks" : [ {
+      "host" : "blog.example.org",
+      "count" : 82
+    }, {
+      "host" : "www.google.com",
+      "count" : 45
+    }, {
+      "host" : "x.com",
+      "count" : 42
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 39
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 30
+    } ],
+    "channelClicks" : [ {
+      "channel" : "social",
+      "count" : 111
+    }, {
+      "channel" : "other",
+      "count" : 82
+    }, {
+      "channel" : "direct",
+      "count" : 81
+    }, {
+      "channel" : "search",
+      "count" : 45
+    } ],
+    "deviceClicks" : [ {
+      "device" : "unknown",
+      "count" : 86
+    }, {
+      "device" : "tablet",
+      "count" : 84
+    }, {
+      "device" : "mobile",
+      "count" : 76
+    }, {
+      "device" : "desktop",
+      "count" : 73
+    } ],
+    "osClicks" : [ {
+      "os" : "Windows",
+      "count" : 70
+    }, {
+      "os" : "Android",
+      "count" : 66
+    }, {
+      "os" : "macOS",
+      "count" : 65
+    }, {
+      "os" : "iOS",
+      "count" : 61
+    }, {
+      "os" : "unknown",
+      "count" : 57
+    } ],
+    "browserClicks" : [ {
+      "browser" : "Safari",
+      "count" : 86
+    }, {
+      "browser" : "Samsung Internet",
+      "count" : 84
+    }, {
+      "browser" : "Chrome",
+      "count" : 79
+    }, {
+      "browser" : "unknown",
+      "count" : 70
+    } ],
+    "botClicks2" : [ {
+      "bot" : "rate-flood",
+      "count" : 7
+    }, {
+      "bot" : "Preview:Discordbot",
+      "count" : 5
+    }, {
+      "bot" : "datacenter:AWS",
+      "count" : 5
+    }, {
+      "bot" : "crawler:googlebot",
+      "count" : 4
+    }, {
+      "bot" : "preview:slackbot",
+      "count" : 3
+    }, {
+      "bot" : "unknown",
+      "count" : 3
+    }, {
+      "bot" : "preview:kakaotalk-scrap",
+      "count" : 2
+    } ],
+    "utmCampaignClicks" : [ {
+      "campaign" : "launch",
+      "count" : 78
+    }, {
+      "campaign" : "newsletter",
+      "count" : 64
+    } ],
+    "utmSourceClicks" : [ {
+      "source" : "Kakao",
+      "count" : 135
+    }, {
+      "source" : "twitter",
+      "count" : 59
+    } ],
+    "utmMediumClicks" : [ {
+      "medium" : "social",
+      "count" : 109
+    } ],
+    "utmContentClicks" : [ {
+      "content" : "hero",
+      "count" : 95
+    } ],
+    "utmTermClicks" : [ {
+      "term" : "spring",
+      "count" : 106
+    } ],
+    "sourceChannelClicks" : [ {
+      "source" : "Profile-card",
+      "count" : 65
+    }, {
+      "source" : "profile-links",
+      "count" : 65
+    }, {
+      "source" : "qr",
+      "count" : 59
+    } ],
+    "clientAppClicks" : [ {
+      "app" : "instagram",
+      "count" : 82
+    }, {
+      "app" : "kakaotalk",
+      "count" : 74
+    } ],
+    "fetchSiteClicks" : [ {
+      "fetchSite" : "cross-site",
+      "count" : 84
+    }, {
+      "fetchSite" : "same-origin",
+      "count" : 82
+    }, {
+      "fetchSite" : "none",
+      "count" : 76
+    } ],
+    "postClicks" : [ ],
+    "channelDepth" : [ {
+      "host" : "blog.example.org",
+      "count" : 82,
+      "firstSeenAt" : "2026-03-15T17:06:39Z",
+      "returningVisitors" : 2,
+      "returnRatio" : 0.077
+    }, {
+      "host" : "www.google.com",
+      "count" : 45,
+      "firstSeenAt" : "2026-03-04T05:46:26Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    }, {
+      "host" : "x.com",
+      "count" : 42,
+      "firstSeenAt" : "2026-03-31T19:05:49Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.077
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 39,
+      "firstSeenAt" : "2026-03-06T19:52:13Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.083
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 30,
+      "firstSeenAt" : "2026-03-26T13:35:02Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.091
+    } ],
+    "destinationClicks" : [ ],
+    "countryClicks" : [ {
+      "country" : "KR",
+      "count" : 108
+    }, {
+      "country" : "JP",
+      "count" : 72
+    }, {
+      "country" : "unknown",
+      "count" : 55
+    }, {
+      "country" : "IN",
+      "count" : 45
+    }, {
+      "country" : "US",
+      "count" : 39
+    } ],
+    "regionClicks" : [ {
+      "region" : "Seoul",
+      "regionCode" : "KR-11",
+      "count" : 108
+    }, {
+      "region" : "Tokyo",
+      "regionCode" : "JP-13",
+      "count" : 72
+    }, {
+      "region" : "Karnataka",
+      "regionCode" : "IN-KA",
+      "count" : 45
+    }, {
+      "region" : "New York",
+      "regionCode" : "US-NY",
+      "count" : 39
+    } ],
+    "cityClicks" : [ {
+      "city" : "Gangnam",
+      "count" : 76
+    }, {
+      "city" : "Shibuya",
+      "count" : 71
+    }, {
+      "city" : "Brooklyn",
+      "count" : 70
+    } ],
+    "languageClicks" : [ {
+      "language" : "en",
+      "count" : 90
+    }, {
+      "language" : "ko",
+      "count" : 90
+    }, {
+      "language" : "ja",
+      "count" : 75
+    } ],
+    "asnClicks" : [ {
+      "asn" : 13335,
+      "organization" : "CLOUDFLARENET",
+      "count" : 89
+    }, {
+      "asn" : 4766,
+      "organization" : "Korea Telecom",
+      "count" : 83
+    }, {
+      "asn" : 16509,
+      "organization" : "AMAZON-02",
+      "count" : 80
+    } ],
+    "datacenterClicks" : 43,
+    "insights" : [ {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Peak time is Thursday at 12:00 (4.3% of all clicks)",
+      "data" : {
+        "dayOfWeek" : "THURSDAY",
+        "hour" : 12,
+        "count" : 15,
+        "share" : 0.043
+      }
+    }, {
+      "type" : "VISITOR_MIX",
+      "severity" : "info",
+      "message" : "48.3% of visitors are first-timers",
+      "data" : {
+        "newShare" : 0.483,
+        "returningShare" : 0.517
+      }
+    }, {
+      "type" : "WEEK_OVER_WEEK",
+      "severity" : "info",
+      "message" : "Clicks +140.0% over the last 7 days (vs the prior 7)",
+      "data" : {
+        "last7" : 24,
+        "prev7" : 10,
+        "ratio" : 1.4
+      }
+    }, {
+      "type" : "CHANNEL_JUMP",
+      "severity" : "info",
+      "message" : "Started on www.google.com but spread to news.ycombinator.com — it jumped beyond its original audience",
+      "data" : {
+        "origin" : "www.google.com",
+        "jumpedTo" : "news.ycombinator.com",
+        "gapHours" : 62
+      }
+    }, {
+      "type" : "IN_APP_BROWSER",
+      "severity" : "info",
+      "message" : "Opened inside Instagram — 48.9% of clicks came from in-app browsers",
+      "data" : {
+        "topApp" : "instagram",
+        "topAppClicks" : 82,
+        "inAppClicks" : 156,
+        "share" : 0.489
+      }
+    } ]
+  },
+  "Asia/Kathmandu" : {
+    "timezone" : "Asia/Kathmandu",
+    "totalClicks" : 348,
+    "humanClicks" : 315,
+    "botClicks" : 33,
+    "uniqueClicks" : 75,
+    "rawRetentionDays" : 90,
+    "rawSince" : "2026-07-22T00:00:00Z",
+    "previewClicks" : 17,
+    "profileClicks" : 118,
+    "firstClickAt" : "2026-03-05T12:38:03Z",
+    "lastClickAt" : "2026-10-20T04:38:44Z",
+    "timeToFirstClickMinutes" : 1340,
+    "peakHour" : 12,
+    "returnRate" : {
+      "newVisitors" : 30,
+      "returningVisitors" : 32,
+      "ratio" : 0.5161290322580645
+    },
+    "lifecycle" : {
+      "dayClicks" : [ {
+        "day" : 1,
+        "count" : 3
+      }, {
+        "day" : 2,
+        "count" : 2
+      }, {
+        "day" : 4,
+        "count" : 2
+      }, {
+        "day" : 5,
+        "count" : 2
+      }, {
+        "day" : 6,
+        "count" : 1
+      }, {
+        "day" : 7,
+        "count" : 1
+      }, {
+        "day" : 8,
+        "count" : 1
+      }, {
+        "day" : 9,
+        "count" : 3
+      }, {
+        "day" : 11,
+        "count" : 1
+      }, {
+        "day" : 12,
+        "count" : 1
+      }, {
+        "day" : 13,
+        "count" : 1
+      }, {
+        "day" : 14,
+        "count" : 1
+      }, {
+        "day" : 15,
+        "count" : 2
+      }, {
+        "day" : 16,
+        "count" : 1
+      }, {
+        "day" : 17,
+        "count" : 2
+      }, {
+        "day" : 18,
+        "count" : 2
+      }, {
+        "day" : 19,
+        "count" : 1
+      }, {
+        "day" : 21,
+        "count" : 1
+      }, {
+        "day" : 22,
+        "count" : 2
+      }, {
+        "day" : 23,
+        "count" : 2
+      }, {
+        "day" : 26,
+        "count" : 2
+      }, {
+        "day" : 27,
+        "count" : 1
+      }, {
+        "day" : 28,
+        "count" : 2
+      }, {
+        "day" : 30,
+        "count" : 1
+      } ],
+      "halfLifeDays" : 14
+    },
+    "dailyClicks" : [ {
+      "date" : "2026-09-20",
+      "count" : 1
+    }, {
+      "date" : "2026-09-21",
+      "count" : 1
+    }, {
+      "date" : "2026-09-22",
+      "count" : 2
+    }, {
+      "date" : "2026-09-24",
+      "count" : 1
+    }, {
+      "date" : "2026-09-25",
+      "count" : 2
+    }, {
+      "date" : "2026-09-26",
+      "count" : 3
+    }, {
+      "date" : "2026-09-27",
+      "count" : 3
+    }, {
+      "date" : "2026-09-28",
+      "count" : 2
+    }, {
+      "date" : "2026-09-29",
+      "count" : 1
+    }, {
+      "date" : "2026-09-30",
+      "count" : 2
+    }, {
+      "date" : "2026-10-01",
+      "count" : 3
+    }, {
+      "date" : "2026-10-02",
+      "count" : 1
+    }, {
+      "date" : "2026-10-03",
+      "count" : 2
+    }, {
+      "date" : "2026-10-06",
+      "count" : 1
+    }, {
+      "date" : "2026-10-07",
+      "count" : 1
+    }, {
+      "date" : "2026-10-08",
+      "count" : 3
+    }, {
+      "date" : "2026-10-09",
+      "count" : 2
+    }, {
+      "date" : "2026-10-10",
+      "count" : 1
+    }, {
+      "date" : "2026-10-11",
+      "count" : 1
+    }, {
+      "date" : "2026-10-12",
+      "count" : 2
+    }, {
+      "date" : "2026-10-13",
+      "count" : 1
+    }, {
+      "date" : "2026-10-14",
+      "count" : 1
+    }, {
+      "date" : "2026-10-15",
+      "count" : 13
+    }, {
+      "date" : "2026-10-16",
+      "count" : 3
+    }, {
+      "date" : "2026-10-17",
+      "count" : 5
+    }, {
+      "date" : "2026-10-18",
+      "count" : 4
+    }, {
+      "date" : "2026-10-19",
+      "count" : 2
+    }, {
+      "date" : "2026-10-20",
+      "count" : 2
+    } ],
+    "hourClicks" : [ {
+      "hour" : 0,
+      "count" : 9
+    }, {
+      "hour" : 1,
+      "count" : 13
+    }, {
+      "hour" : 2,
+      "count" : 15
+    }, {
+      "hour" : 3,
+      "count" : 17
+    }, {
+      "hour" : 4,
+      "count" : 18
+    }, {
+      "hour" : 5,
+      "count" : 22
+    }, {
+      "hour" : 6,
+      "count" : 15
+    }, {
+      "hour" : 7,
+      "count" : 11
+    }, {
+      "hour" : 8,
+      "count" : 13
+    }, {
+      "hour" : 9,
+      "count" : 14
+    }, {
+      "hour" : 10,
+      "count" : 10
+    }, {
+      "hour" : 11,
+      "count" : 9
+    }, {
+      "hour" : 12,
+      "count" : 25
+    }, {
+      "hour" : 13,
+      "count" : 10
+    }, {
+      "hour" : 14,
+      "count" : 14
+    }, {
+      "hour" : 15,
+      "count" : 13
+    }, {
+      "hour" : 16,
+      "count" : 9
+    }, {
+      "hour" : 17,
+      "count" : 10
+    }, {
+      "hour" : 18,
+      "count" : 16
+    }, {
+      "hour" : 19,
+      "count" : 10
+    }, {
+      "hour" : 20,
+      "count" : 8
+    }, {
+      "hour" : 21,
+      "count" : 9
+    }, {
+      "hour" : 22,
+      "count" : 8
+    }, {
+      "hour" : 23,
+      "count" : 17
+    } ],
+    "dayOfWeekClicks" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "count" : 42
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "count" : 43
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "count" : 39
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "count" : 40
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "count" : 57
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "count" : 49
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "count" : 45
+    } ],
+    "heatmap" : [ {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 1,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 3,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 5,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 6,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 7,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 12,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 15,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 18,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SUNDAY",
+      "hour" : 23,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 3,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 5,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 12,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 18,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 22,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "MONDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 2,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 6,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 11,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 14,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 15,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 18,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 19,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "TUESDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 0,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 2,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 4,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 5,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 6,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 7,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 10,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 9,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 15,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 17,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 18,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 1,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "WEDNESDAY",
+      "hour" : 23,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 3,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 4,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 6,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 7,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 9,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 11,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 12,
+      "count" : 13
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 15,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 16,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 17,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 18,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 19,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 20,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 21,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 22,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 0,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "THURSDAY",
+      "hour" : 23,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 1,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 2,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 3,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 4,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 5,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 6,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 8,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 11,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 14,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 15,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 16,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 19,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 22,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "FRIDAY",
+      "hour" : 23,
+      "count" : 6
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 0,
+      "count" : 4
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 1,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 2,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 3,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 4,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 5,
+      "count" : 5
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 10,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 6,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 7,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 8,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 9,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 11,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 12,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 13,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 14,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 15,
+      "count" : 3
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 16,
+      "count" : 2
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 17,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 18,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 20,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 21,
+      "count" : 1
+    }, {
+      "dayOfWeek" : "SATURDAY",
+      "hour" : 23,
+      "count" : 1
+    } ],
+    "referrerClicks" : [ {
+      "referrer" : "https://blog.example.org/post/2",
+      "count" : 86
+    }, {
+      "referrer" : "https://news.ycombinator.com/item",
+      "count" : 44
+    }, {
+      "referrer" : "https://l.instagram.com",
+      "count" : 41
+    }, {
+      "referrer" : "https://www.google.com",
+      "count" : 40
+    }, {
+      "referrer" : "https://x.com/someone/status/1",
+      "count" : 35
+    } ],
+    "referrerHostClicks" : [ {
+      "host" : "blog.example.org",
+      "count" : 86
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 44
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 41
+    }, {
+      "host" : "www.google.com",
+      "count" : 40
+    }, {
+      "host" : "x.com",
+      "count" : 35
+    } ],
+    "channelClicks" : [ {
+      "channel" : "social",
+      "count" : 120
+    }, {
+      "channel" : "other",
+      "count" : 86
+    }, {
+      "channel" : "direct",
+      "count" : 69
+    }, {
+      "channel" : "search",
+      "count" : 40
+    } ],
+    "deviceClicks" : [ {
+      "device" : "desktop",
+      "count" : 81
+    }, {
+      "device" : "unknown",
+      "count" : 81
+    }, {
+      "device" : "tablet",
+      "count" : 78
+    }, {
+      "device" : "mobile",
+      "count" : 75
+    } ],
+    "osClicks" : [ {
+      "os" : "macOS",
+      "count" : 72
+    }, {
+      "os" : "iOS",
+      "count" : 70
+    }, {
+      "os" : "Windows",
+      "count" : 62
+    }, {
+      "os" : "unknown",
+      "count" : 62
+    }, {
+      "os" : "Android",
+      "count" : 49
+    } ],
+    "browserClicks" : [ {
+      "browser" : "Chrome",
+      "count" : 85
+    }, {
+      "browser" : "Samsung Internet",
+      "count" : 79
+    }, {
+      "browser" : "unknown",
+      "count" : 79
+    }, {
+      "browser" : "Safari",
+      "count" : 72
+    } ],
+    "botClicks2" : [ {
+      "bot" : "Preview:Discordbot",
+      "count" : 8
+    }, {
+      "bot" : "preview:slackbot",
+      "count" : 6
+    }, {
+      "bot" : "crawler:googlebot",
+      "count" : 4
+    }, {
+      "bot" : "datacenter:AWS",
+      "count" : 4
+    }, {
+      "bot" : "rate-flood",
+      "count" : 4
+    }, {
+      "bot" : "unknown",
+      "count" : 4
+    }, {
+      "bot" : "preview:kakaotalk-scrap",
+      "count" : 3
+    } ],
+    "utmCampaignClicks" : [ {
+      "campaign" : "launch",
+      "count" : 84
+    }, {
+      "campaign" : "newsletter",
+      "count" : 84
+    } ],
+    "utmSourceClicks" : [ {
+      "source" : "Kakao",
+      "count" : 118
+    }, {
+      "source" : "twitter",
+      "count" : 66
+    } ],
+    "utmMediumClicks" : [ {
+      "medium" : "social",
+      "count" : 91
+    } ],
+    "utmContentClicks" : [ {
+      "content" : "hero",
+      "count" : 106
+    } ],
+    "utmTermClicks" : [ {
+      "term" : "spring",
+      "count" : 121
+    } ],
+    "sourceChannelClicks" : [ {
+      "source" : "Profile-card",
+      "count" : 61
+    }, {
+      "source" : "profile-links",
+      "count" : 57
+    }, {
+      "source" : "qr",
+      "count" : 50
+    } ],
+    "clientAppClicks" : [ {
+      "app" : "kakaotalk",
+      "count" : 85
+    }, {
+      "app" : "instagram",
+      "count" : 69
+    } ],
+    "fetchSiteClicks" : [ {
+      "fetchSite" : "cross-site",
+      "count" : 83
+    }, {
+      "fetchSite" : "none",
+      "count" : 83
+    }, {
+      "fetchSite" : "same-origin",
+      "count" : 81
+    } ],
+    "postClicks" : [ ],
+    "channelDepth" : [ {
+      "host" : "blog.example.org",
+      "count" : 86,
+      "firstSeenAt" : "2026-03-05T13:14:02Z",
+      "returningVisitors" : 3,
+      "returnRatio" : 0.103
+    }, {
+      "host" : "news.ycombinator.com",
+      "count" : 44,
+      "firstSeenAt" : "2026-03-06T14:28:38Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.048
+    }, {
+      "host" : "l.instagram.com",
+      "count" : 41,
+      "firstSeenAt" : "2026-03-06T06:19:16Z",
+      "returningVisitors" : 0,
+      "returnRatio" : 0.0
+    }, {
+      "host" : "www.google.com",
+      "count" : 40,
+      "firstSeenAt" : "2026-03-05T12:38:03Z",
+      "returningVisitors" : 1,
+      "returnRatio" : 0.071
+    }, {
+      "host" : "x.com",
+      "count" : 35,
+      "firstSeenAt" : "2026-03-10T01:43:03Z",
+      "returningVisitors" : 2,
+      "returnRatio" : 0.25
+    } ],
+    "destinationClicks" : [ ],
+    "countryClicks" : [ {
+      "country" : "KR",
+      "count" : 114
+    }, {
+      "country" : "IN",
+      "count" : 62
+    }, {
+      "country" : "unknown",
+      "count" : 49
+    }, {
+      "country" : "JP",
+      "count" : 45
+    }, {
+      "country" : "US",
+      "count" : 45
+    } ],
+    "regionClicks" : [ {
+      "region" : "Seoul",
+      "regionCode" : "KR-11",
+      "count" : 114
+    }, {
+      "region" : "Karnataka",
+      "regionCode" : "IN-KA",
+      "count" : 62
+    }, {
+      "region" : "New York",
+      "regionCode" : "US-NY",
+      "count" : 45
+    }, {
+      "region" : "Tokyo",
+      "regionCode" : "JP-13",
+      "count" : 45
+    } ],
+    "cityClicks" : [ {
+      "city" : "Brooklyn",
+      "count" : 91
+    }, {
+      "city" : "Shibuya",
+      "count" : 81
+    }, {
+      "city" : "Gangnam",
+      "count" : 66
+    } ],
+    "languageClicks" : [ {
+      "language" : "ja",
+      "count" : 84
+    }, {
+      "language" : "ko",
+      "count" : 79
+    }, {
+      "language" : "en",
+      "count" : 73
+    } ],
+    "asnClicks" : [ {
+      "asn" : 13335,
+      "organization" : "CLOUDFLARENET",
+      "count" : 93
+    }, {
+      "asn" : 16509,
+      "organization" : "AMAZON-02",
+      "count" : 89
+    }, {
+      "asn" : 4766,
+      "organization" : "Korea Telecom",
+      "count" : 89
+    } ],
+    "datacenterClicks" : 51,
+    "insights" : [ {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Peak time is Thursday at 12:00 (3.7% of all clicks)",
+      "data" : {
+        "dayOfWeek" : "THURSDAY",
+        "hour" : 12,
+        "count" : 13,
+        "share" : 0.037
+      }
+    }, {
+      "type" : "VISITOR_MIX",
+      "severity" : "info",
+      "message" : "48.4% of visitors are first-timers",
+      "data" : {
+        "newShare" : 0.484,
+        "returningShare" : 0.516
+      }
+    }, {
+      "type" : "WEEK_OVER_WEEK",
+      "severity" : "info",
+      "message" : "Clicks +172.7% over the last 7 days (vs the prior 7)",
+      "data" : {
+        "last7" : 30,
+        "prev7" : 11,
+        "ratio" : 1.727
+      }
+    }, {
+      "type" : "CHANNEL_JUMP",
+      "severity" : "info",
+      "message" : "Started on www.google.com but spread to l.instagram.com — it jumped beyond its original audience",
+      "data" : {
+        "origin" : "www.google.com",
+        "jumpedTo" : "l.instagram.com",
+        "gapHours" : 17
+      }
+    }, {
+      "type" : "IN_APP_BROWSER",
+      "severity" : "info",
+      "message" : "Opened inside KakaoTalk — 48.9% of clicks came from in-app browsers",
+      "data" : {
+        "topApp" : "kakaotalk",
+        "topAppClicks" : 85,
+        "inAppClicks" : 154,
+        "share" : 0.489
+      }
+    } ]
+  }
+}

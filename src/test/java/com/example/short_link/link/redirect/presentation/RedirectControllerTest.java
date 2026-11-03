@@ -14,7 +14,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.ClickFlusher;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.hamcrest.Matchers;
@@ -37,7 +36,6 @@ class RedirectControllerTest {
 
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
-  @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private ClickTotalsReader clickRepository;
   @Autowired private CacheManager cacheManager;
   @Autowired private ClickFlusher clickFlusher;
@@ -98,11 +96,11 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
-    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
+    assertThat(clicks(link)).isZero();
 
     clickFlusher.flush();
 
-    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isEqualTo(1);
+    assertThat(clicks(link)).isEqualTo(1);
   }
 
   @Test
@@ -155,7 +153,7 @@ class RedirectControllerTest {
 
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.
-    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isEqualTo(1);
+    assertThat(clicks(link)).isEqualTo(1);
     assertThat(clickRepository.countHumanByLinkId(link.linkId().value())).isZero();
     assertThat(clickRepository.countBotByLinkId(link.linkId().value())).isEqualTo(1);
   }
@@ -204,6 +202,11 @@ class RedirectControllerTest {
         .andExpect(header().string("Location", "https://example.com/next"));
 
     clickFlusher.flush();
-    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
+    assertThat(clicks(link)).isZero();
+  }
+
+  private long clicks(LinkEntity link) {
+    return clickRepository.countHumanByLinkId(link.linkId().value())
+        + clickRepository.countBotByLinkId(link.linkId().value());
   }
 }
