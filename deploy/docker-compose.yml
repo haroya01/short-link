@@ -102,6 +102,8 @@ services:
       IMAGE_VARIANTS_BACKFILL_INTERVAL: ${IMAGE_VARIANTS_BACKFILL_INTERVAL:-PT1S}
       # 다른 서버 노트의 JPEG·PNG 를 note-images/remote/ 에 복사해 사본과 함께 CDN 으로 낸다(30일 뒤 지움).
       REMOTE_MEDIA_CACHE_ENABLED: ${REMOTE_MEDIA_CACHE_ENABLED:-false}
+      # 실시간 스트림(노트 답글·댓글·방) 서버 전체 상한 — application.yml 기본값과 같게. 0 이면 모두 새로고침으로 받는다.
+      LIVE_MAX_STREAMS: ${LIVE_MAX_STREAMS:-500}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-prod}
       SENTRY_RELEASE: ${APP_IMAGE_TAG:-latest}

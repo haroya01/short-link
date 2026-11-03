@@ -1,0 +1,22 @@
+# Live streams (note replies, post comments, room notes). Never automatically update on test failure.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+#
+# A token runs the scope's own read check and nothing else: a thread as its history does (the note
+# across blocks in one statement, then whether its writer is still active; a public note needs no
+# further lookup), a post's comments as the post (the post; a public post needs no follow or room
+# lookup), a room as membership. The server cap is counted in memory.
+@junit | live-note-stream-token | 2 | 0 | 0 | 0 | 2
+@junit | live-comments-stream-token | 1 | 0 | 0 | 0 | 1
+@junit | live-room-stream-token | 1 | 0 | 0 | 0 | 1
+@junit | live-note-stream-token-again | 2 | 0 | 0 | 0 | 2
+# Someone outside the room and a note that is not there get the same 404 after the same lookup.
+@junit | live-room-stream-token-hidden | 1 | 0 | 0 | 0 | 1
+@junit | live-note-stream-token-missing | 1 | 0 | 0 | 0 | 1
+# A token for another scope is refused before any query.
+@junit | live-room-stream-unauthorized | 0 | 0 | 0 | 0 | 0
+# Opening a stream repeats the token's read check, then reads the scope's newest item id once for
+# the ready cursor (MAX(id) on idx_note_reply, idx_note_room, comment.post_id).
+@junit | live-note-stream | 3 | 0 | 0 | 0 | 3
+@junit | live-comments-stream | 2 | 0 | 0 | 0 | 2
+@junit | live-room-stream | 2 | 0 | 0 | 0 | 2
+@junit | live-note-stream-since | 3 | 0 | 0 | 0 | 3

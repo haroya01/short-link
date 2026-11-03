@@ -16,6 +16,8 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.link.LinkPreviewReader;
+import com.example.short_link.common.live.LiveChange;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNoteFixtures;
 import com.example.short_link.common.note.RemoteNotes;
@@ -201,7 +203,9 @@ class RemoteNoteRecorderTest {
     verify(store).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(6L);
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
-    verifyNoInteractions(events);
+    verify(events)
+        .publishEvent(new LiveChange(LiveTopic.note(6L), LiveChange.Kind.REPLY, 902L, null));
+    verifyNoMoreInteractions(events);
   }
 
   @Test
@@ -608,8 +612,12 @@ class RemoteNoteRecorderTest {
             tuple(null, NoteReplyPolicy.EVERYONE), tuple(5L, NoteReplyPolicy.MENTIONED));
     verify(events, times(1))
         .publishEvent(
-            org.mockito.ArgumentMatchers.<NoteInteractionEvent>argThat(
-                event -> event.type() == NoteInteractionEvent.Type.REPLY));
+            org.mockito.ArgumentMatchers.<Object>argThat(
+                event ->
+                    event instanceof NoteInteractionEvent told
+                        && told.type() == NoteInteractionEvent.Type.REPLY));
+    verify(events, times(1))
+        .publishEvent(new LiveChange(LiveTopic.note(5L), LiveChange.Kind.REPLY, 911L, null));
   }
 
   @Test

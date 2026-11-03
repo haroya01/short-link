@@ -8,4 +8,6 @@ public interface NoteRoomReader {
   boolean isMember(Long roomId, Long userId);
 
   Map<Long, String> names(Collection<Long> roomIds);
+
+  long latestNote(Long roomId);
 }

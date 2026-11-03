@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.live.LiveChange;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.CommentView;
@@ -12,6 +14,7 @@ import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.application.read.UserSummary;
 import com.example.short_link.user.application.read.UserSummaryReader;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ public class CreateCommentUseCase {
   private final UserSummaryReader users;
   private final CommentNotifications notifications;
   private final CommentMentions mentions;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public CommentView execute(CreateCommentCommand cmd, PostViewer reader) {
@@ -47,6 +51,12 @@ public class CreateCommentUseCase {
     CommentEntity saved = commentRepository.save(comment);
 
     notifications.commentCreated(post, parent, saved, cmd.body());
+    events.publishEvent(
+        new LiveChange(
+            LiveTopic.post(cmd.postId()),
+            LiveChange.Kind.COMMENT,
+            saved.getId(),
+            saved.getRoomId()));
 
     UserSummary author = users.find(cmd.userId()).orElse(null);
     return new CommentView(

@@ -50,6 +50,7 @@ class CreateCommentUseCaseTest {
   @Mock private BlogNotificationMuteReader muteReader;
   @Mock private UserModerationGuard moderationGuard;
   @Mock private UserBlockChecker blockChecker;
+  @Mock private org.springframework.context.ApplicationEventPublisher live;
 
   private CreateCommentUseCase useCase;
 
@@ -73,7 +74,8 @@ class CreateCommentUseCaseTest {
                 events,
                 muteReader,
                 PostAccessFixtures.policy()),
-            new CommentMentions(new UserSummaryReader(userRepository)));
+            new CommentMentions(new UserSummaryReader(userRepository)),
+            live);
   }
 
   private PostEntity publishedPost() {
@@ -131,6 +133,13 @@ class CreateCommentUseCaseTest {
         .isEqualTo(com.example.short_link.common.event.BlogInteractionType.COMMENT);
     assertThat(evt.getValue().recipientUserId()).isEqualTo(7L);
     assertThat(evt.getValue().commentId()).isEqualTo(88L);
+    verify(live)
+        .publishEvent(
+            new com.example.short_link.common.live.LiveChange(
+                com.example.short_link.common.live.LiveTopic.post(42L),
+                com.example.short_link.common.live.LiveChange.Kind.COMMENT,
+                88L,
+                null));
   }
 
   @Test
@@ -391,7 +400,7 @@ class CreateCommentUseCaseTest {
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
     verify(commentRepository, org.mockito.Mockito.never()).save(any());
-    org.mockito.Mockito.verifyNoInteractions(events, userRepository, muteReader);
+    org.mockito.Mockito.verifyNoInteractions(events, live, userRepository, muteReader);
   }
 
   @Test

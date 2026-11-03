@@ -30,6 +30,15 @@ class NotePageReaderAdapter implements NotePageReader {
   @PersistenceContext private EntityManager em;
 
   @Override
+  public long latestReply(Long noteId) {
+    Object latest =
+        em.createNativeQuery("SELECT MAX(id) FROM note WHERE in_reply_to_id = :note")
+            .setParameter("note", noteId)
+            .getSingleResult();
+    return latest == null ? 0L : ((Number) latest).longValue();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public Map<Long, List<String>> tagsOf(Collection<Long> noteIds) {
     if (noteIds.isEmpty()) {

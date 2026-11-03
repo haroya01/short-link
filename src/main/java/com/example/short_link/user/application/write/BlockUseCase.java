@@ -2,6 +2,7 @@ package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
+import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.UserBlockEntity;
@@ -40,6 +41,7 @@ public class BlockUseCase {
     followRepository.deleteBetween(blockerId, target.getId());
     withdrawRequest(FollowEdge.follower(blockerId).following(target.getId()));
     withdrawRequest(FollowEdge.follower(target.getId()).following(blockerId));
+    events.publishEvent(new LiveRevoke.Blocked(blockerId, target.getId()));
   }
 
   private void withdrawRequest(FollowEdge request) {

@@ -106,6 +106,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (parent != null && !mayAnswer(received.remoteActorId(), parent)) {
       parent = null;
     }
+    Long answered = parent == null ? null : parent.getId();
     NoteVisibility visibility = received.visibility();
     String warning = warning(received.contentWarning());
     Shape shape = received.shape();
@@ -122,7 +123,7 @@ class RemoteNoteRecorder implements RemoteNotes {
                 warning,
                 received.sensitive() || warning != null,
                 visibility,
-                parent == null ? null : parent.getId(),
+                answered,
                 parent == null ? null : parent.conversation(),
                 parent != null || received.inReplyToUri() != null,
                 parent == null ? NoteReplyPolicy.EVERYONE : parent.getReplyPolicy(),
@@ -154,6 +155,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (!received.notifies()) {
       return stored;
     }
+    NoteLiveChanges.of(noteId, answered, null).ifPresent(events::publishEvent);
     String excerpt = Excerpt.of(received.body());
     if (parent != null && parent.getUserId() != null) {
       events.publishEvent(
