@@ -226,6 +226,20 @@ class LinkInsightsTest {
     assertThat(peak.spark()).containsExactly(1L, 9L);
   }
 
+  @Test
+  void peakDayNeedsTheSampleFloorInItsDailyWindow() {
+    assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 3)))).isEmpty();
+    assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 7))).orElseThrow().params())
+        .isEqualTo(Map.of("date", "2026-07-03", "count", 7L));
+  }
+
+  @Test
+  void peakHourNeedsTheHumanSampleFloor() {
+    assertThat(entry("peakHour", stats().human(9).peakHour(21))).isEmpty();
+    assertThat(entry("peakHour", stats().human(10).peakHour(21)).orElseThrow().params())
+        .isEqualTo(Map.of("hour", 21));
+  }
+
   @Nested
   class RealResponseShapeDividesByHumanClicks {
 

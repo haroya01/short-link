@@ -111,6 +111,28 @@ class WeeklyInsightsServiceTest {
   }
 
   @Test
+  void weekOverWeekChangeNeedsTheSampleFloorInThePreviousWeek() {
+    when(clickRepository.countByUserIdAndRange(anyLong(), any(), any())).thenReturn(5L);
+    when(clickRepository.countHumanByUserIdAndRange(anyLong(), any(), any()))
+        .thenReturn(5L)
+        .thenReturn(1L)
+        .thenReturn(20L)
+        .thenReturn(10L);
+    when(clickRangeTops.topLinksByUser(anyLong(), any(), any(), anyInt())).thenReturn(List.of());
+    when(users.timezone(7L)).thenReturn(Optional.empty());
+    when(clickRangeTops.topHeatmapByUser(anyLong(), any(), any(), anyString(), anyInt()))
+        .thenReturn(List.of());
+
+    WeeklyInsights small = service.compute(7L);
+    assertThat(small.humanClicks()).isEqualTo(5L);
+    assertThat(small.previousHumanClicks()).isEqualTo(1L);
+    assertThat(small.deltaPercent()).isNull();
+
+    WeeklyInsights enough = service.compute(7L);
+    assertThat(enough.deltaPercent()).isEqualTo(1.0);
+  }
+
+  @Test
   void theWeeksPeakIsReadInTheOwnersOffsetOverTheClocksWeek() {
     Instant now = Instant.parse("2026-10-27T00:00:00Z");
     when(users.timezone(7L)).thenReturn(Optional.of("America/New_York"));

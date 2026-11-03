@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LinkInsights {
 
-  private static final long MIN_TOTAL_FOR_INSIGHTS = 10;
+  static final long MIN_TOTAL_FOR_INSIGHTS = 10;
   private static final long MIN_HUMAN_FOR_VELOCITY = 30;
   private static final double VELOCITY_THRESHOLD = 1.5;
   private static final double TREND_THRESHOLD = 0.15;
@@ -92,7 +92,7 @@ public class LinkInsights {
     Optional<Fact> loyalty = channelLoyalty(facts.channelDepth());
     loyalty.ifPresent(found::add);
     inAppBrowser(facts).ifPresent(found::add);
-    peakHour(facts.peakHour()).ifPresent(found::add);
+    peakHour(facts).ifPresent(found::add);
     if (loyalty.isEmpty()) returning(facts).ifPresent(found::add);
     topCountry(facts).ifPresent(found::add);
     device(facts).ifPresent(found::add);
@@ -133,6 +133,7 @@ public class LinkInsights {
   }
 
   private static Optional<Fact> peakDay(List<LinkStats.DailyClick> daily) {
+    if (sum(daily, 0, daily.size()) < MIN_TOTAL_FOR_INSIGHTS) return Optional.empty();
     int peakIndex = -1;
     for (int i = 0; i < daily.size(); i++) {
       if (peakIndex < 0 || daily.get(i).count() >= daily.get(peakIndex).count()) peakIndex = i;
@@ -187,9 +188,9 @@ public class LinkInsights {
     return fact("inAppBrowser", "clientApps", share, null, 78, "percent", pct(share));
   }
 
-  private static Optional<Fact> peakHour(Integer hour) {
-    if (hour == null) return Optional.empty();
-    return fact("peakHour", "hourly", null, null, 70, "hour", hour);
+  private static Optional<Fact> peakHour(ReportFacts facts) {
+    if (facts.peakHour() == null || !facts.enoughHuman()) return Optional.empty();
+    return fact("peakHour", "hourly", null, null, 70, "hour", facts.peakHour());
   }
 
   private static Optional<Fact> returning(ReportFacts facts) {
