@@ -3,6 +3,7 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.campaign.application.dto.CampaignSummary;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.ActivateReadyCampaignsUseCase;
 import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
@@ -181,7 +182,8 @@ class CampaignServiceTest {
     int activated = activateUseCase.execute(now);
 
     assertThat(activated).isGreaterThanOrEqualTo(0);
-    List<CampaignEntity> mine = query.list(500L);
+    List<CampaignEntity> mine =
+        query.summaries(500L).stream().map(CampaignSummary::campaign).toList();
     assertThat(mine)
         .filteredOn(c -> c.getId().equals(future.getId()))
         .extracting(CampaignEntity::getStatus)

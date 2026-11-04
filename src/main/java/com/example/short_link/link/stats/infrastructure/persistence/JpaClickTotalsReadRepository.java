@@ -17,6 +17,10 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   String RECENT = " AND clicked_at >= " + ClickRollup.AGGREGATED_UNTIL;
 
+  String SINCE_BY_LINK =
+      "JSON_TABLE(:sinceByLink, '$[*]' COLUMNS ("
+          + "link_id BIGINT PATH '$[0]', since DECIMAL(20,9) PATH '$[1]')) s";
+
   @Query(
       value =
           "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 0"
@@ -172,6 +176,22 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
       nativeQuery = true)
   List<LinkClickCount> countsByLinkIdsSince(
       @Param("ids") List<Long> ids, @Param("since") BigDecimal since);
+
+  @Query(
+      value =
+          "SELECT link_id AS linkId, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT c.link_id, COUNT(*) AS n FROM "
+              + SINCE_BY_LINK
+              + " JOIN click_event c ON c.link_id = s.link_id "
+              + "AND c.is_bot = 0 AND c.clicked_at >= FROM_UNIXTIME(s.since)"
+              + RAW
+              + " GROUP BY c.link_id UNION ALL "
+              + "SELECT h.link_id, SUM(h.humans) FROM "
+              + SINCE_BY_LINK
+              + " JOIN click_hourly h ON h.link_id = s.link_id "
+              + "AND h.last_human_at >= FROM_UNIXTIME(s.since) GROUP BY h.link_id) u GROUP BY link_id",
+      nativeQuery = true)
+  List<LinkClickCount> countsByLinkIdsEachSince(@Param("sinceByLink") String sinceByLink);
 
   @Query(
       value =

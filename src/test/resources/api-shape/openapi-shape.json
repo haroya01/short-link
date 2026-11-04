@@ -4453,11 +4453,14 @@
     },
     "CampaignSummaryResponse" : {
       "batchCount" : "integer(int64)",
+      "endedAt" : "string(date-time)",
       "endsAt" : "string(date-time)",
+      "humanClicks" : "integer(int64)",
       "id" : "integer(int64)",
       "name" : "string",
       "startsAt" : "string(date-time)",
-      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]"
+      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]",
+      "totalQuantity" : "integer(int64)"
     },
     "CampaignUpdateRequest" : {
       "defaultDestinationUrl" : "string",
