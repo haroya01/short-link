@@ -2,6 +2,7 @@ package com.example.short_link.link.og.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.link.LinkPreviewReader.Preview;
@@ -23,6 +24,13 @@ class LinkPreviewProviderTest {
     assertThat(provider.read("https://a.example"))
         .contains(new Preview("https://a.example", "T", "D", null));
     assertThat(provider.read("https://b.example")).isPresent();
+  }
+
+  @Test
+  void forgettingAnAddressDropsItsCachedPage() {
+    provider.forget("https://c.example");
+
+    verify(service).forget("https://c.example");
   }
 
   @Test

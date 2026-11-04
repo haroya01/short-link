@@ -8,5 +8,7 @@ public interface LinkPreviewReader {
 
   Optional<Preview> read(String url);
 
+  void forget(String url);
+
   record Preview(String url, String title, String description, String image) {}
 }
