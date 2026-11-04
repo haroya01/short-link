@@ -392,7 +392,8 @@
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
 @junit | link-list-owned | 6 | 0 | 0 | 0 | 6
-@junit | link-og-card | 1 | 0 | 0 | 0 | 1
+# The kurl card counts human clicks only for a link whose stats are public; this one's are not.
+@junit | link-og-card | 0 | 0 | 0 | 0 | 0
 @junit | link-og-override | 4 | 0 | 2 | 0 | 6
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
 @junit | link-pow-challenge | 0 | 0 | 0 | 0 | 0
@@ -592,16 +593,24 @@
 @junit | profile-public-read-after-delete | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-stats-private-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-public-stats-read | 17 | 0 | 0 | 0 | 17
-@junit | profile-public-with-featured-block | 5 | 0 | 0 | 0 | 5
-@junit | profile-public-with-link | 5 | 0 | 0 | 0 | 5
+@junit | profile-public-with-featured-block | 4 | 0 | 0 | 0 | 4
+# A link's click count is read and shown only when its stats are public, to the owner too; the
+# response does not depend on who asks, so the cached profile serves everyone. Making a profile
+# link's stats public reads the account (write gate), the link and the owner's handle to drop the
+# cached profile, so the next read loads it again with the count.
+@junit | profile-public-with-link | 4 | 0 | 0 | 0 | 4
+@junit | profile-public-read-by-member | 0 | 0 | 0 | 0 | 0
+@junit | profile-public-read-by-owner | 0 | 0 | 0 | 0 | 0
+@junit | profile-link-stats-public | 3 | 0 | 1 | 0 | 4
+@junit | profile-public-with-public-stats-link | 5 | 0 | 0 | 0 | 5
 # Disabled links are left out in the profile-links read; unopened and expired ones when served.
-@junit | profile-public-unavailable-hidden | 5 | 0 | 0 | 0 | 5
-@junit | profile-public-protected-link | 5 | 0 | 0 | 0 | 5
+@junit | profile-public-unavailable-hidden | 4 | 0 | 0 | 0 | 4
+@junit | profile-public-protected-link | 4 | 0 | 0 | 0 | 4
 # A deleted account's profile is not cached: the username and its history miss.
 @junit | profile-public-after-account-delete | 2 | 0 | 0 | 0 | 2
 # A profile showing view-limited links reads their counts on every request, cached or not, so a
 # link drops off as soon as its last view is spent; the second read is a cache hit plus that read.
-@junit | profile-public-with-limited-links | 6 | 0 | 0 | 0 | 6
+@junit | profile-public-with-limited-links | 5 | 0 | 0 | 0 | 5
 @junit | profile-limited-link-visit | 4 | 0 | 1 | 0 | 5
 @junit | profile-limited-link-visit-room-left | 3 | 0 | 1 | 0 | 4
 @junit | profile-public-after-limit-spent | 1 | 0 | 0 | 0 | 1
@@ -711,10 +720,12 @@
 # in one query whatever the number of cards.
 @junit | reader-series-discovery | 4 | 0 | 0 | 0 | 4
 @junit | reader-series-discovery-with-note | 4 | 0 | 0 | 0 | 4
-@junit | reader-series-subscribe | 8 | 2 | 0 | 0 | 10
+# The subscriber count is read only after checking the series is published or the reader's own
+# (its open-post summary; status and unsubscribe also load the series for its owner).
+@junit | reader-series-subscribe | 9 | 2 | 0 | 0 | 11
 @junit | reader-series-subscription-ids | 1 | 0 | 0 | 0 | 1
-@junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2
-@junit | reader-series-unsubscribe | 2 | 0 | 0 | 1 | 3
+@junit | reader-series-subscription-status | 4 | 0 | 0 | 0 | 4
+@junit | reader-series-unsubscribe | 4 | 0 | 0 | 1 | 5
 @junit | reader-short-note-create | 4 | 1 | 0 | 0 | 5
 @junit | reader-short-note-delete | 3 | 0 | 0 | 4 | 7
 @junit | reader-subscribed-series-cards | 4 | 0 | 0 | 0 | 4
@@ -732,13 +743,14 @@
 @junit | reader-unlisted-path-number-only | 1 | 0 | 0 | 0 | 1
 @junit | reader-unlisted-path-retired-key | 1 | 0 | 0 | 0 | 1
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
-# Links with a view limit or country block: a crawler's card reads the link row and human clicks
-# but no event preview, spends no view, and is refused like a person once the limit is spent or its
-# country is blocked. A prefetch of a counted link stops at the custom-domain check.
+# Links with a view limit or country block: a crawler's card reads the link row (human clicks only
+# when the link's stats are public, which these are not) but no event preview, spends no view, and
+# is refused like a person once the limit is spent or its country is blocked. A prefetch of a
+# counted link stops at the custom-domain check.
 @junit | restricted-create-once | 6 | 5 | 2 | 0 | 13
 @junit | restricted-limit-views | 3 | 0 | 2 | 0 | 5
-@junit | restricted-crawler-preview | 5 | 0 | 0 | 0 | 5
-@junit | restricted-crawler-again | 3 | 0 | 0 | 0 | 3
+@junit | restricted-crawler-preview | 4 | 0 | 0 | 0 | 4
+@junit | restricted-crawler-again | 2 | 0 | 0 | 0 | 2
 @junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
 @junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
 @junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
@@ -748,7 +760,7 @@
 @junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
 @junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
 @junit | restricted-create-open | 6 | 5 | 2 | 0 | 13
-@junit | open-crawler-preview | 6 | 0 | 0 | 0 | 6
+@junit | open-crawler-preview | 5 | 0 | 0 | 0 | 5
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-comment-like | 11 | 2 | 0 | 0 | 13

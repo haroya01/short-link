@@ -102,6 +102,22 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
+  void aFeedCardNeverCarriesTheAuthorsViewCount() {
+    PostEntity read = post(1L, "read");
+    read.publish();
+    ReflectionTestUtils.setField(read, "viewCount", 57L);
+    when(postRepository.findPublishedRecent(null, null, 0, 20)).thenReturn(List.of(read));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(postRepository.countPublished(null, null)).thenReturn(1L);
+
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from(null, null, "recent", null, 0, 20));
+
+    assertThat(view.items()).singleElement().extracting(PublicFeedItem::viewCount).isEqualTo(0L);
+    assertThat(view.items().get(0).likeCount()).isZero();
+  }
+
+  @Test
   void hasNextWhenMorePagesRemain() {
     when(postRepository.findPublishedRecent(null, null, 0, 2))
         .thenReturn(List.of(post(1L, "a"), post(1L, "b")));

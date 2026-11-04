@@ -48,7 +48,8 @@ public interface JpaLinkRepository
         visit.splashSeconds AS splashSeconds,
         visit.splashCtaId AS splashCtaId,
         visit.opensAt AS opensAt,
-        CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled
+        CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled,
+        l.statsPublic AS statsPublic
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id

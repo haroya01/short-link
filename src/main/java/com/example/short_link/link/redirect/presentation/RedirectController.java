@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -268,7 +269,8 @@ public class RedirectController {
           .header("X-Robots-Tag", "noindex, nofollow")
           .build();
     }
-    long clicks = lookup.countHumanClicks(link.linkId());
+    Long clicks =
+        link.showsClickCount(Instant.now()) ? lookup.countHumanClicks(link.linkId()) : null;
     String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, scope);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     return ResponseEntity.ok()

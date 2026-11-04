@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.SeriesSubscriberCount;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class SeriesSubscriptionQueryService {
 
   private final SeriesSubscriptionRepository subscriptionRepository;
+  private final SeriesSubscriberCount subscriberCount;
 
   public SeriesSubscriptionStatus status(Long userId, Long seriesId) {
     boolean subscribed =
         userId != null && subscriptionRepository.existsByUserIdAndSeriesId(userId, seriesId);
-    return new SeriesSubscriptionStatus(
-        subscribed, subscriptionRepository.countBySeriesId(seriesId));
+    return new SeriesSubscriptionStatus(subscribed, subscriberCount.shownTo(userId, seriesId));
   }
 
   public List<Long> mySubscriptions(Long userId) {

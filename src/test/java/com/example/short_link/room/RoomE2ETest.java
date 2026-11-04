@@ -178,8 +178,22 @@ class RoomE2ETest {
     Answer usedUp = send(stranger, post("/api/v1/room-invites/" + open + "/join"), null);
     assertThat(usedUp.status()).isEqualTo(410);
     assertThat((String) usedUp.at("$.reason")).isEqualTo("used_up");
-    assertThat((String) send(null, get("/api/v1/public/room-invites/" + open), null).at("$.reason"))
-        .isEqualTo("used_up");
+    for (String reader : new String[] {"anonymous", "stranger", "owner"}) {
+      Answer spent =
+          send(
+              switch (reader) {
+                case "stranger" -> stranger;
+                case "owner" -> owner;
+                default -> null;
+              },
+              get("/api/v1/public/room-invites/" + open),
+              null);
+      assertThat(spent.status()).as(reader).isEqualTo(410);
+      assertThat((String) spent.at("$.reason")).as(reader).isEqualTo("used_up");
+      assertThat(spent.body())
+          .as(reader)
+          .doesNotContain(tag, owner.username(), friend.username(), "members");
+    }
 
     assertThat(send(friend, patch("/api/v1/rooms/" + room), "{\"name\":\"새 이름\"}").status())
         .isEqualTo(403);
@@ -327,10 +341,8 @@ class RoomE2ETest {
                 friend.id()))
         .isZero();
     em.clear();
-    assertThat(
-            (Boolean)
-                send(null, get("/api/v1/public/room-invites/" + friendsCode), null).at("$.usable"))
-        .isFalse();
+    assertThat(send(null, get("/api/v1/public/room-invites/" + friendsCode), null).status())
+        .isEqualTo(410);
 
     assertThat(send(owner, delete("/api/v1/rooms/my-notes?roomId=" + room), null).status())
         .isEqualTo(202);

@@ -5,6 +5,7 @@ import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
 import java.io.IOException;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,7 +25,8 @@ public class OgCardController {
   @GetMapping(value = "/{shortCode:[0-9A-Za-z]{3,16}}/og.png", produces = MediaType.IMAGE_PNG_VALUE)
   public ResponseEntity<byte[]> ogCard(@PathVariable ShortCode shortCode) throws IOException {
     var cached = lookup.findActiveLink(shortCode);
-    long clicks = lookup.countHumanClicks(cached.linkId());
+    Long clicks =
+        cached.showsClickCount(Instant.now()) ? lookup.countHumanClicks(cached.linkId()) : null;
     byte[] body = renderer.render(urlBuilder.build(shortCode), clicks);
     return ResponseEntity.ok()
         .contentType(MediaType.IMAGE_PNG)

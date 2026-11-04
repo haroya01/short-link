@@ -32,18 +32,26 @@ class ProfileLinksTest {
   private record Count(Long getLinkId, Long getCount) implements LinkClickCount {}
 
   @Test
-  void aCardCarriesWhatTheProfileShowsAndItsClicks() {
+  void aCardCarriesWhatTheProfileShowsAndOnlyAPublicLinksClicks() {
     LinkEntity open =
         TestEntities.withId(new LinkEntity("https://open.example", "open001", 7L, null), 1L);
     open.applyOgMetadata("Fetched", null, "https://img", OPENS);
     open.changeOgOverride("Mine", null, null);
     open.setProfileOrder(2);
     open.featureOnProfile();
+    open.changeStatsVisibility(true);
     LinkEntity locked =
         TestEntities.withId(new LinkEntity("https://locked.example", "lock001", 7L, null), 2L);
     locked.setMaxViews(5);
+    locked.changeStatsVisibility(true);
+    LinkEntity privateStats =
+        TestEntities.withId(new LinkEntity("https://quiet.example", "quiet01", 7L, null), 3L);
     when(links.findPublicProfileLinks(7L))
-        .thenReturn(List.of(new Row(open, null, null), new Row(locked, OPENS, true)));
+        .thenReturn(
+            List.of(
+                new Row(open, null, null),
+                new Row(locked, OPENS, true),
+                new Row(privateStats, null, null)));
     when(clicks.countsByLinkIds(List.of(1L, 2L))).thenReturn(List.of(new Count(1L, 9L)));
 
     List<ProfileLinkCard> cards = profileLinks.publicCards(7L);
@@ -65,6 +73,20 @@ class ProfileLinksTest {
     assertThat(cards.get(1).clicks()).isZero();
     assertThat(cards.get(1).window()).isEqualTo(new ProfileLinkCard.Window(OPENS, null, true));
     assertThat(cards.get(1).window().limits()).isTrue();
+    assertThat(cards.get(2).clicks()).isNull();
+  }
+
+  @Test
+  void noLinkWithPublicStatsMeansNoClickQuery() {
+    LinkEntity quiet =
+        TestEntities.withId(new LinkEntity("https://quiet.example", "quiet01", 7L, null), 3L);
+    when(links.findPublicProfileLinks(7L)).thenReturn(List.of(new Row(quiet, null, null)));
+
+    assertThat(profileLinks.publicCards(7L))
+        .singleElement()
+        .extracting(ProfileLinkCard::clicks)
+        .isNull();
+    verifyNoInteractions(clicks);
   }
 
   @Test

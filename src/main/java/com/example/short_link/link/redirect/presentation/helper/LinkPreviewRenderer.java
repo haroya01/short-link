@@ -19,11 +19,11 @@ public class LinkPreviewRenderer {
     KURL_CARD_ONLY
   }
 
-  public String render(LinkEntity link, String shortUrl, long clickCount) {
+  public String render(LinkEntity link, String shortUrl, Long clickCount) {
     return render(link, shortUrl, clickCount, Scope.DESTINATION);
   }
 
-  public String render(LinkEntity link, String shortUrl, long clickCount, Scope scope) {
+  public String render(LinkEntity link, String shortUrl, Long clickCount, Scope scope) {
     LinkPreviewData preview =
         scope == Scope.KURL_CARD_ONLY
             ? previews.findWithoutDestination(link, shortUrl, clickCount)

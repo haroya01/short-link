@@ -101,19 +101,22 @@ public class RoomQueryService {
         invites
             .inviteByCode(code)
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITE_NOT_FOUND));
+    invite
+        .unusableAt(clock.instant())
+        .ifPresent(
+            spent -> {
+              throw new RoomException(RoomErrorCode.ROOM_INVITE_UNUSABLE, spent.apiName())
+                  .with("reason", spent.apiName());
+            });
     RoomEntity room =
         rooms
             .findById(invite.getRoomId())
             .orElseThrow(() -> new RoomException(RoomErrorCode.ROOM_INVITE_NOT_FOUND));
     long memberCount = rooms.countMembers(room.getId());
     Optional<RoomInviteUnusable> unusable =
-        invite
-            .unusableAt(clock.instant())
-            .or(
-                () ->
-                    memberCount >= RoomEntity.MAX_MEMBERS
-                        ? Optional.of(RoomInviteUnusable.FULL)
-                        : Optional.empty());
+        memberCount >= RoomEntity.MAX_MEMBERS
+            ? Optional.of(RoomInviteUnusable.FULL)
+            : Optional.empty();
     return new RoomInviteLanding(
         room.getName(),
         invites.person(invite.getCreatorId()).orElse(null),

@@ -14,7 +14,7 @@ public class LinkPreviewQueryService {
 
   private final EventLinkPreviewPort eventLinkPreview;
 
-  public LinkPreviewData find(LinkEntity link, String shortUrl, long clickCount) {
+  public LinkPreviewData find(LinkEntity link, String shortUrl, Long clickCount) {
     // 이벤트 귀속 링크는 이벤트 메타데이터가 OG 오버라이드와 스크랩보다 우선한다.
     Long linkId = link.getId();
     EventLinkPreview event =
@@ -40,7 +40,7 @@ public class LinkPreviewQueryService {
   }
 
   // Only what the owner wrote and kurl draws: nothing scraped from or pointing at the destination.
-  public LinkPreviewData findWithoutDestination(LinkEntity link, String shortUrl, long clickCount) {
+  public LinkPreviewData findWithoutDestination(LinkEntity link, String shortUrl, Long clickCount) {
     return new LinkPreviewData(
         nonBlankOr(link.getOgTitleOverride(), shortUrl),
         KURL_DESCRIPTION,
@@ -50,8 +50,9 @@ public class LinkPreviewQueryService {
         true);
   }
 
-  private static String generatedCard(String shortUrl, long clickCount) {
-    return shortUrl + "/og.png?c=" + Math.max(0L, clickCount);
+  private static String generatedCard(String shortUrl, Long clickCount) {
+    String card = shortUrl + "/og.png";
+    return clickCount == null ? card : card + "?c=" + Math.max(0L, clickCount);
   }
 
   private static String nonBlankOr(String value, String fallback) {

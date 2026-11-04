@@ -11,7 +11,7 @@ public record ProfileLinkCard(
     boolean passwordRequired,
     boolean highlighted,
     Integer profileOrder,
-    long clicks,
+    Long clicks,
     Window window) {
 
   public record Preview(String title, String image, String titleOverride) {}

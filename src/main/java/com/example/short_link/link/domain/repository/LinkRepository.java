@@ -138,5 +138,7 @@ public interface LinkRepository {
     Instant getOpensAt();
 
     Boolean getDisabled();
+
+    Boolean getStatsPublic();
   }
 }

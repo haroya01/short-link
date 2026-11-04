@@ -49,7 +49,7 @@ public record PublicProfile(
         String originalUrl,
         String ogTitle,
         String ogImage,
-        long clickCount,
+        Long clickCount,
         boolean highlighted) {
       return new ProfileEntry(
           "LINK",
@@ -69,7 +69,7 @@ public record PublicProfile(
         ShortCode shortCode,
         String shortUrl,
         String ownerTitle,
-        long clickCount,
+        Long clickCount,
         boolean highlighted) {
       return new ProfileEntry(
           "LINK",
