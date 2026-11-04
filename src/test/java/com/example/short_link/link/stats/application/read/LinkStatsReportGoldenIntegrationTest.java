@@ -282,7 +282,7 @@ class LinkStatsReportGoldenIntegrationTest {
     String code = "g" + UUID.randomUUID().toString().substring(0, 7);
     LinkEntity link = links.save(new LinkEntity("https://example.com/" + code, code, owner, null));
     jdbc.update(
-        "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
+        "UPDATE link SET created_at = TIMESTAMPADD(SECOND, ?, '1970-01-01') WHERE id = ?",
         created.getEpochSecond(),
         link.getId());
     linkIds.add(link.getId());

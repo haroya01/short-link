@@ -11,7 +11,7 @@
     "profileClicks" : 117,
     "firstClickAt" : "2026-03-04T05:43:26Z",
     "lastClickAt" : "2026-10-19T21:56:17Z",
-    "timeToFirstClickMinutes" : 0,
+    "timeToFirstClickMinutes" : 25,
     "peakHour" : 0,
     "returnRate" : {
       "newVisitors" : 30,
@@ -211,7 +211,7 @@
       "count" : 15
     }, {
       "hour" : 14,
-      "count" : 12
+      "count" : 13
     }, {
       "hour" : 15,
       "count" : 21
@@ -251,7 +251,7 @@
       "count" : 50
     }, {
       "dayOfWeek" : "WEDNESDAY",
-      "count" : 28
+      "count" : 29
     }, {
       "dayOfWeek" : "THURSDAY",
       "count" : 50
@@ -537,7 +537,7 @@
     }, {
       "dayOfWeek" : "WEDNESDAY",
       "hour" : 14,
-      "count" : 3
+      "count" : 4
     }, {
       "dayOfWeek" : "WEDNESDAY",
       "hour" : 15,
@@ -1082,51 +1082,81 @@
     } ],
     "datacenterClicks" : 53,
     "insights" : [ {
-      "type" : "PEAK_HOUR",
+      "type" : "TREND_UP",
       "severity" : "info",
-      "message" : "Peak time is Thursday at 15:00 (2.6% of all clicks)",
+      "message" : "Clicks in the last 7 days rose 82% from the 7 days before (20 clicks)",
       "data" : {
-        "dayOfWeek" : "THURSDAY",
-        "hour" : 15,
-        "count" : 9,
-        "share" : 0.026
-      }
+        "percent" : 82,
+        "count" : 20
+      },
+      "code" : "trendUp",
+      "params" : {
+        "percent" : 82,
+        "count" : 20
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 1, 1, 4, 1, 2, 1, 1, 1, 3, 1, 10, 2, 2, 1 ]
     }, {
-      "type" : "VISITOR_MIX",
+      "type" : "PEAK_DAY",
       "severity" : "info",
-      "message" : "53.6% of visitors are first-timers",
+      "message" : "The busiest day was 10-15, with 10 clicks",
       "data" : {
-        "newShare" : 0.536,
-        "returningShare" : 0.464
-      }
-    }, {
-      "type" : "WEEK_OVER_WEEK",
-      "severity" : "info",
-      "message" : "Clicks +81.8% over the last 7 days (vs the prior 7)",
-      "data" : {
-        "last7" : 20,
-        "prev7" : 11,
-        "ratio" : 0.818
-      }
-    }, {
-      "type" : "CHANNEL_JUMP",
-      "severity" : "info",
-      "message" : "Started on l.instagram.com but spread to news.ycombinator.com — it jumped beyond its original audience",
-      "data" : {
-        "origin" : "l.instagram.com",
-        "jumpedTo" : "news.ycombinator.com",
-        "gapHours" : 19
-      }
+        "date" : "2026-10-15",
+        "count" : 10
+      },
+      "code" : "peakDay",
+      "params" : {
+        "date" : "2026-10-15",
+        "count" : 10
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 2, 1, 1, 1, 3, 1, 10 ]
     }, {
       "type" : "IN_APP_BROWSER",
       "severity" : "info",
-      "message" : "Opened inside KakaoTalk — 46.3% of clicks came from in-app browsers",
+      "message" : "46% of clicks opened in an in-app browser",
       "data" : {
-        "topApp" : "kakaotalk",
-        "topAppClicks" : 76,
-        "inAppClicks" : 142,
-        "share" : 0.463
-      }
+        "percent" : 46
+      },
+      "code" : "inAppBrowser",
+      "params" : {
+        "percent" : 46
+      },
+      "evidence" : "clientApps",
+      "ratio" : 0.46254071661237783,
+      "spark" : null
+    }, {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Busiest around 0:00",
+      "data" : {
+        "hour" : 0
+      },
+      "code" : "peakHour",
+      "params" : {
+        "hour" : 0
+      },
+      "evidence" : "hourly",
+      "ratio" : null,
+      "spark" : null
+    }, {
+      "type" : "RETURNING_RECENT",
+      "severity" : "info",
+      "message" : "46% of visitors in the last 90 days came back",
+      "data" : {
+        "percent" : 46,
+        "days" : 90
+      },
+      "code" : "returningRecent",
+      "params" : {
+        "percent" : 46,
+        "days" : 90
+      },
+      "evidence" : "visitors",
+      "ratio" : 0.4642857142857143,
+      "spark" : null
     } ]
   },
   "America/New_York" : {
@@ -1141,7 +1171,7 @@
     "profileClicks" : 123,
     "firstClickAt" : "2026-03-05T21:16:27Z",
     "lastClickAt" : "2026-10-20T03:08:40Z",
-    "timeToFirstClickMinutes" : 1858,
+    "timeToFirstClickMinutes" : 2398,
     "peakHour" : 2,
     "returnRate" : {
       "newVisitors" : 31,
@@ -2189,51 +2219,81 @@
     } ],
     "datacenterClicks" : 41,
     "insights" : [ {
-      "type" : "PEAK_HOUR",
+      "type" : "TREND_UP",
       "severity" : "info",
-      "message" : "Peak time is Thursday at 2:00 (2.9% of all clicks)",
+      "message" : "Clicks in the last 7 days rose 180% from the 7 days before (28 clicks)",
       "data" : {
-        "dayOfWeek" : "THURSDAY",
-        "hour" : 2,
-        "count" : 10,
-        "share" : 0.029
-      }
+        "percent" : 180,
+        "count" : 28
+      },
+      "code" : "trendUp",
+      "params" : {
+        "percent" : 180,
+        "count" : 28
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 12, 3, 5, 3 ]
     }, {
-      "type" : "VISITOR_MIX",
+      "type" : "PEAK_DAY",
       "severity" : "info",
-      "message" : "60.8% of visitors are first-timers",
+      "message" : "The busiest day was 10-15, with 12 clicks",
       "data" : {
-        "newShare" : 0.608,
-        "returningShare" : 0.392
-      }
-    }, {
-      "type" : "WEEK_OVER_WEEK",
-      "severity" : "info",
-      "message" : "Clicks +180.0% over the last 7 days (vs the prior 7)",
-      "data" : {
-        "last7" : 28,
-        "prev7" : 10,
-        "ratio" : 1.8
-      }
-    }, {
-      "type" : "CHANNEL_JUMP",
-      "severity" : "info",
-      "message" : "Started on blog.example.org but spread to x.com — it jumped beyond its original audience",
-      "data" : {
-        "origin" : "blog.example.org",
-        "jumpedTo" : "x.com",
-        "gapHours" : 54
-      }
+        "date" : "2026-10-15",
+        "count" : 12
+      },
+      "code" : "peakDay",
+      "params" : {
+        "date" : "2026-10-15",
+        "count" : 12
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 1, 1, 3, 3, 1, 1, 12 ]
     }, {
       "type" : "IN_APP_BROWSER",
       "severity" : "info",
-      "message" : "Opened inside Instagram — 50.9% of clicks came from in-app browsers",
+      "message" : "51% of clicks opened in an in-app browser",
       "data" : {
-        "topApp" : "instagram",
-        "topAppClicks" : 76,
-        "inAppClicks" : 146,
-        "share" : 0.509
-      }
+        "percent" : 51
+      },
+      "code" : "inAppBrowser",
+      "params" : {
+        "percent" : 51
+      },
+      "evidence" : "clientApps",
+      "ratio" : 0.5087108013937283,
+      "spark" : null
+    }, {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Busiest around 2:00",
+      "data" : {
+        "hour" : 2
+      },
+      "code" : "peakHour",
+      "params" : {
+        "hour" : 2
+      },
+      "evidence" : "hourly",
+      "ratio" : null,
+      "spark" : null
+    }, {
+      "type" : "RETURNING_RECENT",
+      "severity" : "info",
+      "message" : "39% of visitors in the last 90 days came back",
+      "data" : {
+        "percent" : 39,
+        "days" : 90
+      },
+      "code" : "returningRecent",
+      "params" : {
+        "percent" : 39,
+        "days" : 90
+      },
+      "evidence" : "visitors",
+      "ratio" : 0.39215686274509803,
+      "spark" : null
     } ]
   },
   "Asia/Kolkata" : {
@@ -2248,7 +2308,7 @@
     "profileClicks" : 130,
     "firstClickAt" : "2026-03-04T05:46:26Z",
     "lastClickAt" : "2026-10-20T04:54:19Z",
-    "timeToFirstClickMinutes" : 0,
+    "timeToFirstClickMinutes" : 28,
     "peakHour" : 12,
     "returnRate" : {
       "newVisitors" : 29,
@@ -2429,11 +2489,11 @@
       "hour" : 8,
       "count" : 16
     }, {
-      "hour" : 9,
+      "hour" : 10,
       "count" : 13
     }, {
-      "hour" : 10,
-      "count" : 12
+      "hour" : 9,
+      "count" : 13
     }, {
       "hour" : 11,
       "count" : 16
@@ -2484,10 +2544,10 @@
       "dayOfWeek" : "TUESDAY",
       "count" : 53
     }, {
-      "dayOfWeek" : "THURSDAY",
-      "count" : 48
-    }, {
       "dayOfWeek" : "WEDNESDAY",
+      "count" : 49
+    }, {
+      "dayOfWeek" : "THURSDAY",
       "count" : 48
     }, {
       "dayOfWeek" : "FRIDAY",
@@ -2762,12 +2822,12 @@
       "count" : 2
     }, {
       "dayOfWeek" : "WEDNESDAY",
-      "hour" : 9,
+      "hour" : 10,
       "count" : 3
     }, {
       "dayOfWeek" : "WEDNESDAY",
-      "hour" : 10,
-      "count" : 2
+      "hour" : 9,
+      "count" : 3
     }, {
       "dayOfWeek" : "WEDNESDAY",
       "hour" : 11,
@@ -3312,51 +3372,81 @@
     } ],
     "datacenterClicks" : 43,
     "insights" : [ {
-      "type" : "PEAK_HOUR",
+      "type" : "TREND_UP",
       "severity" : "info",
-      "message" : "Peak time is Thursday at 12:00 (4.3% of all clicks)",
+      "message" : "Clicks in the last 7 days rose 140% from the 7 days before (24 clicks)",
       "data" : {
-        "dayOfWeek" : "THURSDAY",
-        "hour" : 12,
-        "count" : 15,
-        "share" : 0.043
-      }
+        "percent" : 140,
+        "count" : 24
+      },
+      "code" : "trendUp",
+      "params" : {
+        "percent" : 140,
+        "count" : 24
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 1, 2, 1, 3, 1, 1, 1, 1, 2, 13, 1, 5, 1, 1 ]
     }, {
-      "type" : "VISITOR_MIX",
+      "type" : "PEAK_DAY",
       "severity" : "info",
-      "message" : "48.3% of visitors are first-timers",
+      "message" : "The busiest day was 10-15, with 13 clicks",
       "data" : {
-        "newShare" : 0.483,
-        "returningShare" : 0.517
-      }
-    }, {
-      "type" : "WEEK_OVER_WEEK",
-      "severity" : "info",
-      "message" : "Clicks +140.0% over the last 7 days (vs the prior 7)",
-      "data" : {
-        "last7" : 24,
-        "prev7" : 10,
-        "ratio" : 1.4
-      }
-    }, {
-      "type" : "CHANNEL_JUMP",
-      "severity" : "info",
-      "message" : "Started on www.google.com but spread to news.ycombinator.com — it jumped beyond its original audience",
-      "data" : {
-        "origin" : "www.google.com",
-        "jumpedTo" : "news.ycombinator.com",
-        "gapHours" : 62
-      }
+        "date" : "2026-10-15",
+        "count" : 13
+      },
+      "code" : "peakDay",
+      "params" : {
+        "date" : "2026-10-15",
+        "count" : 13
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 3, 1, 1, 1, 1, 2, 13 ]
     }, {
       "type" : "IN_APP_BROWSER",
       "severity" : "info",
-      "message" : "Opened inside Instagram — 48.9% of clicks came from in-app browsers",
+      "message" : "49% of clicks opened in an in-app browser",
       "data" : {
-        "topApp" : "instagram",
-        "topAppClicks" : 82,
-        "inAppClicks" : 156,
-        "share" : 0.489
-      }
+        "percent" : 49
+      },
+      "code" : "inAppBrowser",
+      "params" : {
+        "percent" : 49
+      },
+      "evidence" : "clientApps",
+      "ratio" : 0.4890282131661442,
+      "spark" : null
+    }, {
+      "type" : "TOP_SOURCE",
+      "severity" : "info",
+      "message" : "blog.example.org brought 26% of your traffic",
+      "data" : {
+        "host" : "blog.example.org",
+        "percent" : 26
+      },
+      "code" : "topSource",
+      "params" : {
+        "host" : "blog.example.org",
+        "percent" : 26
+      },
+      "evidence" : "sources",
+      "ratio" : 0.25705329153605017,
+      "spark" : null
+    }, {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Busiest around 12:00",
+      "data" : {
+        "hour" : 12
+      },
+      "code" : "peakHour",
+      "params" : {
+        "hour" : 12
+      },
+      "evidence" : "hourly",
+      "ratio" : null,
+      "spark" : null
     } ]
   },
   "Asia/Kathmandu" : {
@@ -3371,7 +3461,7 @@
     "profileClicks" : 118,
     "firstClickAt" : "2026-03-05T12:38:03Z",
     "lastClickAt" : "2026-10-20T04:38:44Z",
-    "timeToFirstClickMinutes" : 1340,
+    "timeToFirstClickMinutes" : 1880,
     "peakHour" : 12,
     "returnRate" : {
       "newVisitors" : 30,
@@ -4486,51 +4576,81 @@
     } ],
     "datacenterClicks" : 51,
     "insights" : [ {
-      "type" : "PEAK_HOUR",
+      "type" : "TREND_UP",
       "severity" : "info",
-      "message" : "Peak time is Thursday at 12:00 (3.7% of all clicks)",
+      "message" : "Clicks in the last 7 days rose 173% from the 7 days before (30 clicks)",
       "data" : {
-        "dayOfWeek" : "THURSDAY",
-        "hour" : 12,
-        "count" : 13,
-        "share" : 0.037
-      }
+        "percent" : 173,
+        "count" : 30
+      },
+      "code" : "trendUp",
+      "params" : {
+        "percent" : 173,
+        "count" : 30
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 1, 3, 2, 1, 1, 2, 1, 1, 13, 3, 5, 4, 2, 2 ]
     }, {
-      "type" : "VISITOR_MIX",
+      "type" : "PEAK_DAY",
       "severity" : "info",
-      "message" : "48.4% of visitors are first-timers",
+      "message" : "The busiest day was 10-15, with 13 clicks",
       "data" : {
-        "newShare" : 0.484,
-        "returningShare" : 0.516
-      }
-    }, {
-      "type" : "WEEK_OVER_WEEK",
-      "severity" : "info",
-      "message" : "Clicks +172.7% over the last 7 days (vs the prior 7)",
-      "data" : {
-        "last7" : 30,
-        "prev7" : 11,
-        "ratio" : 1.727
-      }
-    }, {
-      "type" : "CHANNEL_JUMP",
-      "severity" : "info",
-      "message" : "Started on www.google.com but spread to l.instagram.com — it jumped beyond its original audience",
-      "data" : {
-        "origin" : "www.google.com",
-        "jumpedTo" : "l.instagram.com",
-        "gapHours" : 17
-      }
+        "date" : "2026-10-15",
+        "count" : 13
+      },
+      "code" : "peakDay",
+      "params" : {
+        "date" : "2026-10-15",
+        "count" : 13
+      },
+      "evidence" : "daily",
+      "ratio" : null,
+      "spark" : [ 2, 1, 1, 2, 1, 1, 13 ]
     }, {
       "type" : "IN_APP_BROWSER",
       "severity" : "info",
-      "message" : "Opened inside KakaoTalk — 48.9% of clicks came from in-app browsers",
+      "message" : "49% of clicks opened in an in-app browser",
       "data" : {
-        "topApp" : "kakaotalk",
-        "topAppClicks" : 85,
-        "inAppClicks" : 154,
-        "share" : 0.489
-      }
+        "percent" : 49
+      },
+      "code" : "inAppBrowser",
+      "params" : {
+        "percent" : 49
+      },
+      "evidence" : "clientApps",
+      "ratio" : 0.4888888888888889,
+      "spark" : null
+    }, {
+      "type" : "TOP_SOURCE",
+      "severity" : "info",
+      "message" : "blog.example.org brought 27% of your traffic",
+      "data" : {
+        "host" : "blog.example.org",
+        "percent" : 27
+      },
+      "code" : "topSource",
+      "params" : {
+        "host" : "blog.example.org",
+        "percent" : 27
+      },
+      "evidence" : "sources",
+      "ratio" : 0.273015873015873,
+      "spark" : null
+    }, {
+      "type" : "PEAK_HOUR",
+      "severity" : "info",
+      "message" : "Busiest around 12:00",
+      "data" : {
+        "hour" : 12
+      },
+      "code" : "peakHour",
+      "params" : {
+        "hour" : 12
+      },
+      "evidence" : "hourly",
+      "ratio" : null,
+      "spark" : null
     } ]
   }
 }

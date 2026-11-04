@@ -54,7 +54,7 @@ class LinkStatsSharedReadsIntegrationTest {
             new LinkEntity("https://example.com/" + suffix, "s" + suffix, owner.getId(), null));
     em.flush();
     jdbc.update(
-        "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
+        "UPDATE link SET created_at = TIMESTAMPADD(SECOND, ?, '1970-01-01') WHERE id = ?",
         Instant.now().minus(Duration.ofDays(10)).getEpochSecond(),
         link.getId());
     em.refresh(link);
@@ -135,7 +135,7 @@ class LinkStatsSharedReadsIntegrationTest {
     Instant friday2345 = Instant.parse("2026-10-30T18:15:00Z");
     Instant saturday0015 = Instant.parse("2026-10-30T18:45:00Z");
     jdbc.update(
-        "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
+        "UPDATE link SET created_at = TIMESTAMPADD(SECOND, ?, '1970-01-01') WHERE id = ?",
         Instant.parse("2026-10-01T00:00:00Z").getEpochSecond(),
         link.getId());
     em.refresh(link);
