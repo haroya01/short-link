@@ -29,13 +29,9 @@ class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
   }
 
   @Override
-  public long countDirectByLinkId(Long linkId) {
-    return jpa.countDirectByLinkId(linkId);
-  }
-
-  @Override
-  public long countProfileChannelByLinkId(Long linkId) {
-    return jpa.countProfileChannelByLinkId(linkId);
+  public ClickFlags countFlagsByLinkId(Long linkId) {
+    JpaClickTotalsReadRepository.ClickFlagsRow row = jpa.countFlags(linkId);
+    return new ClickFlags(row.getDirect(), row.getProfile(), row.getPreview(), row.getDatacenter());
   }
 
   @Override
@@ -59,18 +55,8 @@ class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
   }
 
   @Override
-  public long countPreviewByLinkId(Long linkId) {
-    return jpa.countPreviewByLinkId(linkId);
-  }
-
-  @Override
   public long countSinceByLinkId(Long linkId, Instant since) {
     return jpa.countSinceByLinkId(linkId, since);
-  }
-
-  @Override
-  public long countDatacenterClicks(Long linkId) {
-    return jpa.countDatacenterClicks(linkId);
   }
 
   @Override

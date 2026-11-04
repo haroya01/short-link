@@ -384,10 +384,12 @@
 @junit | link-redirect | 3 | 0 | 0 | 0 | 3
 @junit | link-redirect-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | link-root-redirect | 0 | 0 | 0 | 0 | 0
-@junit | link-stats-csv | 43 | 0 | 0 | 0 | 43
+# A link report adds its human and bot counts for the total, takes hours and weekdays from its
+# heatmap and the direct, profile, preview and datacenter counts from one statement.
+@junit | link-stats-csv | 37 | 0 | 0 | 0 | 37
 @junit | link-stats-foreign-denied | 2 | 0 | 0 | 0 | 2
-@junit | link-stats-private | 43 | 0 | 0 | 0 | 43
-@junit | link-stats-public | 43 | 0 | 0 | 0 | 43
+@junit | link-stats-private | 37 | 0 | 0 | 0 | 37
+@junit | link-stats-public | 37 | 0 | 0 | 0 | 37
 @junit | link-stats-public-denied | 1 | 0 | 0 | 0 | 1
 @junit | link-stats-publish | 2 | 0 | 1 | 0 | 3
 @junit | link-stream-anonymous | 1 | 0 | 0 | 0 | 1
@@ -476,7 +478,7 @@
 @junit | ops-health-metrics | 0 | 0 | 0 | 0 | 0
 @junit | ops-lifecycle | 1 | 0 | 0 | 0 | 1
 @junit | ops-link-activity | 3 | 0 | 0 | 0 | 3
-@junit | ops-link-detail | 43 | 0 | 0 | 0 | 43
+@junit | ops-link-detail | 37 | 0 | 0 | 0 | 37
 @junit | ops-link-metrics | 2 | 0 | 0 | 0 | 2
 @junit | ops-list-blocked-domains | 1 | 0 | 0 | 0 | 1
 @junit | ops-metric-redirect | 4 | 0 | 0 | 0 | 4

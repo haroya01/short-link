@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.Duration;
@@ -24,6 +25,7 @@ class ExpiredLinkCleanupJobTest {
   @Autowired private ExpiredLinkCleanupJob job;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickEventRepository;
+  @Autowired private ClickTotalsReader clickTotals;
 
   @Test
   void deletesLinksPastGracePeriod() {
@@ -51,7 +53,7 @@ class ExpiredLinkCleanupJobTest {
     assertThat(linkRepository.findByShortCode(new ShortCode("expired1"))).isEmpty();
     assertThat(linkRepository.findByShortCode(new ShortCode("recent01"))).isPresent();
     assertThat(linkRepository.findByShortCode(new ShortCode("active01"))).isPresent();
-    assertThat(clickEventRepository.countByLinkId(expiredLink.linkId().value())).isZero();
+    assertThat(clickTotals.countHumanByLinkId(expiredLink.linkId().value())).isZero();
   }
 
   @Test

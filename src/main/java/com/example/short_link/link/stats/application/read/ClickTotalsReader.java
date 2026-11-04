@@ -12,9 +12,7 @@ public interface ClickTotalsReader {
 
   long countBotByLinkId(Long linkId);
 
-  long countDirectByLinkId(Long linkId);
-
-  long countProfileChannelByLinkId(Long linkId);
+  ClickFlags countFlagsByLinkId(Long linkId);
 
   UniqueVisitors uniqueVisitorsByLinkId(Long linkId);
 
@@ -22,11 +20,7 @@ public interface ClickTotalsReader {
 
   Instant findLastClickAt(Long linkId);
 
-  long countPreviewByLinkId(Long linkId);
-
   long countSinceByLinkId(Long linkId, Instant since);
-
-  long countDatacenterClicks(Long linkId);
 
   List<LinkClickCount> countsByLinkIds(List<Long> ids);
 
@@ -41,4 +35,6 @@ public interface ClickTotalsReader {
   Map<Long, Map<String, Long>> humanClientAppCountsByLinkIds(Collection<Long> linkIds);
 
   record UniqueVisitors(long count, Instant rawSince) {}
+
+  record ClickFlags(long direct, long profile, long preview, long datacenter) {}
 }

@@ -12,8 +12,6 @@ public interface ClickEventRepository {
 
   long count();
 
-  long countByLinkId(Long linkId);
-
   int deleteByLinkIds(Collection<Long> linkIds);
 
   List<ClickEventEntity> findAllByLinkIdInOrderByClickedAtAsc(Collection<Long> linkIds);
