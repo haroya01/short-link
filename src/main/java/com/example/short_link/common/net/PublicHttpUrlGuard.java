@@ -5,6 +5,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -72,12 +73,54 @@ public final class PublicHttpUrlGuard {
       return true;
     }
     if (addr instanceof Inet4Address v4) {
-      return isCarrierGradeNat(v4);
+      return isCarrierGradeNat(v4) || isReservedIpv4(v4);
     }
     if (addr instanceof Inet6Address v6) {
-      return isIpv6UniqueLocal(v6) || isIpv4MappedPrivate(v6);
+      return isIpv6UniqueLocal(v6) || isLocalNat64(v6) || carriesPrivateIpv4(v6);
     }
     return false;
+  }
+
+  private static boolean isReservedIpv4(Inet4Address v4) {
+    byte[] b = v4.getAddress();
+    int b0 = b[0] & 0xff;
+    int b1 = b[1] & 0xff;
+    return b0 == 0 || b0 >= 240 || (b0 == 198 && (b1 & 0xfe) == 18);
+  }
+
+  private static boolean isLocalNat64(Inet6Address v6) {
+    byte[] b = v6.getAddress();
+    return isNat64(b) && b[4] == 0 && b[5] == 1;
+  }
+
+  private static boolean carriesPrivateIpv4(Inet6Address v6) {
+    byte[] b = v6.getAddress();
+    if ((b[0] & 0xff) == 0x20 && b[1] == 0x02) {
+      return isPrivateIpv4(Arrays.copyOfRange(b, 2, 6));
+    }
+    if (zeros(b, 4, 12) && (zeros(b, 0, 4) || isNat64(b))) {
+      return isPrivateIpv4(Arrays.copyOfRange(b, 12, 16));
+    }
+    return isIpv4MappedPrivate(v6);
+  }
+
+  private static boolean isNat64(byte[] b) {
+    return b[0] == 0 && b[1] == 0x64 && (b[2] & 0xff) == 0xff && (b[3] & 0xff) == 0x9b;
+  }
+
+  private static boolean isPrivateIpv4(byte[] address) {
+    try {
+      return isPrivate(InetAddress.getByAddress(address));
+    } catch (UnknownHostException e) {
+      return true;
+    }
+  }
+
+  private static boolean zeros(byte[] b, int from, int to) {
+    for (int i = from; i < to; i++) {
+      if (b[i] != 0) return false;
+    }
+    return true;
   }
 
   private static boolean isCarrierGradeNat(Inet4Address v4) {

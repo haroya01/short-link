@@ -142,7 +142,7 @@ src/main/java/com/example/short_link/common/web/MdcFilter.java=2
 src/main/java/com/example/short_link/common/web/RateLimitFilter.java=3
 src/main/java/com/example/short_link/cta/application/read/CtaCards.java=1
 src/main/java/com/example/short_link/cta/application/read/CtaQueryService.java=1
-src/main/java/com/example/short_link/cta/application/write/CtaLinkTracker.java=2
+src/main/java/com/example/short_link/cta/application/write/CtaLinkTracker.java=1
 src/main/java/com/example/short_link/cta/domain/CtaEntity.java=1
 src/main/java/com/example/short_link/cta/infrastructure/persistence/CtaUserDataEraser.java=1
 src/main/java/com/example/short_link/customdomain/application/write/AutoVerifyCustomDomainUseCase.java=1
@@ -305,7 +305,6 @@ src/main/java/com/example/short_link/link/moderation/infrastructure/persistence/
 src/main/java/com/example/short_link/link/notice/application/LinkClickNoticeListener.java=3
 src/main/java/com/example/short_link/link/notice/scheduler/LinkDigestJob.java=2
 src/main/java/com/example/short_link/link/notice/scheduler/LinkExpiryNoticeJob.java=2
-src/main/java/com/example/short_link/link/og/application/LinkOgFetchService.java=1
 src/main/java/com/example/short_link/link/og/application/OgCardImageRenderer.java=7
 src/main/java/com/example/short_link/link/og/application/dto/LinkPreview.java=2
 src/main/java/com/example/short_link/link/redirect/application/LinkPreviewCrawlerDetector.java=4

@@ -96,4 +96,11 @@ class ReferrerNormalizerTest {
   void hostOfReturnsNullForMalformedUri() {
     assertThat(ReferrerNormalizer.hostOf("https://exa mple.com")).isNull();
   }
+
+  @Test
+  void hostOfFitsTheReferrerHostColumn() {
+    String host = ("a".repeat(60) + ".").repeat(5) + "com";
+
+    assertThat(ReferrerNormalizer.hostOf("https://" + host + "/")).hasSize(255);
+  }
 }

@@ -122,12 +122,15 @@ class ClickFlusherTest {
 
   @Test
   void batchFailureRetriesIndividuallySoOnePoisonRowCannotDropTheRest() {
-    ClickEventEntity poison = entity(1L);
-    ClickEventEntity good = entity(2L);
-    when(assembler.assemble(any())).thenReturn(poison, good);
+    when(assembler.assemble(any())).thenAnswer(inv -> entity(linkOf(inv.getArgument(0))));
     when(repository.saveAll(anyList())).thenThrow(new RuntimeException("batch failed"));
-    when(repository.save(poison)).thenThrow(new RuntimeException("poison row"));
-    when(repository.save(good)).thenReturn(good);
+    when(repository.save(any()))
+        .thenAnswer(
+            inv -> {
+              ClickEventEntity row = inv.getArgument(0);
+              if (row.getLinkId() == 1L) throw new RuntimeException("poison row");
+              return row;
+            });
     buffer.offer(pending(1L));
     buffer.offer(pending(2L));
 
@@ -136,6 +139,29 @@ class ClickFlusherTest {
     verify(events).publishEvent(any(ClickRecordedEvent.class));
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(1.0);
     assertThat(registry.counter("click_recorder", "result", "flush_error").count()).isEqualTo(1.0);
+  }
+
+  @Test
+  void retryNeverResavesAnInstanceTheFailedBatchHeld() {
+    when(assembler.assemble(any())).thenAnswer(inv -> entity(linkOf(inv.getArgument(0))));
+    ArgumentCaptor<List<ClickEventEntity>> batch = ArgumentCaptor.forClass(List.class);
+    when(repository.saveAll(batch.capture())).thenThrow(new RuntimeException("batch failed"));
+    ArgumentCaptor<ClickEventEntity> retried = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(retried.capture())).thenAnswer(inv -> inv.getArgument(0));
+    buffer.offer(pending(1L));
+    buffer.offer(pending(2L));
+
+    flusher.flush();
+
+    assertThat(retried.getAllValues())
+        .hasSize(2)
+        .allSatisfy(row -> assertThat(batch.getValue()).doesNotContain(row))
+        .extracting(ClickEventEntity::getLinkId)
+        .containsExactly(1L, 2L);
+  }
+
+  private static long linkOf(PendingClick click) {
+    return click.ctx().linkId().value();
   }
 
   @Test

@@ -95,7 +95,7 @@ public class CtaEntity extends BaseTimeEntity {
     this.deletedAt = Instant.now();
   }
 
-  private void requireAlive() {
+  public void requireAlive() {
     if (deletedAt != null) {
       throw new CtaException(CtaErrorCode.CTA_DELETED, id);
     }

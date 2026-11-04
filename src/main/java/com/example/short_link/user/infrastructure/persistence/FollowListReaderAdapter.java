@@ -127,7 +127,7 @@ class FollowListReaderAdapter implements FollowListReader {
               flag(row[8]),
               flag(row[9]),
               flag(row[10]),
-              CustomEmoji.fromColumn(row[11] == null ? null : row[11].toString())));
+              CustomEmoji.fromColumn(row[11])));
     }
     return accounts;
   }

@@ -14,13 +14,14 @@ public record CustomEmoji(String shortcode, String url) {
     return emojis == null || emojis.isEmpty() ? null : JSON.writeValueAsString(emojis);
   }
 
-  public static List<CustomEmoji> fromColumn(String column) {
-    if (column == null || column.isBlank()) {
+  public static List<CustomEmoji> fromColumn(Object column) {
+    String json = column == null ? null : column.toString();
+    if (json == null || json.isBlank()) {
       return List.of();
     }
     JsonNode items;
     try {
-      items = JSON.readTree(column);
+      items = JSON.readTree(json);
     } catch (JacksonException malformed) {
       return List.of();
     }

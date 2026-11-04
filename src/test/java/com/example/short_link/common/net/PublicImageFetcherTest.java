@@ -69,6 +69,12 @@ class PublicImageFetcherTest {
     serve("/declared-too-long", this::declaredTooLong);
     serve("/endless", this::endless);
     serve("/slow", this::slow);
+    serve(
+        "/stall",
+        exchange -> {
+          pause(Duration.ofMillis(1500));
+          redirect(exchange, "/stall");
+        });
     server.start();
   }
 
@@ -177,6 +183,17 @@ class PublicImageFetcherTest {
   }
 
   @Test
+  @Timeout(10)
+  void theDeadlineCoversEveryRedirectNotOnlyTheLastBody() {
+    long started = System.nanoTime();
+
+    Result result = fetcher(Duration.ofMillis(1000)).fetch(url("/stall"), CAP);
+
+    assertThat(result).isEqualTo(new Refused("slower than the deadline"));
+    assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(2500);
+  }
+
+  @Test
   void aRedirectIsFollowedOnlyToAnAllowedAddressAndOnlyAFewTimes() {
     assertThat(fetcher().fetch(url("/hop"), CAP)).isInstanceOf(Image.class);
     assertThat(refusal("/away")).isEqualTo("not a public http address");
@@ -273,6 +290,14 @@ class PublicImageFetcherTest {
       }
     } catch (IOException | InterruptedException closed) {
       return;
+    }
+  }
+
+  private static void pause(Duration duration) {
+    try {
+      Thread.sleep(duration);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
     }
   }
 

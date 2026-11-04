@@ -23,7 +23,7 @@ public class CtaLinkTracker {
     }
     String existing = detector.extractCode(url);
     if (existing != null) {
-      return existing; // already a kurl link — measured as-is
+      return existing;
     }
     CreateLinkCommand link = CreateLinkCommand.of(url, userId, null, null);
     CheckedDestination destination;

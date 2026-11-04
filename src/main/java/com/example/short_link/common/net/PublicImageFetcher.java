@@ -33,6 +33,7 @@ public class PublicImageFetcher {
   private static final int MAX_REDIRECTS = 3;
   private static final int CHUNK = 16 * 1024;
   private static final Set<Integer> REDIRECTS = Set.of(301, 302, 303, 307, 308);
+  private static final Refused SLOWER_THAN_THE_DEADLINE = new Refused("slower than the deadline");
   private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
   private static final byte[] PNG_SIGNATURE = {
     (byte) 0x89, 'P', 'N', 'G', (byte) 0x0D, (byte) 0x0A, (byte) 0x1A, (byte) 0x0A
@@ -71,6 +72,9 @@ public class PublicImageFetcher {
     long deadlineNanos = System.nanoTime() + deadline.toNanos();
     String next = url;
     for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      if (remaining(deadlineNanos) <= 0) {
+        return SLOWER_THAN_THE_DEADLINE;
+      }
       Optional<Resolved> target = allowed(next);
       if (target.isEmpty()) {
         return new Refused("not a public " + scheme + " address");
@@ -101,8 +105,12 @@ public class PublicImageFetcher {
     HttpGet request = new HttpGet(target.uri());
     request.setHeader(HttpHeaders.USER_AGENT, USER_AGENT);
     request.setHeader(HttpHeaders.ACCEPT, ACCEPTED);
+    Timeout left =
+        Timeout.ofMilliseconds(Math.max(1, (remaining(deadlineNanos) + 999_999) / 1_000_000));
+    Timeout connect = connectTimeout.compareTo(left) < 0 ? connectTimeout : left;
+    Timeout read = readTimeout.compareTo(left) < 0 ? readTimeout : left;
     try (CloseableHttpClient client =
-        PinnedHttpClientFactory.build(target, connectTimeout, readTimeout, readTimeout, false)) {
+        PinnedHttpClientFactory.build(target, connect, read, read, false)) {
       ClassicHttpResponse response = client.executeOpen(null, request, null);
       try {
         return answer(target.uri(), response, maxBytes, deadlineNanos);
@@ -111,8 +119,15 @@ public class PublicImageFetcher {
         closeQuietly(response);
       }
     } catch (IOException | RuntimeException failed) {
-      return new Step(new Refused(failed.getClass().getSimpleName()), null);
+      return done(
+          remaining(deadlineNanos) <= 0
+              ? SLOWER_THAN_THE_DEADLINE
+              : new Refused(failed.getClass().getSimpleName()));
     }
+  }
+
+  private static long remaining(long deadlineNanos) {
+    return deadlineNanos - System.nanoTime();
   }
 
   private static Step answer(
@@ -149,8 +164,8 @@ public class PublicImageFetcher {
       if (out.size() + n > maxBytes) {
         return new Refused("larger than " + maxBytes + " bytes");
       }
-      if (System.nanoTime() - deadlineNanos > 0) {
-        return new Refused("slower than the deadline");
+      if (remaining(deadlineNanos) < 0) {
+        return SLOWER_THAN_THE_DEADLINE;
       }
       out.write(chunk, 0, n);
     }

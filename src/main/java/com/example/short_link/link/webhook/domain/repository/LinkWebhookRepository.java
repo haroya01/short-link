@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.domain.repository;
 
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -23,4 +24,6 @@ public interface LinkWebhookRepository {
   long countByLinkId(Long linkId);
 
   List<LinkWebhookEntity> findAllEnabledByDeliveryModes(Collection<WebhookDeliveryMode> modes);
+
+  boolean claimSpikeAlert(Long id, Instant firedAt, Instant lastFiredNoLaterThan);
 }
