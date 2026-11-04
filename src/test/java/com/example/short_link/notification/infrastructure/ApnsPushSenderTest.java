@@ -12,9 +12,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
@@ -22,6 +24,7 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -291,6 +294,172 @@ class ApnsPushSenderTest {
                     new PushRoute("yuki", null, null, null, 42L, null, null, null)));
 
     assertThat(jsonMapper.readTree(payload).get("collectionId").asLong()).isEqualTo(42L);
+  }
+
+  @Test
+  void aPushWithoutAnActorKeepsTheShapeOlderAppsRead() {
+    String blog =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "yuki님이 글을 좋아합니다",
+                    "LIKE",
+                    null,
+                    PushApp.BLOG,
+                    PushRoute.toPost("yuki", "me", "my-post", null, null)));
+    String link =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS));
+
+    assertThat(blog)
+        .isEqualTo(
+            "{\"aps\":{\"alert\":{\"title\":\"kurl\",\"subtitle\":\"글 제목\",\"body\":\"yuki님이 글을"
+                + " 좋아합니다\"},\"sound\":\"default\"},\"type\":\"LIKE\",\"actorUsername\":\"yuki\","
+                + "\"ownerUsername\":\"me\",\"postSlug\":\"my-post\"}");
+    assertThat(link)
+        .isEqualTo(
+            "{\"aps\":{\"alert\":{\"title\":\"kurl\",\"subtitle\":\"/spring\",\"body\":\"첫 클릭\"},"
+                + "\"sound\":\"default\",\"category\":\"LINK_STATS\"},\"type\":\"FIRST_CLICK\","
+                + "\"shortCode\":\"spring\"}");
+  }
+
+  @Test
+  void someoneAddressingTheRecipientIsSentAsAConversationWithTheirFace() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "나도 그래",
+                    "alice님이 노트에 답글을 남겼습니다",
+                    "NOTE_REPLY",
+                    null,
+                    PushApp.BLOG,
+                    PushRoute.toNote("alice", "alice", 815L),
+                    new PushActor(
+                        7L,
+                        null,
+                        "alice",
+                        "앨리스",
+                        "https://cdn.kurl.example/avatars/7/a.jpg",
+                        new PushSpeech("나도 그래", "도쿄 모임")),
+                    "room:3"));
+
+    assertThat(payload)
+        .isEqualTo(
+            "{\"aps\":{\"alert\":{\"title\":\"kurl\",\"subtitle\":\"나도 그래\",\"body\":\"alice님이 노트에"
+                + " 답글을 남겼습니다\"},\"sound\":\"default\",\"mutable-content\":1,"
+                + "\"thread-id\":\"room:3\"},\"type\":\"NOTE_REPLY\",\"actorUsername\":\"alice\","
+                + "\"ownerUsername\":\"alice\",\"noteId\":815,\"actor\":{\"id\":7,\"username\":\"alice\","
+                + "\"displayName\":\"앨리스\",\"avatarUrl\":\"https://cdn.kurl.example/avatars/7/a.jpg\"},"
+                + "\"communication\":true,\"text\":\"나도 그래\",\"context\":\"도쿄 모임\"}");
+  }
+
+  @Test
+  void someoneWhoOnlyActedIsSentWithTheirFaceButNotAsAConversation() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "yuki님이 글을 좋아합니다",
+                    "LIKE",
+                    null,
+                    PushApp.BLOG,
+                    PushRoute.toPost("yuki", "me", "my-post", null, null),
+                    new PushActor(2L, null, "yuki", null, null, null),
+                    "post:10"));
+
+    assertThat(payload)
+        .isEqualTo(
+            "{\"aps\":{\"alert\":{\"title\":\"kurl\",\"subtitle\":\"글 제목\",\"body\":\"yuki님이 글을"
+                + " 좋아합니다\"},\"sound\":\"default\",\"mutable-content\":1,\"thread-id\":\"post:10\"},"
+                + "\"type\":\"LIKE\",\"actorUsername\":\"yuki\",\"ownerUsername\":\"me\","
+                + "\"postSlug\":\"my-post\",\"actor\":{\"id\":2,\"username\":\"yuki\"}}");
+  }
+
+  @Test
+  void anAccountElsewhereIsSentByItsRemoteIdWithoutAnAvatar() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "hi",
+                    "ged@m.example님이 노트에서 회원님을 언급했습니다",
+                    "NOTE_MENTION",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute(null, "me", null, null, null, null, null, 5L),
+                    new PushActor(
+                        null, 42L, "ged@m.example", "Ged", null, new PushSpeech("hi", "노트에서 멘션")),
+                    "note:5"));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.get("actor").toString())
+        .isEqualTo("{\"remoteId\":42,\"username\":\"ged@m.example\",\"displayName\":\"Ged\"}");
+    assertThat(root.get("communication").asBoolean()).isTrue();
+    assertThat(root.get("text").asString()).isEqualTo("hi");
+    assertThat(root.get("context").asString()).isEqualTo("노트에서 멘션");
+    assertThat(root.has("actorUsername")).isFalse();
+  }
+
+  @Test
+  void aConversationTooLongForApnsLosesOnlyTheEndOfWhatWasSaid() {
+    String handle = "g".repeat(255) + "@" + "m".repeat(255);
+    String name = "이름".repeat(127);
+    String said = "가".repeat(2000);
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "제".repeat(200),
+                    handle + "님이 노트에서 회원님을 언급했습니다",
+                    "NOTE_MENTION",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute(null, "me", null, null, null, null, null, 5L),
+                    new PushActor(null, 42L, handle, name, null, new PushSpeech(said, "도쿄 모임")),
+                    "note:5"));
+
+    assertThat(payload.getBytes(StandardCharsets.UTF_8).length).isBetween(4090, 4096);
+    JsonNode root = jsonMapper.readTree(payload);
+    String text = root.get("text").asString();
+    assertThat(text).endsWith("…").hasSizeGreaterThan(100);
+    assertThat(said).startsWith(text.substring(0, text.length() - 1));
+    assertThat(root.get("context").asString()).isEqualTo("도쿄 모임");
+    assertThat(root.get("actor").get("displayName").asString()).isEqualTo(name);
+    assertThat(root.get("actor").get("username").asString()).isEqualTo(handle);
+    assertThat(root.get("aps").get("alert").get("subtitle").asString()).isEqualTo("제".repeat(200));
+  }
+
+  @Test
+  void aNoticeNobodyCausedGroupsByItsPostWithoutWakingTheExtension() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "글에 첫 독자가 생겼습니다",
+                    "POST_FIRST_READER",
+                    null,
+                    PushApp.BLOG,
+                    PushRoute.toPost(null, "me", "my-post", null, null),
+                    null,
+                    "post:10"));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.get("aps").get("thread-id").asString()).isEqualTo("post:10");
+    assertThat(root.get("aps").has("mutable-content")).isFalse();
+    assertThat(root.has("actor")).isFalse();
+    assertThat(root.has("communication")).isFalse();
   }
 
   private void respond(int status, String body) throws Exception {

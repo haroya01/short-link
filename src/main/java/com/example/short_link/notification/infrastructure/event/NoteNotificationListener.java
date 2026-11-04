@@ -47,7 +47,8 @@ public class NoteNotificationListener {
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
         NotificationGroupKey.of(type, event.noteId()),
-        event.conversationId());
+        event.conversationId(),
+        event.roomId());
   }
 
   @Async("webhookExecutor")

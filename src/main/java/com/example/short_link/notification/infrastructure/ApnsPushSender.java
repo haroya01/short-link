@@ -1,8 +1,10 @@
 package com.example.short_link.notification.infrastructure;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.user.application.push.DevicePushTargets;
 import com.example.short_link.user.domain.DeviceTarget;
 import java.net.URI;
@@ -13,7 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +34,8 @@ public class ApnsPushSender implements PushSender {
 
   // 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다.
   private static final String LINK_STATS_CATEGORY = "LINK_STATS";
+  private static final int PAYLOAD_LIMIT_BYTES = 4096;
+  private static final String ELLIPSIS = "…";
 
   private final ApnsProperties props;
   private final DevicePushTargets deviceTokens;
@@ -168,6 +174,7 @@ public class ApnsPushSender implements PushSender {
     aps.put("alert", alert);
     aps.put("sound", "default");
     if (message.shortCode() != null) aps.put("category", LINK_STATS_CATEGORY);
+    aps.putAll(conversationKeys(message));
 
     var root = new java.util.LinkedHashMap<String, Object>();
     root.put("aps", aps);
@@ -184,7 +191,57 @@ public class ApnsPushSender implements PushSender {
       if (route.highlightId() != null) root.put("highlightId", route.highlightId());
       if (route.noteId() != null) root.put("noteId", route.noteId());
     }
-    return jsonMapper.writeValueAsString(root);
+    root.putAll(senderKeys(message));
+    return fitted(root);
+  }
+
+  private String fitted(Map<String, Object> root) {
+    String json = jsonMapper.writeValueAsString(root);
+    int overflow = json.getBytes(StandardCharsets.UTF_8).length - PAYLOAD_LIMIT_BYTES;
+    while (overflow > 0 && root.get("text") instanceof String text && !text.isEmpty()) {
+      root.put("text", cut(text, overflow));
+      json = jsonMapper.writeValueAsString(root);
+      overflow = json.getBytes(StandardCharsets.UTF_8).length - PAYLOAD_LIMIT_BYTES;
+    }
+    return json;
+  }
+
+  private static String cut(String text, int overflow) {
+    int end = text.length();
+    int removed = 0;
+    while (end > 0 && removed < overflow + ELLIPSIS.getBytes(StandardCharsets.UTF_8).length) {
+      int codePoint = text.codePointBefore(end);
+      end -= Character.charCount(codePoint);
+      removed += new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8).length;
+    }
+    return end == 0 ? "" : text.substring(0, end) + ELLIPSIS;
+  }
+
+  private static Map<String, Object> conversationKeys(PushMessage message) {
+    var keys = new LinkedHashMap<String, Object>();
+    if (message.actor() != null) keys.put("mutable-content", 1);
+    if (message.threadId() != null) keys.put("thread-id", message.threadId());
+    return keys;
+  }
+
+  private static Map<String, Object> senderKeys(PushMessage message) {
+    PushActor actor = message.actor();
+    if (actor == null) return Map.of();
+    var from = new LinkedHashMap<String, Object>();
+    if (actor.id() != null) from.put("id", actor.id());
+    if (actor.remoteId() != null) from.put("remoteId", actor.remoteId());
+    from.put("username", actor.username());
+    if (actor.displayName() != null) from.put("displayName", actor.displayName());
+    if (actor.avatarUrl() != null) from.put("avatarUrl", actor.avatarUrl());
+    var keys = new LinkedHashMap<String, Object>();
+    keys.put("actor", from);
+    PushSpeech speech = actor.speech();
+    if (speech != null) {
+      keys.put("communication", true);
+      keys.put("text", speech.text());
+      keys.put("context", speech.context());
+    }
+    return keys;
   }
 
   private static String tail(String token) {

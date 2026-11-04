@@ -1,6 +1,8 @@
 package com.example.short_link.notification.presentation.response;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.notification.application.dto.NotificationView;
+import com.example.short_link.notification.domain.NotificationActor;
 import java.time.Instant;
 import java.util.List;
 
@@ -31,9 +33,28 @@ public record NotificationResponse(
     long count,
     List<Actor> actors,
     Long actorRemoteId,
-    Integer milestone) {
+    Integer milestone,
+    String actorDisplayName,
+    List<CustomEmoji> actorEmojis) {
 
-  public record Actor(Long id, String username, String avatarUrl, String profileUrl) {}
+  public record Actor(
+      Long id,
+      String username,
+      String avatarUrl,
+      String profileUrl,
+      String displayName,
+      List<CustomEmoji> emojis) {
+
+    static Actor of(NotificationActor actor) {
+      return new Actor(
+          actor.userId(),
+          actor.username(),
+          actor.avatarUrl(),
+          actor.profileUrl(),
+          actor.displayName(),
+          actor.emojis());
+    }
+  }
 
   public static NotificationResponse from(NotificationView view) {
     return new NotificationResponse(
@@ -61,14 +82,19 @@ public record NotificationResponse(
         view.note() == null ? null : view.note().sourceNoteId(),
         view.note() == null ? null : view.note().sourceExcerpt(),
         view.count(),
-        view.actors().stream()
-            .map(
-                actor ->
-                    new Actor(
-                        actor.userId(), actor.username(), actor.avatarUrl(), actor.profileUrl()))
-            .toList(),
+        view.actors().stream().map(Actor::of).toList(),
         view.actor() == null ? null : view.actor().remoteId(),
-        view.post() == null ? null : view.post().milestone());
+        view.post() == null ? null : view.post().milestone(),
+        actorDisplayName(view),
+        actorEmojis(view));
+  }
+
+  private static String actorDisplayName(NotificationView view) {
+    return view.actor() == null ? null : view.actor().displayName();
+  }
+
+  private static List<CustomEmoji> actorEmojis(NotificationView view) {
+    return view.actor() == null ? List.of() : view.actor().emojis();
   }
 
   private static Long postId(NotificationView view) {

@@ -4031,6 +4031,8 @@
     },
     "Actor" : {
       "avatarUrl" : "string",
+      "displayName" : "string",
+      "emojis" : "[#CustomEmoji]",
       "id" : "integer(int64)",
       "profileUrl" : "string",
       "username" : "string"
@@ -5765,12 +5767,16 @@
       "actorUserId" : "integer(int64)",
       "avatarUrl" : "string",
       "count" : "integer(int64)",
+      "displayName" : "string",
+      "emojis" : "[#CustomEmoji]",
       "lastAt" : "string(date-time)",
       "profileUrl" : "string",
       "username" : "string"
     },
     "NotificationResponse" : {
       "actorAvatarUrl" : "string",
+      "actorDisplayName" : "string",
+      "actorEmojis" : "[#CustomEmoji]",
       "actorId" : "integer(int64)",
       "actorProfileUrl" : "string",
       "actorRemoteId" : "integer(int64)",
