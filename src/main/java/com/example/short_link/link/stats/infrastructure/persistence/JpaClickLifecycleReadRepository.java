@@ -40,11 +40,15 @@ public interface JpaClickLifecycleReadRepository
   @Query(
       value =
           "SELECT day, CAST(SUM(n) AS SIGNED) AS count FROM ("
-              + "SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, COUNT(*) AS n "
+              + "SELECT "
+              + ClickRollup.AGE_DAY
+              + " AS day, COUNT(*) AS n "
               + "FROM click_event c JOIN link l ON c.link_id = l.id "
               + "WHERE l.id = :linkId AND c.is_bot = 0 AND c.clicked_at >= "
               + ClickRollup.AGGREGATED_UNTIL
-              + " AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+              + " AND "
+              + ClickRollup.AGE_DAY
+              + " BETWEEN 0 AND :maxDay "
               + "GROUP BY day UNION ALL "
               + "SELECT age_day, SUM(humans) FROM click_hourly WHERE link_id = :linkId "
               + "AND humans > 0 AND age_day BETWEEN 0 AND :maxDay GROUP BY age_day UNION ALL "

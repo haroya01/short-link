@@ -171,6 +171,41 @@ class ClickRollupEquivalenceIntegrationTest {
   }
 
   @Test
+  void aClickIsInTheWholeDayCountedFromItsLinkCreationBeforeAndAfterTheRollup() {
+    assertThat(
+            jdbc.queryForObject("SELECT TIMESTAMPDIFF(HOUR, UTC_TIMESTAMP(), NOW())", Long.class))
+        .isNotZero();
+    Instant now = Instant.now();
+    Long owner = owner("Asia/Seoul");
+    Instant oldCreated = now.minus(Duration.ofDays(200)).truncatedTo(ChronoUnit.SECONDS);
+    Instant recentCreated = now.minus(Duration.ofDays(3)).truncatedTo(ChronoUnit.SECONDS);
+    Long rolled = link(owner, oldCreated);
+    Long raw = link(owner, recentCreated);
+    Map<Integer, List<Long>> adminBefore = adminLifecycle();
+    for (long hours : List.of(10L, 23L, 25L, 47L)) {
+      insertClick(rolled, oldCreated.plus(Duration.ofHours(hours)));
+      insertClick(raw, recentCreated.plus(Duration.ofHours(hours)));
+    }
+
+    rollup.rollUp(now);
+
+    List<LinkStats.DayClick> twoAndTwo =
+        List.of(new LinkStats.DayClick(0, 2), new LinkStats.DayClick(1, 2));
+    assertThat(stats(rolled).lifecycle().dayClicks()).as("rolled up").isEqualTo(twoAndTwo);
+    assertThat(stats(raw).lifecycle().dayClicks()).as("raw").isEqualTo(twoAndTwo);
+    Map<Integer, List<Long>> adminAfter = adminLifecycle();
+    adminAfter.replaceAll(
+        (day, clicksAndLinks) -> {
+          List<Long> before = adminBefore.getOrDefault(day, List.of(0L, 0L));
+          return List.of(
+              clicksAndLinks.get(0) - before.get(0), clicksAndLinks.get(1) - before.get(1));
+        });
+    adminAfter.values().removeIf(change -> change.equals(List.of(0L, 0L)));
+    assertThat(adminAfter)
+        .containsOnly(Map.entry(0, List.of(4L, 2L)), Map.entry(1, List.of(4L, 2L)));
+  }
+
+  @Test
   void rollingUpAgainTheSameNightChangesNothing() {
     Instant now = Instant.now();
     Instant created = now.minus(Duration.ofDays(120));
@@ -404,6 +439,14 @@ class ClickRollupEquivalenceIntegrationTest {
     return s;
   }
 
+  private Map<Integer, List<Long>> adminLifecycle() {
+    Map<Integer, List<Long>> days = new LinkedHashMap<>();
+    adminAnalytics
+        .lifecycleDays(90)
+        .forEach(row -> days.put(row.getDay(), List.of(row.getClicks(), row.getLinks())));
+    return days;
+  }
+
   private Map<Long, Long> uniques() {
     Map<Long, Long> uniques = new LinkedHashMap<>();
     linkIds.forEach(id -> uniques.put(id, stats(id).uniqueClicks()));
@@ -535,7 +578,7 @@ class ClickRollupEquivalenceIntegrationTest {
 
   private void backdate(Long linkId, Instant created) {
     jdbc.update(
-        "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
+        "UPDATE link SET created_at = TIMESTAMPADD(SECOND, ?, '1970-01-01') WHERE id = ?",
         created.getEpochSecond(),
         linkId);
   }
