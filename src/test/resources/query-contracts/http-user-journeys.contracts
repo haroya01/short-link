@@ -177,7 +177,7 @@
 @junit | campaign-clear-legacy-detail | 2 | 0 | 0 | 0 | 2
 @junit | campaign-clear-legacy-end | 6 | 0 | 2 | 0 | 8
 @junit | campaign-clear-legacy-ended-visit | 3 | 0 | 0 | 0 | 3
-@junit | campaign-clear-legacy-stats | 8 | 0 | 0 | 0 | 8
+@junit | campaign-clear-legacy-stats | 9 | 0 | 0 | 0 | 9
 @junit | campaign-clear-legacy-visit | 3 | 0 | 0 | 0 | 3
 @junit | campaign-clear-null-keeps | 3 | 0 | 1 | 0 | 4
 @junit | campaign-click-worker-persist | 6 | 2 | 0 | 0 | 8
