@@ -24,7 +24,7 @@ import com.example.short_link.link.stats.domain.projection.ClickProjections.UtmT
 import java.util.List;
 
 public interface ClickDimensionReader {
-  List<ReferrerClickRow> findTopReferrerClicks(Long linkId, int limit);
+  List<ReferrerClickRow> findAllReferrerClicks(Long linkId);
 
   List<ReferrerHostClickRow> findTopReferrerHostClicks(Long linkId, int limit);
 

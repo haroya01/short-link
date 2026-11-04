@@ -44,20 +44,20 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReader {
   }
 
   @Override
-  public List<HourClickRow> findHourlyClicksByLinkIdsSince(
-      List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findHourlyClicksByLinkIdsSince(linkIds, epoch(since), timezone);
+  public List<HourClickRow> findHourlyClicksByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone) {
+    return jpa.findHourlyClicksByLinkIds(linkIds, epoch(from), epoch(until), timezone);
   }
 
   @Override
-  public List<DailyClickRow> findDailyClicksByLinkIdsSince(
-      List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findDailyClicksByLinkIdsSince(linkIds, epoch(since), timezone);
+  public List<DailyClickRow> findDailyClicksByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone) {
+    return jpa.findDailyClicksByLinkIds(linkIds, epoch(from), epoch(until), timezone);
   }
 
   @Override
-  public List<HeatmapRow> findHeatmapByLinkIdsSince(
-      List<Long> linkIds, Instant since, String timezone) {
-    return jpa.findHeatmapByLinkIdsSince(linkIds, epoch(since), timezone);
+  public List<HeatmapRow> findHeatmapByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone) {
+    return jpa.findHeatmapByLinkIds(linkIds, epoch(from), epoch(until), timezone);
   }
 }

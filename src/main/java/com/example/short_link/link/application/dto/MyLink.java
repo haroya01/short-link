@@ -15,7 +15,9 @@ public record MyLink(
     List<Long> clicksLast7d,
     String note,
     String timezone,
-    Long humanClickCount) {
+    Long humanClickCount,
+    String ogTitle,
+    String ogTitleOverride) {
   public MyLink(
       ShortCode shortCode,
       String originalUrl,
@@ -34,6 +36,8 @@ public record MyLink(
         clicksLast7d,
         null,
         "UTC",
+        null,
+        null,
         null);
   }
 }

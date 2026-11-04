@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.campaign.application.dto.CampaignRecommendationView;
+import com.example.short_link.campaign.application.dto.CampaignRecommendationView.InsufficientCode;
 import com.example.short_link.campaign.application.dto.CampaignRecommendationView.RecommendationVerdict;
 import com.example.short_link.campaign.application.dto.CampaignStatsView;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.BatchStats;
@@ -33,9 +34,7 @@ class CampaignRecommendationServiceTest {
                 List.of(batches),
                 List.of(),
                 List.of(),
-                List.of(),
-                List.of(),
-                List.of()));
+                new CampaignStatsView.TimeBuckets(List.of(), List.of(), List.of(), "Asia/Seoul")));
     return service.recommend(1L, 9L);
   }
 
@@ -46,6 +45,9 @@ class CampaignRecommendationServiceTest {
     assertThat(view.insufficient()).isTrue();
     assertThat(view.recommendations()).isEmpty();
     assertThat(view.insufficientReason()).contains("재할당");
+    assertThat(view.insufficientCode()).isEqualTo(InsufficientCode.TOO_FEW_BATCHES);
+    assertThat(view.insufficientMinimum()).isEqualTo(2);
+    assertThat(view.insufficientCurrent()).isEqualTo(1);
     assertThat(view.totalQuantity()).isEqualTo(100);
     assertThat(view.totalClicks()).isEqualTo(5);
   }
@@ -56,6 +58,9 @@ class CampaignRecommendationServiceTest {
 
     assertThat(view.insufficient()).isTrue();
     assertThat(view.insufficientReason()).contains("데이터");
+    assertThat(view.insufficientCode()).isEqualTo(InsufficientCode.TOO_FEW_CLICKS);
+    assertThat(view.insufficientMinimum()).isEqualTo(10);
+    assertThat(view.insufficientCurrent()).isEqualTo(5);
     assertThat(view.recommendations()).isEmpty();
   }
 
@@ -64,6 +69,9 @@ class CampaignRecommendationServiceTest {
     CampaignRecommendationView view = recommendWith(batch(1, 100, 50), batch(2, 100, 10));
 
     assertThat(view.insufficient()).isFalse();
+    assertThat(view.insufficientCode()).isNull();
+    assertThat(view.insufficientMinimum()).isNull();
+    assertThat(view.insufficientCurrent()).isNull();
     assertThat(view.totalQuantity()).isEqualTo(200);
     assertThat(view.totalClicks()).isEqualTo(60);
     assertThat(view.avgRatePerHundred()).isEqualTo(30.0);

@@ -5,6 +5,9 @@ import java.util.List;
 public record CampaignRecommendationView(
     boolean insufficient,
     String insufficientReason,
+    InsufficientCode insufficientCode,
+    Integer insufficientMinimum,
+    Integer insufficientCurrent,
     int totalQuantity,
     int totalClicks,
     double avgRatePerHundred,
@@ -21,6 +24,11 @@ public record CampaignRecommendationView(
       int recommendedQuantity,
       int delta,
       RecommendationVerdict verdict) {}
+
+  public enum InsufficientCode {
+    TOO_FEW_BATCHES,
+    TOO_FEW_CLICKS
+  }
 
   public enum RecommendationVerdict {
     BOOST,

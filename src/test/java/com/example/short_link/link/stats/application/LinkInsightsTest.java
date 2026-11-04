@@ -402,7 +402,7 @@ class LinkInsightsTest {
 
     assertThat(insight.type()).isEqualTo("IN_APP_BROWSER");
     assertThat(insight.severity()).isEqualTo("info");
-    assertThat(insight.message()).contains("카카오톡").contains("35.0");
+    assertThat(insight.message()).isEqualTo("사람 클릭의 35.0%가 앱 안 브라우저에서 열렸어요");
     assertThat(insight.data())
         .containsEntry("topApp", "kakaotalk")
         .containsEntry("inAppClicks", 35L)
@@ -410,22 +410,19 @@ class LinkInsightsTest {
   }
 
   @Test
-  void inAppBrowser_localizesTheAppName() {
-    var apps = List.of(new LinkStats.ClientAppClick("kakaotalk", 50L));
+  void inAppBrowser_sentenceStatesTheWholeInAppShareWithoutNamingOneApp() {
+    var apps =
+        List.of(
+            new LinkStats.ClientAppClick("kakaotalk", 30L),
+            new LinkStats.ClientAppClick("instagram", 20L));
 
     LocaleContextHolder.setLocale(Locale.ENGLISH);
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("KakaoTalk");
+    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message())
+        .isEqualTo("50.0% of human clicks opened in an in-app browser");
 
     LocaleContextHolder.setLocale(Locale.JAPANESE);
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("カカオトーク");
-  }
-
-  @Test
-  void inAppBrowser_fallsBackToTheRawAppName() {
-    LocaleContextHolder.setLocale(Locale.KOREAN);
-    var apps = List.of(new LinkStats.ClientAppClick("someNewApp", 50L));
-
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("someNewApp");
+    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message())
+        .isEqualTo("人のクリックの50.0%がアプリ内ブラウザで開かれました");
   }
 
   @Test

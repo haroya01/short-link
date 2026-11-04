@@ -16,11 +16,12 @@ public interface ClickTimeReader {
 
   List<HeatmapRow> findHeatmap(Long linkId, Instant from, Instant until, String timezone);
 
-  List<HourClickRow> findHourlyClicksByLinkIdsSince(
-      List<Long> linkIds, Instant since, String timezone);
+  List<HourClickRow> findHourlyClicksByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone);
 
-  List<DailyClickRow> findDailyClicksByLinkIdsSince(
-      List<Long> linkIds, Instant since, String timezone);
+  List<DailyClickRow> findDailyClicksByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone);
 
-  List<HeatmapRow> findHeatmapByLinkIdsSince(List<Long> linkIds, Instant since, String timezone);
+  List<HeatmapRow> findHeatmapByLinkIds(
+      List<Long> linkIds, Instant from, Instant until, String timezone);
 }
