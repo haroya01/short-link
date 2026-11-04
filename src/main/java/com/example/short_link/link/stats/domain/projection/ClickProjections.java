@@ -64,12 +64,6 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  public interface HostFirstSeenRow {
-    String getHost();
-
-    Long getFirstSeenEpoch();
-  }
-
   public interface DeviceClickRow {
     String getDevice();
 

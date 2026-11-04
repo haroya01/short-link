@@ -118,7 +118,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/applicat
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=20
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, long, Scope)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/safety/application/UrlSafetyChecker.java|isSafe(String)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/application/LinkInsights.java|LinkInsights#1=85
 CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert()#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/presentation/sse/SseClickStreamController.java|stream(ShortCode, String, String, HttpServletResponse)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/link/visit/application/LinkVisitOptionService.java|update(Long, ShortCode, Boolean, SplashChange, Instant, boolean)#1=12
