@@ -247,11 +247,11 @@ class NoteQueryServiceTest {
     NoteEntity reply = note(3L, 2L);
     when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(main));
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(parent));
-    when(feeds.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(feeds.replies(2L, 9L, 0L, NoteQueryService.MAX_REPLIES + 1)).thenReturn(List.of(reply));
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
 
-    NoteThreadView thread = service.thread(9L, 2L);
+    NoteThreadView thread = service.thread(9L, 2L, NoteQueryService.MAX_REPLIES);
 
     assertThat(thread.note().id()).isEqualTo(2L);
     assertThat(thread.parent().id()).isEqualTo(1L);
@@ -260,7 +260,8 @@ class NoteQueryServiceTest {
 
   private NoteEntity threadOf(NoteEntity main) {
     when(notes.findUnblocked(main.getId(), 9L)).thenReturn(Optional.of(main));
-    when(feeds.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(feeds.replies(main.getId(), 9L, 0L, NoteQueryService.MAX_REPLIES + 1))
+        .thenReturn(List.of());
     when(views.of(List.of(main), 9L)).thenReturn(List.of(view(main.getId(), null, null)));
     return main;
   }
@@ -280,7 +281,7 @@ class NoteQueryServiceTest {
                         new NoteSeries.Entry("NOTE", 2L, null, "n2"),
                         new NoteSeries.Entry("NOTE", 3L, null, "n3")))));
 
-    assertThat(service.thread(9L, 2L).series())
+    assertThat(service.thread(9L, 2L, NoteQueryService.MAX_REPLIES).series())
         .isEqualTo(
             new NoteSeriesNavView(
                 "guide",
@@ -295,11 +296,11 @@ class NoteQueryServiceTest {
   void aNoteOutsideAnySeriesOrHiddenFromItsReadersHasNoSeries() {
     threadOf(note(2L, null));
     when(noteSeries.containing(2L)).thenReturn(Optional.empty());
-    assertThat(service.thread(9L, 2L).series()).isNull();
+    assertThat(service.thread(9L, 2L, NoteQueryService.MAX_REPLIES).series()).isNull();
 
     NoteEntity unreadable = threadOf(note(4L, null));
     unreadable.showTo(NoteVisibility.PRIVATE);
-    assertThat(service.thread(9L, 4L).series()).isNull();
+    assertThat(service.thread(9L, 4L, NoteQueryService.MAX_REPLIES).series()).isNull();
     verify(noteSeries, never()).containing(4L);
 
     assertThat(
@@ -322,16 +323,19 @@ class NoteQueryServiceTest {
     when(feeds.replies(
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(NoteQueryService.MAX_REPLIES)))
+            org.mockito.ArgumentMatchers.eq(0L),
+            org.mockito.ArgumentMatchers.eq(NoteQueryService.MAX_REPLIES + 1)))
         .thenReturn(List.of());
     when(views.of(List.of(orphan), null)).thenReturn(List.of(view(2L, 1L, null)));
-    assertThat(service.thread(null, 2L).parent()).isNull();
+    assertThat(service.thread(null, 2L, NoteQueryService.MAX_REPLIES).parent()).isNull();
 
     when(views.of(List.of(orphan), 5L)).thenReturn(List.of());
-    assertThatThrownBy(() -> service.thread(5L, 2L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.thread(5L, 2L, NoteQueryService.MAX_REPLIES))
+        .isInstanceOf(NoteException.class);
 
     when(notes.findUnblocked(4L, null)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.thread(null, 4L)).isInstanceOf(NoteException.class);
+    assertThatThrownBy(() -> service.thread(null, 4L, NoteQueryService.MAX_REPLIES))
+        .isInstanceOf(NoteException.class);
   }
 
   @Test
@@ -361,13 +365,13 @@ class NoteQueryServiceTest {
     NoteEntity hidden = note(3L, 1L);
     NoteEntity unreadable = note(4L, 1L);
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(root));
-    when(feeds.replies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(feeds.replies(1L, 9L, 0L, NoteQueryService.MAX_REPLIES + 1)).thenReturn(List.of(reply));
     when(feeds.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES))
         .thenReturn(List.of(hidden, unreadable));
     when(views.of(List.of(root, reply, hidden, unreadable), 9L))
         .thenReturn(List.of(view(1L, null, null), view(2L, 1L, null), view(3L, 1L, null)));
 
-    NoteThreadView thread = service.thread(9L, 1L);
+    NoteThreadView thread = service.thread(9L, 1L, NoteQueryService.MAX_REPLIES);
 
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(2L);
     assertThat(thread.hiddenReplyCount()).isEqualTo(1);
@@ -393,25 +397,26 @@ class NoteQueryServiceTest {
   void onlyTheWriterOfTheThreadsFirstNoteMayModerateItAtAnyDepth() {
     NoteEntity first = note(1L, null);
     open(first, null, 7L);
-    assertThat(service.thread(7L, 1L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 1L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isTrue();
     open(first, null, 9L);
-    assertThat(service.thread(9L, 1L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(9L, 1L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isFalse();
     open(first, null, null);
-    assertThat(service.thread(null, 1L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(null, 1L, NoteQueryService.MAX_REPLIES).viewerCanModerate())
+        .isFalse();
 
     NoteEntity answer = reply(2L, 8L, 1L, 1L);
     open(answer, first, 7L);
-    assertThat(service.thread(7L, 2L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 2L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isTrue();
     verify(notes, never()).findById(1L);
 
     NoteEntity deep = reply(3L, 8L, 2L, 1L);
     open(deep, answer, 7L);
     when(notes.findById(1L)).thenReturn(Optional.of(first));
-    assertThat(service.thread(7L, 3L).viewerCanModerate()).isTrue();
+    assertThat(service.thread(7L, 3L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isTrue();
     open(deep, answer, 8L);
-    assertThat(service.thread(8L, 3L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(8L, 3L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isFalse();
     when(notes.findById(1L)).thenReturn(Optional.empty());
-    assertThat(service.thread(7L, 3L).viewerCanModerate()).isFalse();
+    assertThat(service.thread(7L, 3L, NoteQueryService.MAX_REPLIES).viewerCanModerate()).isFalse();
   }
 
   @Test

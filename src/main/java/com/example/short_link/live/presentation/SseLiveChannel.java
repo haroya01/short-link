@@ -17,7 +17,9 @@ final class SseLiveChannel implements LiveChannel {
   public void send(LiveEvent event) throws IOException {
     emitter.send(
         switch (event) {
-          case LiveEvent.Ready ready -> SseEmitter.event().name("ready").data(ready);
+          case LiveEvent.Ready ready ->
+              SseEmitter.event().name("ready").reconnectTime(ready.retryMs()).data(ready);
+          case LiveEvent.Bye bye -> SseEmitter.event().name("bye").data(bye);
           case LiveEvent.Changed changed ->
               SseEmitter.event().name("changed").id(changed.cursor()).data(changed);
           case LiveEvent.Revoked revoked -> SseEmitter.event().name("revoked").data(revoked);

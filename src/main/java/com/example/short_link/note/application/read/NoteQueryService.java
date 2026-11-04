@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.common.page.Keyset;
 import com.example.short_link.common.reply.ReplyPreview;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.application.access.NoteAccess;
@@ -42,7 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NoteQueryService {
 
-  static final int MAX_REPLIES = 200;
+  public static final int MAX_REPLIES = 200;
 
   private final NoteRepository notes;
   private final NoteFeedReader feeds;
@@ -72,11 +73,12 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteFeedView room(Long viewerId, Long roomId, PageAsk ask) {
+  public NoteFeedView room(Long viewerId, Long roomId, long after, PageAsk ask) {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
-    return page(ask, viewerId, (offset, limit) -> feeds.inRoom(roomId, viewerId, offset, limit));
+    return page(
+        ask, viewerId, (offset, limit) -> feeds.inRoom(roomId, viewerId, after, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -262,7 +264,7 @@ public class NoteQueryService {
     if (!rooms.isMember(roomId, viewerId)) {
       throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
     }
-    return slice(feeds.inRoom(roomId, viewerId, offset, limit), offset, limit, viewerId);
+    return slice(feeds.inRoom(roomId, viewerId, 0L, offset, limit), offset, limit, viewerId);
   }
 
   @Transactional(readOnly = true)
@@ -381,7 +383,7 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
-  public NoteThreadView thread(Long viewerId, Long noteId) {
+  public NoteThreadView thread(Long viewerId, Long noteId, int replyLimit) {
     NoteEntity note =
         notes
             .findUnblocked(noteId, viewerId)
@@ -395,7 +397,10 @@ public class NoteQueryService {
     if (parentNote != null) {
       batch.add(parentNote);
     }
-    batch.addAll(feeds.replies(noteId, viewerId, MAX_REPLIES));
+    Keyset<NoteEntity> answered =
+        Keyset.of(
+            feeds.replies(noteId, viewerId, 0L, replyLimit + 1), replyLimit, NoteEntity::getId);
+    batch.addAll(answered.rows());
     List<NoteEntity> hidden = feeds.hiddenReplies(noteId, viewerId, MAX_REPLIES);
     batch.addAll(hidden);
     Set<Long> hiddenIds = hidden.stream().map(NoteEntity::getId).collect(Collectors.toSet());
@@ -440,7 +445,29 @@ public class NoteQueryService {
         continuation,
         seriesNav(note),
         hiddenReplyCount,
-        viewerId != null && writesThread(viewerId, note, parentNote));
+        viewerId != null && writesThread(viewerId, note, parentNote),
+        answered.next());
+  }
+
+  @Transactional(readOnly = true)
+  public NoteRepliesView replies(Long viewerId, Long noteId, long after, int limit) {
+    if (readable(viewerId, noteId).isEmpty()) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
+    }
+    Keyset<NoteEntity> answered =
+        Keyset.of(feeds.replies(noteId, viewerId, after, limit + 1), limit, NoteEntity::getId);
+    Set<Long> chain =
+        Set.copyOf(
+            NoteViews.chains(pages.selfReplies(List.of(noteId), NoteEntity.MAX_THREAD_NOTES - 1))
+                .getOrDefault(noteId, List.of()));
+    List<NoteEntity> others =
+        answered.rows().stream().filter(reply -> !chain.contains(reply.getId())).toList();
+    return new NoteRepliesView(
+        views.of(others, viewerId),
+        answered.next(),
+        String.valueOf(pages.latestReply(noteId)),
+        others.size() < answered.rows().size(),
+        pages.countReplies(noteId, viewerId, chain));
   }
 
   private boolean writesThread(Long viewerId, NoteEntity note, NoteEntity parent) {

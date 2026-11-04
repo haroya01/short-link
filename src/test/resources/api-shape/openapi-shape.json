@@ -1750,7 +1750,8 @@
     },
     "GET /api/v1/public/notes/{id}" : {
       "parameters" : {
-        "id" : "path integer(int64) required"
+        "id" : "path integer(int64) required",
+        "replies" : "query integer(int32)"
       },
       "responses" : {
         "200" : "#NoteThreadView"
@@ -1780,6 +1781,16 @@
       },
       "responses" : {
         "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/{id}/replies" : {
+      "parameters" : {
+        "after" : "query integer(int64)",
+        "id" : "path integer(int64) required",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteRepliesView"
       }
     },
     "GET /api/v1/public/notes/{noteId}/posts" : {
@@ -1845,6 +1856,18 @@
       },
       "responses" : {
         "200" : "[#CommentView]"
+      }
+    },
+    "GET /api/v1/public/posts/{postId}/comments/page" : {
+      "parameters" : {
+        "after" : "query integer(int64)",
+        "cursor" : "query integer(int64)",
+        "limit" : "query integer(int32)",
+        "postId" : "path integer(int64) required",
+        "tombstones" : "query boolean"
+      },
+      "responses" : {
+        "200" : "#CommentsView"
       }
     },
     "GET /api/v1/public/posts/{postId}/highlights" : {
@@ -2115,6 +2138,7 @@
     },
     "GET /api/v1/rooms/{id}/notes" : {
       "parameters" : {
+        "after" : "query integer(int64)",
         "id" : "path integer(int64) required",
         "page" : "query integer(int32)",
         "size" : "query integer(int32)"
@@ -4519,6 +4543,12 @@
       "mentions" : "[string]",
       "parentId" : "integer(int64)"
     },
+    "CommentsView" : {
+      "items" : "[#CommentView]",
+      "latest" : "string",
+      "next" : "string",
+      "total" : "integer(int64)"
+    },
     "CommitCoverRequest" : {
       "key" : "string"
     },
@@ -5663,6 +5693,13 @@
     "NotePollVoteRequest" : {
       "choices" : "[integer(int32)]"
     },
+    "NoteRepliesView" : {
+      "continued" : "boolean",
+      "items" : "[#NoteView]",
+      "latest" : "string",
+      "next" : "string",
+      "total" : "integer(int64)"
+    },
     "NoteSeriesNavView" : {
       "next" : "#ItemLink",
       "position" : "integer(int32)",
@@ -5677,6 +5714,7 @@
       "note" : "#NoteView",
       "parent" : "#NoteView",
       "replies" : "[#NoteView]",
+      "repliesNext" : "string",
       "series" : "#NoteSeriesNavView",
       "viewerCanModerate" : "boolean"
     },

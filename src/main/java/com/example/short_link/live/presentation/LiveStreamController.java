@@ -109,7 +109,7 @@ public class LiveStreamController {
     }
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("X-Accel-Buffering", "no");
-    SseEmitter emitter = new SseEmitter(props.lifetime().toMillis());
+    SseEmitter emitter = new SseEmitter(props.hardLimit().toMillis());
     LiveSubscriber subscriber =
         new LiveSubscriber(userId, topic, scope.get(), new SseLiveChannel(emitter));
     if (!live.join(subscriber)) {

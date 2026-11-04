@@ -102,7 +102,7 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
         EventStream room =
             open("live-room-stream", roomPath + "/stream?streamToken=" + roomToken)) {
       long replyId =
-          setup("POST", "/api/v1/notes", owner, Map.of("body", "답이에요", "inReplyToId", noteId))
+          setup("POST", "/api/v1/notes", stranger, Map.of("body", "답이에요", "inReplyToId", noteId))
               .path("id")
               .asLong();
       long commentId =
@@ -118,6 +118,49 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
       assertChanged(comments.awaitEvent("changed"), "post", postId, "comment", commentId);
       assertChanged(room.awaitEvent("changed"), "room", roomId, "note", roomNoteId);
 
+      JsonNode newReplies =
+          step(
+              "live-note-replies-after",
+              "GET",
+              "/api/v1/public/notes/" + noteId + "/replies?after=" + thread.cursor(),
+              member,
+              null,
+              200);
+      assertThat(newReplies.path("items").get(0).path("id").asLong()).isEqualTo(replyId);
+      assertThat(newReplies.path("items")).hasSize(1);
+      assertThat(newReplies.path("latest").asText()).isEqualTo(String.valueOf(replyId));
+      assertThat(newReplies.path("total").asLong()).isEqualTo(1);
+      JsonNode newComments =
+          step(
+              "live-comments-after",
+              "GET",
+              "/api/v1/public/posts/" + postId + "/comments/page?after=" + comments.cursor(),
+              member,
+              null,
+              200);
+      assertThat(newComments.path("items").get(0).path("id").asLong()).isEqualTo(commentId);
+      assertThat(newComments.path("next").isNull()).isTrue();
+      JsonNode firstPage =
+          step(
+              "live-comments-first-page",
+              "GET",
+              "/api/v1/public/posts/" + postId + "/comments/page?limit=20",
+              member,
+              null,
+              200);
+      assertThat(firstPage.path("latest").asText()).isEqualTo(String.valueOf(commentId));
+      assertThat(firstPage.path("total").asLong()).isEqualTo(1);
+      JsonNode newRoomNotes =
+          step(
+              "live-room-notes-after",
+              "GET",
+              "/api/v1/rooms/" + roomId + "/notes?after=" + room.cursor(),
+              member,
+              null,
+              200);
+      assertThat(newRoomNotes.path("items").get(0).path("id").asLong()).isEqualTo(roomNoteId);
+      assertThat(newRoomNotes.path("items")).hasSize(1);
+
       setup("POST", "/api/v1/rooms/" + roomId + "/leave", member, null);
       JsonNode revoked = json.readTree(room.awaitEvent("revoked"));
       assertThat(revoked.path("scope").asText()).isEqualTo("room");
@@ -128,12 +171,28 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
         step("live-note-stream-token-again", "POST", notePath + "/stream-token", member, null, 200)
             .path("streamToken")
             .asText();
+    String renewed;
     try (EventStream behind =
         open("live-note-stream-since", notePath + "/stream?streamToken=" + again + "&since=0")) {
       JsonNode changed = json.readTree(behind.awaitEvent("changed"));
       assertThat(changed.path("more").asBoolean()).isTrue();
       assertThat(changed.path("items")).isEmpty();
+      renewed = behind.ready().path("streamToken").asText();
+      assertThat(behind.ready().path("retryMs").asLong()).isBetween(1_000L, 5_000L);
+      assertThat(behind.retry()).isBetween(1_000L, 5_000L);
     }
+    try (EventStream reused =
+        open(
+            "live-note-stream-reconnect",
+            notePath + "/stream?streamToken=" + renewed + "&since=" + replyIdOf(noteId))) {
+      assertThat(reused.ready().path("cursor").asText()).isEqualTo(replyIdOf(noteId));
+    }
+  }
+
+  private String replyIdOf(long noteId) {
+    return String.valueOf(
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE in_reply_to_id = ?", Long.class, noteId));
   }
 
   private static void assertChanged(String raw, String scope, long scopeId, String kind, long id)
@@ -200,6 +259,7 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
                 assertThat(response.headers().firstValue("X-Accel-Buffering")).contains("no");
                 JsonNode ready = json.readTree(stream.awaitEvent("ready"));
                 assertThat(ready.path("cursor").isString()).isTrue();
+                stream.ready = ready;
                 return stream;
               } catch (Exception | AssertionError failure) {
                 stream.close();
@@ -213,6 +273,8 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
   private static final class EventStream implements AutoCloseable {
     private final InputStream body;
     private final BufferedReader reader;
+    private JsonNode ready;
+    private long retry = -1;
 
     private EventStream(InputStream body) {
       this.body = body;
@@ -242,12 +304,26 @@ class LiveStreamHttpQueryContractTest extends OperationalHttpJourneySupport {
           return data.toString();
         }
         if (line.startsWith("event:")) name = line.substring("event:".length()).stripLeading();
+        if (line.startsWith("retry:"))
+          retry = Long.parseLong(line.substring("retry:".length()).strip());
         if (line.startsWith("data:")) {
           if (!data.isEmpty()) data.append('\n');
           data.append(line.substring("data:".length()).stripLeading());
         }
       }
       throw new AssertionError("SSE closed before delivering the " + expectedName + " event");
+    }
+
+    private JsonNode ready() {
+      return ready;
+    }
+
+    private long retry() {
+      return retry;
+    }
+
+    private String cursor() {
+      return ready.path("cursor").asText();
     }
 
     @Override

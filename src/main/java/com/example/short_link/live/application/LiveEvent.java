@@ -4,7 +4,10 @@ import java.util.List;
 
 public sealed interface LiveEvent {
 
-  record Ready(String scope, long scopeId, String cursor) implements LiveEvent {}
+  record Ready(String scope, long scopeId, String cursor, String streamToken, long retryMs)
+      implements LiveEvent {}
+
+  record Bye(String reason, long retryMs) implements LiveEvent {}
 
   record Changed(
       String scope, long scopeId, List<Item> items, boolean more, String cursor, String at)

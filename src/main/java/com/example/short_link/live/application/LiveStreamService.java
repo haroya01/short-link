@@ -21,12 +21,17 @@ public class LiveStreamService {
       new EnumMap<>(LiveTopic.Scope.class);
   private final ClickStreamTokenService tokens;
   private final LiveStreams streams;
+  private final LiveProperties props;
 
   public LiveStreamService(
-      List<LiveScopeReader> readers, ClickStreamTokenService tokens, LiveStreams streams) {
+      List<LiveScopeReader> readers,
+      ClickStreamTokenService tokens,
+      LiveStreams streams,
+      LiveProperties props) {
     readers.forEach(reader -> this.readers.put(reader.scope(), reader));
     this.tokens = tokens;
     this.streams = streams;
+    this.props = props;
   }
 
   public String issueToken(LiveTopic topic, long viewerId, String clientIp) {
@@ -37,7 +42,7 @@ public class LiveStreamService {
       throw new LiveException(LiveErrorCode.LIVE_STREAM_LIMIT, RETRY_AFTER_SECONDS)
           .with("retryAfterSeconds", RETRY_AFTER_SECONDS);
     }
-    return tokens.createStreamToken(viewerId, topic.tokenScope());
+    return tokens.createStreamToken(viewerId, topic.tokenScope(), props.tokenTtl());
   }
 
   public Optional<Long> holder(LiveTopic topic, String streamToken) {
@@ -62,7 +67,11 @@ public class LiveStreamService {
 
   public void begin(LiveSubscriber subscriber, Long since) {
     LiveTopic topic = subscriber.topic();
-    streams.start(subscriber, readers.get(topic.scope()).latest(topic.id()), since);
+    streams.start(
+        subscriber,
+        readers.get(topic.scope()).latest(topic.id()),
+        since,
+        tokens.createStreamToken(subscriber.userId(), topic.tokenScope(), props.tokenTtl()));
   }
 
   public void leave(LiveSubscriber subscriber) {

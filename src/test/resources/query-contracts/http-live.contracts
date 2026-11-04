@@ -21,3 +21,17 @@
 @junit | live-comments-stream | 2 | 0 | 0 | 0 | 2
 @junit | live-room-stream | 2 | 0 | 0 | 0 | 2
 @junit | live-note-stream-since | 3 | 0 | 0 | 0 | 3
+# Reconnecting with the token the last ready handed out costs what any connection costs: no token
+# request, the read check and the ready cursor.
+@junit | live-note-stream-reconnect | 3 | 0 | 0 | 0 | 3
+# Fetching only what is new after a changed event. Comments: the post, the heard comments past the
+# cursor (and, when a reply's parent is older than the cursor, those parents in one more lookup),
+# their likes and writers, the newest id. The first page of top-level comments reads the page, then
+# all of their replies in one statement. Thread replies: the thread's read check, the replies past
+# the cursor, the writer's continuation, the reply views as a thread reads them, the newest id. Both
+# count the whole list once (comments as the list without emptied places, replies as the thread's
+# replies). Room notes past the cursor read as the room's first page does (room-notes).
+@junit | live-comments-after | 6 | 0 | 0 | 0 | 6
+@junit | live-comments-first-page | 7 | 0 | 0 | 0 | 7
+@junit | live-note-replies-after | 10 | 0 | 0 | 0 | 10
+@junit | live-room-notes-after | 9 | 0 | 0 | 0 | 9

@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 
 class LivePropertiesTest {
 
-  private final LiveProperties defaults = new LiveProperties(null, 0, null, null, null, null, null);
+  private final LiveProperties defaults =
+      new LiveProperties(null, 0, null, null, null, null, null, null);
 
   @Test
   void unsetValuesFallBackToTheDocumentedDefaults() {
@@ -18,8 +19,16 @@ class LivePropertiesTest {
   }
 
   @Test
+  void lifetimesSpreadBetweenFourAndSixMinutesAndTheEmitterOutlivesTheLongest() {
+    assertThat(defaults.lifetimeAt(0.0)).isEqualTo(Duration.ofMinutes(4));
+    assertThat(defaults.lifetimeAt(1.0)).isEqualTo(Duration.ofMinutes(6));
+    assertThat(defaults.hardLimit()).isEqualTo(Duration.ofMinutes(6).plusSeconds(50));
+    assertThat(defaults.tokenTtl()).isEqualTo(Duration.ofMinutes(10));
+  }
+
+  @Test
   void aZeroCapStaysZero() {
-    assertThat(new LiveProperties(0, 4, null, null, null, null, null).maxStreams()).isZero();
+    assertThat(new LiveProperties(0, 4, null, null, null, null, null, null).maxStreams()).isZero();
   }
 
   @Test

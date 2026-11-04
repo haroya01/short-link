@@ -47,13 +47,8 @@ class CommentRepositoryAdapter implements CommentRepository {
   @SuppressWarnings("unchecked")
   public List<CommentEntity> findHeardByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
-            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.deleted_at IS NULL AND "
-                + PostAccessSql.said("c")
-                + HeardSql.heard("c.user_id")
-                + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
-                + " WHERE pc.id = c.parent_id"
-                + HeardSql.heard("pc.user_id")
-                + "))"
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND "
+                + heard(false)
                 + " ORDER BY c.created_at ASC",
             CommentEntity.class)
         .setParameter("postId", postId)
@@ -67,19 +62,7 @@ class CommentRepositoryAdapter implements CommentRepository {
   public List<CommentEntity> findHeardWithTombstonesByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
             "SELECT c.* FROM comment c WHERE c.post_id = :postId AND "
-                + PostAccessSql.said("c")
-                + " AND ((c.deleted_at IS NULL"
-                + HeardSql.heard("c.user_id")
-                + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
-                + " WHERE pc.id = c.parent_id AND (pc.deleted_at IS NOT NULL"
-                + " OR (pc.deleted_at IS NULL"
-                + HeardSql.heard("pc.user_id")
-                + ")))))"
-                + " OR (c.deleted_at IS NOT NULL AND c.parent_id IS NULL"
-                + " AND EXISTS (SELECT 1 FROM comment r WHERE r.parent_id = c.id"
-                + " AND r.deleted_at IS NULL"
-                + HeardSql.heard("r.user_id")
-                + ")))"
+                + heard(true)
                 + " ORDER BY c.created_at ASC",
             CommentEntity.class)
         .setParameter("postId", postId)
@@ -148,5 +131,105 @@ class CommentRepositoryAdapter implements CommentRepository {
             .setParameter("post", postId)
             .getSingleResult();
     return latest == null ? 0L : ((Number) latest).longValue();
+  }
+
+  private static String heard(boolean tombstones) {
+    if (!tombstones) {
+      return "c.deleted_at IS NULL AND "
+          + PostAccessSql.said("c")
+          + HeardSql.heard("c.user_id")
+          + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
+          + " WHERE pc.id = c.parent_id"
+          + HeardSql.heard("pc.user_id")
+          + "))";
+    }
+    return PostAccessSql.said("c")
+        + " AND ((c.deleted_at IS NULL"
+        + HeardSql.heard("c.user_id")
+        + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
+        + " WHERE pc.id = c.parent_id AND (pc.deleted_at IS NOT NULL"
+        + " OR (pc.deleted_at IS NULL"
+        + HeardSql.heard("pc.user_id")
+        + ")))))"
+        + " OR (c.deleted_at IS NOT NULL AND c.parent_id IS NULL"
+        + " AND EXISTS (SELECT 1 FROM comment r WHERE r.parent_id = c.id"
+        + " AND r.deleted_at IS NULL"
+        + HeardSql.heard("r.user_id")
+        + ")))";
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<CommentEntity> heardThreads(
+      Long postId, Long viewerId, long cursor, int limit, boolean tombstones) {
+    return em.createNativeQuery(
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.parent_id IS NULL"
+                + " AND c.id > :cursor AND "
+                + heard(tombstones)
+                + " ORDER BY c.id ASC",
+            CommentEntity.class)
+        .setParameter("postId", postId)
+        .setParameter("cursor", cursor)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<CommentEntity> heardRepliesTo(
+      Long postId, Collection<Long> parentIds, Long viewerId, boolean tombstones) {
+    if (parentIds.isEmpty()) {
+      return List.of();
+    }
+    return em.createNativeQuery(
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.parent_id IN (:parents)"
+                + " AND "
+                + heard(tombstones)
+                + " ORDER BY c.id ASC",
+            CommentEntity.class)
+        .setParameter("postId", postId)
+        .setParameter("parents", parentIds)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<CommentEntity> heardAfter(
+      Long postId, Long viewerId, long after, int limit, boolean tombstones) {
+    return em.createNativeQuery(
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND c.id > :after AND "
+                + heard(tombstones)
+                + " ORDER BY c.id ASC",
+            CommentEntity.class)
+        .setParameter("postId", postId)
+        .setParameter("after", after)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  public long countHeard(Long postId, Long viewerId) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM comment c WHERE c.post_id = :postId AND " + heard(false))
+                .setParameter("postId", postId)
+                .setParameter("viewer", HeardSql.viewer(viewerId))
+                .setParameter("now", Instant.now())
+                .getSingleResult())
+        .longValue();
+  }
+
+  @Override
+  public List<CommentEntity> findAllOnPost(Long postId, Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return jpa.findAllByPostIdAndIdIn(postId, ids);
   }
 }

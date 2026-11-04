@@ -2,6 +2,8 @@ package com.example.short_link.live.application;
 
 import com.example.short_link.common.live.LiveScope;
 import com.example.short_link.common.live.LiveTopic;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class LiveSubscriber {
 
@@ -12,6 +14,8 @@ public final class LiveSubscriber {
   private long cursor;
   private boolean ready;
   private boolean missed;
+  private volatile boolean ended;
+  private final AtomicReference<ScheduledFuture<?>> rotation = new AtomicReference<>();
 
   public LiveSubscriber(long userId, LiveTopic topic, LiveScope scope, LiveChannel channel) {
     this.userId = userId;
@@ -46,6 +50,28 @@ public final class LiveSubscriber {
 
   boolean missed() {
     return missed;
+  }
+
+  boolean ended() {
+    return ended;
+  }
+
+  void rotation(ScheduledFuture<?> scheduled) {
+    if (scheduled == null) {
+      return;
+    }
+    rotation.set(scheduled);
+    if (ended) {
+      scheduled.cancel(false);
+    }
+  }
+
+  void end() {
+    ended = true;
+    ScheduledFuture<?> scheduled = rotation.get();
+    if (scheduled != null) {
+      scheduled.cancel(false);
+    }
   }
 
   void advance(long latest) {

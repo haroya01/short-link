@@ -280,9 +280,9 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<NoteEntity> inRoom(Long roomId, Long viewerId, int offset, int limit) {
+  public List<NoteEntity> inRoom(Long roomId, Long viewerId, long after, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.room_id = :room AND "
+            "SELECT n.* FROM note n WHERE n.room_id = :room AND n.id > :after AND "
                 + notReply("n")
                 + " AND "
                 + NoteAccessSql.readable("n")
@@ -290,6 +290,7 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("room", roomId)
+        .setParameter("after", after)
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setFirstResult(offset)
@@ -438,24 +439,27 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   }
 
   @Override
-  public List<NoteEntity> replies(Long noteId, Long viewerId, int limit) {
-    return answers(noteId, viewerId, limit, false);
+  public List<NoteEntity> replies(Long noteId, Long viewerId, long after, int limit) {
+    return answers(noteId, viewerId, after, limit, false);
   }
 
   @Override
   public List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit) {
-    return answers(noteId, viewerId, limit, true);
+    return answers(noteId, viewerId, 0L, limit, true);
   }
 
   @SuppressWarnings("unchecked")
-  private List<NoteEntity> answers(Long noteId, Long viewerId, int limit, boolean hidden) {
+  private List<NoteEntity> answers(
+      Long noteId, Long viewerId, long after, int limit, boolean hidden) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.in_reply_to_id = :noteId AND n.reply_hidden_at IS "
+            "SELECT n.* FROM note n WHERE n.in_reply_to_id = :noteId AND n.id > :after"
+                + " AND n.reply_hidden_at IS "
                 + (hidden ? "NOT NULL" : "NULL")
                 + heardNote("n")
                 + " ORDER BY n.id ASC",
             NoteEntity.class)
         .setParameter("noteId", noteId)
+        .setParameter("after", after)
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setMaxResults(limit)
