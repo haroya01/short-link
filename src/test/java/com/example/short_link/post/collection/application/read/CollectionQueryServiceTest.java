@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
+import com.example.short_link.post.collection.application.CollectionUnlistedUrls;
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
@@ -65,7 +66,8 @@ class CollectionQueryServiceTest {
                 highlightRepository,
                 noteBodies,
                 new UserSummaryReader(userRepository)),
-            new UserSummaryReader(userRepository));
+            new UserSummaryReader(userRepository),
+            new CollectionUnlistedUrls("https://blog.kurl.test/"));
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
@@ -365,7 +367,56 @@ class CollectionQueryServiceTest {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
 
-    assertThatThrownBy(() -> service.detail(2L, 10L))
+    assertThatThrownBy(() -> service.detail(2L, 10L, null))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
+  }
+
+  @Test
+  void aLinkOnlyCollectionOpensForOthersOnlyWithItsKey() {
+    CollectionEntity unlisted = collection(10L, 1L, CollectionVisibility.UNLISTED);
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(unlisted));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L, "curator")));
+
+    for (String wrong : new String[] {null, "", unlisted.getUnlistedKey() + "x", "guess"}) {
+      assertThatThrownBy(() -> service.detail(2L, 10L, wrong))
+          .isInstanceOf(PostException.class)
+          .extracting(e -> ((PostException) e).errorCode())
+          .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
+      assertThatThrownBy(() -> service.detail(null, 10L, wrong))
+          .isInstanceOf(PostException.class)
+          .extracting(e -> ((PostException) e).errorCode())
+          .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
+    }
+    CollectionDetailView opened = service.detail(null, 10L, unlisted.getUnlistedKey());
+
+    assertThat(opened.id()).isEqualTo(10L);
+    assertThat(opened.unlistedUrl()).isNull();
+  }
+
+  @Test
+  void onlyTheOwnerSeesTheLinkThatOpensALinkOnlyCollection() {
+    CollectionEntity unlisted = collection(10L, 1L, CollectionVisibility.UNLISTED);
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(unlisted));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L, "curator")));
+
+    CollectionDetailView own = service.detail(1L, 10L, null);
+
+    assertThat(own.unlistedUrl())
+        .isEqualTo("https://blog.kurl.test/collections/10?k=" + unlisted.getUnlistedKey());
+  }
+
+  @Test
+  void aPrivateCollectionStaysHiddenEvenWithTheKeyItHadWhileLinkOnly() {
+    CollectionEntity once = collection(10L, 1L, CollectionVisibility.UNLISTED);
+    String key = once.getUnlistedKey();
+    once.edit("느린 사고", null, CollectionVisibility.PRIVATE);
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(once));
+
+    assertThatThrownBy(() -> service.detail(2L, 10L, key))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
@@ -375,7 +426,7 @@ class CollectionQueryServiceTest {
   void detailThrowsWhenMissing() {
     when(collectionRepository.findById(10L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.detail(1L, 10L))
+    assertThatThrownBy(() -> service.detail(1L, 10L, null))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
@@ -405,7 +456,7 @@ class CollectionQueryServiceTest {
         .thenReturn(List.of(user(2L, "alice"), user(3L, "bob")));
     when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L, "curator")));
 
-    CollectionDetailView view = service.detail(1L, 10L);
+    CollectionDetailView view = service.detail(1L, 10L, null);
 
     assertThat(view.curatorUsername()).isEqualTo("curator");
     assertThat(view.curatorUserId()).isEqualTo(1L);
@@ -444,7 +495,7 @@ class CollectionQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "alice")));
     when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L, "curator")));
 
-    CollectionDetailView view = service.detail(1L, 10L);
+    CollectionDetailView view = service.detail(1L, 10L, null);
 
     assertThat(view.connections()).hasSize(1);
     assertThat(view.connections().get(0).blockType()).isEqualTo("POST");

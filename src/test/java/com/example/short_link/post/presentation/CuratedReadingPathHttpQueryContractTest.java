@@ -269,18 +269,51 @@ class CuratedReadingPathHttpQueryContractTest extends ContentHttpJourneySupport 
                     null)
                 .toString())
         .contains(outsider.username());
+    String link =
+        step(
+                "curation-unlist-path",
+                "PUT",
+                collectionPath(collection),
+                reader,
+                Map.of("title", "A public path through readable code", "visibility", "UNLISTED"),
+                200)
+            .path("unlistedUrl")
+            .asText();
+    assertThat(link).contains("/collections/" + collection + "?k=");
+    String key = link.substring(link.indexOf("?k=") + 3);
     step(
-        "curation-unlist-path",
-        "PUT",
-        collectionPath(collection),
-        reader,
-        Map.of("title", "A public path through readable code", "visibility", "UNLISTED"),
-        200);
+        "reader-unlisted-path-number-only", "GET", collectionPath(collection), outsider, null, 404);
     assertThat(
-            get("reader-unlisted-path-direct-link", collectionPath(collection), outsider)
+            step(
+                    "reader-unlisted-path-direct-link",
+                    "GET",
+                    collectionPath(collection),
+                    outsider,
+                    null,
+                    200,
+                    Map.of("X-Collection-Key", key))
                 .path("id")
                 .asLong())
         .isEqualTo(collection);
+    String rotated =
+        step(
+                "curation-unlisted-key-rotate",
+                "POST",
+                collectionPath(collection) + "/unlisted-key/rotate",
+                reader,
+                null,
+                200)
+            .path("unlistedUrl")
+            .asText();
+    assertThat(rotated).doesNotContain(key);
+    step(
+        "reader-unlisted-path-retired-key",
+        "GET",
+        collectionPath(collection),
+        null,
+        null,
+        404,
+        Map.of("X-Collection-Key", key));
     assertThat(
             get(
                     "reader-unlisted-path-absent-from-profile",

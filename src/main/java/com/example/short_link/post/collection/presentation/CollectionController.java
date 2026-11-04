@@ -13,6 +13,7 @@ import com.example.short_link.post.collection.presentation.request.ConnectBlockR
 import com.example.short_link.post.collection.presentation.request.CreateCollectionRequest;
 import com.example.short_link.post.collection.presentation.request.EditCollectionRequest;
 import com.example.short_link.post.collection.presentation.request.ReorderConnectionsRequest;
+import com.example.short_link.post.presentation.response.UnlistedLinkResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -33,6 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class CollectionController {
+
+  public static final String KEY_HEADER = "X-Collection-Key";
 
   private final CollectionCommandService commandService;
   private final CollectionQueryService queryService;
@@ -49,7 +53,7 @@ public class CollectionController {
                 request.description(),
                 request.visibility(),
                 request.orderedOrLegacyPath()));
-    return CollectionSummaryView.afterCreation(saved);
+    return queryService.createdSummary(saved);
   }
 
   @PutMapping("/collections/{id}")
@@ -78,8 +82,17 @@ public class CollectionController {
   }
 
   @GetMapping("/collections/{id}")
-  public CollectionDetailView detail(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return queryService.detail(userId, id);
+  public CollectionDetailView detail(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @RequestHeader(value = KEY_HEADER, required = false) String key) {
+    return queryService.detail(userId, id, key == null || key.isBlank() ? null : key.trim());
+  }
+
+  @PostMapping("/collections/{id}/unlisted-key/rotate")
+  public UnlistedLinkResponse rotateUnlistedKey(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return new UnlistedLinkResponse(commandService.rotateUnlistedKey(userId, id));
   }
 
   @PostMapping("/collections/{id}/connections")

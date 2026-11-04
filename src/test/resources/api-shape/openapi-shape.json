@@ -947,6 +947,7 @@
     },
     "GET /api/v1/collections/{id}" : {
       "parameters" : {
+        "X-Collection-Key" : "header string",
         "id" : "path integer(int64) required"
       },
       "responses" : {
@@ -2905,6 +2906,14 @@
         "201" : "-"
       }
     },
+    "POST /api/v1/collections/{id}/unlisted-key/rotate" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#UnlistedLinkResponse"
+      }
+    },
     "POST /api/v1/comments/{id}/like" : {
       "parameters" : {
         "id" : "path integer(int64) required"
@@ -4514,6 +4523,7 @@
       "kind" : "string",
       "ordered" : "boolean",
       "title" : "string",
+      "unlistedUrl" : "string",
       "visibility" : "string"
     },
     "CollectionSummaryView" : {
@@ -4528,6 +4538,7 @@
       "position" : "integer(int32)",
       "preview" : "[string]",
       "title" : "string",
+      "unlistedUrl" : "string",
       "updatedAt" : "string(date-time)",
       "visibility" : "string"
     },

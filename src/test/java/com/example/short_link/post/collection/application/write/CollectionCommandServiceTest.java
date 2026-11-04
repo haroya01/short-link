@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.common.note.NoteBodyReader;
+import com.example.short_link.post.collection.application.CollectionUnlistedUrls;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
@@ -26,6 +27,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -53,7 +56,8 @@ class CollectionCommandServiceTest {
             postRepository,
             highlightRepository,
             noteBodies,
-            events);
+            events,
+            new CollectionUnlistedUrls("https://blog.kurl.test"));
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
@@ -249,7 +253,7 @@ class CollectionCommandServiceTest {
     // 멱등이되 목소리는 갱신 — 새로 쓴 "왜"가 조용히 버려지지 않는다.
     assertThat(result.getWhy()).isEqualTo("new");
     verify(connectionRepository, never()).save(any());
-    verify(events, never()).publishEvent(any());
+    verify(events, never()).publishEvent(any(CollectionConnectedEvent.class));
   }
 
   @Test
@@ -317,6 +321,48 @@ class CollectionCommandServiceTest {
     assertThat(event.connectedPostId()).isEqualTo(5L);
     assertThat(event.connectedAuthorUserId()).isEqualTo(2L);
     assertThat(event.priorContributorUserIds()).containsExactly(3L, 4L);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = CollectionVisibility.class,
+      names = {"UNLISTED", "PRIVATE"})
+  void connectingIntoACollectionThatIsNotPublicTellsNoOne(CollectionVisibility visibility) {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, visibility)));
+    when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(List.of(connection(101L, ConnectionBlockType.POST, 0)));
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
+
+    verify(events, never()).publishEvent(any(CollectionConnectedEvent.class));
+  }
+
+  @Test
+  void rotatingTheKeyRetiresTheOldLinkAndReturnsTheNewOne() {
+    CollectionEntity unlisted = collection(10L, 1L, CollectionVisibility.UNLISTED);
+    String old = unlisted.getUnlistedKey();
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(unlisted));
+
+    String url = service.rotateUnlistedKey(1L, 10L);
+
+    assertThat(unlisted.getUnlistedKey()).isNotEqualTo(old).hasSize(32);
+    assertThat(url)
+        .isEqualTo("https://blog.kurl.test/collections/10?k=" + unlisted.getUnlistedKey());
+    assertThat(unlisted.isVisibleTo(2L, old)).isFalse();
+  }
+
+  @Test
+  void onlyTheOwnerRotatesTheKey() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 2L, CollectionVisibility.UNLISTED)));
+
+    assertThatThrownBy(() -> service.rotateUnlistedKey(1L, 10L))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
   }
 
   @Test
