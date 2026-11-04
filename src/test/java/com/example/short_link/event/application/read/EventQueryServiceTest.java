@@ -23,7 +23,9 @@ import com.example.short_link.link.application.read.LinkRefReader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +58,8 @@ class EventQueryServiceTest {
             registrationRepository,
             eventLinkRepository,
             new LinkRefReader(linkRepository),
-            coverImageUrls);
+            coverImageUrls,
+            Clock.fixed(CREATED, ZoneOffset.UTC));
   }
 
   private EventEntity ownedEvent() {

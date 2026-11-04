@@ -98,6 +98,7 @@ public class EventEntity extends BaseTimeEntity {
       ContactField contactField) {
     validateDetails(
         title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
+    validateSchedule(startsAt, endsAt, closeAt);
     this.userId = userId;
     this.slug = slug;
     this.title = title;
@@ -118,23 +119,33 @@ public class EventEntity extends BaseTimeEntity {
   }
 
   public boolean acceptsRegistrations(Instant now) {
-    return registrationClosureReason(now) == null
-        && (capacity == null || registrationCount < capacity);
+    return registrationClosure(now) == null;
   }
 
-  // 상태와 마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다.
+  public RegistrationClosure registrationClosure(Instant now) {
+    RegistrationClosure reason = registrationClosureReason(now);
+    if (reason == null && capacity != null && registrationCount >= capacity) {
+      return RegistrationClosure.FULL;
+    }
+    return reason;
+  }
+
+  // 상태·종료·마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다.
   public void requireRegistrationOpen(Instant now) {
-    EventErrorCode reason = registrationClosureReason(now);
+    RegistrationClosure reason = registrationClosureReason(now);
+    if (reason == RegistrationClosure.CANCELED) {
+      throw new EventException(EventErrorCode.EVENT_CANCELED, id);
+    }
     if (reason != null) {
-      throw new EventException(reason, id);
+      throw new EventException(EventErrorCode.EVENT_REGISTRATION_CLOSED, id);
     }
   }
 
-  private EventErrorCode registrationClosureReason(Instant now) {
-    if (status == EventStatus.CANCELED) return EventErrorCode.EVENT_CANCELED;
-    if (status != EventStatus.OPEN || (closeAt != null && !now.isBefore(closeAt))) {
-      return EventErrorCode.EVENT_REGISTRATION_CLOSED;
-    }
+  private RegistrationClosure registrationClosureReason(Instant now) {
+    if (status == EventStatus.CANCELED) return RegistrationClosure.CANCELED;
+    if (!now.isBefore(effectiveEnd())) return RegistrationClosure.ENDED;
+    if (status != EventStatus.OPEN) return RegistrationClosure.CLOSED;
+    if (closeAt != null && !now.isBefore(closeAt)) return RegistrationClosure.DEADLINE;
     return null;
   }
 
@@ -161,6 +172,7 @@ public class EventEntity extends BaseTimeEntity {
     requireEditable();
     validateDetails(
         title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
+    validateSchedule(startsAt, endsAt, closeAt);
     this.title = title;
     this.descriptionMd = descriptionMd;
     this.startsAt = startsAt;
@@ -234,6 +246,17 @@ public class EventEntity extends BaseTimeEntity {
     requireMaxLength(locationText, 200, "locationText");
     requireMaxLength(locationUrl, 2048, "locationUrl");
     requireMaxLength(onlineUrl, 2048, "onlineUrl");
+  }
+
+  private static void validateSchedule(Instant startsAt, Instant endsAt, Instant closeAt) {
+    if (endsAt != null && endsAt.isBefore(startsAt)) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "endsAt before startsAt")
+          .with("field", "endsAt");
+    }
+    if (closeAt != null && closeAt.isAfter(endsAt != null ? endsAt : startsAt)) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "closeAt after event end")
+          .with("field", "closeAt");
+    }
   }
 
   private static void requireText(String value, int maxLength, String field) {

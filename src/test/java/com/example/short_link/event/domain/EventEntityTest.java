@@ -8,7 +8,9 @@ import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class EventEntityTest {
 
@@ -70,7 +72,7 @@ class EventEntityTest {
   @Test
   void fullSnapshotHidesAvailabilityButLeavesReservationToAtomicUpdate() {
     EventEntity event = event(1, null);
-    org.springframework.test.util.ReflectionTestUtils.setField(event, "registrationCount", 1);
+    ReflectionTestUtils.setField(event, "registrationCount", 1);
 
     assertThat(event.acceptsRegistrations(NOW)).isFalse();
     assertThatCode(() -> event.requireRegistrationOpen(NOW)).doesNotThrowAnyException();
@@ -85,6 +87,155 @@ class EventEntityTest {
     EventEntity canceled = event(null, null);
     canceled.cancel();
     assertThat(canceled.acceptsRegistrations(NOW)).isFalse();
+  }
+
+  private EventEntity timed(Instant startsAt, Instant endsAt, Instant closeAt) {
+    return new EventEntity(
+        1L,
+        "slug123abc",
+        "스터디 모집",
+        null,
+        startsAt,
+        endsAt,
+        "Asia/Tokyo",
+        null,
+        null,
+        null,
+        null,
+        closeAt,
+        ContactField.EMAIL);
+  }
+
+  private static void assertInvalidField(ThrowingCallable call, String field) {
+    assertThatThrownBy(call)
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> {
+              assertThat(e.errorCode()).isEqualTo(EventErrorCode.INVALID_EVENT_DETAILS);
+              assertThat(e.properties()).containsEntry("field", field);
+            });
+  }
+
+  @Test
+  void endsAtBeforeStartsAt_isRejectedOnCreateAndUpdate() {
+    Instant starts = NOW.plus(7, ChronoUnit.DAYS);
+    assertInvalidField(() -> timed(starts, starts.minusSeconds(1), null), "endsAt");
+
+    EventEntity event = timed(starts, starts, null);
+    assertInvalidField(
+        () ->
+            event.update(
+                "제목",
+                null,
+                starts,
+                starts.minusSeconds(1),
+                "Asia/Tokyo",
+                null,
+                null,
+                null,
+                null,
+                null),
+        "endsAt");
+    assertThat(event.getEndsAt()).isEqualTo(starts);
+  }
+
+  @Test
+  void closeAtAfterTheEventEnd_isRejectedOnCreateAndUpdate() {
+    Instant starts = NOW.plus(7, ChronoUnit.DAYS);
+    Instant ends = starts.plusSeconds(3600);
+    assertInvalidField(() -> timed(starts, ends, ends.plusSeconds(1)), "closeAt");
+    assertInvalidField(() -> timed(starts, null, starts.plusSeconds(1)), "closeAt");
+    assertThat(timed(starts, ends, ends).getCloseAt()).isEqualTo(ends);
+    assertThat(timed(starts, null, starts).getCloseAt()).isEqualTo(starts);
+
+    EventEntity event = timed(starts, ends, null);
+    assertInvalidField(
+        () ->
+            event.update(
+                "제목",
+                null,
+                starts,
+                null,
+                "Asia/Tokyo",
+                null,
+                null,
+                null,
+                null,
+                starts.plusSeconds(1)),
+        "closeAt");
+    assertThat(event.getEndsAt()).isEqualTo(ends);
+    assertThat(event.getCloseAt()).isNull();
+  }
+
+  @Test
+  void registrationStaysOpenAfterStartUntilTheEventEnds() {
+    Instant starts = NOW.minusSeconds(3600);
+    Instant ends = NOW.plusSeconds(3600);
+    EventEntity event = timed(starts, ends, null);
+
+    assertThat(event.acceptsRegistrations(NOW)).isTrue();
+    assertThat(event.acceptsRegistrations(ends.minusNanos(1))).isTrue();
+    assertThatCode(() -> event.requireRegistrationOpen(ends.minusNanos(1)))
+        .doesNotThrowAnyException();
+    assertThat(event.acceptsRegistrations(ends)).isFalse();
+    assertThatThrownBy(() -> event.requireRegistrationOpen(ends))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.EVENT_REGISTRATION_CLOSED));
+  }
+
+  @Test
+  void eventWithoutEndStopsRegistrationAtItsStart() {
+    EventEntity event = timed(NOW, null, null);
+
+    assertThat(event.acceptsRegistrations(NOW.minusNanos(1))).isTrue();
+    assertThat(event.acceptsRegistrations(NOW)).isFalse();
+    assertThatThrownBy(() -> event.requireRegistrationOpen(NOW))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.EVENT_REGISTRATION_CLOSED));
+  }
+
+  @Test
+  void storedEndBeforeStart_stillReadsAndClosesAtItsEnd() {
+    Instant starts = NOW.minus(80, ChronoUnit.DAYS);
+    EventEntity event = timed(starts, null, null);
+    ReflectionTestUtils.setField(event, "endsAt", starts.minus(3, ChronoUnit.DAYS));
+
+    assertThat(event.spotsLeft()).isNull();
+    assertThat(event.acceptsRegistrations(NOW)).isFalse();
+    assertThatThrownBy(() -> event.requireRegistrationOpen(NOW))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.EVENT_REGISTRATION_CLOSED));
+    assertThatCode(event::close).doesNotThrowAnyException();
+    assertThatCode(() -> event.updateCoverImage("event-covers/1/1/a.jpg"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void registrationClosureNamesTheStrongestReason() {
+    EventEntity open = event(1, null);
+    assertThat(open.registrationClosure(NOW)).isNull();
+
+    EventEntity full = event(1, null);
+    ReflectionTestUtils.setField(full, "registrationCount", 1);
+    assertThat(full.registrationClosure(NOW)).isEqualTo(RegistrationClosure.FULL);
+
+    EventEntity deadline = event(1, NOW);
+    ReflectionTestUtils.setField(deadline, "registrationCount", 1);
+    assertThat(deadline.registrationClosure(NOW)).isEqualTo(RegistrationClosure.DEADLINE);
+
+    EventEntity closed = event(1, NOW);
+    closed.close();
+    assertThat(closed.registrationClosure(NOW)).isEqualTo(RegistrationClosure.CLOSED);
+
+    EventEntity ended = timed(NOW.minus(2, ChronoUnit.DAYS), NOW, NOW);
+    ended.close();
+    assertThat(ended.registrationClosure(NOW)).isEqualTo(RegistrationClosure.ENDED);
+
+    ended.cancel();
+    assertThat(ended.registrationClosure(NOW)).isEqualTo(RegistrationClosure.CANCELED);
   }
 
   @Test

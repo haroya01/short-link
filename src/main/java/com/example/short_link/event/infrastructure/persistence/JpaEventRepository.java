@@ -32,8 +32,11 @@ public interface JpaEventRepository extends JpaRepository<EventEntity, Long>, Ev
 
   @Override
   @Query(
-      "SELECT e FROM EventEntity e WHERE e.piiPurgedAt IS NULL "
-          + "AND COALESCE(e.endsAt, e.startsAt) < :endedBefore ORDER BY e.id LIMIT :limit")
+      "SELECT e FROM EventEntity e WHERE COALESCE(e.endsAt, e.startsAt) < :endedBefore "
+          + "AND (e.piiPurgedAt IS NULL OR EXISTS (SELECT 1 FROM EventRegistrationEntity r "
+          + "WHERE r.eventId = e.id AND "
+          + JpaEventRegistrationRepository.HOLDS_PII
+          + ")) ORDER BY e.id LIMIT :limit")
   List<EventEntity> findPurgeCandidates(
       @Param("endedBefore") Instant endedBefore, @Param("limit") int limit);
 }

@@ -1,6 +1,7 @@
 package com.example.short_link.event.application.read;
 
 import com.example.short_link.event.domain.EventEntity;
+import com.example.short_link.event.domain.RegistrationClosure;
 import java.time.Instant;
 import java.util.List;
 
@@ -20,6 +21,7 @@ public record EventView(
     Instant closeAt,
     String contactField,
     String status,
+    String registrationClosedReason,
     int registrationCount,
     List<EventQuestionView> questions,
     List<EventLinkView> links,
@@ -31,7 +33,9 @@ public record EventView(
       EventEntity event,
       List<EventQuestionView> questions,
       List<EventLinkView> links,
-      String coverImageUrl) {
+      String coverImageUrl,
+      Instant now) {
+    RegistrationClosure closure = event.registrationClosure(now);
     return new EventView(
         event.getId(),
         event.getSlug(),
@@ -48,6 +52,7 @@ public record EventView(
         event.getCloseAt(),
         event.getContactField().name(),
         event.getStatus().name(),
+        closure == null ? null : closure.name(),
         event.getRegistrationCount(),
         questions,
         links,
