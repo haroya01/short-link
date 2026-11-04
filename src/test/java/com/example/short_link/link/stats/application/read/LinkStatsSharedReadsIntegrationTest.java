@@ -59,6 +59,9 @@ class LinkStatsSharedReadsIntegrationTest {
         link.getId());
     em.refresh(link);
     at = Instant.now().minus(Duration.ofDays(2)).truncatedTo(ChronoUnit.HOURS);
+    jdbc.update(
+        "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1),"
+            + " aggregated_until = FROM_UNIXTIME(1) WHERE id = 1");
   }
 
   @Test

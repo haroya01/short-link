@@ -101,6 +101,7 @@ class LinkStatsReportGoldenIntegrationTest {
     }
     rollup.rollUp(NOW);
     rollup.deleteRolledUp();
+    rollup.aggregate(NOW);
 
     ObjectNode reports = PRETTY.createObjectNode();
     for (String zone : ZONES) {
@@ -292,6 +293,10 @@ class LinkStatsReportGoldenIntegrationTest {
     jdbc.update("DELETE FROM click_hourly");
     jdbc.update("DELETE FROM click_daily_dim");
     jdbc.update("DELETE FROM click_daily_visitors");
-    jdbc.update("UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1) WHERE id = 1");
+    jdbc.update("DELETE FROM click_recent_quarter");
+    jdbc.update("DELETE FROM click_recent_dim");
+    jdbc.update(
+        "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1),"
+            + " aggregated_until = FROM_UNIXTIME(1) WHERE id = 1");
   }
 }

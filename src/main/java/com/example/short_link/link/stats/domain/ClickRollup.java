@@ -6,6 +6,12 @@ public final class ClickRollup {
   public static final String ROLLED_UNTIL =
       "(SELECT rolled_until FROM click_rollup_state WHERE id = 1)";
 
+  public static final String VISITOR_INDEX = " FORCE INDEX (idx_click_event_link_bot_visitor)";
+
+  public static final String AGGREGATED_UNTIL =
+      "(SELECT GREATEST(rolled_until, COALESCE(aggregated_until, rolled_until))"
+          + " FROM click_rollup_state WHERE id = 1)";
+
   public static final int REFERRER = 1;
   public static final int REFERRER_HOST = 2;
   public static final int DEVICE = 3;

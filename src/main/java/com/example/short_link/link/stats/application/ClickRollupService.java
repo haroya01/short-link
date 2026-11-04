@@ -18,6 +18,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class ClickRollupService {
 
+  private static final Duration LATE_CLICKS = Duration.ofHours(1);
+  private static final Duration REDO_DAYS = Duration.ofDays(2);
+
   private final ClickRollupRepository rollups;
   private final ClickRetentionProperties properties;
   private final TransactionTemplate dayTransaction;
@@ -67,6 +70,28 @@ public class ClickRollupService {
       rolled = dayEnd;
       days++;
     }
+    return days;
+  }
+
+  public int aggregate(Instant now) {
+    Instant closed = now.minus(LATE_CLICKS).truncatedTo(ChronoUnit.DAYS);
+    Instant from = rollups.aggregatedUntil().minus(REDO_DAYS);
+    Instant rolled = rollups.rolledUntil();
+    if (from.isBefore(rolled)) from = rolled;
+    int days = 0;
+    Optional<Instant> next = rollups.firstClickAtOrAfter(from);
+    while (next.isPresent() && next.get().isBefore(closed)) {
+      Instant dayStart = next.get().truncatedTo(ChronoUnit.DAYS);
+      Instant dayEnd = dayStart.plus(Duration.ofDays(1));
+      dayTransaction.executeWithoutResult(
+          status -> {
+            rollups.aggregateDay(dayStart, dayEnd);
+            rollups.advanceAggregatedTo(dayEnd);
+          });
+      days++;
+      next = rollups.firstClickAtOrAfter(dayEnd);
+    }
+    dayTransaction.executeWithoutResult(status -> rollups.advanceAggregatedTo(closed));
     return days;
   }
 
