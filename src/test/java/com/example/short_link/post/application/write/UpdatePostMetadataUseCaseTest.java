@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.access.PostPasswords;
@@ -100,6 +102,7 @@ class UpdatePostMetadataUseCaseTest {
     verify(revisionCapture, never()).capture(any());
     verify(moderation).requireCanWrite(7L);
     verify(profileCache).evictByUserId(7L);
+    verify(events).publishEvent(new LiveRevoke.Recheck(LiveTopic.post(42L)));
   }
 
   @Test

@@ -140,4 +140,13 @@ class CommentRepositoryAdapter implements CommentRepository {
   public int deleteAllByPostId(Long postId) {
     return jpa.deleteAllByPostId(postId);
   }
+
+  @Override
+  public long latestId(Long postId) {
+    Object latest =
+        em.createNativeQuery("SELECT MAX(id) FROM comment WHERE post_id = :post")
+            .setParameter("post", postId)
+            .getSingleResult();
+    return latest == null ? 0L : ((Number) latest).longValue();
+  }
 }

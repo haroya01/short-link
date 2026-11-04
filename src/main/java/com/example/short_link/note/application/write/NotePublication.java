@@ -88,6 +88,9 @@ final class NotePublication {
     if (previewUrl != null) {
       told.add(new NoteLinkPreviewRequested(note.getId(), previewUrl));
     }
+    NoteLiveChanges.of(
+            note.getId(), note.getInReplyToId(), note.getRoomId(), note.getVisibility().direct())
+        .ifPresent(told::add);
     return told;
   }
 

@@ -32,4 +32,6 @@ public interface CommentRepository {
   List<CommentEntity> findAllByParentId(Long parentId);
 
   int deleteAllByPostId(Long postId);
+
+  long latestId(Long postId);
 }

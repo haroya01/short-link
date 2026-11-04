@@ -1,5 +1,6 @@
 package com.example.short_link.room.application.write;
 
+import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.room.RoomNoteRemover;
 import com.example.short_link.common.room.RoomPostRemover;
 import com.example.short_link.room.application.read.RoomQueryService;
@@ -17,6 +18,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class RoomCommandService {
   private final RoomNoteRemover notes;
   private final RoomPostRemover posts;
   private final Clock clock;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public RoomView create(Long userId, String rawName) {
@@ -70,6 +73,7 @@ public class RoomCommandService {
       notes.eraseNotesBy(userId, roomId);
       posts.erasePostsBy(userId, roomId);
     }
+    events.publishEvent(new LiveRevoke.LeftRoom(roomId, userId));
   }
 
   @Transactional
@@ -84,6 +88,7 @@ public class RoomCommandService {
     invites.disableInvitesBy(roomId, memberId, now);
     invitations.dropInvitationsBy(roomId, memberId);
     rooms.markRemoved(roomId, memberId, now);
+    events.publishEvent(new LiveRevoke.LeftRoom(roomId, memberId));
   }
 
   @Transactional

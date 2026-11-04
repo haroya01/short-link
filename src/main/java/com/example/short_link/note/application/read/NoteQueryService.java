@@ -350,16 +350,8 @@ public class NoteQueryService {
   @Transactional(readOnly = true)
   public NoteHistoryView history(Long viewerId, Long noteId) {
     NoteEntity note =
-        notes
-            .findUnblocked(noteId, viewerId)
+        readable(viewerId, noteId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    boolean authorGone =
-        note.isRemote()
-            ? people.remoteAuthors(Set.of(note.getRemoteActorId()), viewerId).isEmpty()
-            : people.activeAuthors(Set.of(note.getUserId())).isEmpty();
-    if (authorGone || !access.readable(note, viewerId)) {
-      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
-    }
     List<NoteHistoryView.Version> versions = new ArrayList<>();
     versions.add(
         new NoteHistoryView.Version(
@@ -373,6 +365,19 @@ public class NoteQueryService {
               earlier.body(), earlier.contentWarning(), earlier.sensitive(), earlier.at()));
     }
     return new NoteHistoryView(noteId, versions);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<NoteEntity> readable(Long viewerId, Long noteId) {
+    return notes
+        .findUnblocked(noteId, viewerId)
+        .filter(note -> !authorGone(note, viewerId) && access.readable(note, viewerId));
+  }
+
+  private boolean authorGone(NoteEntity note, Long viewerId) {
+    return note.isRemote()
+        ? people.remoteAuthors(Set.of(note.getRemoteActorId()), viewerId).isEmpty()
+        : people.activeAuthors(Set.of(note.getUserId())).isEmpty();
   }
 
   @Transactional(readOnly = true)

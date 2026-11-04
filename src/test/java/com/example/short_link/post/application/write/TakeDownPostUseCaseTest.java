@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class TakeDownPostUseCaseTest {
@@ -29,13 +32,15 @@ class TakeDownPostUseCaseTest {
 
   @Mock private PostRepository postRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
+  @Mock private ApplicationEventPublisher events;
 
   private TakeDownPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
     useCase =
-        new TakeDownPostUseCase(postRepository, cacheEviction, Clock.fixed(NOW, ZoneOffset.UTC));
+        new TakeDownPostUseCase(
+            postRepository, cacheEviction, Clock.fixed(NOW, ZoneOffset.UTC), events);
   }
 
   @Test
@@ -50,6 +55,7 @@ class TakeDownPostUseCaseTest {
     assertThat(post.getTakenDownAt()).isEqualTo(NOW);
     verify(postRepository).save(post);
     verify(cacheEviction).evictByUserId(7L);
+    verify(events).publishEvent(new LiveRevoke.Closed(LiveTopic.post(42L)));
   }
 
   @Test
