@@ -18,14 +18,17 @@ public record CollectionSummaryView(
     String curatorUsername,
     String curatorAvatarUrl,
     Integer position,
-    Long connectionId) {
+    Long connectionId,
+    String unlistedUrl) {
 
-  public static CollectionSummaryView afterCreation(CollectionEntity collection) {
-    return afterWrite(collection, 0);
+  public static CollectionSummaryView afterCreation(
+      CollectionEntity collection, String unlistedUrl) {
+    return afterWrite(collection, 0, unlistedUrl);
   }
 
-  public static CollectionSummaryView afterWrite(CollectionEntity collection, long count) {
-    return from(collection, count, List.of(), Curator.UNKNOWN, null, null);
+  public static CollectionSummaryView afterWrite(
+      CollectionEntity collection, long count, String unlistedUrl) {
+    return from(collection, count, List.of(), Curator.UNKNOWN, null, null, unlistedUrl);
   }
 
   public static CollectionSummaryView inList(
@@ -33,13 +36,14 @@ public record CollectionSummaryView(
       long count,
       List<String> preview,
       Curator curator,
-      Long connectionId) {
-    return from(collection, count, preview, curator, null, connectionId);
+      Long connectionId,
+      String unlistedUrl) {
+    return from(collection, count, preview, curator, null, connectionId, unlistedUrl);
   }
 
   public static CollectionSummaryView containingBlock(
       CollectionEntity collection, long count, Curator curator, Integer position) {
-    return from(collection, count, List.of(), curator, position, null);
+    return from(collection, count, List.of(), curator, position, null, null);
   }
 
   private static CollectionSummaryView from(
@@ -48,7 +52,8 @@ public record CollectionSummaryView(
       List<String> preview,
       Curator curator,
       Integer position,
-      Long connectionId) {
+      Long connectionId,
+      String unlistedUrl) {
     return new CollectionSummaryView(
         collection.getId(),
         collection.getTitle(),
@@ -62,7 +67,8 @@ public record CollectionSummaryView(
         curator.username(),
         curator.avatarUrl(),
         position,
-        connectionId);
+        connectionId,
+        unlistedUrl);
   }
 
   public record Curator(String username, String avatarUrl) {

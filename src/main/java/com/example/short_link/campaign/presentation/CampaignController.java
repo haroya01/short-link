@@ -49,9 +49,7 @@ public class CampaignController {
 
   @GetMapping
   public List<CampaignSummaryResponse> list(@AuthenticationPrincipal Long userId) {
-    return query.list(userId).stream()
-        .map(c -> CampaignSummaryResponse.from(c, query.batchCount(c.getId())))
-        .toList();
+    return query.summaries(userId).stream().map(CampaignSummaryResponse::from).toList();
   }
 
   @GetMapping("/{id}")

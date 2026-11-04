@@ -11,8 +11,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationListResult;
+import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationView;
 import com.example.short_link.notification.application.read.NotificationQueryService;
@@ -65,6 +67,89 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.items[0].commentId").value(nullValue()))
         .andExpect(jsonPath("$.items[0].highlightId").value(nullValue()))
         .andExpect(jsonPath("$.hasMore").value(false));
+  }
+
+  @Test
+  void listNamesEachActorAndTheEmojisAnAccountElsewhereDrawsInItsName() throws Exception {
+    NotificationActor ged =
+        new NotificationActor(
+            null,
+            "ged@m.example",
+            "https://files.m.example/ged.png",
+            "https://m.example/@ged",
+            42L,
+            "Ged :verified:",
+            List.of(new CustomEmoji("verified", "https://files.m.example/v.png")));
+    NotificationActor alice =
+        new NotificationActor(2L, "alice", "a.png", null, null, "앨리스", List.of());
+    NotificationView view =
+        new NotificationView(
+            5L,
+            NotificationType.NOTE_LIKE,
+            ged,
+            null,
+            null,
+            null,
+            new NotificationNoteRef(7L, "hi", null, null),
+            2,
+            List.of(ged, alice),
+            false,
+            Instant.parse("2026-06-07T00:00:00Z"));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(view), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].actorUsername").value("ged@m.example"))
+        .andExpect(jsonPath("$.items[0].actorDisplayName").value("Ged :verified:"))
+        .andExpect(jsonPath("$.items[0].actorEmojis[0].shortcode").value("verified"))
+        .andExpect(jsonPath("$.items[0].actorEmojis[0].url").value("https://files.m.example/v.png"))
+        .andExpect(jsonPath("$.items[0].actors[0].displayName").value("Ged :verified:"))
+        .andExpect(jsonPath("$.items[0].actors[0].emojis[0].shortcode").value("verified"))
+        .andExpect(jsonPath("$.items[0].actors[1].displayName").value("앨리스"))
+        .andExpect(jsonPath("$.items[0].actors[1].emojis").isEmpty());
+  }
+
+  @Test
+  void anActorWithoutANameOrAnyActorAtAllComesWithNullAndNoEmojis() throws Exception {
+    NotificationView named =
+        new NotificationView(
+            5L,
+            NotificationType.LIKE,
+            new NotificationActor(2L, "alice", null),
+            new NotificationPostRef(10L, "my-post", "Hi", null),
+            null,
+            null,
+            null,
+            1,
+            List.of(new NotificationActor(2L, "alice", null)),
+            false,
+            Instant.parse("2026-06-07T00:00:00Z"));
+    NotificationView nobody =
+        new NotificationView(
+            6L,
+            NotificationType.POST_FIRST_READER,
+            null,
+            new NotificationPostRef(10L, "my-post", "Hi", null),
+            null,
+            null,
+            null,
+            1,
+            List.of(),
+            false,
+            Instant.parse("2026-06-07T00:00:00Z"));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(named, nobody), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].actorDisplayName").value(nullValue()))
+        .andExpect(jsonPath("$.items[0].actorEmojis").isEmpty())
+        .andExpect(jsonPath("$.items[0].actors[0].displayName").value(nullValue()))
+        .andExpect(jsonPath("$.items[1].actorDisplayName").value(nullValue()))
+        .andExpect(jsonPath("$.items[1].actorEmojis").isEmpty());
   }
 
   @Test

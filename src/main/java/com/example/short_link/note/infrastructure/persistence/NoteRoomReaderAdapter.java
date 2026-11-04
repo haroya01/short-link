@@ -38,4 +38,14 @@ class NoteRoomReaderAdapter implements NoteRoomReader {
     }
     return names;
   }
+
+  @Override
+  public long latestNote(Long roomId) {
+    Object latest =
+        em.createNativeQuery(
+                "SELECT MAX(n.id) FROM note n WHERE n.room_id = :room AND " + NoteSql.notReply("n"))
+            .setParameter("room", roomId)
+            .getSingleResult();
+    return latest == null ? 0L : ((Number) latest).longValue();
+  }
 }

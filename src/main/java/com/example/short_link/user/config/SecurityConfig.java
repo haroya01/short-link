@@ -91,6 +91,7 @@ public class SecurityConfig {
             "X-Pow-Nonce",
             "X-Post-Key",
             "X-Post-Grant",
+            "X-Collection-Key",
             "X-Kurl-Device"));
     cors.setExposedHeaders(List.of("X-Request-Id", "Content-Disposition", "X-Content-Version"));
     cors.setAllowCredentials(true);
@@ -199,10 +200,13 @@ public class SecurityConfig {
                         GET,
                         "/api/v1/links/*/public-stats",
                         "/api/v1/links/*/stream",
-                        "/api/v1/users/me/clicks/stream")
+                        "/api/v1/users/me/clicks/stream",
+                        "/api/v1/live/notes/*/stream",
+                        "/api/v1/live/posts/*/comments/stream",
+                        "/api/v1/live/rooms/*/stream")
                     .permitAll()
-                    // CollectionQueryService.detail 이 isVisibleTo()로 비공개 컬렉션을 404로 감춘다. 단일 세그먼트만
-                    // 허용해 하위 connections 등의 쓰기 경로는 인증을 유지한다.
+                    // CollectionQueryService.detail 이 isVisibleTo()로 비공개·키 없는 링크 공개 컬렉션을 404로 감춘다.
+                    // 단일 세그먼트만 허용해 하위 connections 등의 쓰기 경로는 인증을 유지한다.
                     .requestMatchers(GET, "/api/v1/collections/*")
                     .permitAll()
                     // Controllers support a null viewer for public reads; mutations require a

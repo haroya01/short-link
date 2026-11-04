@@ -2,6 +2,8 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -19,6 +21,7 @@ import com.example.short_link.post.exception.PostException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +42,7 @@ public class DeletePostUseCase {
   private final SeriesItemRepository seriesItemRepository;
   private final ProfileCacheInvalidator cacheEviction;
   private final CollectionConnectionCleaner connectionCleaner;
+  private final ApplicationEventPublisher events;
 
   // 컬렉션 연결에는 FK가 없으므로 하이라이트 ID를 삭제 전에 읽어 연결도 제거한다.
   @Transactional
@@ -76,6 +80,7 @@ public class DeletePostUseCase {
     connectionCleaner.purgeForPost(post.getId());
     seriesItemRepository.deleteByRef(SeriesItemType.POST, post.getId());
     postRepository.delete(post);
+    events.publishEvent(new LiveRevoke.Closed(LiveTopic.post(post.getId())));
     // 마지막 공개 글을 삭제하면 프로필의 블로그 진입점도 사라져야 한다.
     cacheEviction.evictByUserId(post.getUserId());
   }

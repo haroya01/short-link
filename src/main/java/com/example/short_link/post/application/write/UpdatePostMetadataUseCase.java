@@ -3,6 +3,8 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.image.ImageVariantKeys;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -38,12 +40,12 @@ public class UpdatePostMetadataUseCase {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     if (cmd.access().any() && !cmd.changesContent()) {
       editGuard.checkAccessChange(post);
-      changeAccess(post, cmd.access());
+      changeAccess(post, cmd);
       return writeViews.fromSaved(postRepository.save(post));
     }
     editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
     if (cmd.access().any()) {
-      changeAccess(post, cmd.access());
+      changeAccess(post, cmd);
     }
 
     applySlug(post, cmd);
@@ -114,8 +116,9 @@ public class UpdatePostMetadataUseCase {
     }
   }
 
-  private void changeAccess(PostEntity post, PostAccessChange change) {
-    accessSettings.apply(post, change);
+  private void changeAccess(PostEntity post, UpdatePostMetadataCommand cmd) {
+    accessSettings.apply(post, cmd.access());
+    events.publishEvent(new LiveRevoke.Recheck(LiveTopic.post(cmd.postId())));
     if (post.isPublished()) {
       profileCache.evictByUserId(post.getUserId());
     }

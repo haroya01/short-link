@@ -1,6 +1,8 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -8,6 +10,7 @@ import com.example.short_link.post.exception.PostException;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,7 @@ public class TakeDownPostUseCase {
   private final PostRepository postRepository;
   private final ProfileCacheInvalidator cacheEviction;
   private final Clock clock;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public void takeDown(Long adminUserId, Long postId) {
@@ -27,6 +31,7 @@ public class TakeDownPostUseCase {
     boolean wasPublished = post.isPublished();
     post.takeDown(clock.instant());
     postRepository.save(post);
+    events.publishEvent(new LiveRevoke.Closed(LiveTopic.post(postId)));
     if (wasPublished) {
       cacheEviction.evictByUserId(post.getUserId());
     }

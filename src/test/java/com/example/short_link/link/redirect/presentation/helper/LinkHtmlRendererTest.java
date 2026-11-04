@@ -135,9 +135,29 @@ class LinkHtmlRendererTest {
   }
 
   @Test
-  void passwordPrompt_failed_addsShakeClass() {
-    assertThat(renderer.passwordPrompt(KO, CODE, true, null)).contains("card shake");
-    assertThat(renderer.passwordPrompt(KO, CODE, false, null)).doesNotContain("card shake");
+  void aWrongPasswordMarksOnlyTheFieldAndTiesTheErrorToIt() {
+    String failed = renderer.passwordPrompt(KO, CODE, true, null);
+    assertThat(failed).contains("<div class=\"row field miss\">");
+    assertThat(failed).contains("aria-invalid=\"true\" aria-describedby=\"err\"");
+    assertThat(failed).contains("<p class=\"err\" id=\"err\">비밀번호가 올바르지 않아요.</p>");
+    assertThat(failed).contains("<main class=\"still\">");
+
+    String fresh = renderer.passwordPrompt(KO, CODE, false, null);
+    assertThat(fresh).contains("<div class=\"row field\">");
+    assertThat(fresh)
+        .doesNotContain("field miss")
+        .doesNotContain("aria-invalid")
+        .doesNotContain("class=\"err\"");
+    assertThat(fresh).contains("<main>");
+  }
+
+  @Test
+  void thePasswordFieldIsLabelledAndSubmitsFromTheLine() {
+    String html = renderer.passwordPrompt(KO, CODE, false, null);
+    assertThat(html).contains("<label class=\"sr\" for=\"pw\">비밀번호</label>");
+    assertThat(html).contains("placeholder=\"비밀번호\"");
+    assertThat(html)
+        .contains("<button type=\"submit\">열기<span aria-hidden=\"true\">→</span></button></div>");
   }
 
   @Test
@@ -147,7 +167,33 @@ class LinkHtmlRendererTest {
     String body = new String(r.getBody());
     assertThat(body).contains("http-equiv=\"refresh\"");
     assertThat(body).contains("data-u=\"https://example.com/a?b=1&amp;c=2\"");
-    assertThat(body).contains("bigmark");
+    assertThat(body).contains("<span class=\"line\"></span>");
+    assertThat(body).contains("<main class=\"still\">");
+  }
+
+  @Test
+  void reducedMotionStopsEveryMotionAndLeavesTheLineDrawn() {
+    String html = renderer.unlockedPage(KO, "https://example.com");
+    assertThat(html)
+        .contains(
+            "@media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;"
+                + "transition:none!important}}");
+    String line = html.substring(html.indexOf(".line{"), html.indexOf("}", html.indexOf(".line{")));
+    assertThat(line).doesNotContain("scaleX(0)").contains("backwards");
+  }
+
+  @Test
+  void greenIsOnlyTheMarkAndTheLineThatOpensALink() {
+    String html = renderer.unlockedPage(KO, "https://example.com");
+    String style = html.substring(html.indexOf("<style>") + 7, html.indexOf("</style>"));
+    List<String> green =
+        java.util.regex.Pattern.compile("([^{}]+)\\{[^{}]*var\\(--green\\)[^{}]*\\}")
+            .matcher(style)
+            .results()
+            .map(m -> m.group(1).trim())
+            .toList();
+    assertThat(green).containsExactlyInAnyOrder(".mark", ".line");
+    assertThat(style).contains(".splash .line{background:var(--muted)");
   }
 
   @Test
@@ -205,7 +251,7 @@ class LinkHtmlRendererTest {
     assertThat(html).contains("<html lang=\"ja\">");
     assertThat(html).contains("パスワードが必要なリンク");
     assertThat(html).contains("パスワードが正しくありません");
-    assertThat(html).contains(">開く</button>");
+    assertThat(html).contains(">開く<span aria-hidden=\"true\">→</span></button>");
     assertThat(html).doesNotContain("비밀번호");
   }
 
@@ -244,7 +290,8 @@ class LinkHtmlRendererTest {
     assertThat(body).contains("<a class=\"btn\" href=\"https://kurl.me/app1\">앱 받기</a>");
     assertThat(body).contains("data-u=\"https://dest.example.com/?a=1&amp;b=2\"");
     assertThat(body).contains("<span id=\"n\">2</span>초 후 자동으로 이동해요");
-    assertThat(body).contains("animation-duration:2s");
+    assertThat(body).contains("<span class=\"line\" style=\"animation-duration:2s\"></span>");
+    assertThat(body).contains("document.querySelector('.line')");
     assertThat(body).doesNotContain("class=\"stay\"");
   }
 

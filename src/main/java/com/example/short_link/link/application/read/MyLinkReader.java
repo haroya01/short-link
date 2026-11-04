@@ -102,7 +102,9 @@ public class MyLinkReader {
                     sparkByLinkId.getOrDefault(link.getId(), zeroes()),
                     link.getNote(),
                     zone.getId(),
-                    humans.getOrDefault(link.getId(), 0L)))
+                    humans.getOrDefault(link.getId(), 0L),
+                    link.getOgTitle(),
+                    link.getOgTitleOverride()))
         .toList();
   }
 

@@ -2,13 +2,12 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.common.post.PostAudience;
+import com.example.short_link.common.security.UnlistedKeys;
 import com.example.short_link.post.application.access.PostPasswords;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRoomReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Component;
 public class PostAccessSettings {
 
   private static final int MAX_BLOCKED_COUNTRIES = 85;
-  private static final SecureRandom RANDOM = new SecureRandom();
 
   private final PostPasswords passwords;
   private final PostRoomReader rooms;
@@ -45,7 +43,7 @@ public class PostAccessSettings {
       post.blockCountries(blocked);
     }
     if (placing) {
-      post.changeAudience(audience, change.roomId(), newUnlistedKey());
+      post.changeAudience(audience, change.roomId(), UnlistedKeys.next());
     }
   }
 
@@ -79,7 +77,7 @@ public class PostAccessSettings {
   }
 
   public void rotateUnlistedKey(PostEntity post) {
-    post.rotateUnlistedKey(newUnlistedKey());
+    post.rotateUnlistedKey(UnlistedKeys.next());
   }
 
   private static PostAudience audience(String requested, PostAudience current) {
@@ -99,11 +97,5 @@ public class PostAccessSettings {
           .with("invalid", invalid);
     }
     return requested.stream().map(code -> code.trim().toUpperCase(Locale.ROOT)).toList();
-  }
-
-  private static String newUnlistedKey() {
-    byte[] key = new byte[24];
-    RANDOM.nextBytes(key);
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(key);
   }
 }

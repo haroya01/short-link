@@ -31,16 +31,20 @@ public interface JpaAdminAnalyticsRepository
   @Query(
       value =
           "SELECT YEARWEEK(u.created_at, 3) AS cohortKey, "
-              + "YEARWEEK(c.at, 3) AS activityKey, "
+              + "YEARWEEK(c.at_utc, 3) AS activityKey, "
               + "COUNT(DISTINCT u.id) AS activeUsers "
               + "FROM users u JOIN link l ON l.user_id = u.id "
-              + "JOIN (SELECT link_id, clicked_at AS at, clicked_at AS last_at FROM click_event "
-              + "WHERE is_bot = 0 AND clicked_at >= "
+              + "JOIN (SELECT link_id, "
+              + "TIMESTAMPADD(SECOND, UNIX_TIMESTAMP(clicked_at), '1970-01-01') AS at_utc, "
+              + "TIMESTAMPADD(SECOND, UNIX_TIMESTAMP(clicked_at), '1970-01-01') AS last_utc "
+              + "FROM click_event WHERE is_bot = 0 AND clicked_at >= "
               + ClickRollup.ROLLED_UNTIL
-              + " UNION ALL SELECT link_id, hour_start, last_human_at FROM click_hourly "
-              + "WHERE humans > 0) c ON c.link_id = l.id "
+              + " UNION ALL SELECT link_id, "
+              + "TIMESTAMPADD(SECOND, UNIX_TIMESTAMP(hour_start), '1970-01-01'), "
+              + "TIMESTAMPADD(SECOND, UNIX_TIMESTAMP(last_human_at), '1970-01-01') "
+              + "FROM click_hourly WHERE humans > 0) c ON c.link_id = l.id "
               + "WHERE u.created_at >= :since "
-              + "AND c.last_at >= u.created_at "
+              + "AND c.last_utc >= u.created_at "
               + "GROUP BY cohortKey, activityKey "
               + "ORDER BY cohortKey, activityKey",
       nativeQuery = true)
@@ -50,11 +54,15 @@ public interface JpaAdminAnalyticsRepository
   @Query(
       value =
           "SELECT day, CAST(SUM(n) AS SIGNED) AS clicks, COUNT(DISTINCT link_id) AS links "
-              + "FROM (SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, "
+              + "FROM (SELECT "
+              + ClickRollup.AGE_DAY
+              + " AS day, "
               + "l.id AS link_id, COUNT(*) AS n FROM click_event c JOIN link l ON l.id = c.link_id "
               + "WHERE c.is_bot = 0 AND c.clicked_at >= "
               + ClickRollup.ROLLED_UNTIL
-              + " AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+              + " AND "
+              + ClickRollup.AGE_DAY
+              + " BETWEEN 0 AND :maxDay "
               + "GROUP BY day, l.id UNION ALL "
               + "SELECT h.age_day, h.link_id, SUM(h.humans) FROM click_hourly h "
               + "JOIN link l ON l.id = h.link_id WHERE h.humans > 0 "

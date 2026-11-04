@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,9 @@ class ClaimAnonymousLinksUseCaseTest {
   @Autowired private CreateLinkUseCase creationService;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
+
+  @Value("${short-link.link-quota.authenticated}")
+  private long quotaPerUser;
 
   @Test
   void claimsAnonymousLinkByToken() {
@@ -87,6 +91,30 @@ class ClaimAnonymousLinksUseCaseTest {
     LinkEntity afterClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
     assertThat(afterClaim.getUserId()).isEqualTo(user.getId());
     assertThat(afterClaim.getExpiresAt()).isNull();
+  }
+
+  @Test
+  void claimsNoMoreThanTheAccountsLinkQuotaLeaves() {
+    UserEntity user = userRepository.save(new UserEntity("c6@example.com", "google", "g-c6"));
+    for (int i = 1; i < quotaPerUser; i++) {
+      linkRepository.save(
+          new LinkEntity("https://example.com/own" + i, "qo" + i + "x", user.getId(), null));
+    }
+    String first =
+        creationService
+            .execute(CreateLinkCommand.of("https://example.com/claim6a", null, null, null))
+            .claimToken();
+    String second =
+        creationService
+            .execute(CreateLinkCommand.of("https://example.com/claim6b", null, null, null))
+            .claimToken();
+
+    ClaimResult result =
+        useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(first, second)));
+
+    assertThat(result.claimed()).isEqualTo(1);
+    assertThat(result.skipped()).isEqualTo(1);
+    assertThat(linkRepository.countByUserId(user.getId())).isEqualTo(quotaPerUser);
   }
 
   @Test

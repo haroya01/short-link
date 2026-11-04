@@ -15,65 +15,45 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
 
-  @Query(
-      value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(humans + bots), 0) FROM click_hourly "
-              + "WHERE link_id = :linkId)",
-      nativeQuery = true)
-  long countByLinkId(@Param("linkId") Long linkId);
+  String RECENT = " AND clicked_at >= " + ClickRollup.AGGREGATED_UNTIL;
+
+  String SINCE_BY_LINK =
+      "JSON_TABLE(:sinceByLink, '$[*]' COLUMNS ("
+          + "link_id BIGINT PATH '$[0]', since DECIMAL(20,9) PATH '$[1]')) s";
 
   @Query(
       value =
           "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 0"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(humans), 0) FROM click_hourly WHERE link_id = :linkId)",
+              + RECENT
+              + ") + (SELECT COALESCE(SUM(humans), 0) FROM click_hourly WHERE link_id = :linkId)"
+              + " + (SELECT COALESCE(SUM(humans), 0) FROM click_recent_quarter "
+              + "WHERE link_id = :linkId)",
       nativeQuery = true)
   long countHumanByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       value =
           "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 1"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(bots), 0) FROM click_hourly WHERE link_id = :linkId)",
+              + RECENT
+              + ") + (SELECT COALESCE(SUM(bots), 0) FROM click_hourly WHERE link_id = :linkId)"
+              + " + (SELECT COALESCE(SUM(bots), 0) FROM click_recent_quarter "
+              + "WHERE link_id = :linkId)",
       nativeQuery = true)
   long countBotByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 0 "
-              + "AND referrer IS NULL"
+          "SELECT CASE WHEN s.rolledUp THEN NULL ELSE (SELECT COUNT(DISTINCT visitor_hash) "
+              + "FROM click_event"
+              + ClickRollup.VISITOR_INDEX
+              + " WHERE link_id = :linkId AND is_bot = 0 "
+              + "AND visitor_hash IS NOT NULL"
               + RAW
-              + ") + (SELECT COALESCE(SUM(clicks), 0) FROM click_daily_dim "
-              + "WHERE link_id = :linkId AND dim = "
-              + ClickRollup.REFERRER
-              + " AND is_bot = 0 AND value IS NULL)",
-      nativeQuery = true)
-  long countDirectByLinkId(@Param("linkId") Long linkId);
-
-  @Query(
-      value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 0 "
-              + "AND source_channel LIKE 'profile-%'"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(clicks), 0) FROM click_daily_dim "
-              + "WHERE link_id = :linkId AND dim = "
-              + ClickRollup.SOURCE_CHANNEL
-              + " AND is_bot = 0 AND value LIKE 'profile-%')",
-      nativeQuery = true)
-  long countProfileChannelByLinkId(@Param("linkId") Long linkId);
-
-  @Query(
-      value =
-          "SELECT COUNT(DISTINCT visitor_hash) AS recent, "
-              + "EXISTS (SELECT 1 FROM click_daily_visitors v WHERE v.link_id = :linkId) "
+              + ") END AS recent, s.rolledUp, s.rolledUntil "
+              + "FROM (SELECT EXISTS (SELECT 1 FROM click_daily_visitors v WHERE v.link_id = :linkId) "
               + "AS rolledUp, UNIX_TIMESTAMP("
               + ClickRollup.ROLLED_UNTIL
-              + ") AS rolledUntil "
-              + "FROM click_event WHERE link_id = :linkId AND is_bot = 0 "
-              + "AND visitor_hash IS NOT NULL"
-              + RAW,
+              + ") AS rolledUntil) s",
       nativeQuery = true)
   RecentVisitorsRow countRecentVisitors(@Param("linkId") Long linkId);
 
@@ -84,7 +64,9 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   @Query(
       value =
-          "SELECT DISTINCT visitor_hash FROM click_event WHERE link_id = :linkId AND is_bot = 0 "
+          "SELECT DISTINCT visitor_hash FROM click_event"
+              + ClickRollup.VISITOR_INDEX
+              + " WHERE link_id = :linkId AND is_bot = 0 "
               + "AND visitor_hash IS NOT NULL"
               + RAW,
       nativeQuery = true)
@@ -94,8 +76,9 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
       value =
           "SELECT UNIX_TIMESTAMP(COALESCE("
               + "(SELECT MIN(first_human_at) FROM click_hourly WHERE link_id = :linkId), "
+              + "(SELECT MIN(first_human_at) FROM click_recent_quarter WHERE link_id = :linkId), "
               + "(SELECT MIN(clicked_at) FROM click_event WHERE link_id = :linkId AND is_bot = 0"
-              + RAW
+              + RECENT
               + ")))",
       nativeQuery = true)
   Long findFirstClickEpoch(@Param("linkId") Long linkId);
@@ -104,22 +87,11 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
       value =
           "SELECT UNIX_TIMESTAMP(COALESCE("
               + "(SELECT MAX(clicked_at) FROM click_event WHERE link_id = :linkId AND is_bot = 0"
-              + RAW
-              + "), (SELECT MAX(last_human_at) FROM click_hourly WHERE link_id = :linkId)))",
+              + RECENT
+              + "), (SELECT MAX(last_human_at) FROM click_recent_quarter WHERE link_id = :linkId), "
+              + "(SELECT MAX(last_human_at) FROM click_hourly WHERE link_id = :linkId)))",
       nativeQuery = true)
   Long findLastClickEpoch(@Param("linkId") Long linkId);
-
-  @Query(
-      value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId AND is_bot = 1 "
-              + "AND bot_name LIKE 'preview:%'"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(clicks), 0) FROM click_daily_dim "
-              + "WHERE link_id = :linkId AND dim = "
-              + ClickRollup.BOT_NAME
-              + " AND is_bot = 1 AND value LIKE 'preview:%')",
-      nativeQuery = true)
-  long countPreviewByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
@@ -128,15 +100,45 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   @Query(
       value =
-          "SELECT (SELECT COUNT(*) FROM click_event WHERE link_id = :linkId "
-              + "AND bot_name LIKE 'datacenter:%'"
-              + RAW
-              + ") + (SELECT COALESCE(SUM(clicks), 0) FROM click_daily_dim "
-              + "WHERE link_id = :linkId AND dim = "
+          "SELECT CAST(r.direct + d.direct AS SIGNED) AS direct, "
+              + "CAST(r.profile + d.profile AS SIGNED) AS profile, "
+              + "CAST(r.preview + d.preview AS SIGNED) AS preview, "
+              + "CAST(r.datacenter + d.datacenter AS SIGNED) AS datacenter FROM ("
+              + "SELECT COALESCE(SUM(is_bot = 0 AND referrer IS NULL), 0) AS direct, "
+              + "COALESCE(SUM(is_bot = 0 AND source_channel LIKE 'profile-%'), 0) AS profile, "
+              + "COALESCE(SUM(is_bot = 1 AND bot_name LIKE 'preview:%'), 0) AS preview, "
+              + "COALESCE(SUM(bot_name LIKE 'datacenter:%'), 0) AS datacenter "
+              + "FROM click_event WHERE link_id = :linkId"
+              + RECENT
+              + ") r, (SELECT COALESCE(SUM(CASE WHEN dim = "
+              + ClickRollup.REFERRER
+              + " AND is_bot = 0 AND value IS NULL THEN clicks END), 0) AS direct, "
+              + "COALESCE(SUM(CASE WHEN dim = "
+              + ClickRollup.SOURCE_CHANNEL
+              + " AND is_bot = 0 AND value LIKE 'profile-%' THEN clicks END), 0) AS profile, "
+              + "COALESCE(SUM(CASE WHEN dim = "
               + ClickRollup.BOT_NAME
-              + " AND value LIKE 'datacenter:%')",
+              + " AND is_bot = 1 AND value LIKE 'preview:%' THEN clicks END), 0) AS preview, "
+              + "COALESCE(SUM(CASE WHEN dim = "
+              + ClickRollup.BOT_NAME
+              + " AND value LIKE 'datacenter:%' THEN clicks END), 0) AS datacenter "
+              + "FROM (SELECT dim, is_bot, value, clicks FROM click_daily_dim WHERE link_id = :linkId "
+              + "AND dim IN ("
+              + ClickRollup.REFERRER
+              + ", "
+              + ClickRollup.SOURCE_CHANNEL
+              + ", "
+              + ClickRollup.BOT_NAME
+              + ") UNION ALL SELECT dim, is_bot, value, clicks FROM click_recent_dim "
+              + "WHERE link_id = :linkId AND dim IN ("
+              + ClickRollup.REFERRER
+              + ", "
+              + ClickRollup.SOURCE_CHANNEL
+              + ", "
+              + ClickRollup.BOT_NAME
+              + ")) x) d",
       nativeQuery = true)
-  long countDatacenterClicks(@Param("linkId") Long linkId);
+  ClickFlagsRow countFlags(@Param("linkId") Long linkId);
 
   @Query(
       value =
@@ -178,6 +180,22 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
   @Query(
       value =
           "SELECT link_id AS linkId, CAST(SUM(n) AS SIGNED) AS count FROM ("
+              + "SELECT c.link_id, COUNT(*) AS n FROM "
+              + SINCE_BY_LINK
+              + " JOIN click_event c ON c.link_id = s.link_id "
+              + "AND c.is_bot = 0 AND c.clicked_at >= FROM_UNIXTIME(s.since)"
+              + RAW
+              + " GROUP BY c.link_id UNION ALL "
+              + "SELECT h.link_id, SUM(h.humans) FROM "
+              + SINCE_BY_LINK
+              + " JOIN click_hourly h ON h.link_id = s.link_id "
+              + "AND h.last_human_at >= FROM_UNIXTIME(s.since) GROUP BY h.link_id) u GROUP BY link_id",
+      nativeQuery = true)
+  List<LinkClickCount> countsByLinkIdsEachSince(@Param("sinceByLink") String sinceByLink);
+
+  @Query(
+      value =
+          "SELECT link_id AS linkId, CAST(SUM(n) AS SIGNED) AS count FROM ("
               + "SELECT link_id, COUNT(*) AS n FROM click_event WHERE link_id IN (:ids) "
               + "AND is_bot = 0 AND clicked_at < FROM_UNIXTIME(:before)"
               + RAW
@@ -199,6 +217,16 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
               + "AND first_human_at < FROM_UNIXTIME(:before))))",
       nativeQuery = true)
   Long findLastClickBeforeEpoch(@Param("ids") List<Long> ids, @Param("before") BigDecimal before);
+
+  interface ClickFlagsRow {
+    long getDirect();
+
+    long getProfile();
+
+    long getPreview();
+
+    long getDatacenter();
+  }
 
   interface RecentVisitorsRow {
     Long getRecent();

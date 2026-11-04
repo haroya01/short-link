@@ -69,7 +69,7 @@ class EventControllerTest {
   }
 
   private EventView view() {
-    return EventView.from(entity(), List.of(), List.of(), null);
+    return EventView.from(entity(), List.of(), List.of(), null, Instant.now());
   }
 
   @Test

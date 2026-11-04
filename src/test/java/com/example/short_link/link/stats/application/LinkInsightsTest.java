@@ -2,22 +2,22 @@ package com.example.short_link.link.stats.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.common.analytics.HeatmapCell;
 import com.example.short_link.link.application.dto.LinkStats;
-import com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
 class LinkInsightsTest {
-
-  private static final LocalDate REPORT_DATE = LocalDate.of(2026, 9, 12);
 
   private static MessageSource messageSource() {
     var ms = new ResourceBundleMessageSource();
@@ -29,453 +29,396 @@ class LinkInsightsTest {
 
   private final LinkInsights insights = new LinkInsights(messageSource());
 
-  private static HostFirstSeenRow firstSeen(String host, Long epoch) {
-    return new HostFirstSeenRow() {
-      public String getHost() {
-        return host;
-      }
-
-      public Long getFirstSeenEpoch() {
-        return epoch;
-      }
-    };
-  }
-
-  private static LinkInsights.ReportFacts.ReportFactsBuilder generalFacts(long total) {
-    return LinkInsights.ReportFacts.builder()
-        .reportDate(REPORT_DATE)
-        .total(total)
-        .heatmap(List.of())
-        .channels(List.of())
-        .countries(List.of())
-        .dailyClicks(List.of());
-  }
-
-  private static LinkInsights.ReportFacts facts(long total, long human) {
-    return LinkInsights.ReportFacts.builder()
-        .reportDate(REPORT_DATE)
-        .total(total)
-        .human(human)
-        .heatmap(List.of())
-        .channels(List.of())
-        .countries(List.of())
-        .dailyClicks(List.of())
-        .clientApps(List.of(new LinkStats.ClientAppClick("kakaotalk", 3)))
-        .channelDepth(List.of(new LinkStats.ChannelDepth("loyal.example", 8, null, 5, 0.5)))
-        .build();
-  }
-
-  @Test
-  void reportBelowGeneralSampleStillEvaluatesLoyaltyWithoutReadingChannelHistory() {
-    List<LinkStats.Insight> report =
-        insights.computeReport(
-            facts(9, 9),
-            () -> {
-              throw new AssertionError("small samples must not query channel history");
-            });
-
-    assertThat(report).extracting(LinkStats.Insight::type).containsExactly("CHANNEL_LOYALTY");
-  }
-
-  @Test
-  void reportKeepsChannelJumpThenInAppThenLoyaltyOrder() {
-    List<LinkStats.Insight> report =
-        insights.computeReport(
-            facts(10, 10),
-            () ->
-                List.of(
-                    firstSeen("origin.example", 0L),
-                    firstSeen("early.example", 3599L),
-                    firstSeen("jump.example", 3600L)));
-
-    assertThat(report)
-        .extracting(LinkStats.Insight::type)
-        .containsExactly("CHANNEL_JUMP", "IN_APP_BROWSER", "CHANNEL_LOYALTY");
-    assertThat(report.getFirst().data())
-        .containsEntry("jumpedTo", "jump.example")
-        .containsEntry("gapHours", 1L);
-  }
-
-  @Test
-  void channelJumpKeepsAnUnknownOriginFromProducingAnInsight() {
-    assertThat(insights.channelJump(List.of(firstSeen(null, 0L), firstSeen("later", 7200L))))
-        .isEmpty();
-  }
-
   @AfterEach
   void resetLocale() {
     LocaleContextHolder.resetLocaleContext();
   }
 
-  @Test
-  void messageLocalizesByRequestLocale() {
-    var heatmap = List.of(new HeatmapCell("TUESDAY", 21, 30L));
+  private static LinkInsights.ReportFacts.ReportFactsBuilder stats() {
+    return LinkInsights.ReportFacts.builder()
+        .total(100)
+        .human(90)
+        .bot(10)
+        .velocity(new LinkStats.Velocity(0, 0, 0));
+  }
 
-    LocaleContextHolder.setLocale(Locale.ENGLISH);
-    var en =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of).stream()
-            .filter(i -> i.type().equals("PEAK_HOUR"))
-            .findFirst()
-            .orElseThrow();
-    assertThat(en.message()).contains("Peak time").contains("Tuesday");
+  private static LinkInsights.ReportFacts.ReportFactsBuilder realLinkStats() {
+    return LinkInsights.ReportFacts.builder()
+        .total(1309)
+        .human(1125)
+        .bot(184)
+        .velocity(new LinkStats.Velocity(0, 0, 0))
+        .returnRate(new LinkStats.ReturnRate(300, 60, 60.0 / 360))
+        .referrerHosts(
+            List.of(
+                new LinkStats.ReferrerHostClick("instagram.com", 383),
+                new LinkStats.ReferrerHostClick("pf.kakao.com", 236),
+                new LinkStats.ReferrerHostClick("haru.notion.site", 146),
+                new LinkStats.ReferrerHostClick("x.com", 101),
+                new LinkStats.ReferrerHostClick("blog.naver.com", 68)))
+        .devices(
+            List.of(
+                new LinkStats.DeviceClick("mobile", 877),
+                new LinkStats.DeviceClick("desktop", 203),
+                new LinkStats.DeviceClick("tablet", 45)))
+        .clientApps(
+            List.of(
+                new LinkStats.ClientAppClick("kakaotalk", 191),
+                new LinkStats.ClientAppClick("instagram", 101),
+                new LinkStats.ClientAppClick("naver", 34),
+                new LinkStats.ClientAppClick("line", 23)))
+        .countries(
+            List.of(
+                new LinkStats.CountryClick("KR", 810),
+                new LinkStats.CountryClick("JP", 214),
+                new LinkStats.CountryClick("unknown", 101)))
+        .rawRetentionDays(90)
+        .rawSince(Instant.parse("2026-08-04T00:00:00Z"));
+  }
 
-    LocaleContextHolder.setLocale(Locale.KOREAN);
-    var ko =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of).stream()
-            .filter(i -> i.type().equals("PEAK_HOUR"))
-            .findFirst()
-            .orElseThrow();
-    assertThat(ko.message()).contains("피크 시간").contains("화요일");
+  private List<LinkStats.Insight> journal(LinkInsights.ReportFacts.ReportFactsBuilder facts) {
+    return insights.computeReport(facts.build());
+  }
 
-    LocaleContextHolder.setLocale(Locale.JAPANESE);
-    var ja =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of).stream()
-            .filter(i -> i.type().equals("PEAK_HOUR"))
-            .findFirst()
-            .orElseThrow();
-    assertThat(ja.message()).contains("ピーク時間").contains("火曜日");
+  private Optional<LinkStats.Insight> entry(
+      String code, LinkInsights.ReportFacts.ReportFactsBuilder facts) {
+    return journal(facts).stream().filter(i -> i.code().equals(code)).findFirst();
+  }
+
+  private static List<LinkStats.DailyClick> days(String month, long... counts) {
+    return IntStream.range(0, counts.length)
+        .mapToObj(
+            i ->
+                new LinkStats.DailyClick(
+                    LocalDate.parse("2026-" + month + "-01").plusDays(i), counts[i]))
+        .toList();
+  }
+
+  private static LinkStats.ChannelDepth depth(String host, long count, long returning, double r) {
+    return new LinkStats.ChannelDepth(host, count, null, returning, r);
   }
 
   @Test
-  void returnsEmptyWhenTotalBelowThreshold() {
-    List<LinkStats.Insight> result = insights.computeReport(generalFacts(5).build(), List::of);
-    assertThat(result).isEmpty();
+  void noClicksMeansNoSentences() {
+    assertThat(journal(stats().total(0))).isEmpty();
   }
 
   @Test
-  void detectsBotRatioWarning() {
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).bot(50).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).contains("BOT_RATIO_HIGH");
-    LinkStats.Insight bot =
-        result.stream().filter(i -> i.type().equals("BOT_RATIO_HIGH")).findFirst().orElseThrow();
-    assertThat(bot.severity()).isEqualTo("warning");
+  void rulesBelowTheirGuardStaySilent() {
+    List<LinkStats.Insight> entries =
+        journal(
+            stats()
+                .bot(2)
+                .human(98)
+                .referrerHosts(
+                    List.of(
+                        new LinkStats.ReferrerHostClick("a.com", 10),
+                        new LinkStats.ReferrerHostClick("b.com", 9),
+                        new LinkStats.ReferrerHostClick("c.com", 8),
+                        new LinkStats.ReferrerHostClick("d.com", 8),
+                        new LinkStats.ReferrerHostClick("e.com", 8))));
+
+    assertThat(entries).extracting(LinkStats.Insight::code).doesNotContain("topSource");
+    assertThat(entries).noneMatch(i -> i.code().startsWith("bot"));
   }
 
   @Test
-  void detectsTopChannelWhenAboveThreshold() {
-    var channels =
-        List.of(
-            new LinkStats.ChannelClick("social", 80L), new LinkStats.ChannelClick("direct", 20L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).channels(channels).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).contains("TOP_CHANNEL");
+  void trendNeedsThePreviousSevenDays() {
+    long[] flat = IntStream.range(0, 14).mapToLong(i -> i < 7 ? 0 : 10).toArray();
+
+    assertThat(entry("trendUp", stats().dailyClicks(days("07", flat)))).isEmpty();
   }
 
   @Test
-  void detectsCountryConcentration() {
-    var countries =
-        List.of(new LinkStats.CountryClick("KR", 90L), new LinkStats.CountryClick("US", 10L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).countries(countries).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).contains("COUNTRY_CONCENTRATION");
+  void sortsByImportanceAndKeepsFive() {
+    long[] counts = IntStream.range(0, 14).mapToLong(i -> i == 13 ? 50 : 10).toArray();
+    List<LinkStats.Insight> entries =
+        journal(
+            stats()
+                .velocity(new LinkStats.Velocity(0, 0, 2.1))
+                .peakHour(21)
+                .timeToFirstClickMinutes(5L)
+                .bot(25)
+                .human(75)
+                .returnRate(new LinkStats.ReturnRate(60, 40, 0.4))
+                .dailyClicks(days("07", counts))
+                .referrerHosts(
+                    List.of(
+                        new LinkStats.ReferrerHostClick("x.com", 80),
+                        new LinkStats.ReferrerHostClick("b.com", 20)))
+                .countries(
+                    List.of(
+                        new LinkStats.CountryClick("KR", 90), new LinkStats.CountryClick("JP", 10)))
+                .devices(
+                    List.of(
+                        new LinkStats.DeviceClick("Mobile", 80),
+                        new LinkStats.DeviceClick("Desktop", 20))));
+
+    assertThat(entries).hasSize(5);
+    assertThat(entries)
+        .extracting(LinkStats.Insight::code)
+        .containsExactly("velocity", "trendUp", "peakDay", "topSource", "botHigh");
+    assertThat(entries.getFirst().params()).containsEntry("x", 2.1);
   }
 
   @Test
-  void detectsPeakHour() {
-    var heatmap = List.of(new HeatmapCell("MONDAY", 10, 5L), new HeatmapCell("TUESDAY", 21, 30L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
-    var peak = result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
-    assertThat(peak.data()).containsEntry("dayOfWeek", "TUESDAY").containsEntry("hour", 21);
-  }
-
-  @Test
-  void detectsFastDecay() {
-    var lifecycle =
-        new LinkStats.Lifecycle(
-            List.of(new LinkStats.DayClick(0, 90L), new LinkStats.DayClick(1, 10L)), 0);
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).lifecycle(lifecycle).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).contains("FAST_DECAY");
-  }
-
-  @Test
-  void detectsWeekOverWeekGrowth() {
-    LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 14; i++) {
-      daily.add(new LinkStats.DailyClick(base.plusDays(i), i < 7 ? 5L : 10L));
-    }
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).contains("WEEK_OVER_WEEK");
-  }
-
-  @Test
-  void weekOverWeekDeclineEmitsWarning() {
-    LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 14; i++) {
-      daily.add(new LinkStats.DailyClick(base.plusDays(i), i < 7 ? 20L : 5L));
-    }
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(200).dailyClicks(daily).build(), List::of);
-    var wow =
-        result.stream().filter(i -> i.type().equals("WEEK_OVER_WEEK")).findFirst().orElseThrow();
-    assertThat(wow.severity()).isEqualTo("warning");
-  }
-
-  @Test
-  void weekOverWeekSkippedWhenPrevWeekTooSmall() {
-    LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 14; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L));
-    daily.set(13, new LinkStats.DailyClick(base.plusDays(13), 50L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("WEEK_OVER_WEEK");
-  }
-
-  @Test
-  void detectsVisitorMix() {
-    var rr = new LinkStats.ReturnRate(7, 3, 0.3);
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).returnRate(rr).build(), List::of);
-    var mix = result.stream().filter(i -> i.type().equals("VISITOR_MIX")).findFirst().orElseThrow();
-    assertThat(mix.data()).containsKey("newShare").containsKey("returningShare");
-  }
-
-  @Test
-  void visitorMixSkippedWhenTooFewVisitors() {
-    var rr = new LinkStats.ReturnRate(2, 1, 0.33);
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).returnRate(rr).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("VISITOR_MIX");
-  }
-
-  @Test
-  void peakHourSkippedWhenAllCellsTooLow() {
-    var heatmap = List.of(new HeatmapCell("MONDAY", 10, 1L), new HeatmapCell("TUESDAY", 21, 1L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("PEAK_HOUR");
-  }
-
-  @Test
-  void fastDecaySkippedWhenFirstWeekHasNoClicks() {
-    var lifecycle = new LinkStats.Lifecycle(List.of(new LinkStats.DayClick(10, 50L)), null);
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).lifecycle(lifecycle).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("FAST_DECAY");
-  }
-
-  @Test
-  void unknownDayOfWeekFallsBackInPeakHour() {
-    var heatmap = List.of(new HeatmapCell("UNKNOWN", 5, 30L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
-    var peak = result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
-    assertThat(peak.message()).contains("UNKNOWN");
-  }
-
-  @Test
-  void topChannelSkippedWhenBelowThreshold() {
-    var channels =
-        List.of(
-            new LinkStats.ChannelClick("social", 30L),
-            new LinkStats.ChannelClick("direct", 30L),
-            new LinkStats.ChannelClick("search", 40L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).channels(channels).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("TOP_CHANNEL");
-  }
-
-  @Test
-  void countryConcentrationSkippedWhenBelowThreshold() {
-    var countries =
-        List.of(new LinkStats.CountryClick("KR", 50L), new LinkStats.CountryClick("US", 50L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).countries(countries).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("COUNTRY_CONCENTRATION");
-  }
-
-  @Test
-  void peakHourCoversAllKoreanWeekdayLabels() {
-    for (String dow : List.of("WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")) {
-      var heatmap = List.of(new HeatmapCell(dow, 20, 30L));
-      List<LinkStats.Insight> result =
-          insights.computeReport(generalFacts(100).heatmap(heatmap).build(), List::of);
-      var peak =
-          result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
-      assertThat(peak.data()).containsEntry("dayOfWeek", dow);
-    }
-  }
-
-  @Test
-  void detectsDarkSocialWhenDirectShareHigh() {
-    var channels =
-        List.of(
-            new LinkStats.ChannelClick("direct", 40L), new LinkStats.ChannelClick("social", 60L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).channels(channels).build(), List::of);
-    var ds = result.stream().filter(i -> i.type().equals("DARK_SOCIAL")).findFirst().orElseThrow();
-    assertThat(ds.severity()).isEqualTo("info");
-    assertThat(ds.data()).containsKey("share").containsEntry("directClicks", 40L);
-  }
-
-  @Test
-  void darkSocialSkippedWhenDirectShareLow() {
-    var channels =
-        List.of(
-            new LinkStats.ChannelClick("direct", 20L), new LinkStats.ChannelClick("social", 80L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).channels(channels).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DARK_SOCIAL");
-  }
-
-  @Test
-  void detectsSecondWindAfterDormancy() {
-    LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 7; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L));
-    for (int i = 7; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 2L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    var sw = result.stream().filter(i -> i.type().equals("SECOND_WIND")).findFirst().orElseThrow();
-    assertThat(sw.severity()).isEqualTo("info");
-  }
-
-  @Test
-  void secondWindSkippedWhenSteady() {
-    LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 5L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("SECOND_WIND");
-  }
-
-  @Test
-  void detectsDormancyWhenLongIdle() {
-    var daily = List.of(new LinkStats.DailyClick(REPORT_DATE.minusDays(12), 5L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    var dm = result.stream().filter(i -> i.type().equals("DORMANT")).findFirst().orElseThrow();
-    assertThat(dm.severity()).isEqualTo("warning");
-    assertThat(dm.data()).containsKey("daysIdle");
-  }
-
-  @Test
-  void dormancyUsesTheReportsLocalDateAtTheSevenDayBoundary() {
-    var daily = List.of(new LinkStats.DailyClick(REPORT_DATE.minusDays(6), 5L));
-
-    var beforeMidnight =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    var afterMidnight =
-        insights.computeReport(
-            generalFacts(100).dailyClicks(daily).reportDate(REPORT_DATE.plusDays(1)).build(),
-            List::of);
-
-    assertThat(beforeMidnight).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
-    assertThat(afterMidnight)
-        .filteredOn(insight -> insight.type().equals("DORMANT"))
-        .singleElement()
-        .satisfies(insight -> assertThat(insight.data()).containsEntry("daysIdle", 7L));
-  }
-
-  @Test
-  void dormancySkippedWhenRecentlyActive() {
-    var daily = List.of(new LinkStats.DailyClick(REPORT_DATE.minusDays(1), 5L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
-  }
-
-  @Test
-  void dormancySkippedWhenNeverActive() {
-    var daily = List.of(new LinkStats.DailyClick(REPORT_DATE.minusDays(12), 0L));
-    List<LinkStats.Insight> result =
-        insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
-    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
-  }
-
-  @Test
-  void inAppBrowser_firesWhenTheShareIsBigEnough() {
-    LocaleContextHolder.setLocale(Locale.KOREAN);
-    var apps =
-        List.of(
-            new LinkStats.ClientAppClick("kakaotalk", 25L),
-            new LinkStats.ClientAppClick("instagram", 10L));
-
-    var insight = insights.inAppBrowser(apps, 100).orElseThrow();
-
-    assertThat(insight.type()).isEqualTo("IN_APP_BROWSER");
-    assertThat(insight.severity()).isEqualTo("info");
-    assertThat(insight.message()).contains("카카오톡").contains("35.0");
-    assertThat(insight.data())
-        .containsEntry("topApp", "kakaotalk")
-        .containsEntry("inAppClicks", 35L)
-        .containsEntry("share", 0.35);
-  }
-
-  @Test
-  void inAppBrowser_localizesTheAppName() {
-    var apps = List.of(new LinkStats.ClientAppClick("kakaotalk", 50L));
-
-    LocaleContextHolder.setLocale(Locale.ENGLISH);
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("KakaoTalk");
-
-    LocaleContextHolder.setLocale(Locale.JAPANESE);
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("カカオトーク");
-  }
-
-  @Test
-  void inAppBrowser_fallsBackToTheRawAppName() {
-    LocaleContextHolder.setLocale(Locale.KOREAN);
-    var apps = List.of(new LinkStats.ClientAppClick("someNewApp", 50L));
-
-    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("someNewApp");
-  }
-
-  @Test
-  void inAppBrowser_silentWhenShareIsSmall() {
-    var apps = List.of(new LinkStats.ClientAppClick("kakaotalk", 5L));
-
-    assertThat(insights.inAppBrowser(apps, 100)).isEmpty();
-  }
-
-  @Test
-  void inAppBrowser_silentWithoutEnoughClicksOrData() {
-    assertThat(insights.inAppBrowser(List.of(new LinkStats.ClientAppClick("kakaotalk", 5L)), 5))
+  void inAppShareUsesHumanClicksWithATwentyPercentFloorAndNamesNoApp() {
+    assertThat(
+            entry(
+                "inAppBrowser",
+                stats()
+                    .human(100)
+                    .clientApps(List.of(new LinkStats.ClientAppClick("kakaotalk", 19)))))
         .isEmpty();
-    assertThat(insights.inAppBrowser(List.of(), 100)).isEmpty();
-    assertThat(insights.inAppBrowser(null, 100)).isEmpty();
-  }
 
-  private static LinkStats.ChannelDepth depth(String host, long returning, double ratio) {
-    return new LinkStats.ChannelDepth(host, 100L, java.time.Instant.now(), returning, ratio);
+    LinkStats.Insight over =
+        entry(
+                "inAppBrowser",
+                stats()
+                    .human(100)
+                    .clientApps(
+                        List.of(
+                            new LinkStats.ClientAppClick("instagram", 9),
+                            new LinkStats.ClientAppClick("kakaotalk", 12))))
+            .orElseThrow();
+    assertThat(over.params()).isEqualTo(Map.of("percent", 21L));
+    assertThat(over.evidence()).isEqualTo("clientApps");
   }
 
   @Test
-  void channelLoyalty_picksTheHighestReturnRateNotTheBiggestChannel() {
+  void channelLoyaltyPicksTheBestReturnRatioAboveTheSampleFloor() {
+    LinkStats.Insight loyal =
+        entry(
+                "channelLoyalty",
+                stats()
+                    .channelDepth(
+                        List.of(
+                            depth("tiny.example", 9, 4, 0.9),
+                            depth("notion.site", 120, 41, 0.41),
+                            depth("instagram.com", 400, 38, 0.11))))
+            .orElseThrow();
+
+    assertThat(loyal.params()).isEqualTo(Map.of("host", "notion.site", "percent", 41L));
+  }
+
+  @Test
+  void channelLoyaltyFoldsTheWholeLinkReturningSentence() {
+    LinkStats.ReturnRate returnRate = new LinkStats.ReturnRate(60, 40, 0.4);
+    LinkStats.ChannelDepth loyal = depth("notion.site", 120, 41, 0.41);
+
+    assertThat(entry("returning", stats().returnRate(returnRate).channelDepth(List.of(loyal))))
+        .isEmpty();
+    assertThat(
+            entry(
+                "returning",
+                stats()
+                    .returnRate(returnRate)
+                    .channelDepth(List.of(depth("notion.site", 120, 41, 0.12)))))
+        .isPresent();
+  }
+
+  @Test
+  void peakDayGivesTheDateAndTheSparkUpToThePeak() {
+    LinkStats.Insight peak =
+        entry("peakDay", stats().dailyClicks(days("07", 1, 9, 3))).orElseThrow();
+
+    assertThat(peak.params()).isEqualTo(Map.of("date", "2026-07-02", "count", 9L));
+    assertThat(peak.spark()).containsExactly(1L, 9L);
+  }
+
+  @Test
+  void peakDayNeedsTheSampleFloorInItsDailyWindow() {
+    assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 3)))).isEmpty();
+    assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 7))).orElseThrow().params())
+        .isEqualTo(Map.of("date", "2026-07-03", "count", 7L));
+  }
+
+  @Test
+  void peakHourNeedsTheHumanSampleFloor() {
+    assertThat(entry("peakHour", stats().human(9).peakHour(21))).isEmpty();
+    assertThat(entry("peakHour", stats().human(10).peakHour(21)).orElseThrow().params())
+        .isEqualTo(Map.of("hour", 21));
+  }
+
+  @Nested
+  class RealResponseShapeDividesByHumanClicks {
+
+    @Test
+    void inAppTotal349OfHuman1125Is31() {
+      assertThat(entry("inAppBrowser", realLinkStats()).orElseThrow().params())
+          .isEqualTo(Map.of("percent", 31L));
+    }
+
+    @Test
+    void topSourceInstagram383OfHuman1125Is34WithDirectInTheDenominator() {
+      assertThat(entry("topSource", realLinkStats()).orElseThrow().params())
+          .isEqualTo(Map.of("host", "instagram.com", "percent", 34L));
+    }
+
+    @Test
+    void oneReferredClickAmongDirectOnesIsNotMostOfTheTraffic() {
+      assertThat(
+              entry(
+                  "topSource",
+                  realLinkStats()
+                      .human(1000)
+                      .referrerHosts(List.of(new LinkStats.ReferrerHostClick("x.com", 1)))))
+          .isEmpty();
+    }
+
+    @Test
+    void topSourceNeedsTheHumanSampleFloor() {
+      assertThat(
+              entry(
+                  "topSource",
+                  realLinkStats()
+                      .human(6)
+                      .referrerHosts(List.of(new LinkStats.ReferrerHostClick("x.com", 6)))))
+          .isEmpty();
+    }
+
+    @Test
+    void sixPreviewsAreNotAHundredPercentAutomated() {
+      assertThat(journal(realLinkStats().total(6).human(0).bot(6)))
+          .noneMatch(i -> i.code().startsWith("bot"));
+    }
+
+    @Test
+    void trendNeedsTheSampleFloorInThePreviousWeek() {
+      assertThat(entry("trendUp", realLinkStats().dailyClicks(weeks(1, 3)))).isEmpty();
+      assertThat(
+              entry("trendUp", realLinkStats().dailyClicks(weeks(20, 30))).orElseThrow().params())
+          .isEqualTo(Map.of("percent", 50L, "count", 30L));
+    }
+
+    private List<LinkStats.DailyClick> weeks(long prev, long last) {
+      long[] counts =
+          IntStream.range(0, 14).mapToLong(i -> i == 0 ? prev : i == 13 ? last : 0).toArray();
+      return days("10", counts);
+    }
+
+    @Test
+    void desktopSentenceCountsDesktopClicksOnly() {
+      LinkInsights.ReportFacts.ReportFactsBuilder mixed =
+          realLinkStats()
+              .human(100)
+              .devices(
+                  List.of(
+                      new LinkStats.DeviceClick("mobile", 30),
+                      new LinkStats.DeviceClick("desktop", 30),
+                      new LinkStats.DeviceClick("tablet", 20),
+                      new LinkStats.DeviceClick("unknown", 20)));
+
+      assertThat(entry("desktopHeavy", mixed)).isEmpty();
+      assertThat(entry("mobileHeavy", realLinkStats()).orElseThrow().params())
+          .isEqualTo(Map.of("percent", 78L));
+    }
+
+    @Test
+    void countrySentenceSkipsUnknownAndDividesByHumanClicks() {
+      assertThat(entry("topCountry", realLinkStats()).orElseThrow().params())
+          .isEqualTo(Map.of("country", "KR", "percent", 72L));
+      assertThat(
+              entry(
+                  "topCountry",
+                  realLinkStats()
+                      .countries(
+                          List.of(
+                              new LinkStats.CountryClick("unknown", 700),
+                              new LinkStats.CountryClick("KR", 425)))))
+          .isEmpty();
+    }
+
+    @Test
+    void returningRatioNamesTheRawRetentionWindow() {
+      LinkStats.ReturnRate rate = new LinkStats.ReturnRate(300, 60, 0.2);
+
+      assertThat(entry("returningRecent", realLinkStats().returnRate(rate)).orElseThrow().params())
+          .isEqualTo(Map.of("percent", 20L, "days", 90));
+      assertThat(
+              entry("returning", realLinkStats().rawSince(null).returnRate(rate))
+                  .orElseThrow()
+                  .params())
+          .isEqualTo(Map.of("percent", 20L));
+      assertThat(
+              entry(
+                  "returningRecent",
+                  realLinkStats().returnRate(new LinkStats.ReturnRate(4, 2, 0.33))))
+          .isEmpty();
+    }
+  }
+
+  @Test
+  void legacyMessageUsesTheSameFactsInEachLanguageWithoutRawCodes() {
     LocaleContextHolder.setLocale(Locale.KOREAN);
-    var channels = List.of(depth("instagram.com", 6L, 0.35), depth("notion.so", 8L, 0.62));
+    List<LinkStats.Insight> ko = journal(realLinkStats());
+    assertThat(ko)
+        .extracting(LinkStats.Insight::code)
+        .containsExactly(
+            "inAppBrowser", "topSource", "returningRecent", "topCountry", "mobileHeavy");
+    assertThat(ko)
+        .extracting(LinkStats.Insight::message)
+        .containsExactly(
+            "클릭의 31%가 앱 안 브라우저에서 열렸어요",
+            "유입의 34%가 instagram.com에서 왔어요",
+            "최근 90일 다녀간 사람 17%가 다시 왔어요",
+            "대한민국에서 72%가 왔어요",
+            "클릭의 78%가 모바일에서 왔어요");
 
-    var insight = insights.channelLoyalty(channels).orElseThrow();
+    LocaleContextHolder.setLocale(Locale.JAPANESE);
+    assertThat(entry("topCountry", realLinkStats()).orElseThrow().message())
+        .isEqualTo("韓国から72%が来ています");
 
-    assertThat(insight.type()).isEqualTo("CHANNEL_LOYALTY");
-    assertThat(insight.severity()).isEqualTo("info");
-    assertThat(insight.message()).contains("notion.so").contains("62.0");
-    assertThat(insight.data())
-        .containsEntry("host", "notion.so")
-        .containsEntry("returnRatio", 0.62)
-        .containsEntry("returningVisitors", 8L);
+    LocaleContextHolder.setLocale(Locale.ENGLISH);
+    assertThat(entry("botFiltered", realLinkStats().returnRate(null)).orElseThrow().message())
+        .isEqualTo("Excluding 14% automated traffic leaves 1,125 human clicks");
   }
 
   @Test
-  void channelLoyalty_silentWhenTheRateIsOrdinary() {
-    assertThat(insights.channelLoyalty(List.of(depth("instagram.com", 9L, 0.12)))).isEmpty();
+  void legacyFieldsStayFilledForOldClients() {
+    LinkStats.Insight peak =
+        entry("peakDay", stats().dailyClicks(days("07", 1, 9, 3))).orElseThrow();
+    LocaleContextHolder.setLocale(Locale.KOREAN);
+
+    assertThat(peak.type()).isEqualTo("PEAK_DAY");
+    assertThat(peak.severity()).isEqualTo("info");
+    assertThat(peak.data()).isEqualTo(peak.params());
+    assertThat(entry("trendDown", stats().dailyClicks(days("07", trendDown()))).orElseThrow())
+        .satisfies(
+            down -> {
+              assertThat(down.type()).isEqualTo("TREND_DOWN");
+              assertThat(down.severity()).isEqualTo("warning");
+            });
+    assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 9, 3))).orElseThrow().message())
+        .isEqualTo("07-02에 하루 9클릭으로 가장 많았어요");
+  }
+
+  private static long[] trendDown() {
+    return IntStream.range(0, 14).mapToLong(i -> i < 7 ? 10 : 5).toArray();
   }
 
   @Test
-  void channelLoyalty_silentWhenTheSampleIsTiny() {
-    assertThat(insights.channelLoyalty(List.of(depth("instagram.com", 2L, 1.0)))).isEmpty();
+  void velocityNeedsThirtyHumanClicks() {
+    assertThat(entry("velocity", stats().human(29).velocity(new LinkStats.Velocity(9, 1, 9.0))))
+        .isEmpty();
+    assertThat(entry("velocity", stats().human(30).velocity(new LinkStats.Velocity(9, 1, 1.46))))
+        .isEmpty();
   }
 
   @Test
-  void channelLoyalty_silentWithoutChannels() {
-    assertThat(insights.channelLoyalty(List.of())).isEmpty();
-    assertThat(insights.channelLoyalty(null)).isEmpty();
+  void fastFirstClickIsWithinTheFirstHourAndAtLeastOneMinute() {
+    assertThat(entry("fastFirstClick", stats().timeToFirstClickMinutes(0L)).orElseThrow().params())
+        .isEqualTo(Map.of("minutes", 1L));
+    assertThat(entry("fastFirstClick", stats().timeToFirstClickMinutes(60L))).isEmpty();
+    assertThat(entry("fastFirstClick", stats().timeToFirstClickMinutes(-1L))).isEmpty();
+  }
+
+  @Test
+  void automatedShareAboveTwentyPercentIsAWarning() {
+    LinkStats.Insight high = entry("botHigh", stats().bot(25).human(75)).orElseThrow();
+
+    assertThat(high.params()).isEqualTo(Map.of("percent", 25L, "human", 75L));
+    assertThat(high.evidence()).isEqualTo("automated");
+    assertThat(high.ratio()).isEqualTo(0.25);
   }
 }

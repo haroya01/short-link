@@ -28,8 +28,8 @@
 # A reply inside the room: the parent and whether the replier may read it (one readable lookup), a
 # block check each way, authors, membership, insert; who of those answered may read the reply (one
 # readersAmong statement), the room's name, the federation actor; after commit the parent's author
-# hears of it as for any reply.
-@junit | room-note-reply | 15 | 2 | 0 | 0 | 17
+# hears of it as for any reply, and the push, a conversation, reads the room's name once more.
+@junit | room-note-reply | 16 | 2 | 0 | 0 | 18
 # The room's notes as a member reads them: membership, the page, thread parts, authors, one
 # readable lookup for the room notes, media, counts, marks and the room's name.
 @junit | room-notes | 9 | 0 | 0 | 0 | 9
@@ -77,6 +77,9 @@
 @junit | room-request-reject | 3 | 0 | 0 | 1 | 4
 @junit | room-invites | 4 | 0 | 0 | 0 | 4
 @junit | room-invite-disable | 4 | 0 | 1 | 0 | 5
+# A switched-off, expired or used-up code answers 410 with its reason after reading the invite
+# alone: no room, member count, inviter or faces.
+@junit | room-invite-landing-disabled | 1 | 0 | 0 | 0 | 1
 # Removing a member: lock, both memberships, the membership deleted, their invites stopped, the
 # invitations they sent that nobody answered deleted, and the removal kept so no invite lets them
 # back in.

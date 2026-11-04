@@ -70,7 +70,8 @@ class LinkStatsDailyClicksContractTest {
         links.save(
             new LinkEntity("https://example.com/" + suffix, "c" + suffix, owner.getId(), null));
     em.flush();
-    em.createNativeQuery("UPDATE link SET created_at = FROM_UNIXTIME(:epoch) WHERE id = :id")
+    em.createNativeQuery(
+            "UPDATE link SET created_at = TIMESTAMPADD(SECOND, :epoch, '1970-01-01') WHERE id = :id")
         .setParameter("epoch", LINK_CREATED.getEpochSecond())
         .setParameter("id", link.getId())
         .executeUpdate();

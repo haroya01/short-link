@@ -53,7 +53,8 @@ public class CachedLinkLoader {
         variants,
         new CachedLink.VisitOptions(
             Boolean.TRUE.equals(link.getOpenInBrowser()), splash(link), link.getOpensAt()),
-        Boolean.TRUE.equals(link.getDisabled()));
+        Boolean.TRUE.equals(link.getDisabled()),
+        Boolean.TRUE.equals(link.getStatsPublic()));
   }
 
   private CachedLink.Splash splash(LinkRepository.CachedLinkRow link) {

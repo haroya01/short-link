@@ -137,11 +137,15 @@ public class JwtTokenService {
   }
 
   public String createStreamToken(Long userId, String shortCode) {
+    return createStreamToken(userId, shortCode, STREAM_TTL);
+  }
+
+  public String createStreamToken(Long userId, String shortCode, Duration ttl) {
     Instant now = Instant.now();
     return Jwts.builder()
         .subject(String.valueOf(userId))
         .issuedAt(Date.from(now))
-        .expiration(Date.from(now.plus(STREAM_TTL)))
+        .expiration(Date.from(now.plus(ttl)))
         .claim(CLAIM_TYPE, TYPE_STREAM)
         .claim(CLAIM_SHORT_CODE, shortCode)
         .signWith(privateKey, Jwts.SIG.RS256)

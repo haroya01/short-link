@@ -2,6 +2,7 @@ package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.application.dto.CampaignRecommendationView;
 import com.example.short_link.campaign.application.dto.CampaignRecommendationView.BatchRecommendation;
+import com.example.short_link.campaign.application.dto.CampaignRecommendationView.InsufficientCode;
 import com.example.short_link.campaign.application.dto.CampaignRecommendationView.RecommendationVerdict;
 import com.example.short_link.campaign.application.dto.CampaignStatsView;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.BatchStats;
@@ -43,6 +44,9 @@ public class CampaignRecommendationService {
       return new CampaignRecommendationView(
           true,
           "재할당 대상이 부족합니다 — 배포 묶음을 2개 이상 만든 뒤 다시 확인하세요.",
+          InsufficientCode.TOO_FEW_BATCHES,
+          MIN_BATCH_COUNT,
+          batches.size(),
           totalQuantity,
           totalClicks,
           0.0,
@@ -52,6 +56,9 @@ public class CampaignRecommendationService {
       return new CampaignRecommendationView(
           true,
           "데이터가 적습니다 — 총 클릭 10회 이상 누적되면 추천을 보여드립니다.",
+          InsufficientCode.TOO_FEW_CLICKS,
+          MIN_TOTAL_CLICKS,
+          totalClicks,
           totalQuantity,
           totalClicks,
           0.0,
@@ -65,7 +72,8 @@ public class CampaignRecommendationService {
     correctRounding(allocations, totalQuantity);
     List<BatchRecommendation> recs = allocations.stream().map(Allocation::toView).toList();
 
-    return new CampaignRecommendationView(false, null, totalQuantity, totalClicks, avgRate, recs);
+    return new CampaignRecommendationView(
+        false, null, null, null, null, totalQuantity, totalClicks, avgRate, recs);
   }
 
   private static WeightedBatch weigh(BatchStats batch, double avgRate) {

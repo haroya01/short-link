@@ -23,4 +23,8 @@ public interface NotePageReader {
   Map<Long, NoteStats> stats(Collection<Long> noteIds);
 
   NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds);
+
+  long latestReply(Long noteId);
+
+  long countReplies(Long noteId, Long viewerId, Collection<Long> leftOut);
 }

@@ -2,7 +2,6 @@ package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -14,30 +13,29 @@ class LinkStatsTotalsReader {
 
   private static final Duration BASELINE_WINDOW = Duration.ofHours(24);
 
-  private final ClickEventRepository clickRepository;
   private final ClickTotalsReader clickTotals;
 
   Totals totals(LinkId linkId, Instant linkCreatedAt) {
-    long total = clickRepository.countByLinkId(linkId.value());
     long human = clickTotals.countHumanByLinkId(linkId.value());
     long bot = clickTotals.countBotByLinkId(linkId.value());
     var unique = clickTotals.uniqueVisitorsByLinkId(linkId.value());
     Instant firstClickAt = clickTotals.findFirstClickAt(linkId.value());
     Instant lastClickAt = clickTotals.findLastClickAt(linkId.value());
-    long previewClicks = clickTotals.countPreviewByLinkId(linkId.value());
-    long profileClicks = clickTotals.countProfileChannelByLinkId(linkId.value());
+    ClickTotalsReader.ClickFlags flags = clickTotals.countFlagsByLinkId(linkId.value());
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
             : Math.max(0, Duration.between(linkCreatedAt, firstClickAt).toMinutes());
     return new Totals(
-        total,
+        human + bot,
         human,
         bot,
         unique.count(),
         unique.rawSince(),
-        previewClicks,
-        profileClicks,
+        flags.preview(),
+        flags.profile(),
+        flags.direct(),
+        flags.datacenter(),
         firstClickAt,
         lastClickAt,
         timeToFirstClickMinutes);
@@ -61,6 +59,8 @@ class LinkStatsTotalsReader {
       Instant rawSince,
       long previewClicks,
       long profileClicks,
+      long directClicks,
+      long datacenterClicks,
       Instant firstClickAt,
       Instant lastClickAt,
       Long timeToFirstClickMinutes) {}

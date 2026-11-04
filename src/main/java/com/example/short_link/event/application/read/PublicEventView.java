@@ -1,6 +1,7 @@
 package com.example.short_link.event.application.read;
 
 import com.example.short_link.event.domain.EventEntity;
+import com.example.short_link.event.domain.RegistrationClosure;
 import java.time.Instant;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public record PublicEventView(
     String contactField,
     String status,
     boolean acceptingRegistrations,
+    String registrationClosedReason,
     int attending,
     String organizerName,
     String organizerAvatarUrl,
@@ -34,6 +36,7 @@ public record PublicEventView(
       String coverImageUrl,
       String organizerName,
       String organizerAvatarUrl) {
+    RegistrationClosure closure = event.registrationClosure(now);
     return new PublicEventView(
         event.getSlug(),
         event.getTitle(),
@@ -50,7 +53,8 @@ public record PublicEventView(
         event.getCloseAt(),
         event.getContactField().name(),
         event.getStatus().name(),
-        event.acceptsRegistrations(now),
+        closure == null,
+        closure == null ? null : closure.name(),
         event.getRegistrationCount(),
         organizerName,
         organizerAvatarUrl,

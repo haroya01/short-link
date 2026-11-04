@@ -24,7 +24,8 @@ public record CachedLink(
     String expiredMessage,
     List<Variant> variants,
     VisitOptions visitOptions,
-    boolean disabled) {
+    boolean disabled,
+    boolean statsPublic) {
 
   public CachedLink {
     variants = variants == null ? List.of() : List.copyOf(variants);
@@ -33,6 +34,10 @@ public record CachedLink(
 
   public boolean isExpired(Instant now) {
     return expiresAt != null && !now.isBefore(expiresAt);
+  }
+
+  public boolean showsClickCount(Instant now) {
+    return statsPublic && !passwordRequired && !visitOptions.opensLaterThan(now);
   }
 
   public boolean limitsVisitors() {

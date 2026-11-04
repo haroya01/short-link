@@ -80,10 +80,22 @@ public class CampaignEntity extends BaseTimeEntity {
     this.name = name;
     this.startsAt = startsAt;
     this.endsAt = endsAt;
-    this.defaultDestinationUrl = defaultDestinationUrl;
+    this.defaultDestinationUrl = blankToNull(defaultDestinationUrl);
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
-    this.postEndDestinationUrl = postEndDestinationUrl;
+    this.postEndDestinationUrl = blankToNull(postEndDestinationUrl);
     this.postEndMessage = normalizeMessage(postEndMessage);
+  }
+
+  public String getDefaultDestinationUrl() {
+    return blankToNull(defaultDestinationUrl);
+  }
+
+  public String getPostEndDestinationUrl() {
+    return blankToNull(postEndDestinationUrl);
+  }
+
+  public String getPostEndMessage() {
+    return blankToNull(postEndMessage);
   }
 
   public boolean isOwnedBy(Long userId) {
@@ -162,9 +174,9 @@ public class CampaignEntity extends BaseTimeEntity {
       String postEndDestinationUrl,
       String postEndMessage) {
     this.endsAt = endsAt;
-    this.defaultDestinationUrl = defaultDestinationUrl;
+    this.defaultDestinationUrl = blankToNull(defaultDestinationUrl);
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
-    this.postEndDestinationUrl = postEndDestinationUrl;
+    this.postEndDestinationUrl = blankToNull(postEndDestinationUrl);
     this.postEndMessage = normalizeMessage(postEndMessage);
   }
 
@@ -198,6 +210,10 @@ public class CampaignEntity extends BaseTimeEntity {
         && (postEndDestinationUrl == null || postEndDestinationUrl.isBlank())) {
       throw new CampaignException(CampaignErrorCode.MISSING_POST_END_DESTINATION);
     }
+  }
+
+  private static String blankToNull(String url) {
+    return url == null || url.isBlank() ? null : url;
   }
 
   private static String normalizeMessage(String raw) {

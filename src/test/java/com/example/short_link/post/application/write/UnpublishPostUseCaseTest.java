@@ -3,9 +3,12 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class UnpublishPostUseCaseTest {
@@ -25,6 +29,7 @@ class UnpublishPostUseCaseTest {
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
+  @Mock private ApplicationEventPublisher events;
 
   private UnpublishPostUseCase useCase;
 
@@ -36,7 +41,8 @@ class UnpublishPostUseCaseTest {
             postRepository,
             cacheEviction,
             new PostWriteViewAssembler(
-                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()));
+                postRepository, PostAccessFixtures.unlistedUrls(), PostAccessFixtures.rooms()),
+            events);
   }
 
   @Test
@@ -50,6 +56,7 @@ class UnpublishPostUseCaseTest {
 
     assertThat(result.status()).isEqualTo(PostStatus.UNPUBLISHED.name());
     assertThat(result.publishedAt()).isNotNull();
+    verify(events).publishEvent(new LiveRevoke.Closed(LiveTopic.post(42L)));
   }
 
   @Test

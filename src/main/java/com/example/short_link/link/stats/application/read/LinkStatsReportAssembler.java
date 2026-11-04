@@ -33,10 +33,11 @@ class LinkStatsReportAssembler {
     LinkStatsTimeBucketsReader.TimeBuckets time =
         timeReader.read(linkId, link.getCreatedAt(), reportZone, reportTime);
     LinkStatsDimensionBreakdownsReader.ChannelBreakdowns channels =
-        dimensionsReader.channels(linkId);
+        dimensionsReader.channels(linkId, totals.directClicks());
     LinkStatsDimensionBreakdownsReader.DeviceBreakdowns devices = dimensionsReader.devices(linkId);
     LinkStatsDimensionBreakdownsReader.UtmBreakdowns utm = dimensionsReader.utm(linkId);
-    LinkStatsDimensionBreakdownsReader.GeoBreakdowns geo = dimensionsReader.geo(linkId);
+    LinkStatsDimensionBreakdownsReader.GeoBreakdowns geo =
+        dimensionsReader.geo(linkId, totals.datacenterClicks());
     List<LinkStats.DestinationClick> destinations = dimensionsReader.destinations(link);
     List<LinkStats.ClientAppClick> clientApps = dimensionsReader.clientApps(linkId);
     List<LinkStats.FetchSiteClick> fetchSites = dimensionsReader.fetchSites(linkId);
@@ -48,20 +49,22 @@ class LinkStatsReportAssembler {
     List<LinkStats.Insight> insights =
         insightsCalculator.computeReport(
             LinkInsights.ReportFacts.builder()
-                .reportDate(reportTime.atZone(reportZone).toLocalDate())
                 .total(totals.total())
                 .human(totals.human())
                 .bot(totals.bot())
-                .heatmap(time.heatmap())
-                .channels(channels.channels())
-                .countries(geo.countries())
-                .returnRate(returnRate)
-                .lifecycle(lifecycle)
                 .dailyClicks(time.daily())
-                .clientApps(clientApps)
+                .velocity(velocity)
+                .referrerHosts(channels.referrerHosts())
                 .channelDepth(channelDepth)
-                .build(),
-            () -> lifecycleReader.channelFirstSeen(linkId));
+                .clientApps(clientApps)
+                .peakHour(time.peakHour())
+                .returnRate(returnRate)
+                .rawSince(totals.rawSince())
+                .rawRetentionDays(retention.rawDays())
+                .countries(geo.countries())
+                .devices(devices.devices())
+                .timeToFirstClickMinutes(totals.timeToFirstClickMinutes())
+                .build());
 
     return LinkStats.builder()
         .shortCode(link.getShortCode())

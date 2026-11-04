@@ -1,6 +1,7 @@
 package com.example.short_link.user.application;
 
 import com.example.short_link.common.security.ClickStreamTokenService;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,5 +19,10 @@ class JwtClickStreamTokenService implements ClickStreamTokenService {
   @Override
   public String createStreamToken(Long userId, String shortCode) {
     return jwt.createStreamToken(userId, shortCode);
+  }
+
+  @Override
+  public String createStreamToken(Long userId, String scope, Duration ttl) {
+    return jwt.createStreamToken(userId, scope, ttl);
   }
 }

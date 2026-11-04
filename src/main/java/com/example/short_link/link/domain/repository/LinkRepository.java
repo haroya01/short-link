@@ -53,6 +53,8 @@ public interface LinkRepository {
 
   List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit);
 
+  int reopenGivenUpOgFetches();
+
   List<LinkEntity> findStaleOgCandidates(Instant before, int limit);
 
   long countByUserId(Long userId);
@@ -136,5 +138,7 @@ public interface LinkRepository {
     Instant getOpensAt();
 
     Boolean getDisabled();
+
+    Boolean getStatsPublic();
   }
 }

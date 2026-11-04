@@ -14,7 +14,6 @@ import org.springframework.stereotype.Repository;
 class ClickEventRepositoryAdapter implements ClickEventRepository {
 
   private final JpaClickEventRepository jpa;
-  private final JpaClickTotalsReadRepository totals;
   private final ClickRollupRepository rollups;
 
   @Override
@@ -30,11 +29,6 @@ class ClickEventRepositoryAdapter implements ClickEventRepository {
   @Override
   public long count() {
     return jpa.countWithRollups();
-  }
-
-  @Override
-  public long countByLinkId(Long linkId) {
-    return totals.countByLinkId(linkId);
   }
 
   @Override

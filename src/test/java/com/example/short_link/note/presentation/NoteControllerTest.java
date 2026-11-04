@@ -66,7 +66,7 @@ class NoteControllerTest {
 
   @Test
   void aNoteErrorKeepsItsStatusAndCode() throws Exception {
-    when(query.thread(any(), eq(9L)))
+    when(query.thread(any(), eq(9L), eq(NoteQueryService.MAX_REPLIES)))
         .thenThrow(new NoteException(NoteErrorCode.NOTE_NOT_FOUND, 9L));
 
     mvc.perform(get("/api/v1/public/notes/9"))

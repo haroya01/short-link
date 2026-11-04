@@ -96,6 +96,15 @@ short-link:
     keep-for: 30d
     sweep-batch: 200
     sweep-delay: PT10M
+  live:
+    max-streams: ${LIVE_MAX_STREAMS:500}
+    max-streams-per-user: 4
+    lifetime: 5m
+    heartbeat: 25s
+    window: 300ms
+    window-per-stream: 20ms
+    max-window: 10s
+    token-ttl: 10m
   pow:
     difficulty: ${POW_DIFFICULTY:3}
     enforce: ${POW_ENFORCE:true}

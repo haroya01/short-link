@@ -130,7 +130,8 @@ public class NoteInteractions {
         target.excerpt(),
         source == null ? null : source.getId(),
         source == null ? null : source.excerpt(),
-        target.conversation());
+        target.conversation(),
+        target.getRoomId());
   }
 
   public record LikeStatus(boolean liked, long likeCount) {}

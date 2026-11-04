@@ -130,5 +130,14 @@ public record LinkStats(
 
   public record DayClick(int day, long count) {}
 
-  public record Insight(String type, String severity, String message, Map<String, Object> data) {}
+  public record Insight(
+      String type,
+      String severity,
+      String message,
+      Map<String, Object> data,
+      String code,
+      Map<String, Object> params,
+      String evidence,
+      Double ratio,
+      List<Long> spark) {}
 }

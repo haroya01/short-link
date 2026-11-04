@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.notification.domain.NotificationActor;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -36,15 +37,58 @@ class NotificationActorReaderAdapterTest {
   }
 
   @Test
-  void mapsRowsToActorsAndToleratesNullAvatar() {
+  void mapsRowsToActorsAndToleratesNullAvatarAndName() {
     when(em.createNativeQuery(anyString())).thenReturn(query);
     when(query.setParameter(anyString(), any())).thenReturn(query);
     when(query.getResultList())
-        .thenReturn(List.of(new Object[] {1L, "alice", "a.png"}, new Object[] {2L, "bob", null}));
+        .thenReturn(
+            List.of(
+                new Object[] {1L, "alice", "a.png", "Alice"},
+                new Object[] {2L, "bob", null, null}));
 
     Map<Long, NotificationActor> resolved = adapter().resolve(Set.of(1L, 2L));
 
-    assertThat(resolved.get(1L)).isEqualTo(new NotificationActor(1L, "alice", "a.png"));
+    assertThat(resolved.get(1L))
+        .isEqualTo(new NotificationActor(1L, "alice", "a.png", null, null, "Alice", List.of()));
     assertThat(resolved.get(2L)).isEqualTo(new NotificationActor(2L, "bob", null));
+  }
+
+  @Test
+  void remoteRowsCarryTheHandleNameAndTheEmojisThatDrawIt() {
+    when(em.createNativeQuery(anyString())).thenReturn(query);
+    when(query.setParameter(anyString(), any())).thenReturn(query);
+    when(query.getResultList())
+        .thenReturn(
+            List.of(
+                new Object[] {
+                  42L,
+                  "ged",
+                  "m.example",
+                  "https://files.m.example/ged.png",
+                  null,
+                  "https://m.example/users/ged",
+                  "Ged :verified:",
+                  "[{\"shortcode\":\"verified\",\"url\":\"https://files.m.example/v.png\"}]"
+                },
+                new Object[] {
+                  43L, null, "relay.example", null, null, "https://relay.example/actor", null, null
+                }));
+
+    Map<Long, NotificationActor> resolved = adapter().resolveRemote(Set.of(42L, 43L));
+
+    assertThat(resolved.get(42L))
+        .isEqualTo(
+            new NotificationActor(
+                null,
+                "ged@m.example",
+                "https://files.m.example/ged.png",
+                "https://m.example/users/ged",
+                42L,
+                "Ged :verified:",
+                List.of(new CustomEmoji("verified", "https://files.m.example/v.png"))));
+    assertThat(resolved.get(43L))
+        .isEqualTo(
+            new NotificationActor(
+                null, "relay.example", null, "https://relay.example/actor", 43L, null, List.of()));
   }
 }

@@ -51,6 +51,7 @@ class PublicPostCollectionsControllerTest {
                     "curator",
                     "https://cdn.kurl.me/a.jpg",
                     2,
+                    null,
                     null)));
 
     mvc.perform(get("/api/v1/public/posts/5/collections"))
@@ -92,6 +93,7 @@ class PublicPostCollectionsControllerTest {
             "curator",
             "https://cdn.kurl.me/a.jpg",
             3,
+            null,
             null);
     when(queryService.publicCollectionsContainingBatch(
             ConnectionBlockType.POST, List.of(5L, 6L, 7L)))

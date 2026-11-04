@@ -42,7 +42,7 @@ public class WeeklyInsightsService {
     long previousHumanClicks = clickRanges.countHumanByUserIdAndRange(userId, prevFrom, from);
 
     Double deltaPercent =
-        previousHumanClicks == 0
+        previousHumanClicks < LinkInsights.MIN_TOTAL_FOR_INSIGHTS
             ? null
             : (double) (humanClicks - previousHumanClicks) / previousHumanClicks;
     Double humanRatio = totalClicks == 0 ? null : (double) humanClicks / totalClicks;

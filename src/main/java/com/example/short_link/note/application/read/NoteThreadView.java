@@ -12,4 +12,5 @@ public record NoteThreadView(
     List<NoteView> continuation,
     NoteSeriesNavView series,
     int hiddenReplyCount,
-    boolean viewerCanModerate) {}
+    boolean viewerCanModerate,
+    String repliesNext) {}

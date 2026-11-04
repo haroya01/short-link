@@ -5,6 +5,8 @@ import com.example.short_link.link.og.application.dto.LinkPreview;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +15,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LinkPreviewService {
 
-  private final OgScraper ogScraper;
+  private static final String CACHE = "linkPreview";
 
-  @Cacheable(value = "linkPreview", key = "#url")
+  private final OgScraper ogScraper;
+  private final CacheManager cacheManager;
+
+  @Cacheable(value = CACHE, key = "#url")
   public LinkPreview fetch(String url) {
     if (!isHttp(url)) return LinkPreview.bare(url);
     try {
@@ -24,6 +29,15 @@ public class LinkPreviewService {
     } catch (RuntimeException e) {
       log.warn("link preview fetch failed for {}: {}", url, e.getMessage());
       return LinkPreview.bare(url);
+    }
+  }
+
+  public void forget(String url) {
+    try {
+      Cache cache = cacheManager.getCache(CACHE);
+      if (cache != null) cache.evictIfPresent(url);
+    } catch (RuntimeException failure) {
+      log.warn("link preview cache eviction failed for {}: {}", url, failure.toString());
     }
   }
 

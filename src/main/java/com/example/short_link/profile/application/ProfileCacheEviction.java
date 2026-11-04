@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ProfileCacheEviction implements ProfileCacheInvalidator {
 
-  public static final String CACHE_NAME = "public-profile-snapshot";
+  public static final String CACHE_NAME = "public-profile-page";
 
   private final CacheManager cacheManager;
   private final UserSummaryReader users;

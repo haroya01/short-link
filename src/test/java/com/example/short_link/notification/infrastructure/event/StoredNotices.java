@@ -13,10 +13,12 @@ import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.write.NotificationFanoutWriter;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
+import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
@@ -55,13 +57,19 @@ final class StoredNotices {
 
   record Push(List<Long> recipients, String type, PushRoute route) {}
 
+  record Face(String type, PushActor actor, String threadId) {}
+
   private static final Instant NOW = Instant.parse("2026-10-27T03:00:00Z");
 
   private final NotificationTargetCodec codec =
       new NotificationTargetCodec(JsonMapper.builder().build());
   private final List<NotificationEntity> saved = new ArrayList<>();
   private final List<Push> pushes = new ArrayList<>();
+  private final List<Face> faces = new ArrayList<>();
   private final Map<Long, NotificationUser> users = new HashMap<>();
+  private final Map<Long, NotificationActor> members = new HashMap<>();
+  private final Map<Long, NotificationActor> remotes = new HashMap<>();
+  private final Map<Long, String> rooms = new HashMap<>();
   private final Set<List<Object>> silenced = new HashSet<>();
   private int userLookups;
   private int silenceChecks;
@@ -80,6 +88,19 @@ final class StoredNotices {
           }
           userLookups++;
           return userIds.stream().map(users::get).filter(Objects::nonNull).toList();
+        }
+      };
+
+  private final NotificationActorReader actorReader =
+      new NotificationActorReader() {
+        @Override
+        public Map<Long, NotificationActor> resolve(Collection<Long> userIds) {
+          return pick(members, userIds);
+        }
+
+        @Override
+        public Map<Long, NotificationActor> resolveRemote(Collection<Long> remoteActorIds) {
+          return pick(remotes, remoteActorIds);
         }
       };
 
@@ -145,10 +166,11 @@ final class StoredNotices {
             messages,
             new BlogNotificationPreferenceService(mock(BlogNotificationPreferenceRepository.class)),
             new NotificationFanoutWriter(repository),
-            mock(NotificationActorReader.class),
+            actorReader,
             new AcceptingPolicies(),
             (userIds, now) -> Map.of(),
             blocks,
+            roomId -> Optional.ofNullable(rooms.get(roomId)),
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -157,8 +179,29 @@ final class StoredNotices {
   }
 
   StoredNotices user(long id, String username) {
-    users.put(id, new NotificationUser(id, username, "ko"));
+    return member(new NotificationActor(id, username, null));
+  }
+
+  StoredNotices member(NotificationActor actor) {
+    users.put(actor.userId(), new NotificationUser(actor.userId(), actor.username(), "ko"));
+    members.put(actor.userId(), actor);
     return this;
+  }
+
+  void room(long id, String name) {
+    rooms.put(id, name);
+  }
+
+  StoredNotices remote(NotificationActor actor) {
+    remotes.put(actor.remoteId(), actor);
+    return this;
+  }
+
+  private static Map<Long, NotificationActor> pick(
+      Map<Long, NotificationActor> known, Collection<Long> ids) {
+    Map<Long, NotificationActor> found = new HashMap<>();
+    ids.stream().filter(known::containsKey).forEach(id -> found.put(id, known.get(id)));
+    return found;
   }
 
   void silence(long recipient, long actor) {
@@ -191,6 +234,10 @@ final class StoredNotices {
     return List.copyOf(pushes);
   }
 
+  List<Face> faces() {
+    return List.copyOf(faces);
+  }
+
   int userLookups() {
     return userLookups;
   }
@@ -203,11 +250,17 @@ final class StoredNotices {
     @Override
     public void send(Long recipientUserId, PushMessage message) {
       pushes.add(new Push(List.of(recipientUserId), message.type(), message.route()));
+      faces.add(face(message));
     }
 
     @Override
     public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
       pushes.add(new Push(List.copyOf(recipientUserIds), message.type(), message.route()));
+      faces.add(face(message));
+    }
+
+    private Face face(PushMessage message) {
+      return new Face(message.type(), message.actor(), message.threadId());
     }
   }
 

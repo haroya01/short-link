@@ -1,6 +1,9 @@
 package com.example.short_link.link.og.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.OgMetadata;
@@ -10,11 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 @ExtendWith(MockitoExtension.class)
 class LinkPreviewServiceTest {
 
   @Mock private OgScraper ogScraper;
+  @Mock private CacheManager caches;
+  @Mock private Cache cache;
   @InjectMocks private LinkPreviewService service;
 
   @Test
@@ -47,5 +54,26 @@ class LinkPreviewServiceTest {
 
     assertThat(p.url()).isEqualTo("https://boom.example");
     assertThat(p.title()).isNull();
+  }
+
+  @Test
+  void forgettingRemovesTheCachedPageBeforeReturning() {
+    when(caches.getCache("linkPreview")).thenReturn(cache);
+
+    service.forget("https://youtu.be/x");
+
+    verify(cache).evictIfPresent("https://youtu.be/x");
+  }
+
+  @Test
+  void aMissingCacheOrABrokenRedisLetsTheRefreshGoOn() {
+    assertThatCode(() -> service.forget("https://a.example/")).doesNotThrowAnyException();
+
+    when(caches.getCache("linkPreview")).thenReturn(cache);
+    doThrow(new IllegalStateException("redis down"))
+        .when(cache)
+        .evictIfPresent("https://b.example/");
+
+    assertThatCode(() -> service.forget("https://b.example/")).doesNotThrowAnyException();
   }
 }

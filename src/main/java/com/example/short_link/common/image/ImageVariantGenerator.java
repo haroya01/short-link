@@ -20,24 +20,6 @@ public class ImageVariantGenerator {
   private final ReentrantLock decoding = new ReentrantLock();
 
   public void generate(String key) {
-    decoding.lock();
-    try {
-      generateAlone(key);
-    } finally {
-      decoding.unlock();
-    }
-  }
-
-  public boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
-    decoding.lock();
-    try {
-      return storeAlone(key, original, maxSourcePixels);
-    } finally {
-      decoding.unlock();
-    }
-  }
-
-  private void generateAlone(String key) {
     long started = System.nanoTime();
     try {
       if (ledger.recorded(key)) {
@@ -53,7 +35,7 @@ public class ImageVariantGenerator {
       byte[] original = source.get();
       ImageVariantRenderer.Rendered rendered;
       try {
-        rendered = renderer.render(original, ImageVariantKeys.png(key));
+        rendered = alone(() -> renderer.render(original, ImageVariantKeys.png(key)));
       } catch (IOException unreadable) {
         ledger.record(key, Outcome.FAILED);
         log(key, "failed", started, original.length, 0, "undecodable");
@@ -67,11 +49,11 @@ public class ImageVariantGenerator {
     }
   }
 
-  private boolean storeAlone(String key, byte[] original, long maxSourcePixels) {
+  public boolean storeWithVariants(String key, byte[] original, long maxSourcePixels) {
     long started = System.nanoTime();
     ImageVariantRenderer.Rendered rendered;
     try {
-      rendered = renderer.render(original, ImageVariantKeys.png(key), maxSourcePixels);
+      rendered = alone(() -> renderer.render(original, ImageVariantKeys.png(key), maxSourcePixels));
     } catch (IOException unreadable) {
       log(key, "failed", started, original.length, 0, unreadable.getMessage());
       return false;
@@ -81,6 +63,19 @@ public class ImageVariantGenerator {
     ledger.record(key, Outcome.MADE);
     log(key, "made", started, original.length, size(rendered), null);
     return true;
+  }
+
+  private ImageVariantRenderer.Rendered alone(Decode decode) throws IOException {
+    decoding.lock();
+    try {
+      return decode.run();
+    } finally {
+      decoding.unlock();
+    }
+  }
+
+  private interface Decode {
+    ImageVariantRenderer.Rendered run() throws IOException;
   }
 
   private void putVariants(String key, ImageVariantRenderer.Rendered rendered) {

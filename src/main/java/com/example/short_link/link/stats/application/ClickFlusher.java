@@ -57,7 +57,7 @@ public class ClickFlusher {
     if (pending.isEmpty()) {
       return;
     }
-    List<ClickEventEntity> batch = assemble(pending);
+    List<Assembled> batch = assemble(pending);
     List<ClickEventEntity> saved = persist(batch);
     meterRegistry.counter("click_recorder", "result", "flushed").increment(saved.size());
     publishAll(saved);
@@ -86,11 +86,11 @@ public class ClickFlusher {
     }
   }
 
-  private List<ClickEventEntity> assemble(List<PendingClick> pending) {
-    List<ClickEventEntity> batch = new ArrayList<>(pending.size());
+  private List<Assembled> assemble(List<PendingClick> pending) {
+    List<Assembled> batch = new ArrayList<>(pending.size());
     for (PendingClick click : pending) {
       try {
-        batch.add(assembler.assemble(click));
+        batch.add(new Assembled(click, assembler.assemble(click)));
       } catch (RuntimeException e) {
         meterRegistry.counter("click_recorder", "result", "assemble_error").increment();
         log.warn("failed to assemble click for linkId={}", click.ctx().linkId(), e);
@@ -99,30 +99,34 @@ public class ClickFlusher {
     return batch;
   }
 
-  private List<ClickEventEntity> persist(List<ClickEventEntity> batch) {
+  private List<ClickEventEntity> persist(List<Assembled> batch) {
     if (batch.isEmpty()) {
-      return batch;
+      return List.of();
     }
     try {
-      return transaction.execute(status -> repository.saveAll(batch));
+      return transaction.execute(
+          status -> repository.saveAll(batch.stream().map(Assembled::event).toList()));
     } catch (RuntimeException e) {
       log.warn("click batch insert failed, retrying {} rows individually", batch.size(), e);
       return persistIndividually(batch);
     }
   }
 
-  private List<ClickEventEntity> persistIndividually(List<ClickEventEntity> batch) {
+  private List<ClickEventEntity> persistIndividually(List<Assembled> batch) {
     List<ClickEventEntity> saved = new ArrayList<>(batch.size());
-    for (ClickEventEntity entity : batch) {
+    for (Assembled assembled : batch) {
       try {
-        saved.add(transaction.execute(status -> repository.save(entity)));
+        saved.add(
+            transaction.execute(status -> repository.save(assembler.assemble(assembled.click()))));
       } catch (RuntimeException e) {
         meterRegistry.counter("click_recorder", "result", "flush_error").increment();
-        log.warn("dropped click for linkId={}: {}", entity.getLinkId(), e.toString());
+        log.warn("dropped click for linkId={}: {}", assembled.event().getLinkId(), e.toString());
       }
     }
     return saved;
   }
+
+  private record Assembled(PendingClick click, ClickEventEntity event) {}
 
   private void publishRecorded(ClickEventEntity saved, LinkEntity link) {
     events.publishEvent(

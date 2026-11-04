@@ -107,10 +107,10 @@ class NoteReplyControlsIntegrationTest {
     assertThat(canReply(root, named)).isTrue();
     assertThat(canReply(root, stranger)).isFalse();
     assertThat(canReply(root, null)).isNull();
-    NoteThreadView fromReply = query.thread(stranger, reply);
+    NoteThreadView fromReply = query.thread(stranger, reply, NoteQueryService.MAX_REPLIES);
     assertThat(fromReply.note().replyPolicy()).isEqualTo("mentioned");
     assertThat(fromReply.note().canReply()).isFalse();
-    assertThat(query.thread(named, reply).note().canReply()).isTrue();
+    assertThat(query.thread(named, reply, NoteQueryService.MAX_REPLIES).note().canReply()).isTrue();
   }
 
   @Test
@@ -122,19 +122,20 @@ class NoteReplyControlsIntegrationTest {
 
     threads.setReplyHidden(writer, hidden, true);
     flush();
-    assertThat(query.thread(followed, hidden).replies())
+    assertThat(query.thread(followed, hidden, NoteQueryService.MAX_REPLIES).replies())
         .extracting(NoteView::id)
         .containsExactly(underHidden);
 
-    NoteThreadView thread = query.thread(followed, root);
+    NoteThreadView thread = query.thread(followed, root, NoteQueryService.MAX_REPLIES);
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(kept);
     assertThat(thread.note().replyCount()).isEqualTo(1);
     assertThat(thread.hiddenReplyCount()).isEqualTo(1);
-    assertThat(query.thread(null, root).hiddenReplyCount()).isEqualTo(1);
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).hiddenReplyCount())
+        .isEqualTo(1);
     assertThat(query.hiddenReplies(followed, root))
         .extracting(NoteView::id, NoteView::hidden)
         .containsExactly(org.assertj.core.groups.Tuple.tuple(hidden, true));
-    assertThat(query.thread(null, hidden).note().hidden()).isTrue();
+    assertThat(query.thread(null, hidden, NoteQueryService.MAX_REPLIES).note().hidden()).isTrue();
     assertThatThrownBy(() -> threads.setReplyHidden(named, kept, true))
         .isInstanceOfSatisfying(
             NoteException.class,
@@ -142,11 +143,11 @@ class NoteReplyControlsIntegrationTest {
 
     threads.setReplyHidden(writer, hidden, false);
     flush();
-    assertThat(query.thread(null, root).replies())
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).replies())
         .extracting(NoteView::id)
         .containsExactly(kept, hidden);
     assertThat(query.hiddenReplies(null, root)).isEmpty();
-    assertThat(query.thread(null, root).hiddenReplyCount()).isZero();
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).hiddenReplyCount()).isZero();
   }
 
   @Test
@@ -158,14 +159,22 @@ class NoteReplyControlsIntegrationTest {
     flush();
 
     for (long note : List.of(root, reply, deep, deeper)) {
-      assertThat(query.thread(writer, note).viewerCanModerate()).as("note %d", note).isTrue();
-      assertThat(query.thread(named, note).viewerCanModerate()).as("note %d", note).isFalse();
-      assertThat(query.thread(null, note).viewerCanModerate()).as("note %d", note).isFalse();
+      assertThat(query.thread(writer, note, NoteQueryService.MAX_REPLIES).viewerCanModerate())
+          .as("note %d", note)
+          .isTrue();
+      assertThat(query.thread(named, note, NoteQueryService.MAX_REPLIES).viewerCanModerate())
+          .as("note %d", note)
+          .isFalse();
+      assertThat(query.thread(null, note, NoteQueryService.MAX_REPLIES).viewerCanModerate())
+          .as("note %d", note)
+          .isFalse();
     }
     threads.setReplyHidden(writer, deeper, true);
     flush();
-    assertThat(query.thread(stranger, deep).hiddenReplyCount()).isEqualTo(1);
-    assertThat(query.thread(stranger, root).hiddenReplyCount()).isZero();
+    assertThat(query.thread(stranger, deep, NoteQueryService.MAX_REPLIES).hiddenReplyCount())
+        .isEqualTo(1);
+    assertThat(query.thread(stranger, root, NoteQueryService.MAX_REPLIES).hiddenReplyCount())
+        .isZero();
   }
 
   @Test
@@ -175,7 +184,7 @@ class NoteReplyControlsIntegrationTest {
     long remoteActor = remoteActor("alice");
     long remote = remoteNotes.receive(remoteReply(remoteActor, statuses + "1", root)).orElseThrow();
     flush();
-    assertThat(query.thread(null, root).replies())
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).replies())
         .extracting(NoteView::id)
         .containsExactly(members, remote);
 
@@ -190,7 +199,7 @@ class NoteReplyControlsIntegrationTest {
                     + remote
                     + " AND in_reply_to_id IS NULL AND conversation_id IS NULL AND reply"))
         .isEqualTo(1);
-    assertThat(query.thread(null, root).replies()).isEmpty();
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).replies()).isEmpty();
     assertThat(remoteNotes.receive(remoteReply(remoteActor, statuses + "1", root))).isEmpty();
     assertThatThrownBy(() -> threads.delete(named, root))
         .isInstanceOfSatisfying(
@@ -217,7 +226,7 @@ class NoteReplyControlsIntegrationTest {
     long fromDave = remoteNotes.receive(remoteReply(dave, statuses + "d", root)).orElseThrow();
     flush();
 
-    assertThat(query.thread(null, root).replies())
+    assertThat(query.thread(null, root, NoteQueryService.MAX_REPLIES).replies())
         .extracting(NoteView::id)
         .containsExactly(fromBob, fromCarol);
     assertThat(
@@ -249,7 +258,7 @@ class NoteReplyControlsIntegrationTest {
   }
 
   private Boolean canReply(long noteId, Long viewer) {
-    return query.thread(viewer, noteId).note().canReply();
+    return query.thread(viewer, noteId, NoteQueryService.MAX_REPLIES).note().canReply();
   }
 
   private String policyOf(long noteId) {

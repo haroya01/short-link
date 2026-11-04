@@ -947,6 +947,7 @@
     },
     "GET /api/v1/collections/{id}" : {
       "parameters" : {
+        "X-Collection-Key" : "header string",
         "id" : "path integer(int64) required"
       },
       "responses" : {
@@ -1323,6 +1324,39 @@
       },
       "responses" : {
         "200" : "[#WebhookSummary]"
+      }
+    },
+    "GET /api/v1/live/notes/{id}/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/live/posts/{id}/comments/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
+      }
+    },
+    "GET /api/v1/live/rooms/{id}/stream" : {
+      "parameters" : {
+        "Last-Event-ID" : "header string",
+        "id" : "path integer(int64) required",
+        "since" : "query string",
+        "streamToken" : "query string"
+      },
+      "responses" : {
+        "200" : "#SseEmitter"
       }
     },
     "GET /api/v1/me/saved" : {
@@ -1717,7 +1751,8 @@
     },
     "GET /api/v1/public/notes/{id}" : {
       "parameters" : {
-        "id" : "path integer(int64) required"
+        "id" : "path integer(int64) required",
+        "replies" : "query integer(int32)"
       },
       "responses" : {
         "200" : "#NoteThreadView"
@@ -1747,6 +1782,16 @@
       },
       "responses" : {
         "200" : "#NoteFeedView"
+      }
+    },
+    "GET /api/v1/public/notes/{id}/replies" : {
+      "parameters" : {
+        "after" : "query integer(int64)",
+        "id" : "path integer(int64) required",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#NoteRepliesView"
       }
     },
     "GET /api/v1/public/notes/{noteId}/posts" : {
@@ -1812,6 +1857,18 @@
       },
       "responses" : {
         "200" : "[#CommentView]"
+      }
+    },
+    "GET /api/v1/public/posts/{postId}/comments/page" : {
+      "parameters" : {
+        "after" : "query integer(int64)",
+        "cursor" : "query integer(int64)",
+        "limit" : "query integer(int32)",
+        "postId" : "path integer(int64) required",
+        "tombstones" : "query boolean"
+      },
+      "responses" : {
+        "200" : "#CommentsView"
       }
     },
     "GET /api/v1/public/posts/{postId}/highlights" : {
@@ -2082,6 +2139,7 @@
     },
     "GET /api/v1/rooms/{id}/notes" : {
       "parameters" : {
+        "after" : "query integer(int64)",
         "id" : "path integer(int64) required",
         "page" : "query integer(int32)",
         "size" : "query integer(int32)"
@@ -2848,6 +2906,14 @@
         "201" : "-"
       }
     },
+    "POST /api/v1/collections/{id}/unlisted-key/rotate" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#UnlistedLinkResponse"
+      }
+    },
     "POST /api/v1/comments/{id}/like" : {
       "parameters" : {
         "id" : "path integer(int64) required"
@@ -3021,6 +3087,30 @@
       "request" : "#LinkWebhookRegisterRequest required",
       "responses" : {
         "200" : "#IssuedWebhook"
+      }
+    },
+    "POST /api/v1/live/notes/{id}/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
+      }
+    },
+    "POST /api/v1/live/posts/{id}/comments/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
+      }
+    },
+    "POST /api/v1/live/rooms/{id}/stream-token" : {
+      "parameters" : {
+        "id" : "path integer(int64) required"
+      },
+      "responses" : {
+        "200" : "#LiveStreamTokenResponse"
       }
     },
     "POST /api/v1/notes" : {
@@ -3950,6 +4040,8 @@
     },
     "Actor" : {
       "avatarUrl" : "string",
+      "displayName" : "string",
+      "emojis" : "[#CustomEmoji]",
       "id" : "integer(int64)",
       "profileUrl" : "string",
       "username" : "string"
@@ -4333,6 +4425,9 @@
     "CampaignRecommendationView" : {
       "avgRatePerHundred" : "number(double)",
       "insufficient" : "boolean",
+      "insufficientCode" : "string enum[TOO_FEW_BATCHES|TOO_FEW_CLICKS]",
+      "insufficientCurrent" : "integer(int32)",
+      "insufficientMinimum" : "integer(int32)",
       "insufficientReason" : "string",
       "recommendations" : "[#BatchRecommendation]",
       "totalClicks" : "integer(int32)",
@@ -4353,15 +4448,19 @@
       "heatmap" : "[#HeatmapCell]",
       "lastTestScanAt" : "string(date-time)",
       "testScans" : "integer(int64)",
+      "timezone" : "string",
       "totalClicks" : "integer(int64)"
     },
     "CampaignSummaryResponse" : {
       "batchCount" : "integer(int64)",
+      "endedAt" : "string(date-time)",
       "endsAt" : "string(date-time)",
+      "humanClicks" : "integer(int64)",
       "id" : "integer(int64)",
       "name" : "string",
       "startsAt" : "string(date-time)",
-      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]"
+      "status" : "string enum[ACTIVE|ARCHIVED|DRAFT|ENDED]",
+      "totalQuantity" : "integer(int64)"
     },
     "CampaignUpdateRequest" : {
       "defaultDestinationUrl" : "string",
@@ -4431,6 +4530,7 @@
       "kind" : "string",
       "ordered" : "boolean",
       "title" : "string",
+      "unlistedUrl" : "string",
       "visibility" : "string"
     },
     "CollectionSummaryView" : {
@@ -4445,6 +4545,7 @@
       "position" : "integer(int32)",
       "preview" : "[string]",
       "title" : "string",
+      "unlistedUrl" : "string",
       "updatedAt" : "string(date-time)",
       "visibility" : "string"
     },
@@ -4461,6 +4562,12 @@
       "likeCount" : "integer(int64)",
       "mentions" : "[string]",
       "parentId" : "integer(int64)"
+    },
+    "CommentsView" : {
+      "items" : "[#CommentView]",
+      "latest" : "string",
+      "next" : "string",
+      "total" : "integer(int64)"
     },
     "CommitCoverRequest" : {
       "key" : "string"
@@ -4801,6 +4908,7 @@
       "locationUrl" : "string",
       "onlineUrl" : "string",
       "questions" : "[#EventQuestionView]",
+      "registrationClosedReason" : "string",
       "registrationCount" : "integer(int32)",
       "slug" : "string",
       "startsAt" : "string(date-time)",
@@ -5066,9 +5174,14 @@
       "skipped" : "integer(int32)"
     },
     "Insight" : {
+      "code" : "string",
       "data" : "map<object>",
+      "evidence" : "string",
       "message" : "string",
+      "params" : "map<object>",
+      "ratio" : "number(double)",
       "severity" : "string",
+      "spark" : "[integer(int64)]",
       "type" : "string"
     },
     "InviteToRoomRequest" : {
@@ -5379,6 +5492,9 @@
       "memberCount" : "integer(int64)",
       "title" : "string"
     },
+    "LiveStreamTokenResponse" : {
+      "streamToken" : "string"
+    },
     "Locked" : {
       "reason" : "string enum[FOLLOWERS|PASSWORD|REGION|REGION_CHECK]"
     },
@@ -5495,6 +5611,8 @@
       "expiresAt" : "string(date-time)",
       "humanClickCount" : "integer(int64)",
       "note" : "string",
+      "ogTitle" : "string",
+      "ogTitleOverride" : "string",
       "originalUrl" : "string",
       "shortCode" : "string",
       "shortUrl" : "string",
@@ -5603,6 +5721,13 @@
     "NotePollVoteRequest" : {
       "choices" : "[integer(int32)]"
     },
+    "NoteRepliesView" : {
+      "continued" : "boolean",
+      "items" : "[#NoteView]",
+      "latest" : "string",
+      "next" : "string",
+      "total" : "integer(int64)"
+    },
     "NoteSeriesNavView" : {
       "next" : "#ItemLink",
       "position" : "integer(int32)",
@@ -5617,6 +5742,7 @@
       "note" : "#NoteView",
       "parent" : "#NoteView",
       "replies" : "[#NoteView]",
+      "repliesNext" : "string",
       "series" : "#NoteSeriesNavView",
       "viewerCanModerate" : "boolean"
     },
@@ -5666,12 +5792,16 @@
       "actorUserId" : "integer(int64)",
       "avatarUrl" : "string",
       "count" : "integer(int64)",
+      "displayName" : "string",
+      "emojis" : "[#CustomEmoji]",
       "lastAt" : "string(date-time)",
       "profileUrl" : "string",
       "username" : "string"
     },
     "NotificationResponse" : {
       "actorAvatarUrl" : "string",
+      "actorDisplayName" : "string",
+      "actorEmojis" : "[#CustomEmoji]",
       "actorId" : "integer(int64)",
       "actorProfileUrl" : "string",
       "actorRemoteId" : "integer(int64)",
@@ -6025,6 +6155,7 @@
       "organizerAvatarUrl" : "string",
       "organizerName" : "string",
       "questions" : "[#EventQuestionView]",
+      "registrationClosedReason" : "string",
       "slug" : "string",
       "spotsLeft" : "integer(int32)",
       "startsAt" : "string(date-time)",

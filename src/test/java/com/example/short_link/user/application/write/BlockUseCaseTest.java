@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
+import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.user.domain.FollowEdge;
 import com.example.short_link.user.domain.UserBlockEntity;
@@ -58,6 +59,7 @@ class BlockUseCaseTest {
     useCase.block(9L, "bob");
 
     verify(blockRepository).save(any(UserBlockEntity.class));
+    verify(events).publishEvent(new LiveRevoke.Blocked(9L, 2L));
   }
 
   @Test

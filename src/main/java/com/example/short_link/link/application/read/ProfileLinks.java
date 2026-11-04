@@ -34,8 +34,13 @@ public class ProfileLinks {
 
   private Map<Long, Long> clickCounts(List<ProfileLinkRow> rows) {
     Map<Long, Long> counts = new HashMap<>();
-    if (!rows.isEmpty()) {
-      List<Long> ids = rows.stream().map(row -> row.getLink().getId()).toList();
+    List<Long> ids =
+        rows.stream()
+            .map(ProfileLinkRow::getLink)
+            .filter(LinkEntity::isStatsPublic)
+            .map(LinkEntity::getId)
+            .toList();
+    if (!ids.isEmpty()) {
       for (LinkClickCount row : clicks.countsByLinkIds(ids)) {
         counts.put(row.getLinkId(), row.getCount());
       }
@@ -54,7 +59,7 @@ public class ProfileLinks {
         Boolean.TRUE.equals(row.getPasswordRequired()),
         link.isProfileHighlighted(),
         link.getProfileOrder(),
-        counts.getOrDefault(link.getId(), 0L),
+        link.isStatsPublic() ? counts.getOrDefault(link.getId(), 0L) : null,
         new ProfileLinkCard.Window(
             row.getOpensAt(), link.getExpiresAt(), link.getMaxViews() != null));
   }

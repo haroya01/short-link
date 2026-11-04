@@ -25,7 +25,6 @@ public class LinkOgFetchService {
   private final LinkCacheEviction linkCacheEviction;
   private final OgFetchProperties ogFetch;
 
-  // 페이지 조회는 트랜잭션 밖에서 하고, 저장은 저장소별 트랜잭션으로 한다.
   public void refresh(ShortCode shortCode, String originalUrl) {
     OgMetadata og = scraper.fetch(originalUrl);
     LinkEntity entity = repository.findByShortCode(shortCode).orElse(null);

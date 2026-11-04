@@ -1,12 +1,15 @@
 package com.example.short_link.note.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.live.LiveChange;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -88,10 +91,51 @@ class NotePublicationTest {
 
     List<Object> events = told(reply, parent, null, null, List.of(), null, false, List.of());
 
-    assertThat(kinds(events)).containsExactly(NotePublishedEvent.class, NoteInteractionEvent.class);
+    assertThat(kinds(events))
+        .containsExactly(NotePublishedEvent.class, NoteInteractionEvent.class, LiveChange.class);
     assertThat(((NoteInteractionEvent) events.get(1)).type())
         .isEqualTo(NoteInteractionEvent.Type.REPLY);
     assertThat(((NoteInteractionEvent) events.get(1)).recipientUserId()).isEqualTo(9L);
+    assertThat(events.get(2))
+        .isEqualTo(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 100L, null));
+  }
+
+  @Test
+  void aNoteInARoomWakesThoseWatchingTheRoomAndAReplyThereWakesItsThread() {
+    NoteEntity first = note(50L, 9L, "방에서 처음", null);
+    first.postIn(4L);
+    first.showTo(NoteVisibility.ROOM);
+    NoteEntity answer = note(100L, 7L, "방에서 답", first);
+
+    assertThat(told(first, null, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.room(4L), LiveChange.Kind.NOTE, 50L, 4L));
+    assertThat(told(answer, first, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 100L, 4L))
+        .noneMatch(
+            event ->
+                event.equals(new LiveChange(LiveTopic.room(4L), LiveChange.Kind.NOTE, 100L, 4L)));
+  }
+
+  @Test
+  void aDirectReplyIsMarkedSoTheThreadsWatchersAreNotWoken() {
+    NoteEntity parent = note(50L, 9L, "질문", null);
+    NoteEntity direct = note(100L, 7L, "@mina 몰래", parent);
+    direct.showTo(NoteVisibility.DIRECT);
+    NoteEntity followers = note(101L, 7L, "팔로워만", parent);
+    followers.showTo(NoteVisibility.PRIVATE);
+
+    assertThat(told(direct, parent, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 100L, null, true));
+    assertThat(told(followers, parent, null, null, List.of(), null, false, List.of()))
+        .contains(new LiveChange(LiveTopic.note(50L), LiveChange.Kind.REPLY, 101L, null, false));
+  }
+
+  @Test
+  void aNoteOutsideAnyRoomAndThreadWakesNoStream() {
+    NoteEntity alone = note(50L, 9L, "혼자", null);
+
+    assertThat(told(alone, null, null, null, List.of(), null, false, List.of()))
+        .noneMatch(LiveChange.class::isInstance);
   }
 
   @Test
@@ -122,6 +166,36 @@ class NotePublicationTest {
         .extracting(event -> ((NoteInteractionEvent) event).type())
         .containsExactly(NoteInteractionEvent.Type.MENTION);
     assertThat(events).noneMatch(NoteBroadcastEvent.class::isInstance);
+  }
+
+  @Test
+  void aReplyOrMentionInARoomCarriesTheRoomAndTheThreadItsRootStarted() {
+    NoteEntity parent = note(50L, 9L, "방 질문", null);
+    parent.postIn(3L);
+    NoteEntity inRoom = note(100L, 7L, "@bob 방에서", parent);
+    inRoom.showTo(NoteVisibility.ROOM);
+    NoteEntity question = note(60L, 9L, "질문", null);
+    NoteEntity outside = note(101L, 7L, "@bob 밖에서", question);
+
+    List<Object> roomEvents =
+        told(inRoom, parent, null, null, List.of(BOB), Set.of(8L, 9L), false, List.of());
+    List<Object> outsideEvents =
+        told(outside, question, null, null, List.of(BOB), null, false, List.of());
+
+    assertThat(roomEvents)
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .extracting(
+            event -> ((NoteInteractionEvent) event).type(),
+            event -> ((NoteInteractionEvent) event).conversationId(),
+            event -> ((NoteInteractionEvent) event).roomId())
+        .containsExactly(
+            tuple(NoteInteractionEvent.Type.REPLY, 50L, 3L),
+            tuple(NoteInteractionEvent.Type.MENTION, 50L, 3L));
+    assertThat(outsideEvents)
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .extracting(event -> ((NoteInteractionEvent) event).roomId())
+        .hasSize(2)
+        .containsOnlyNulls();
   }
 
   @Test

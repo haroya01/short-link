@@ -106,4 +106,31 @@ class PublicHttpUrlGuardTest {
   void rejectsMulticast() {
     assertThat(PublicHttpUrlGuard.isPublic("http://224.0.0.1/")).isFalse();
   }
+
+  @Test
+  void rejectsReservedIpv4RangesNothingPublicLivesIn() {
+    assertThat(PublicHttpUrlGuard.isPublic("http://0.0.0.1/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://198.18.0.1/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://198.19.255.254/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://240.0.0.1/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://255.255.255.255/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://198.17.0.1/")).isTrue();
+    assertThat(PublicHttpUrlGuard.isPublic("http://198.20.0.1/")).isTrue();
+  }
+
+  @Test
+  void rejectsIpv6AddressesThatCarryAPrivateIpv4() {
+    assertThat(PublicHttpUrlGuard.isPublic("http://[64:ff9b::a9fe:a9fe]/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[64:ff9b::a00:1]/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[64:ff9b:1::1]/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[2002:a00:1::1]/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[2002:7f00:1::]/")).isFalse();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[::a00:1]/")).isFalse();
+  }
+
+  @Test
+  void acceptsIpv6AddressesThatCarryAPublicIpv4() {
+    assertThat(PublicHttpUrlGuard.isPublic("http://[64:ff9b::808:808]/")).isTrue();
+    assertThat(PublicHttpUrlGuard.isPublic("http://[2002:808:808::1]/")).isTrue();
+  }
 }

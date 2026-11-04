@@ -15,6 +15,8 @@ public interface JpaClickLifecycleReadRepository
 
   String RAW = " AND clicked_at >= " + ClickRollup.ROLLED_UNTIL;
 
+  String RECENT = " AND clicked_at >= " + ClickRollup.AGGREGATED_UNTIL;
+
   // 세션화한 재방문 — 같은 visitor 가 *30분 이상 간격을 두고 다시* 와야 returning(같은 자리 더블탭은 1회).
   // 방문자를 잇는 visitor_hash는 원본에만 있어 원본 보관 기간 안의 클릭만 센다.
   @Override
@@ -22,13 +24,12 @@ public interface JpaClickLifecycleReadRepository
       value =
           "SELECT SUM(CASE WHEN sessions = 1 THEN 1 ELSE 0 END) AS newCount, "
               + "SUM(CASE WHEN sessions >= 2 THEN 1 ELSE 0 END) AS returningCount "
-              + "FROM (SELECT visitor_hash, SUM(is_new_session) AS sessions FROM ("
-              + "  SELECT visitor_hash, "
-              + "    CASE WHEN LAG(clicked_at) OVER (PARTITION BY visitor_hash ORDER BY clicked_at) IS NULL "
-              + "         OR TIMESTAMPDIFF(MINUTE, "
-              + "              LAG(clicked_at) OVER (PARTITION BY visitor_hash ORDER BY clicked_at), clicked_at) >= 30 "
-              + "    THEN 1 ELSE 0 END AS is_new_session "
-              + "  FROM click_event "
+              + "FROM (SELECT visitor_hash, SUM(CASE WHEN prev_at IS NULL "
+              + "    OR TIMESTAMPDIFF(MINUTE, prev_at, clicked_at) >= 30 THEN 1 ELSE 0 END) AS sessions "
+              + "  FROM (SELECT visitor_hash, clicked_at, "
+              + "    LAG(clicked_at) OVER (PARTITION BY visitor_hash ORDER BY clicked_at) AS prev_at "
+              + "  FROM click_event"
+              + ClickRollup.VISITOR_INDEX
               + "  WHERE link_id = :linkId AND visitor_hash IS NOT NULL AND is_bot = 0"
               + RAW
               + ") s GROUP BY visitor_hash) t",
@@ -39,13 +40,19 @@ public interface JpaClickLifecycleReadRepository
   @Query(
       value =
           "SELECT day, CAST(SUM(n) AS SIGNED) AS count FROM ("
-              + "SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, COUNT(*) AS n "
+              + "SELECT "
+              + ClickRollup.AGE_DAY
+              + " AS day, COUNT(*) AS n "
               + "FROM click_event c JOIN link l ON c.link_id = l.id "
               + "WHERE l.id = :linkId AND c.is_bot = 0 AND c.clicked_at >= "
-              + ClickRollup.ROLLED_UNTIL
-              + " AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+              + ClickRollup.AGGREGATED_UNTIL
+              + " AND "
+              + ClickRollup.AGE_DAY
+              + " BETWEEN 0 AND :maxDay "
               + "GROUP BY day UNION ALL "
               + "SELECT age_day, SUM(humans) FROM click_hourly WHERE link_id = :linkId "
+              + "AND humans > 0 AND age_day BETWEEN 0 AND :maxDay GROUP BY age_day UNION ALL "
+              + "SELECT age_day, SUM(humans) FROM click_recent_quarter WHERE link_id = :linkId "
               + "AND humans > 0 AND age_day BETWEEN 0 AND :maxDay GROUP BY age_day"
               + ") u GROUP BY day ORDER BY day",
       nativeQuery = true)
@@ -65,22 +72,25 @@ public interface JpaClickLifecycleReadRepository
               + "            FROM click_event "
               + "            WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
               + "              AND referrer_host <> ''"
-              + RAW
+              + RECENT
               + "            GROUP BY referrer_host UNION ALL "
               + "            SELECT value, SUM(clicks), MIN(first_at) FROM click_daily_dim "
+              + "            WHERE link_id = :linkId AND dim = "
+              + ClickRollup.REFERRER_HOST
+              + "              AND is_bot = 0 AND value <> '' GROUP BY value UNION ALL "
+              + "            SELECT value, SUM(clicks), MIN(first_at) FROM click_recent_dim "
               + "            WHERE link_id = :linkId AND dim = "
               + ClickRollup.REFERRER_HOST
               + "              AND is_bot = 0 AND value <> '' GROUP BY value) r "
               + "      GROUP BY referrer_host) h "
               + "LEFT JOIN (SELECT referrer_host, COUNT(*) AS visitors, "
               + "             SUM(CASE WHEN sessions >= 2 THEN 1 ELSE 0 END) AS returningVisitors "
-              + "           FROM (SELECT referrer_host, visitor_hash, SUM(is_new_session) AS sessions "
-              + "                 FROM (SELECT referrer_host, visitor_hash, "
-              + "                         CASE WHEN LAG(clicked_at) OVER (PARTITION BY referrer_host, visitor_hash ORDER BY clicked_at) IS NULL "
-              + "                              OR TIMESTAMPDIFF(MINUTE, "
-              + "                                   LAG(clicked_at) OVER (PARTITION BY referrer_host, visitor_hash ORDER BY clicked_at), clicked_at) >= 30 "
-              + "                         THEN 1 ELSE 0 END AS is_new_session "
-              + "                       FROM click_event "
+              + "           FROM (SELECT referrer_host, visitor_hash, SUM(CASE WHEN prev_at IS NULL "
+              + "                   OR TIMESTAMPDIFF(MINUTE, prev_at, clicked_at) >= 30 THEN 1 ELSE 0 END) AS sessions "
+              + "                 FROM (SELECT referrer_host, visitor_hash, clicked_at, "
+              + "                         LAG(clicked_at) OVER (PARTITION BY referrer_host, visitor_hash ORDER BY clicked_at) AS prev_at "
+              + "                       FROM click_event"
+              + ClickRollup.VISITOR_INDEX
               + "                       WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
               + "                         AND referrer_host <> '' AND visitor_hash IS NOT NULL"
               + RAW
@@ -91,22 +101,4 @@ public interface JpaClickLifecycleReadRepository
       nativeQuery = true)
   List<com.example.short_link.link.stats.domain.projection.ClickProjections.ChannelDepthRow>
       findChannelDepth(@Param("linkId") Long linkId, @Param("limit") int limit);
-
-  @Override
-  @Query(
-      value =
-          "SELECT referrer_host AS host, UNIX_TIMESTAMP(MIN(first_at)) AS firstSeenEpoch "
-              + "FROM (SELECT referrer_host, MIN(clicked_at) AS first_at FROM click_event "
-              + "      WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
-              + "        AND referrer_host <> ''"
-              + RAW
-              + "      GROUP BY referrer_host UNION ALL "
-              + "      SELECT value, MIN(first_at) FROM click_daily_dim WHERE link_id = :linkId "
-              + "        AND dim = "
-              + ClickRollup.REFERRER_HOST
-              + " AND is_bot = 0 AND value <> '' GROUP BY value) r "
-              + "GROUP BY referrer_host ORDER BY firstSeenEpoch",
-      nativeQuery = true)
-  List<com.example.short_link.link.stats.domain.projection.ClickProjections.HostFirstSeenRow>
-      findFirstSeenByReferrerHost(@Param("linkId") Long linkId);
 }

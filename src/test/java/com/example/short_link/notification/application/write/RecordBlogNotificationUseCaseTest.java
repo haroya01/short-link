@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.Actor;
+import com.example.short_link.common.room.RoomNameReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
@@ -12,9 +13,11 @@ import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushActor;
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.application.push.PushSpeech;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -31,12 +34,15 @@ import com.example.short_link.notification.domain.repository.NotificationUserRea
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,6 +77,9 @@ class RecordBlogNotificationUseCaseTest {
   private NotificationKeywordFilterReader keywordFilters;
 
   @Mock private UserBlockChecker blocks;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private RoomNameReader rooms;
 
   private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
@@ -116,6 +125,11 @@ class RecordBlogNotificationUseCaseTest {
                     false));
   }
 
+  private void member(long id, String username) {
+    when(actorReader.resolve(Set.of(id)))
+        .thenReturn(Map.of(id, new NotificationActor(id, username, null)));
+  }
+
   private RecordBlogNotificationUseCase useCase() {
     return new RecordBlogNotificationUseCase(
         repository,
@@ -129,6 +143,7 @@ class RecordBlogNotificationUseCaseTest {
         policies,
         keywordFilters,
         blocks,
+        rooms,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -276,8 +291,7 @@ class RecordBlogNotificationUseCaseTest {
   void aReplyPushOpensTheReplyUnderItsWriter() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -339,9 +353,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushMirrorsEveryTypeWithActorName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
 
     Map<NotificationType, String> expected =
         Map.ofEntries(
@@ -396,8 +408,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushCarriesTypeAndRouteOfTheTarget() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -452,8 +463,7 @@ class RecordBlogNotificationUseCaseTest {
   void highlightReplyPushPointsAtTheHighlight() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -475,8 +485,7 @@ class RecordBlogNotificationUseCaseTest {
   void quotesAcrossPostsAndNotesOpenTheActorsWork() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
 
     useCase()
@@ -506,8 +515,7 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void fannedOutNewPostRoutesToTheActorsPost() {
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
     when(userRepository.findAllByIdIn(List.of(7L, 8L)))
         .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ko")));
 
@@ -524,6 +532,137 @@ class RecordBlogNotificationUseCaseTest {
         .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
     assertThat(pushed.getValue().route())
         .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null, null));
+  }
+
+  @ParameterizedTest
+  @EnumSource(NotificationType.class)
+  void onlySomeoneAddressingTheRecipientIsPushedAsAConversation(NotificationType type) {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+
+    useCase().record(9L, type, Actor.member(2L), null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    PushActor actor = pushed.getValue().actor();
+    assertThat(actor.id()).isEqualTo(2L);
+    assertThat(actor.username()).isEqualTo("yuki");
+    assertThat(actor.speech() != null)
+        .isEqualTo(
+            EnumSet.of(
+                    NotificationType.COMMENT,
+                    NotificationType.REPLY,
+                    NotificationType.MENTION,
+                    NotificationType.NOTE_REPLY,
+                    NotificationType.NOTE_MENTION)
+                .contains(type));
+  }
+
+  @Test
+  void aReplySpeaksItsWordsUnderTheRoomItWasWrittenIn() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+    when(rooms.nameOf(3L)).thenReturn(Optional.of("도쿄 모임"));
+
+    NotificationNoteRef reply = new NotificationNoteRef(5L, "내 노트", 12L, "나도 그래");
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, 3L);
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, 4L);
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), reply, null, 40L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(3))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(message -> message.actor().speech(), PushSender.PushMessage::threadId)
+        .containsExactly(
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "도쿄 모임"), "room:3"),
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "내 노트에 답글"), "room:4"),
+            org.assertj.core.api.Assertions.tuple(new PushSpeech("나도 그래", "내 노트에 답글"), "note:40"));
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::body)
+        .containsOnly("yuki님이 노트에 답글을 남겼습니다");
+  }
+
+  @Test
+  void aCommentWhoseWordsNoPushCarriesSaysWhatHappenedUnderThePostsTitle() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    member(2L, "yuki");
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ja")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.COMMENT,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "tokyo", "도쿄 산책", null, 55L, null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_MENTION,
+            Actor.member(2L),
+            new NotificationNoteRef(6L, "@me 여기", null, null));
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(message -> message.actor().speech())
+        .containsExactly(
+            new PushSpeech("コメントしました", "도쿄 산책"), new PushSpeech("@me 여기", "ノートでのメンション"));
+  }
+
+  @Test
+  void onlyAConversationShownWithItsSpeakerLooksUpTheRoomsName() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    NotificationNoteRef note = new NotificationNoteRef(5L, "내 노트", null, null);
+
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), note, null, 40L, 3L);
+    member(2L, "yuki");
+    useCase().record(9L, NotificationType.NOTE_LIKE, Actor.member(2L), note, null, 40L, 3L);
+
+    org.mockito.Mockito.verifyNoInteractions(rooms);
+  }
+
+  @Test
+  void aConversationWithNobodyToShowIsAPlainPush() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase().record(9L, NotificationType.NOTE_REPLY, Actor.member(2L), null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().actor()).isNull();
+  }
+
+  @Test
+  void aFanOutLooksItsActorUpOnceHoweverManyLanguagesItIsPushedIn() {
+    member(2L, "yuki");
+    when(userRepository.findAllByIdIn(List.of(7L, 8L)))
+        .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ja")));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 8L),
+            NotificationType.NEW_POST,
+            Actor.member(2L),
+            new NotificationPostRef(10L, "fresh", "새 글", null));
+
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .sendToAll(
+            org.mockito.ArgumentMatchers.anyCollection(),
+            org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
+    org.mockito.Mockito.verify(actorReader).resolve(Set.of(2L));
   }
 
   @Test
@@ -563,9 +702,7 @@ class RecordBlogNotificationUseCaseTest {
   void pushIsLocalizedToRecipientLocale() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
     NotificationUser recipient = org.mockito.Mockito.mock(NotificationUser.class);
     when(recipient.locale()).thenReturn("ja");
     when(userRepository.findById(9L)).thenReturn(Optional.of(recipient));
@@ -587,9 +724,7 @@ class RecordBlogNotificationUseCaseTest {
 
     useCase().record(9L, NotificationType.FOLLOW, Actor.member(2L), null);
 
-    NotificationUser nameless = org.mockito.Mockito.mock(NotificationUser.class);
-    when(nameless.username()).thenReturn(null);
-    when(userRepository.findById(3L)).thenReturn(Optional.of(nameless));
+    member(3L, null);
 
     useCase().record(9L, NotificationType.FOLLOW, Actor.member(3L), null);
 
@@ -745,9 +880,7 @@ class RecordBlogNotificationUseCaseTest {
   void connectedSerializesCollectionRefAndSubtitlesWithCollectionName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
-    when(actor.username()).thenReturn("yuki");
-    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    member(2L, "yuki");
 
     useCase()
         .record(
@@ -884,8 +1017,7 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void aReplyTrippingAWarnFilterIsPushedWithoutItsText() {
     filtersOf(9L, new KeywordFilter("스포일러", false, false));
-    when(userRepository.findById(2L))
-        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    member(2L, "yuki");
 
     replyFrom2To9("결말 스포일러 있음");
 
@@ -899,6 +1031,8 @@ class RecordBlogNotificationUseCaseTest {
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
     assertThat(pushed.getValue().subtitle()).isNull();
     assertThat(pushed.getValue().body()).isEqualTo("yuki님이 노트에 답글을 남겼습니다");
+    assertThat(pushed.getValue().actor().speech())
+        .isEqualTo(new PushSpeech("노트에 답글을 남겼습니다", "내 노트에 답글"));
   }
 
   @Test

@@ -23,7 +23,7 @@ public class UpdateCtaUseCase {
   }
 
   private String trackingCodeFor(UpdateCtaCommand cmd) {
-    ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId());
+    ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId()).requireAlive();
     return linkTracker.trackingCodeFor(cmd.userId(), cmd.url());
   }
 

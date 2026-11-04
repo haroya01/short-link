@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.admin.application.read.AdminMetricReader;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository;
@@ -9,6 +10,8 @@ import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.campaign.application.CampaignBatchService;
 import com.example.short_link.campaign.application.CampaignStatsService;
 import com.example.short_link.campaign.application.dto.BatchWithLink;
+import com.example.short_link.campaign.application.dto.CampaignSummary;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
@@ -29,6 +32,8 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManagerFactory;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.RecordComponent;
 import java.time.Duration;
 import java.time.Instant;
@@ -67,6 +72,7 @@ class ClickRollupEquivalenceIntegrationTest {
   @Autowired private LinkStatsQueryService linkStats;
   @Autowired private CampaignStatsService campaignStats;
   @Autowired private CampaignBatchService batchService;
+  @Autowired private CampaignQueryService campaignQuery;
   @Autowired private CreateCampaignUseCase createCampaign;
   @Autowired private ClickTotalsReader totals;
   @Autowired private ClickEventRepository clickEvents;
@@ -94,7 +100,11 @@ class ClickRollupEquivalenceIntegrationTest {
     jdbc.update("DELETE FROM click_hourly");
     jdbc.update("DELETE FROM click_daily_dim");
     jdbc.update("DELETE FROM click_daily_visitors");
-    jdbc.update("UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1) WHERE id = 1");
+    jdbc.update("DELETE FROM click_recent_quarter");
+    jdbc.update("DELETE FROM click_recent_dim");
+    jdbc.update(
+        "UPDATE click_rollup_state SET rolled_until = FROM_UNIXTIME(1),"
+            + " aggregated_until = FROM_UNIXTIME(1) WHERE id = 1");
   }
 
   @AfterEach
@@ -149,12 +159,50 @@ class ClickRollupEquivalenceIntegrationTest {
     assertThat(rawRowsBefore(rolledUntil)).isZero();
     assertThat(snapshot(post, seoul, now)).isEqualTo(before);
     assertThat(uniques()).isEqualTo(uniqueBefore);
+    assertThat(rollup.aggregate(now)).isPositive();
+    assertThat(snapshot(post, seoul, now)).isEqualTo(before);
+    assertThat(uniques()).isEqualTo(uniqueBefore);
     for (Long linkId : linkIds) {
       LinkStats.ReturnRate returnRate = stats(linkId).returnRate();
       assertThat(returnRate.newVisitors() + returnRate.returningVisitors())
           .isEqualTo(rawVisitors(linkId));
       assertThat(stats(linkId).rawSince()).isEqualTo(rolledUntil);
     }
+  }
+
+  @Test
+  void aClickIsInTheWholeDayCountedFromItsLinkCreationBeforeAndAfterTheRollup() {
+    assertThat(
+            jdbc.queryForObject("SELECT TIMESTAMPDIFF(HOUR, UTC_TIMESTAMP(), NOW())", Long.class))
+        .isNotZero();
+    Instant now = Instant.now();
+    Long owner = owner("Asia/Seoul");
+    Instant oldCreated = now.minus(Duration.ofDays(200)).truncatedTo(ChronoUnit.SECONDS);
+    Instant recentCreated = now.minus(Duration.ofDays(3)).truncatedTo(ChronoUnit.SECONDS);
+    Long rolled = link(owner, oldCreated);
+    Long raw = link(owner, recentCreated);
+    Map<Integer, List<Long>> adminBefore = adminLifecycle();
+    for (long hours : List.of(10L, 23L, 25L, 47L)) {
+      insertClick(rolled, oldCreated.plus(Duration.ofHours(hours)));
+      insertClick(raw, recentCreated.plus(Duration.ofHours(hours)));
+    }
+
+    rollup.rollUp(now);
+
+    List<LinkStats.DayClick> twoAndTwo =
+        List.of(new LinkStats.DayClick(0, 2), new LinkStats.DayClick(1, 2));
+    assertThat(stats(rolled).lifecycle().dayClicks()).as("rolled up").isEqualTo(twoAndTwo);
+    assertThat(stats(raw).lifecycle().dayClicks()).as("raw").isEqualTo(twoAndTwo);
+    Map<Integer, List<Long>> adminAfter = adminLifecycle();
+    adminAfter.replaceAll(
+        (day, clicksAndLinks) -> {
+          List<Long> before = adminBefore.getOrDefault(day, List.of(0L, 0L));
+          return List.of(
+              clicksAndLinks.get(0) - before.get(0), clicksAndLinks.get(1) - before.get(1));
+        });
+    adminAfter.values().removeIf(change -> change.equals(List.of(0L, 0L)));
+    assertThat(adminAfter)
+        .containsOnly(Map.entry(0, List.of(4L, 2L)), Map.entry(1, List.of(4L, 2L)));
   }
 
   @Test
@@ -196,6 +244,62 @@ class ClickRollupEquivalenceIntegrationTest {
     assertThat(stats(linkId).humanClicks()).isEqualTo(4);
     assertThat(stats(linkId).firstClickAt()).isEqualTo(day91);
     assertThat(stats(linkId).lastClickAt()).isEqualTo(day89);
+  }
+
+  @Test
+  void aDayMovingFromTheRecentSumsIntoTheRollupsCountsOnceWhenTheMoveFailsOrRunsAgain() {
+    Instant now = Instant.now();
+    Long owner = owner("Asia/Seoul");
+    Long linkId = link(owner, now.minus(Duration.ofDays(120)));
+    Instant created = links.findByShortCode(codeByLink.get(linkId)).orElseThrow().getCreatedAt();
+    seedClicks(linkId, created.plusSeconds(1), now, 400, null, new Random(13));
+    Object rawOnly = normalize(stats(linkId));
+    assertThat(rollup.aggregate(now)).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+
+    ClickRollupService failsOnTheThirdDay =
+        new ClickRollupService(
+            failingAdvanceTo(3), new ClickRetentionProperties(90, true, 1000), transactionManager);
+    assertThatThrownBy(() -> failsOnTheThirdDay.rollUp(now)).hasMessage("roll interrupted");
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(recentRowsBelowRolledUntil()).isZero();
+
+    assertThat(rollup.rollUp(now)).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(rollup.rollUp(now)).isZero();
+    assertThat(rollup.aggregate(now)).isPositive();
+    assertThat(rollup.deleteRolledUp()).isPositive();
+    assertThat(normalize(stats(linkId))).isEqualTo(rawOnly);
+    assertThat(recentRowsBelowRolledUntil()).isZero();
+  }
+
+  private long recentRowsBelowRolledUntil() {
+    return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM click_recent_quarter, click_rollup_state "
+                + "WHERE id = 1 AND quarter_start < rolled_until",
+            Long.class)
+        + jdbc.queryForObject(
+            "SELECT COUNT(*) FROM click_recent_dim, click_rollup_state "
+                + "WHERE id = 1 AND day_start < rolled_until",
+            Long.class);
+  }
+
+  private ClickRollupRepository failingAdvanceTo(int call) {
+    int[] calls = {0};
+    return (ClickRollupRepository)
+        Proxy.newProxyInstance(
+            ClickRollupRepository.class.getClassLoader(),
+            new Class<?>[] {ClickRollupRepository.class},
+            (proxy, method, args) -> {
+              if (method.getName().equals("advanceTo") && ++calls[0] == call) {
+                throw new IllegalStateException("roll interrupted");
+              }
+              try {
+                return method.invoke(rollupRepository, args);
+              } catch (InvocationTargetException e) {
+                throw e.getCause();
+              }
+            });
   }
 
   @Test
@@ -288,6 +392,7 @@ class ClickRollupEquivalenceIntegrationTest {
       s.put(
           "campaign:" + campaignId,
           normalize(campaignStats.statsFor(campaignId, ownerOfCampaign(campaignId))));
+      s.put("campaignSummary:" + campaignId, summaryClicks(campaignId));
     }
     if (post != null) {
       Instant since = now.minus(Duration.ofDays(120)).truncatedTo(ChronoUnit.DAYS);
@@ -334,6 +439,14 @@ class ClickRollupEquivalenceIntegrationTest {
     return s;
   }
 
+  private Map<Integer, List<Long>> adminLifecycle() {
+    Map<Integer, List<Long>> days = new LinkedHashMap<>();
+    adminAnalytics
+        .lifecycleDays(90)
+        .forEach(row -> days.put(row.getDay(), List.of(row.getClicks(), row.getLinks())));
+    return days;
+  }
+
   private Map<Long, Long> uniques() {
     Map<Long, Long> uniques = new LinkedHashMap<>();
     linkIds.forEach(id -> uniques.put(id, stats(id).uniqueClicks()));
@@ -342,6 +455,14 @@ class ClickRollupEquivalenceIntegrationTest {
 
   private LinkStats stats(Long linkId) {
     return linkStats.stats(ownerByLink.get(linkId), codeByLink.get(linkId));
+  }
+
+  private long summaryClicks(Long campaignId) {
+    return campaignQuery.summaries(ownerOfCampaign(campaignId)).stream()
+        .filter(summary -> summary.campaign().getId().equals(campaignId))
+        .mapToLong(CampaignSummary::humanClicks)
+        .findFirst()
+        .orElseThrow();
   }
 
   private Long ownerOfCampaign(Long campaignId) {
@@ -457,7 +578,7 @@ class ClickRollupEquivalenceIntegrationTest {
 
   private void backdate(Long linkId, Instant created) {
     jdbc.update(
-        "UPDATE link SET created_at = FROM_UNIXTIME(?) WHERE id = ?",
+        "UPDATE link SET created_at = TIMESTAMPADD(SECOND, ?, '1970-01-01') WHERE id = ?",
         created.getEpochSecond(),
         linkId);
   }

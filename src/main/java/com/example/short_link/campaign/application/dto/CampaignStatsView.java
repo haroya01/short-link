@@ -1,6 +1,7 @@
 package com.example.short_link.campaign.application.dto;
 
 import com.example.short_link.link.domain.ShortCode;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,9 +13,10 @@ public record CampaignStatsView(
     List<BatchStats> byBatch,
     List<GroupStats> byDistributor,
     List<GroupStats> byArea,
-    List<HourBucket> byHour,
-    List<DayBucket> byDay,
-    List<HeatmapCell> heatmap) {
+    @JsonUnwrapped TimeBuckets timeBuckets) {
+
+  public record TimeBuckets(
+      List<HourBucket> byHour, List<DayBucket> byDay, List<HeatmapCell> heatmap, String timezone) {}
 
   public record BatchStats(
       Long batchId,

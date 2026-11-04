@@ -6,12 +6,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.SeriesSubscriberCount;
 import com.example.short_link.post.application.read.SeriesSubscriptionStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesSubscriptionEntity;
+import com.example.short_link.post.domain.SeriesSummary;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,13 +34,19 @@ class SubscribeSeriesUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new SubscribeSeriesUseCase(seriesRepository, subscriptionRepository, events);
+    useCase =
+        new SubscribeSeriesUseCase(
+            seriesRepository,
+            subscriptionRepository,
+            events,
+            new SeriesSubscriberCount(seriesRepository, subscriptionRepository));
   }
 
   @Test
   void subscribeCreatesEdgeWhenNotYetSubscribed() {
     when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
     when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(1);
+    when(seriesRepository.findPublishedSummaries(List.of(5L))).thenReturn(List.of(published(5L)));
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(3L);
 
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);
@@ -59,6 +68,7 @@ class SubscribeSeriesUseCaseTest {
   void subscribeIsIdempotentWhenAlreadySubscribed() {
     when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
     when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(0);
+    when(seriesRepository.findPublishedSummaries(List.of(5L))).thenReturn(List.of(published(5L)));
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(1L);
 
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);
@@ -80,6 +90,8 @@ class SubscribeSeriesUseCaseTest {
   void unsubscribeDeletesWhenSubscribed() {
     SeriesSubscriptionEntity edge = new SeriesSubscriptionEntity(9L, 5L);
     when(subscriptionRepository.findByUserIdAndSeriesId(9L, 5L)).thenReturn(Optional.of(edge));
+    when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
+    when(seriesRepository.findPublishedSummaries(List.of(5L))).thenReturn(List.of(published(5L)));
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(0L);
 
     SeriesSubscriptionStatus status = useCase.unsubscribe(9L, 5L);
@@ -92,11 +104,25 @@ class SubscribeSeriesUseCaseTest {
   @Test
   void unsubscribeIsNoOpWhenNotSubscribed() {
     when(subscriptionRepository.findByUserIdAndSeriesId(9L, 5L)).thenReturn(Optional.empty());
-    when(subscriptionRepository.countBySeriesId(5L)).thenReturn(0L);
+    when(seriesRepository.findById(5L)).thenReturn(Optional.empty());
 
     SeriesSubscriptionStatus status = useCase.unsubscribe(9L, 5L);
 
     verify(subscriptionRepository, never()).delete(ArgumentMatchers.any());
     assertThat(status.subscribed()).isFalse();
+  }
+
+  @Test
+  void subscribingToASeriesWithNothingPublishedShowsSomeoneElseNoCount() {
+    when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
+    when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(1);
+    when(seriesRepository.findPublishedSummaries(List.of(5L))).thenReturn(List.of());
+
+    assertThat(useCase.subscribe(9L, 5L).subscriberCount()).isZero();
+    verify(subscriptionRepository, never()).countBySeriesId(5L);
+  }
+
+  private static SeriesSummary published(long seriesId) {
+    return new SeriesSummary(seriesId, "s", "S", 1);
   }
 }

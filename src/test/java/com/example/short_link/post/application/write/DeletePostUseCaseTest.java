@@ -2,10 +2,13 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +48,7 @@ class DeletePostUseCaseTest {
   @Mock private SeriesItemRepository seriesItemRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private CollectionConnectionCleaner connectionCleaner;
+  @Mock private ApplicationEventPublisher events;
 
   private DeletePostUseCase useCase;
 
@@ -62,7 +67,8 @@ class DeletePostUseCaseTest {
             postReadRepository,
             seriesItemRepository,
             cacheEviction,
-            connectionCleaner);
+            connectionCleaner,
+            events);
   }
 
   @Test
@@ -100,6 +106,7 @@ class DeletePostUseCaseTest {
     order.verify(connectionCleaner).purgeForPost(42L);
     order.verify(seriesItemRepository).deleteByRef(SeriesItemType.POST, 42L);
     order.verify(postRepository).delete(post);
+    verify(events).publishEvent(new LiveRevoke.Closed(LiveTopic.post(42L)));
   }
 
   private static PostHighlightEntity highlight(long id) {

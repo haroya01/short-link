@@ -97,7 +97,7 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
               (String) columns[3],
               (String) columns[4],
               (String) columns[5],
-              CustomEmoji.fromColumn(columns[6] == null ? null : columns[6].toString())));
+              CustomEmoji.fromColumn(columns[6])));
     }
     return authors;
   }

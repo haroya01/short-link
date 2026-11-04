@@ -163,6 +163,23 @@
 @junit | campaign-batch-visit | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batches-csv | 5 | 0 | 0 | 0 | 5
 @junit | campaign-batches-qr-zip | 5 | 0 | 0 | 0 | 5
+# Clearing fields, measured against Docker MySQL 2026-11-04: an empty string clears and a JSON null
+# keeps, with the same SQL as any policy or batch update. Rows that still hold empty strings read
+# as no value: a batch without its own URL stops at the campaign check, the batch link redirects,
+# stats skip the blank groups, the CSV leaves the cells empty, and ending writes no follow-up URL
+# or message onto the link, whose visit is then the expired page.
+@junit | campaign-clear-batch-create | 8 | 6 | 2 | 0 | 16
+@junit | campaign-clear-batch-fields | 4 | 0 | 1 | 0 | 5
+@junit | campaign-clear-create | 1 | 1 | 0 | 0 | 2
+@junit | campaign-clear-fields | 3 | 0 | 1 | 0 | 4
+@junit | campaign-clear-legacy-batch-needs-url | 2 | 0 | 0 | 0 | 2
+@junit | campaign-clear-legacy-csv | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-legacy-detail | 2 | 0 | 0 | 0 | 2
+@junit | campaign-clear-legacy-end | 6 | 0 | 2 | 0 | 8
+@junit | campaign-clear-legacy-ended-visit | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-legacy-stats | 9 | 0 | 0 | 0 | 9
+@junit | campaign-clear-legacy-visit | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-null-keeps | 3 | 0 | 1 | 0 | 4
 @junit | campaign-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | campaign-create | 1 | 1 | 0 | 0 | 2
 @junit | campaign-create-comparison | 1 | 1 | 0 | 0 | 2
@@ -174,11 +191,12 @@
 # custom-domain owner check before forwarding there.
 @junit | campaign-ended-visit | 4 | 0 | 0 | 0 | 4
 @junit | campaign-ended-visit-trailing-slash | 4 | 0 | 0 | 0 | 4
-@junit | campaign-list | 3 | 0 | 0 | 0 | 3
+@junit | campaign-list | 2 | 0 | 0 | 0 | 2
+@junit | campaign-list-with-batches | 3 | 0 | 0 | 0 | 3
 @junit | campaign-policy-reapply | 10 | 0 | 6 | 0 | 16
 @junit | campaign-policy-update | 3 | 0 | 1 | 0 | 4
 @junit | campaign-reapplied-visit | 4 | 0 | 0 | 0 | 4
-@junit | campaign-recommendations | 10 | 0 | 0 | 0 | 10
+@junit | campaign-recommendations | 11 | 0 | 0 | 0 | 11
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
 @junit | campaign-scheduled-batch-create | 8 | 6 | 2 | 0 | 16
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
@@ -188,8 +206,8 @@
 @junit | campaign-scheduled-read-active | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-read-ended | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-repeat-tick | 2 | 0 | 0 | 0 | 2
-@junit | campaign-stats | 10 | 0 | 0 | 0 | 10
-@junit | campaign-stats-compare | 12 | 0 | 0 | 0 | 12
+@junit | campaign-stats | 11 | 0 | 0 | 0 | 11
+@junit | campaign-stats-compare | 13 | 0 | 0 | 0 | 13
 @junit | creator-blog-hook-create | 1 | 1 | 0 | 0 | 2
 @junit | creator-blog-hook-delete | 1 | 0 | 0 | 1 | 2
 @junit | creator-blog-hook-denies-other | 1 | 0 | 0 | 0 | 1
@@ -205,10 +223,12 @@
 @junit | creator-cta-update | 3 | 0 | 1 | 0 | 4
 @junit | creator-reader-behavior | 0 | 1 | 0 | 0 | 1
 @junit | curation-collection-delete | 1 | 0 | 0 | 1 | 2
-# A highlight is connected only when the post it is on is open or the curator's own.
-@junit | curation-connect-highlight | 10 | 2 | 0 | 0 | 12
-@junit | curation-connect-note | 9 | 2 | 0 | 0 | 11
-@junit | curation-connect-post | 7 | 2 | 0 | 0 | 9
+# A highlight is connected only when the post it is on is open or the curator's own. The path is
+# still private while these connect, so no one is notified: only a PUBLIC collection tells the
+# connected author and the earlier contributors.
+@junit | curation-connect-highlight | 4 | 1 | 0 | 0 | 5
+@junit | curation-connect-note | 3 | 1 | 0 | 0 | 4
+@junit | curation-connect-post | 3 | 1 | 0 | 0 | 4
 @junit | curation-delete-highlight-purges-connection | 1 | 0 | 0 | 3 | 4
 @junit | curation-delete-note-purges-connection | 3 | 0 | 0 | 4 | 7
 @junit | curation-disconnect-post | 2 | 0 | 0 | 1 | 3
@@ -232,6 +252,7 @@
 @junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | curation-unlist-path | 2 | 0 | 1 | 0 | 3
+@junit | curation-unlisted-key-rotate | 1 | 0 | 1 | 0 | 2
 @junit | custom-domain-delete | 1 | 0 | 0 | 1 | 2
 @junit | custom-domain-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-list | 1 | 0 | 0 | 0 | 1
@@ -349,7 +370,8 @@
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
 @junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
 @junit | link-bulk-import | 10 | 10 | 4 | 0 | 24
-@junit | link-claim-anonymous | 2 | 0 | 1 | 0 | 3
+# Claiming counts the account's links once something matched, so a claim stops at the link quota.
+@junit | link-claim-anonymous | 3 | 0 | 1 | 0 | 4
 @junit | link-claim-replay | 2 | 0 | 0 | 0 | 2
 @junit | link-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | link-countries-block | 3 | 0 | 2 | 0 | 5
@@ -370,7 +392,8 @@
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
 @junit | link-list-owned | 6 | 0 | 0 | 0 | 6
-@junit | link-og-card | 1 | 0 | 0 | 0 | 1
+# The kurl card counts human clicks only for a link whose stats are public; this one's are not.
+@junit | link-og-card | 0 | 0 | 0 | 0 | 0
 @junit | link-og-override | 4 | 0 | 2 | 0 | 6
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
 @junit | link-pow-challenge | 0 | 0 | 0 | 0 | 0
@@ -380,10 +403,12 @@
 @junit | link-redirect | 3 | 0 | 0 | 0 | 3
 @junit | link-redirect-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | link-root-redirect | 0 | 0 | 0 | 0 | 0
-@junit | link-stats-csv | 43 | 0 | 0 | 0 | 43
+# A link report adds its human and bot counts for the total, takes hours and weekdays from its
+# heatmap and the direct, profile, preview and datacenter counts from one statement.
+@junit | link-stats-csv | 37 | 0 | 0 | 0 | 37
 @junit | link-stats-foreign-denied | 2 | 0 | 0 | 0 | 2
-@junit | link-stats-private | 43 | 0 | 0 | 0 | 43
-@junit | link-stats-public | 43 | 0 | 0 | 0 | 43
+@junit | link-stats-private | 37 | 0 | 0 | 0 | 37
+@junit | link-stats-public | 37 | 0 | 0 | 0 | 37
 @junit | link-stats-public-denied | 1 | 0 | 0 | 0 | 1
 @junit | link-stats-publish | 2 | 0 | 1 | 0 | 3
 @junit | link-stream-anonymous | 1 | 0 | 0 | 0 | 1
@@ -472,7 +497,7 @@
 @junit | ops-health-metrics | 0 | 0 | 0 | 0 | 0
 @junit | ops-lifecycle | 1 | 0 | 0 | 0 | 1
 @junit | ops-link-activity | 3 | 0 | 0 | 0 | 3
-@junit | ops-link-detail | 43 | 0 | 0 | 0 | 43
+@junit | ops-link-detail | 37 | 0 | 0 | 0 | 37
 @junit | ops-link-metrics | 2 | 0 | 0 | 0 | 2
 @junit | ops-list-blocked-domains | 1 | 0 | 0 | 0 | 1
 @junit | ops-metric-redirect | 4 | 0 | 0 | 0 | 4
@@ -568,16 +593,24 @@
 @junit | profile-public-read-after-delete | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-stats-private-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-public-stats-read | 17 | 0 | 0 | 0 | 17
-@junit | profile-public-with-featured-block | 5 | 0 | 0 | 0 | 5
-@junit | profile-public-with-link | 5 | 0 | 0 | 0 | 5
+@junit | profile-public-with-featured-block | 4 | 0 | 0 | 0 | 4
+# A link's click count is read and shown only when its stats are public, to the owner too; the
+# response does not depend on who asks, so the cached profile serves everyone. Making a profile
+# link's stats public reads the account (write gate), the link and the owner's handle to drop the
+# cached profile, so the next read loads it again with the count.
+@junit | profile-public-with-link | 4 | 0 | 0 | 0 | 4
+@junit | profile-public-read-by-member | 0 | 0 | 0 | 0 | 0
+@junit | profile-public-read-by-owner | 0 | 0 | 0 | 0 | 0
+@junit | profile-link-stats-public | 3 | 0 | 1 | 0 | 4
+@junit | profile-public-with-public-stats-link | 5 | 0 | 0 | 0 | 5
 # Disabled links are left out in the profile-links read; unopened and expired ones when served.
-@junit | profile-public-unavailable-hidden | 5 | 0 | 0 | 0 | 5
-@junit | profile-public-protected-link | 5 | 0 | 0 | 0 | 5
+@junit | profile-public-unavailable-hidden | 4 | 0 | 0 | 0 | 4
+@junit | profile-public-protected-link | 4 | 0 | 0 | 0 | 4
 # A deleted account's profile is not cached: the username and its history miss.
 @junit | profile-public-after-account-delete | 2 | 0 | 0 | 0 | 2
 # A profile showing view-limited links reads their counts on every request, cached or not, so a
 # link drops off as soon as its last view is spent; the second read is a cache hit plus that read.
-@junit | profile-public-with-limited-links | 6 | 0 | 0 | 0 | 6
+@junit | profile-public-with-limited-links | 5 | 0 | 0 | 0 | 5
 @junit | profile-limited-link-visit | 4 | 0 | 1 | 0 | 5
 @junit | profile-limited-link-visit-room-left | 3 | 0 | 1 | 0 | 4
 @junit | profile-public-after-limit-spent | 1 | 0 | 0 | 0 | 1
@@ -687,10 +720,12 @@
 # in one query whatever the number of cards.
 @junit | reader-series-discovery | 4 | 0 | 0 | 0 | 4
 @junit | reader-series-discovery-with-note | 4 | 0 | 0 | 0 | 4
-@junit | reader-series-subscribe | 8 | 2 | 0 | 0 | 10
+# The subscriber count is read only after checking the series is published or the reader's own
+# (its open-post summary; status and unsubscribe also load the series for its owner).
+@junit | reader-series-subscribe | 9 | 2 | 0 | 0 | 11
 @junit | reader-series-subscription-ids | 1 | 0 | 0 | 0 | 1
-@junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2
-@junit | reader-series-unsubscribe | 2 | 0 | 0 | 1 | 3
+@junit | reader-series-subscription-status | 4 | 0 | 0 | 0 | 4
+@junit | reader-series-unsubscribe | 4 | 0 | 0 | 1 | 5
 @junit | reader-short-note-create | 4 | 1 | 0 | 0 | 5
 @junit | reader-short-note-delete | 3 | 0 | 0 | 4 | 7
 @junit | reader-subscribed-series-cards | 4 | 0 | 0 | 0 | 4
@@ -702,15 +737,20 @@
 @junit | reader-tag-unhide | 2 | 0 | 0 | 1 | 3
 @junit | reader-unfollow-author | 4 | 0 | 0 | 1 | 5
 @junit | reader-unlisted-path-absent-from-profile | 2 | 0 | 0 | 0 | 2
+# A link-only path opens for someone else only with its current key; without it, or with a key the
+# owner rotated away, it answers 404 after reading the one row, like a private or missing one.
 @junit | reader-unlisted-path-direct-link | 8 | 0 | 0 | 0 | 8
+@junit | reader-unlisted-path-number-only | 1 | 0 | 0 | 0 | 1
+@junit | reader-unlisted-path-retired-key | 1 | 0 | 0 | 0 | 1
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
-# Links with a view limit or country block: a crawler's card reads the link row and human clicks
-# but no event preview, spends no view, and is refused like a person once the limit is spent or its
-# country is blocked. A prefetch of a counted link stops at the custom-domain check.
+# Links with a view limit or country block: a crawler's card reads the link row (human clicks only
+# when the link's stats are public, which these are not) but no event preview, spends no view, and
+# is refused like a person once the limit is spent or its country is blocked. A prefetch of a
+# counted link stops at the custom-domain check.
 @junit | restricted-create-once | 6 | 5 | 2 | 0 | 13
 @junit | restricted-limit-views | 3 | 0 | 2 | 0 | 5
-@junit | restricted-crawler-preview | 5 | 0 | 0 | 0 | 5
-@junit | restricted-crawler-again | 3 | 0 | 0 | 0 | 3
+@junit | restricted-crawler-preview | 4 | 0 | 0 | 0 | 4
+@junit | restricted-crawler-again | 2 | 0 | 0 | 0 | 2
 @junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
 @junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
 @junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
@@ -720,7 +760,7 @@
 @junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
 @junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
 @junit | restricted-create-open | 6 | 5 | 2 | 0 | 13
-@junit | open-crawler-preview | 6 | 0 | 0 | 0 | 6
+@junit | open-crawler-preview | 5 | 0 | 0 | 0 | 5
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-comment-like | 11 | 2 | 0 | 0 | 13

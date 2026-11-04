@@ -119,7 +119,7 @@ class VisitHandoffTest {
                 .getBody());
 
     assertThat(body).contains("<p class=\"msg\">안내</p>");
-    assertThat(body).doesNotContain("class=\"bigmark\"");
+    assertThat(body).doesNotContain("<h1>열렸어요</h1>");
   }
 
   @Test

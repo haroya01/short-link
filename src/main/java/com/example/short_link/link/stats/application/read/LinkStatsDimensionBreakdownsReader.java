@@ -20,24 +20,24 @@ class LinkStatsDimensionBreakdownsReader {
   private static final int TOP_SIZE = 50;
 
   private final ClickDimensionReader clickDimensions;
-  private final ClickTotalsReader clickTotals;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkDestinationRepository destinationRepository;
   private final PostTitleReader postTitles;
 
-  ChannelBreakdowns channels(LinkId linkId) {
-    List<LinkStats.ReferrerClick> referrers =
-        clickDimensions.findTopReferrerClicks(linkId.value(), TOP_SIZE).stream()
+  ChannelBreakdowns channels(LinkId linkId, long direct) {
+    List<LinkStats.ReferrerClick> allReferrers =
+        clickDimensions.findAllReferrerClicks(linkId.value()).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
             .toList();
+    List<LinkStats.ReferrerClick> referrers =
+        allReferrers.subList(0, Math.min(TOP_SIZE, allReferrers.size()));
     List<LinkStats.ReferrerHostClick> referrerHosts =
         clickDimensions.findTopReferrerHostClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.ReferrerHostClick(r.getHost(), r.getCount()))
             .toList();
     Map<String, Long> channelTotals = new HashMap<>();
-    referrers.forEach(
+    allReferrers.forEach(
         r -> channelTotals.merge(channelClassifier.classify(r.referrer()), r.count(), Long::sum));
-    long direct = clickTotals.countDirectByLinkId(linkId.value());
     if (direct > 0) channelTotals.merge("direct", direct, Long::sum);
     List<LinkStats.ChannelClick> channels =
         channelTotals.entrySet().stream()
@@ -119,7 +119,7 @@ class LinkStatsDimensionBreakdownsReader {
         .toList();
   }
 
-  GeoBreakdowns geo(LinkId linkId) {
+  GeoBreakdowns geo(LinkId linkId, long datacenterClicks) {
     List<LinkStats.CountryClick> countries =
         clickDimensions.findTopCountryClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
@@ -140,7 +140,6 @@ class LinkStatsDimensionBreakdownsReader {
         clickDimensions.findTopAsnClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.AsnClick(r.getAsn(), r.getOrganization(), r.getCount()))
             .toList();
-    long datacenterClicks = clickTotals.countDatacenterClicks(linkId.value());
     return new GeoBreakdowns(countries, regions, cities, languages, asns, datacenterClicks);
   }
 

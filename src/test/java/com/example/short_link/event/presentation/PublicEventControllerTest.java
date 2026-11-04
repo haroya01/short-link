@@ -53,6 +53,7 @@ class PublicEventControllerTest {
         "EMAIL",
         "OPEN",
         true,
+        null,
         7,
         "dohyun",
         null,

@@ -9,9 +9,15 @@ public interface ClickRollupRepository {
 
   Instant rolledUntil();
 
+  Instant aggregatedUntil();
+
   Optional<Instant> firstClickAtOrAfter(Instant from);
 
   void rollUpDay(Instant dayStart, Instant dayEnd);
+
+  void aggregateDay(Instant dayStart, Instant dayEnd);
+
+  void advanceAggregatedTo(Instant aggregatedUntil);
 
   List<LinkVisitor> humanVisitors(Instant from, Instant until);
 

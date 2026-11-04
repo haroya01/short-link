@@ -44,12 +44,6 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  public interface DayOfWeekClickRow {
-    Integer getDow();
-
-    Long getCount();
-  }
-
   public interface HeatmapRow {
     Integer getDow();
 
@@ -68,12 +62,6 @@ public final class ClickProjections {
     String getHost();
 
     Long getCount();
-  }
-
-  public interface HostFirstSeenRow {
-    String getHost();
-
-    Long getFirstSeenEpoch();
   }
 
   public interface DeviceClickRow {

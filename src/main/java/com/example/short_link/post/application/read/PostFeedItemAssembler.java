@@ -66,7 +66,7 @@ public class PostFeedItemAssembler {
         post.getLanguageTag(),
         redacted ? List.of() : List.copyOf(post.getTags()),
         post.getPublishedAt(),
-        redacted ? 0 : post.getViewCount(),
+        0,
         redacted ? 0 : post.getLikeCount(),
         null,
         null,

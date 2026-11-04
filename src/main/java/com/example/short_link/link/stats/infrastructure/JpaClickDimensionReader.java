@@ -26,6 +26,7 @@ import com.example.short_link.link.stats.infrastructure.persistence.JpaClickDime
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,8 +36,8 @@ public class JpaClickDimensionReader implements ClickDimensionReader {
   private final JpaClickDimensionReadRepository repository;
 
   @Override
-  public List<ReferrerClickRow> findTopReferrerClicks(Long linkId, int limit) {
-    return repository.findReferrerClicks(linkId, PageRequest.ofSize(limit));
+  public List<ReferrerClickRow> findAllReferrerClicks(Long linkId) {
+    return repository.findReferrerClicks(linkId, Pageable.unpaged());
   }
 
   @Override
