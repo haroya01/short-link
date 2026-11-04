@@ -163,6 +163,23 @@
 @junit | campaign-batch-visit | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batches-csv | 5 | 0 | 0 | 0 | 5
 @junit | campaign-batches-qr-zip | 5 | 0 | 0 | 0 | 5
+# Clearing fields, measured against Docker MySQL 2026-11-04: an empty string clears and a JSON null
+# keeps, with the same SQL as any policy or batch update. Rows that still hold empty strings read
+# as no value: a batch without its own URL stops at the campaign check, the batch link redirects,
+# stats skip the blank groups, the CSV leaves the cells empty, and ending writes no follow-up URL
+# or message onto the link, whose visit is then the expired page.
+@junit | campaign-clear-batch-create | 8 | 6 | 2 | 0 | 16
+@junit | campaign-clear-batch-fields | 4 | 0 | 1 | 0 | 5
+@junit | campaign-clear-create | 1 | 1 | 0 | 0 | 2
+@junit | campaign-clear-fields | 3 | 0 | 1 | 0 | 4
+@junit | campaign-clear-legacy-batch-needs-url | 2 | 0 | 0 | 0 | 2
+@junit | campaign-clear-legacy-csv | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-legacy-detail | 2 | 0 | 0 | 0 | 2
+@junit | campaign-clear-legacy-end | 6 | 0 | 2 | 0 | 8
+@junit | campaign-clear-legacy-ended-visit | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-legacy-stats | 8 | 0 | 0 | 0 | 8
+@junit | campaign-clear-legacy-visit | 3 | 0 | 0 | 0 | 3
+@junit | campaign-clear-null-keeps | 3 | 0 | 1 | 0 | 4
 @junit | campaign-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | campaign-create | 1 | 1 | 0 | 0 | 2
 @junit | campaign-create-comparison | 1 | 1 | 0 | 0 | 2

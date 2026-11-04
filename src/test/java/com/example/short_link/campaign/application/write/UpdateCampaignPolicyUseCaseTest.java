@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class UpdateCampaignPolicyUseCaseTest {
 
@@ -53,6 +54,22 @@ class UpdateCampaignPolicyUseCaseTest {
     assertThat(campaign.getPostEndAction()).isEqualTo(CampaignPostEndAction.REDIRECT);
     assertThat(campaign.getPostEndDestinationUrl()).isEqualTo("https://after.example.com");
     assertThat(campaign.getPostEndMessage()).isEqualTo("later message");
+  }
+
+  @Test
+  void anEmptyStringClearsEachOptionalFieldWhileNullKeepsTheRest() {
+    CampaignEntity campaign = campaign();
+
+    useCase.execute(
+        new UpdateCampaignPolicyCommand(
+            1L, 7L, null, null, "", CampaignPostEndAction.KEEP, "", ""));
+
+    assertThat(campaign.getName()).isEqualTo("original");
+    assertThat(campaign.getEndsAt()).isEqualTo(START.plusSeconds(3600));
+    assertThat(campaign.getPostEndAction()).isEqualTo(CampaignPostEndAction.KEEP);
+    assertThat(ReflectionTestUtils.getField(campaign, "defaultDestinationUrl")).isNull();
+    assertThat(ReflectionTestUtils.getField(campaign, "postEndDestinationUrl")).isNull();
+    assertThat(campaign.getPostEndMessage()).isNull();
   }
 
   @Test
