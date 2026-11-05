@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
@@ -53,14 +54,16 @@ class AuthServiceExtendedTest {
 
   @Test
   void completeTwoFactorRejectsGarbageChallenge() {
-    assertThatThrownBy(() -> authService.completeTwoFactor("not-a-jwt", "000000", false))
+    assertThatThrownBy(
+            () -> authService.completeTwoFactor("not-a-jwt", "000000", false, SessionChannel.WEB))
         .isInstanceOf(UserException.class);
   }
 
   @Test
   void completeTwoFactorRejectsWhenUserMissing() {
     String challenge = jwt.createTwoFactorChallengeToken(999_999_999L);
-    assertThatThrownBy(() -> authService.completeTwoFactor(challenge, "000000", false))
+    assertThatThrownBy(
+            () -> authService.completeTwoFactor(challenge, "000000", false, SessionChannel.WEB))
         .satisfiesAnyOf(
             t -> assertThat(t).isInstanceOf(UserException.class),
             t -> assertThat(t).isInstanceOf(UserException.class));
@@ -73,7 +76,8 @@ class AuthServiceExtendedTest {
     userRepository.save(user);
     String challenge = jwt.createTwoFactorChallengeToken(user.getId());
 
-    assertThatThrownBy(() -> authService.completeTwoFactor(challenge, "000000", false))
+    assertThatThrownBy(
+            () -> authService.completeTwoFactor(challenge, "000000", false, SessionChannel.WEB))
         .satisfiesAnyOf(
             t -> assertThat(t).isInstanceOf(UserException.class),
             t -> assertThat(t).isInstanceOf(UserException.class));
@@ -88,7 +92,7 @@ class AuthServiceExtendedTest {
     user.softDelete();
     userRepository.save(user);
 
-    assertThatThrownBy(() -> authService.refresh(tokens.refreshToken()))
+    assertThatThrownBy(() -> authService.refresh(tokens.refreshToken(), SessionChannel.WEB))
         .isInstanceOf(UserException.class);
   }
 

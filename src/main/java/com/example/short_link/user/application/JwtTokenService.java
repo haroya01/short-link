@@ -16,6 +16,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -33,6 +34,8 @@ public class JwtTokenService {
   private static final String CLAIM_TYPE = "type";
 
   private static final String CLAIM_SESSION = "sid";
+  private static final String CLAIM_CHANNEL = "ch";
+  private static final String CHANNEL_WEB = "web";
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
   private static final String TYPE_TWOFA_CHALLENGE = "twofa_challenge";
@@ -44,10 +47,14 @@ public class JwtTokenService {
   private final PublicKey publicKey;
   private final Duration accessTtl;
   private final Duration refreshTtl;
+  private final Duration mobileRefreshTtl;
+  private final Clock clock;
 
-  public JwtTokenService(JwtProperties props) throws GeneralSecurityException {
+  public JwtTokenService(JwtProperties props, Clock clock) throws GeneralSecurityException {
     this.accessTtl = props.accessTtl();
     this.refreshTtl = props.refreshTtl();
+    this.mobileRefreshTtl = props.mobileRefreshTtl();
+    this.clock = clock;
     String privateKeyPem = props.privateKey();
     String publicKeyPem = props.publicKey();
     if (privateKeyPem.isBlank() || publicKeyPem.isBlank()) {
@@ -68,7 +75,7 @@ public class JwtTokenService {
   }
 
   public String createAccessToken(Long userId, String role, String sessionId) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     var builder =
         Jwts.builder()
             .subject(String.valueOf(userId))
@@ -80,17 +87,18 @@ public class JwtTokenService {
     return builder.signWith(privateKey, Jwts.SIG.RS256).compact();
   }
 
-  public RefreshToken createRefreshToken(Long userId, String sessionId) {
-    Instant now = Instant.now();
+  public RefreshToken createRefreshToken(Long userId, String sessionId, SessionChannel channel) {
+    Instant now = clock.instant();
     String jti = UUID.randomUUID().toString();
     var builder =
         Jwts.builder()
             .subject(String.valueOf(userId))
             .id(jti)
             .issuedAt(Date.from(now))
-            .expiration(Date.from(now.plus(refreshTtl)))
+            .expiration(Date.from(now.plus(refreshTtl(channel))))
             .claim(CLAIM_TYPE, TYPE_REFRESH);
     if (sessionId != null) builder.claim(CLAIM_SESSION, sessionId);
+    if (channel == SessionChannel.WEB) builder.claim(CLAIM_CHANNEL, CHANNEL_WEB);
     return new RefreshToken(builder.signWith(privateKey, Jwts.SIG.RS256).compact(), jti);
   }
 
@@ -112,13 +120,16 @@ public class JwtTokenService {
       throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected refresh token");
     }
     return new ParsedRefresh(
-        Long.valueOf(claims.getSubject()), claims.getId(), claims.get(CLAIM_SESSION, String.class));
+        Long.valueOf(claims.getSubject()),
+        claims.getId(),
+        claims.get(CLAIM_SESSION, String.class),
+        CHANNEL_WEB.equals(claims.get(CLAIM_CHANNEL)));
   }
 
   // Its own type claim keeps it from passing as an access token; only second-factor verification
   // exchanges it for a session.
   public String createTwoFactorChallengeToken(Long userId) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     return Jwts.builder()
         .subject(String.valueOf(userId))
         .issuedAt(Date.from(now))
@@ -141,7 +152,7 @@ public class JwtTokenService {
   }
 
   public String createStreamToken(Long userId, String shortCode, Duration ttl) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     return Jwts.builder()
         .subject(String.valueOf(userId))
         .issuedAt(Date.from(now))
@@ -165,11 +176,16 @@ public class JwtTokenService {
   }
 
   private Claims parseClaims(String token) {
-    return Jwts.parser().verifyWith(publicKey).build().parseSignedClaims(token).getPayload();
+    return Jwts.parser()
+        .verifyWith(publicKey)
+        .clock(() -> Date.from(clock.instant()))
+        .build()
+        .parseSignedClaims(token)
+        .getPayload();
   }
 
-  public Duration refreshTtl() {
-    return refreshTtl;
+  public Duration refreshTtl(SessionChannel channel) {
+    return channel == SessionChannel.MOBILE ? mobileRefreshTtl : refreshTtl;
   }
 
   public Duration accessTtl() {

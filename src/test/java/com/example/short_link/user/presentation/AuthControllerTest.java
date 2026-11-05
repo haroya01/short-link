@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.AppleIdentity;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.application.write.AppleIdentityVerifier;
@@ -52,7 +53,7 @@ class AuthControllerTest {
   @Test
   void refreshIssuesNewAccessToken() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 
     mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", refresh.token())))
@@ -76,7 +77,7 @@ class AuthControllerTest {
   @Test
   void refreshReplayWithinGraceSucceeds() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 
     mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", refresh.token())))
@@ -92,7 +93,7 @@ class AuthControllerTest {
   void refreshWithUnknownTokenReturns401() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
     // Never stored and never just rotated → rejected as a stale/unknown token (this token only).
-    RefreshToken stale = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken stale = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB);
 
     mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", stale.token())))
         .andExpect(status().isUnauthorized());
@@ -102,7 +103,7 @@ class AuthControllerTest {
   void logoutClearsRefreshFromStore() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
     String access = jwt.createAccessToken(user.getId(), "USER");
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 
     mvc.perform(

@@ -40,7 +40,8 @@ class DeviceTokenCommandServiceTest {
         new DeviceTokenCommandService(
             deviceTokens,
             userRepository,
-            new JwtProperties("", "", Duration.ofMinutes(15), Duration.ofDays(14), null),
+            new JwtProperties(
+                "", "", Duration.ofMinutes(15), Duration.ofDays(14), null, Duration.ofDays(365)),
             Clock.fixed(AT, ZoneOffset.UTC));
   }
 
@@ -70,7 +71,7 @@ class DeviceTokenCommandServiceTest {
     ArgumentCaptor<DeviceTokenEntity> saved = ArgumentCaptor.forClass(DeviceTokenEntity.class);
     verify(deviceTokens).save(saved.capture());
     assertThat(saved.getValue().getSessionId()).isEqualTo("s-1");
-    assertThat(saved.getValue().getSessionExpiresAt()).isEqualTo(AT.plus(Duration.ofDays(14)));
+    assertThat(saved.getValue().getSessionExpiresAt()).isEqualTo(AT.plus(Duration.ofDays(365)));
   }
 
   @Test

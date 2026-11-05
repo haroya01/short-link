@@ -1,6 +1,7 @@
 package com.example.short_link.user.application.write;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.application.properties.JwtProperties;
@@ -56,7 +57,7 @@ public class AuthService {
       return new TokenLoginResult.TwoFactorRequired(
           jwt.createTwoFactorChallengeToken(user.getId()));
     }
-    return new TokenLoginResult.Tokens(issue(user));
+    return new TokenLoginResult.Tokens(issue(user, SessionChannel.WEB));
   }
 
   // Returns a one-time code because the browser sheet cannot deliver tokens to the app. No session
@@ -78,7 +79,7 @@ public class AuthService {
         exchangeCodes
             .consume(code)
             .orElseThrow(() -> new UserException(UserErrorCode.INVALID_EXCHANGE_CODE));
-    return issue(loadActiveUser(userId));
+    return issue(loadActiveUser(userId), SessionChannel.MOBILE);
   }
 
   private UserEntity upsertOAuthUser(String email, String oauthProvider, String oauthId) {
@@ -98,7 +99,8 @@ public class AuthService {
   // to that account, preserving one account per unique email and leaving its original OAuth
   // identity unchanged.
   @Transactional
-  public TokenLoginResult loginWithApple(String appleSubject, String email) {
+  public TokenLoginResult loginWithApple(
+      String appleSubject, String email, SessionChannel channel) {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId("apple", appleSubject)
@@ -112,7 +114,7 @@ public class AuthService {
       return new TokenLoginResult.TwoFactorRequired(
           jwt.createTwoFactorChallengeToken(user.getId()));
     }
-    return new TokenLoginResult.Tokens(issue(user));
+    return new TokenLoginResult.Tokens(issue(user, channel));
   }
 
   private Optional<UserEntity> findLinkableByEmail(String email) {
@@ -137,7 +139,8 @@ public class AuthService {
   }
 
   @Transactional
-  public IssuedTokens completeTwoFactor(String challengeToken, String code, boolean recovery) {
+  public IssuedTokens completeTwoFactor(
+      String challengeToken, String code, boolean recovery, SessionChannel channel) {
     Long userId;
     try {
       userId = jwt.parseTwoFactorChallengeToken(challengeToken);
@@ -151,25 +154,29 @@ public class AuthService {
             .findById(userId)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
-    return issue(user);
+    return issue(user, channel);
   }
 
   @Transactional
-  public IssuedTokens refresh(String refreshToken) {
+  public IssuedTokens refresh(String refreshToken, SessionChannel channel) {
     ParsedRefresh parsed;
     try {
       parsed = jwt.parseRefreshToken(refreshToken);
     } catch (Exception e) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
+    if (channel == SessionChannel.MOBILE && parsed.webOnly()) {
+      log.warn("web refresh token sent to the app refresh for userId={}", parsed.userId());
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+    }
     // Only the request that consumed the token rotates it. The marker left behind keeps a
     // shared-cookie race from being mistaken for theft.
     if (refreshStore.consume(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace())) {
-      return continueSession(parsed);
+      return continueSession(parsed, channel);
     }
     if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
-      return continueSession(parsed);
+      return continueSession(parsed, channel);
     }
     log.warn(
         "refresh token unknown or expired for userId={}, rejecting this token "
@@ -207,27 +214,28 @@ public class AuthService {
 
   // A rotation keeps the session id (a refresh token from before sessions starts one) and moves the
   // session's devices' end along with the new refresh token's.
-  private IssuedTokens continueSession(ParsedRefresh parsed) {
+  private IssuedTokens continueSession(ParsedRefresh parsed, SessionChannel channel) {
     String sessionId =
         parsed.sessionId() != null ? parsed.sessionId() : UUID.randomUUID().toString();
-    IssuedTokens tokens = issue(loadActiveUser(parsed.userId()), sessionId);
-    deviceTokens.extendSession(parsed.userId(), sessionId, clock.instant().plus(jwt.refreshTtl()));
+    IssuedTokens tokens = issue(loadActiveUser(parsed.userId()), sessionId, channel);
+    deviceTokens.extendSession(
+        parsed.userId(), sessionId, clock.instant().plus(jwt.refreshTtl(channel)));
     return tokens;
   }
 
-  private IssuedTokens issue(UserEntity user) {
-    return issue(user, UUID.randomUUID().toString());
+  private IssuedTokens issue(UserEntity user, SessionChannel channel) {
+    return issue(user, UUID.randomUUID().toString(), channel);
   }
 
-  private IssuedTokens issue(UserEntity user, String sessionId) {
+  private IssuedTokens issue(UserEntity user, String sessionId, SessionChannel channel) {
     // 모든 세션 발급에서 BANNED를 거부한다. SUSPENDED는 상태 확인·소명을 위해 로그인을 허용하고
     // 콘텐츠 생성만 UserModerationGuard에서 막는다.
     if (user.isBanned()) {
       throw new UserException(UserErrorCode.ACCOUNT_BANNED);
     }
     String access = jwt.createAccessToken(user.getId(), user.getRole().name(), sessionId);
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), sessionId);
-    refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), sessionId, channel);
+    refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl(channel));
     return new IssuedTokens(access, refresh.token());
   }
 }

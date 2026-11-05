@@ -10,6 +10,7 @@ import com.example.short_link.user.exception.UserException;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,8 @@ class JwtTokenServiceExtendedTest {
   private JwtTokenService freshService() throws Exception {
     return new JwtTokenService(
         new JwtProperties(
-            "", "", Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10)));
+            "", "", Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10), null),
+        Clock.systemUTC());
   }
 
   @Test
@@ -41,7 +43,7 @@ class JwtTokenServiceExtendedTest {
   @Test
   void parseAccessTokenDetailedRejectsRefreshToken() throws Exception {
     JwtTokenService svc = freshService();
-    String refresh = svc.createRefreshToken(42L, null).token();
+    String refresh = svc.createRefreshToken(42L, null, SessionChannel.WEB).token();
     assertThatThrownBy(() -> svc.parseAccessTokenDetailed(refresh))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
@@ -70,8 +72,10 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc =
         new JwtTokenService(
             new JwtProperties(
-                "", "", Duration.ofMinutes(1), Duration.ofDays(30), Duration.ofSeconds(10)));
-    assertThat(svc.refreshTtl()).isEqualTo(Duration.ofDays(30));
+                "", "", Duration.ofMinutes(1), Duration.ofDays(30), Duration.ofSeconds(10), null),
+            Clock.systemUTC());
+    assertThat(svc.refreshTtl(SessionChannel.WEB)).isEqualTo(Duration.ofDays(30));
+    assertThat(svc.refreshTtl(SessionChannel.MOBILE)).isEqualTo(Duration.ofDays(365));
   }
 
   @Test
@@ -79,7 +83,8 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc =
         new JwtTokenService(
             new JwtProperties(
-                "", "", Duration.ofMinutes(15), Duration.ofDays(30), Duration.ofSeconds(10)));
+                "", "", Duration.ofMinutes(15), Duration.ofDays(30), Duration.ofSeconds(10), null),
+            Clock.systemUTC());
     assertThat(svc.accessTtl()).isEqualTo(Duration.ofMinutes(15));
   }
 
@@ -99,7 +104,8 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc =
         new JwtTokenService(
             new JwtProperties(
-                priv, pub, Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10)));
+                priv, pub, Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10), null),
+            Clock.systemUTC());
     String token = svc.createAccessToken(42L, "USER");
     assertThat(svc.parseAccessTokenDetailed(token).userId()).isEqualTo(42L);
   }
@@ -114,7 +120,9 @@ class JwtTokenServiceExtendedTest {
                         "-----BEGIN PUBLIC KEY-----\nXXX\n-----END PUBLIC KEY-----",
                         Duration.ofMinutes(5),
                         Duration.ofDays(7),
-                        Duration.ofSeconds(10))))
+                        Duration.ofSeconds(10),
+                        null),
+                    Clock.systemUTC()))
         .isInstanceOf(GeneralSecurityException.class);
   }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.support.TestEntities;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
@@ -65,7 +66,7 @@ class SoftDeleteFlowTest {
 
     deletionService.deleteAccount(user.getId());
 
-    assertThatThrownBy(() -> authService.refresh(initial.refreshToken()))
+    assertThatThrownBy(() -> authService.refresh(initial.refreshToken(), SessionChannel.WEB))
         .isInstanceOf(UserException.class);
   }
 

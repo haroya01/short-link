@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.AppleIdentity;
 import com.example.short_link.user.application.write.AppleIdentityVerifier;
 import com.example.short_link.user.application.write.AuthService;
@@ -42,7 +43,8 @@ public class MobileAuthController {
   @PostMapping("/apple")
   public AppleLoginResponse apple(@Valid @RequestBody AppleLoginRequest request) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
-    return switch (authService.loginWithApple(identity.subject(), identity.email())) {
+    return switch (authService.loginWithApple(
+        identity.subject(), identity.email(), SessionChannel.MOBILE)) {
       case AuthService.TokenLoginResult.Tokens tokens -> AppleLoginResponse.tokens(tokens.issued());
       case AuthService.TokenLoginResult.TwoFactorRequired challenge ->
           AppleLoginResponse.twoFactor(challenge.challengeToken());
@@ -56,13 +58,15 @@ public class MobileAuthController {
 
   @PostMapping("/refresh")
   public MobileTokenResponse refresh(@Valid @RequestBody MobileRefreshRequest request) {
-    return MobileTokenResponse.from(authService.refresh(request.refreshToken()));
+    return MobileTokenResponse.from(
+        authService.refresh(request.refreshToken(), SessionChannel.MOBILE));
   }
 
   @PostMapping("/2fa/verify")
   public MobileTokenResponse verifyTwoFactor(@Valid @RequestBody TwoFactorVerifyRequest request) {
     return MobileTokenResponse.from(
-        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery()));
+        authService.completeTwoFactor(
+            request.challenge(), request.code(), request.recovery(), SessionChannel.MOBILE));
   }
 
   @PostMapping("/logout")

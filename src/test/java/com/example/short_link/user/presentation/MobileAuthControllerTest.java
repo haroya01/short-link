@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.write.MobileExchangeCodeStore;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.domain.RefreshToken;
@@ -87,7 +88,7 @@ class MobileAuthControllerTest {
   @Test
   void refreshAcceptsTokenInBody() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m3"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.MOBILE);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 
     mvc.perform(
@@ -97,6 +98,19 @@ class MobileAuthControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accessToken").isString())
         .andExpect(jsonPath("$.refreshToken").isString());
+  }
+
+  @Test
+  void aWebRefreshTokenIsRefusedByTheAppRefresh() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m5"));
+    RefreshToken web = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB);
+    refreshStore.save(user.getId(), web.jti(), Duration.ofDays(14));
+
+    mvc.perform(
+            post("/api/v1/auth/mobile/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"" + web.token() + "\"}"))
+        .andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -120,7 +134,7 @@ class MobileAuthControllerTest {
   @Test
   void logoutKillsExactlyThePresentedSession() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m4"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.MOBILE);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
     String body = "{\"refreshToken\":\"" + refresh.token() + "\"}";
 
