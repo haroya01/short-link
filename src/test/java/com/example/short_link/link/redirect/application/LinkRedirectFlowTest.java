@@ -23,11 +23,13 @@ import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.health.application.DestinationHealthProperties;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -54,6 +56,7 @@ class LinkRedirectFlowTest {
           uaClassifier,
           meterRegistry,
           blockedDomainChecker,
+          new DestinationHealthProperties(true, 0, 0, 0, 0),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   private CachedLink basicLink(String url) {
@@ -96,6 +99,54 @@ class LinkRedirectFlowTest {
     assertThat(redirect.picked().url()).isEqualTo("https://example.com/dst");
     verify(clickRecorder).record(any());
     verify(incrementViewCount, never()).execute(any());
+  }
+
+  @Test
+  void aDomainGoneForThreeDaysShowsTheNoticeAndStillCountsTheClick() {
+    stubBasics();
+    CachedLink link =
+        CachedLinkFixture.link(new LinkId(7L), "https://pepefc2.onamarudsi")
+            .destinationGoneSince(NOW.minus(Duration.ofDays(3)))
+            .build();
+
+    RedirectOutcome outcome =
+        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+
+    assertThat(outcome)
+        .isEqualTo(new RedirectOutcome.DeadDestination("https://pepefc2.onamarudsi"));
+    verify(clickRecorder).record(any());
+  }
+
+  @Test
+  void aDomainGoneForLessThanThreeDaysStillRedirects() {
+    stubBasics();
+    CachedLink link =
+        CachedLinkFixture.link(new LinkId(7L), "https://pepefc2.onamarudsi")
+            .destinationGoneSince(NOW.minus(Duration.ofDays(3)).plusSeconds(1))
+            .build();
+
+    RedirectOutcome outcome =
+        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
+  }
+
+  @Test
+  void aVariantOnAnotherAddressStillRedirectsWhenTheOriginalDomainIsGone() {
+    stubBasics();
+    CachedLink link =
+        CachedLinkFixture.link(new LinkId(7L), "https://pepefc2.onamarudsi")
+            .destinationGoneSince(NOW.minus(Duration.ofDays(30)))
+            .variants(
+                List.of(CachedLinkFixture.variant(3L, "https://alive.example/", 1, true, null)))
+            .build();
+
+    RedirectOutcome outcome =
+        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
+    assertThat(((RedirectOutcome.Redirect) outcome).picked().url())
+        .isEqualTo("https://alive.example/");
   }
 
   @Test

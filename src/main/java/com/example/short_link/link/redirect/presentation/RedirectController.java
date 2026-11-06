@@ -230,6 +230,7 @@ public class RedirectController {
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
+      case RedirectOutcome.DeadDestination dd -> html.deadDestinationPageResponse(locale, dd.url());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException(
               "PasswordRequired decided at controller before flow.execute()");

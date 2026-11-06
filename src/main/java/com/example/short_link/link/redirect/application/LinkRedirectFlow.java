@@ -10,6 +10,7 @@ import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.health.application.DestinationHealthProperties;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -29,6 +30,7 @@ public class LinkRedirectFlow {
   private final UserAgentClassifier userAgentClassifier;
   private final MeterRegistry meterRegistry;
   private final BlockedDomainChecker blockedDomainChecker;
+  private final DestinationHealthProperties destinationHealth;
   private final Clock clock;
 
   public RedirectOutcome execute(CachedLink link, LinkEntity entity, RedirectVisit visit) {
@@ -79,6 +81,13 @@ public class LinkRedirectFlow {
       clickRecorder.recordPreview(ctx, "prefetch");
     } else {
       clickRecorder.record(ctx);
+    }
+    return arrival(link, picked);
+  }
+
+  private RedirectOutcome arrival(CachedLink link, CachedLink.Picked picked) {
+    if (link.destinationGone(picked.url(), clock.instant(), destinationHealth.noticeAfter())) {
+      return new RedirectOutcome.DeadDestination(picked.url());
     }
     return new RedirectOutcome.Redirect(picked, link.visitOptions());
   }
