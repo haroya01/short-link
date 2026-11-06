@@ -49,13 +49,19 @@ public interface JpaLinkRepository
         visit.splashCtaId AS splashCtaId,
         visit.opensAt AS opensAt,
         CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled,
-        l.statsPublic AS statsPublic
+        l.statsPublic AS statsPublic,
+        CASE
+          WHEN health.failure = com.example.short_link.link.health.domain.DestinationFailure.NO_HOST
+            AND health.checkedUrl = l.originalUrl
+          THEN health.brokenSince
+        END AS destinationGoneSince
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
+      LEFT JOIN LinkDestinationHealthEntity health ON health.linkId = l.id
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);

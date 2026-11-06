@@ -191,6 +191,11 @@ class CachedLinkLoaderTest {
       public Boolean getStatsPublic() {
         return false;
       }
+
+      @Override
+      public Instant getDestinationGoneSince() {
+        return null;
+      }
     };
   }
 }
