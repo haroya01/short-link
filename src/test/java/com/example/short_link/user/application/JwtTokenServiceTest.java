@@ -8,6 +8,7 @@ import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import java.time.Clock;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,8 @@ class JwtTokenServiceTest {
     service =
         new JwtTokenService(
             new JwtProperties(
-                "", "", Duration.ofMinutes(15), Duration.ofDays(14), Duration.ofSeconds(10)));
+                "", "", Duration.ofMinutes(15), Duration.ofDays(14), Duration.ofSeconds(10), null),
+            Clock.systemUTC());
   }
 
   @Test
@@ -33,7 +35,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseAccessTokenRejectsRefreshToken() {
-    String refresh = service.createRefreshToken(42L, null).token();
+    String refresh = service.createRefreshToken(42L, null, SessionChannel.WEB).token();
 
     assertThatThrownBy(() -> service.parseAccessTokenDetailed(refresh))
         .isInstanceOf(UserException.class)
@@ -43,7 +45,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseRefreshTokenReturnsUserIdAndJti() {
-    RefreshToken refresh = service.createRefreshToken(42L, null);
+    RefreshToken refresh = service.createRefreshToken(42L, null, SessionChannel.WEB);
 
     ParsedRefresh parsed = service.parseRefreshToken(refresh.token());
 

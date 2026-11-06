@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
@@ -241,7 +242,7 @@ class MyLinksControllerTest {
   @Test
   void rejectsRefreshTokenAsAccess() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("x@example.com", "google", "g-x"));
-    String refresh = jwt.createRefreshToken(user.getId(), null).token();
+    String refresh = jwt.createRefreshToken(user.getId(), null, SessionChannel.WEB).token();
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + refresh))
         .andExpect(status().isUnauthorized());

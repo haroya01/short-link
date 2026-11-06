@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
@@ -19,7 +20,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -53,11 +55,13 @@ class AuthServiceRefreshConcurrencyTest {
     jdbc.update("DELETE FROM users WHERE id = ?", userId);
   }
 
-  @Test
-  void concurrentRefreshesOfOneTokenRotateOnceAndServeTheOtherThroughGrace() throws Exception {
+  @ParameterizedTest
+  @EnumSource(SessionChannel.class)
+  void concurrentRefreshesOfOneTokenRotateOnceAndServeTheOtherThroughGrace(SessionChannel channel)
+      throws Exception {
     for (int round = 0; round < ROUNDS; round++) {
-      RefreshToken token = jwt.createRefreshToken(userId, null);
-      refreshStore.save(userId, token.jti(), jwt.refreshTtl());
+      RefreshToken token = jwt.createRefreshToken(userId, null, channel);
+      refreshStore.save(userId, token.jti(), jwt.refreshTtl(channel));
       CyclicBarrier bothAtConsume = new CyclicBarrier(2);
       List<Boolean> consumed = new CopyOnWriteArrayList<>();
       doAnswer(
@@ -70,7 +74,7 @@ class AuthServiceRefreshConcurrencyTest {
           .when(refreshStore)
           .consume(eq(userId), eq(token.jti()), any());
 
-      List<IssuedTokens> issued = refreshTwiceAtOnce(token.token());
+      List<IssuedTokens> issued = refreshTwiceAtOnce(token.token(), channel);
 
       assertThat(consumed).containsExactlyInAnyOrder(true, false);
       verify(refreshStore).wasRecentlyRotated(userId, token.jti());
@@ -78,13 +82,17 @@ class AuthServiceRefreshConcurrencyTest {
       assertThat(issued)
           .extracting(tokens -> jwt.parseRefreshToken(tokens.refreshToken()).jti())
           .allSatisfy(jti -> assertThat(refreshStore.exists(userId, jti)).isTrue());
+      assertThat(issued)
+          .extracting(tokens -> jwt.parseRefreshToken(tokens.refreshToken()).webOnly())
+          .containsOnly(channel == SessionChannel.WEB);
     }
   }
 
-  private List<IssuedTokens> refreshTwiceAtOnce(String refreshToken) throws Exception {
+  private List<IssuedTokens> refreshTwiceAtOnce(String refreshToken, SessionChannel channel)
+      throws Exception {
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      var first = executor.submit(() -> authService.refresh(refreshToken));
-      var second = executor.submit(() -> authService.refresh(refreshToken));
+      var first = executor.submit(() -> authService.refresh(refreshToken, channel));
+      var second = executor.submit(() -> authService.refresh(refreshToken, channel));
       return List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS));
     }
   }

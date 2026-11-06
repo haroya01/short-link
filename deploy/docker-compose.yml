@@ -33,7 +33,17 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "60", "1000"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    # Redis 7 은 AOF 를 켜고 시작할 때 AOF 가 없으면 dump.rdb 를 읽지 않고 빈 AOF 로 시작한다(로그인 전부 사라짐).
+    # 그래서 RDB 만 있는 볼륨은 AOF 없이 그대로 띄우고, 실행 중에 CONFIG SET appendonly yes 로 AOF 를 만든 뒤부터 켠다.
+    command:
+      - sh
+      - -c
+      - |
+        appendonly=yes
+        if [ -f /data/dump.rdb ] && [ ! -d /data/appendonlydir ]; then appendonly=no; fi
+        exec docker-entrypoint.sh redis-server --requirepass "$$REDIS_PASSWORD" --save 60 1000 --appendonly "$$appendonly" --appendfsync everysec
     volumes:
       - redis_data:/data
     healthcheck:

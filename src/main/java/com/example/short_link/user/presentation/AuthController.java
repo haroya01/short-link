@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.AppleIdentity;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AppleIdentityVerifier;
@@ -41,7 +42,7 @@ public class AuthController {
     if (refreshToken == null) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    return issueAndSetCookie(authService.refresh(refreshToken), res);
+    return issueAndSetCookie(authService.refresh(refreshToken, SessionChannel.WEB), res);
   }
 
   @PostMapping("/logout")
@@ -61,7 +62,8 @@ public class AuthController {
   public AppleWebLoginResponse apple(
       @Valid @RequestBody AppleLoginRequest request, HttpServletResponse res) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
-    return switch (authService.loginWithApple(identity.subject(), identity.email())) {
+    return switch (authService.loginWithApple(
+        identity.subject(), identity.email(), SessionChannel.WEB)) {
       case TokenLoginResult.Tokens tokens -> {
         refreshCookieWriter.set(res, tokens.issued().refreshToken());
         yield AppleWebLoginResponse.tokens(tokens.issued().accessToken());
@@ -85,7 +87,9 @@ public class AuthController {
     }
     TokenResponse response =
         issueAndSetCookie(
-            authService.completeTwoFactor(challenge, request.code(), request.recovery()), res);
+            authService.completeTwoFactor(
+                challenge, request.code(), request.recovery(), SessionChannel.WEB),
+            res);
     if (challengeCookie != null) {
       challengeCookieWriter.clear(res);
     }

@@ -11,6 +11,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
+import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.AppleIdentity;
 import com.example.short_link.user.application.twofactor.TotpCodec;
 import com.example.short_link.user.application.write.AppleIdentityVerifier;
@@ -89,8 +90,8 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
         .isEqualTo("owned-referrer.example.com");
     assertThat(exportedClicks.get(0).path("clickedAt").asText()).isEqualTo("2026-01-15T00:00:00Z");
     assertThat(exported.headers().firstValue("Content-Disposition")).isPresent();
-    var refresh = jwt.createRefreshToken(owner.getId(), null);
-    refreshTokens.save(owner.getId(), refresh.jti(), jwt.refreshTtl());
+    var refresh = jwt.createRefreshToken(owner.getId(), null, SessionChannel.WEB);
+    refreshTokens.save(owner.getId(), refresh.jti(), jwt.refreshTtl(SessionChannel.WEB));
     call("account-delete", "DELETE", "/api/v1/users/me", null, token, 204);
     assertThat(
             count(
