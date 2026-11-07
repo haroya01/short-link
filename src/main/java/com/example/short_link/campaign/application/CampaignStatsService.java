@@ -12,6 +12,7 @@ import com.example.short_link.campaign.application.dto.CampaignStatsView.TimeBuc
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.common.security.UserAccessLookup;
+import com.example.short_link.common.time.DowHour;
 import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.common.time.ReportZones;
 import com.example.short_link.link.stats.application.read.ClickTimeReader;
@@ -93,7 +94,7 @@ public class CampaignStatsService {
     Instant until = clock.instant().truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
     List<OffsetPeriod> periods = OffsetPeriod.between(zone, campaign.getStartsAt(), until);
     List<HourBucket> byHour =
-        sum(
+        OffsetPeriod.sum(
                 periods,
                 p -> clickTime.findHourlyClicksByLinkIds(linkIds, p.from(), p.until(), p.offset()),
                 HourClickRow::getHour,
@@ -104,7 +105,7 @@ public class CampaignStatsService {
             .map(e -> new HourBucket(e.getKey(), e.getValue()))
             .toList();
     List<DayBucket> byDay =
-        sum(
+        OffsetPeriod.sum(
                 periods,
                 p -> clickTime.findDailyClicksByLinkIds(linkIds, p.from(), p.until(), p.offset()),
                 DailyClickRow::getDay,
@@ -115,7 +116,7 @@ public class CampaignStatsService {
             .map(e -> new DayBucket(e.getKey(), e.getValue()))
             .toList();
     List<HeatmapCell> heatmap =
-        sum(
+        OffsetPeriod.sum(
                 periods,
                 p -> clickTime.findHeatmapByLinkIds(linkIds, p.from(), p.until(), p.offset()),
                 r -> new DowHour(r.getDow(), r.getHour()),
@@ -151,25 +152,6 @@ public class CampaignStatsService {
 
   private ZoneId ownerZone(Long ownerId) {
     return users.timezone(ownerId).map(ReportZones::zoneOf).orElse(ReportZones.DEFAULT_ZONE);
-  }
-
-  private static <R, K> Map<K, Long> sum(
-      List<OffsetPeriod> periods,
-      Function<OffsetPeriod, List<R>> query,
-      Function<R, K> key,
-      Function<R, Long> count) {
-    Map<K, Long> sums = new HashMap<>();
-    for (OffsetPeriod period : periods) {
-      for (R row : query.apply(period)) {
-        sums.merge(key.apply(row), count.apply(row), Long::sum);
-      }
-    }
-    return sums;
-  }
-
-  private record DowHour(int dow, int hour) {
-    static final Comparator<DowHour> ORDER =
-        Comparator.comparingInt(DowHour::dow).thenComparingInt(DowHour::hour);
   }
 
   private static Map<Long, Long> toMap(List<LinkClickCount> rows) {

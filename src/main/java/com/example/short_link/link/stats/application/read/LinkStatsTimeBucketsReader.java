@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.common.analytics.HeatmapCell;
+import com.example.short_link.common.time.DowHour;
 import com.example.short_link.common.time.OffsetPeriod;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
@@ -11,11 +12,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +33,7 @@ class LinkStatsTimeBucketsReader {
     List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, linkCreatedAt, until);
 
     List<LinkStats.DailyClick> daily =
-        sum(
+        OffsetPeriod.sum(
                 recent,
                 p -> clickTime.findDailyClicks(id, p.from(), p.until(), p.offset()),
                 DailyClickRow::getDay,
@@ -45,7 +44,7 @@ class LinkStatsTimeBucketsReader {
             .map(e -> new LinkStats.DailyClick(e.getKey(), e.getValue()))
             .toList();
     Map<DowHour, Long> cells =
-        sum(
+        OffsetPeriod.sum(
             lifetime,
             p -> clickTime.findHeatmap(id, p.from(), p.until(), p.offset()),
             r -> new DowHour(r.getDow(), r.getHour()),
@@ -81,25 +80,6 @@ class LinkStatsTimeBucketsReader {
                         mapDayOfWeek(e.getKey().dow()), e.getKey().hour(), e.getValue()))
             .toList();
     return new TimeBuckets(daily, hourly, peakHour, dayOfWeek, heatmap);
-  }
-
-  private static <R, K> Map<K, Long> sum(
-      List<OffsetPeriod> periods,
-      Function<OffsetPeriod, List<R>> query,
-      Function<R, K> key,
-      Function<R, Long> count) {
-    Map<K, Long> sums = new HashMap<>();
-    for (OffsetPeriod period : periods) {
-      for (R row : query.apply(period)) {
-        sums.merge(key.apply(row), count.apply(row), Long::sum);
-      }
-    }
-    return sums;
-  }
-
-  private record DowHour(int dow, int hour) {
-    static final Comparator<DowHour> ORDER =
-        Comparator.comparingInt(DowHour::dow).thenComparingInt(DowHour::hour);
   }
 
   static String mapDayOfWeek(int mysqlDow) {
