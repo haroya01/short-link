@@ -2,10 +2,10 @@ name: prod-smoke
 
 # Scheduled synthetic check of production critical paths against the REAL edge
 # (Cloudflare → nginx → app) — the localhost e2e suite can't see deploy/config/edge drift.
-# Alerts Discord on failure. Tune the cron cadence as needed; */15 = every 15 min.
+# Alerts Discord on failure. Runs every 6 hours (0 */6).
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:
