@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class OffsetPeriodTest {
@@ -32,5 +34,19 @@ class OffsetPeriodTest {
 
     assertThat(OffsetPeriod.between(ZoneId.of("America/New_York"), FROM, fallBack))
         .containsExactly(new OffsetPeriod(FROM, fallBack, "-04:00"));
+  }
+
+  @Test
+  void theSameBucketReadInBothOffsetsAddsUp() {
+    List<OffsetPeriod> periods = OffsetPeriod.between(ZoneId.of("America/New_York"), FROM, UNTIL);
+    Map<String, List<Map.Entry<Integer, Long>>> rows =
+        Map.of(
+            "-04:00", List.of(Map.entry(1, 3L), Map.entry(2, 1L)),
+            "-05:00", List.of(Map.entry(1, 2L)));
+
+    assertThat(
+            OffsetPeriod.sum(
+                periods, p -> rows.get(p.offset()), Map.Entry::getKey, Map.Entry::getValue))
+        .isEqualTo(Map.of(1, 5L, 2, 1L));
   }
 }

@@ -9,6 +9,7 @@ import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.support.FakeTransactions;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,12 @@ class UpdateBlockUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdateBlockUseCase(profileBlockRepository, mock(ProfileCacheEviction.class));
+    useCase =
+        new UpdateBlockUseCase(
+            profileBlockRepository,
+            mock(ProfileCacheEviction.class),
+            new BlockDestinations(url -> true),
+            FakeTransactions.template());
   }
 
   @Test

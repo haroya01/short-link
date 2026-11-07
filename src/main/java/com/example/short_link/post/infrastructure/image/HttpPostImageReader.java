@@ -5,6 +5,7 @@ import com.example.short_link.common.net.HttpFetcher.Request;
 import com.example.short_link.common.net.HttpFetcher.Response;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
+import com.example.short_link.common.net.Redirects;
 import com.example.short_link.post.application.image.ExternalPostImageReader;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -79,20 +80,15 @@ public class HttpPostImageReader implements ExternalPostImageReader {
         log.warn("post image import fetch failed url={} post={}", originalUrl, postId, e);
         throw new PostException(PostErrorCode.PERMISSION_DENIED, "image fetch failed");
       }
-      if (!isRedirect(response.status())) {
+      if (!Redirects.isRedirect(response.status())) {
         return response;
       }
-      String location = response.header("Location");
-      if (location == null || location.isBlank()) {
-        throw new PostException(PostErrorCode.PERMISSION_DENIED, "redirect missing location");
-      }
-      URI next;
-      try {
-        next = current.uri().resolve(location.trim());
-      } catch (IllegalArgumentException e) {
-        throw new PostException(
-            PostErrorCode.PERMISSION_DENIED, "image url not allowed: " + location);
-      }
+      URI next =
+          Redirects.next(current.uri(), response.header("Location"))
+              .orElseThrow(
+                  () ->
+                      new PostException(
+                          PostErrorCode.PERMISSION_DENIED, "redirect without a usable location"));
       current =
           PublicHttpUrlGuard.resolve(next.toString())
               .orElseThrow(
@@ -101,10 +97,6 @@ public class HttpPostImageReader implements ExternalPostImageReader {
                           PostErrorCode.PERMISSION_DENIED, "image url not allowed: " + next));
     }
     throw new PostException(PostErrorCode.PERMISSION_DENIED, "too many redirects");
-  }
-
-  private static boolean isRedirect(int status) {
-    return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
   }
 
   // 원격 Content-Type은 신뢰할 수 없고 정상 이미지도 octet-stream으로 올 수 있어 저장 타입은 바이트 시그니처로 판별한다.

@@ -25,6 +25,8 @@ import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.image.ImageVariantsRequested;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.BlockEdge;
@@ -1237,6 +1239,7 @@ class NoteWriteActionsTest {
     verify(likes).deleteAllByNoteId(2L);
     verify(events).publishEvent(new NoteDeletedEvent(1L, 7L, List.of("k1")));
     verify(events, never()).publishEvent(new NoteDeletedEvent(2L, null, List.of()));
+    verify(events).publishEvent(new LiveRevoke.Closed(LiveTopic.note(2L)));
   }
 
   @Test

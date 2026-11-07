@@ -53,7 +53,7 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       this(code, value, num, keepNull, bots, "NULL");
     }
 
-    String insert() {
+    String insert(String table) {
       String v = value == null ? "NULL" : value;
       String n = num == null ? "NULL" : num;
       String key =
@@ -67,8 +67,9 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
       String present = value != null ? value : num;
       String groupBy =
           value != null && num != null ? value + ", " + num : value != null ? value : num;
-      return "INSERT INTO click_daily_dim "
-          + "(link_id, dim, day_start, is_bot, value_key, value, num, region_code, clicks, first_at) "
+      return "INSERT INTO "
+          + table
+          + " (link_id, dim, day_start, is_bot, value_key, value, num, region_code, clicks, first_at) "
           + "SELECT c.link_id, "
           + code
           + ", FROM_UNIXTIME(:dayStart), c.is_bot, "
@@ -114,12 +115,10 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
           new Dimension(ClickRollup.ASN, "c.asn_org", "c.asn", false, true));
 
   private static final List<String> DAILY_DIMENSIONS =
-      DIMENSIONS.stream().map(Dimension::insert).toList();
+      DIMENSIONS.stream().map(d -> d.insert("click_daily_dim")).toList();
 
   private static final List<String> RECENT_DIMENSIONS =
-      DAILY_DIMENSIONS.stream()
-          .map(sql -> sql.replace("INSERT INTO click_daily_dim ", "INSERT INTO click_recent_dim "))
-          .toList();
+      DIMENSIONS.stream().map(d -> d.insert("click_recent_dim")).toList();
 
   @PersistenceContext private EntityManager em;
 

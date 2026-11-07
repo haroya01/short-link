@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum EventErrorCode {
   EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "event not found: %s"),
+  MALICIOUS_URL(HttpStatus.BAD_REQUEST, "destination refused"),
   EVENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "event permission denied"),
   EVENT_CANCELED(HttpStatus.CONFLICT, "event canceled: %s"),
   EVENT_FULL(HttpStatus.CONFLICT, "event full: %s"),

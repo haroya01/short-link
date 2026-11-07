@@ -331,14 +331,14 @@ class InboxClassifierTest {
     String unknown = "https://mastodon.example/s/2";
     String elsewhere = "https://elsewhere.example/s/3";
     String tooLong = "https://mastodon.example/" + "x".repeat(512);
-    when(remoteNotes.exists(kept)).thenReturn(true);
-    when(remoteNotes.exists(unknown)).thenReturn(false);
-    when(remoteNotes.exists(elsewhere)).thenReturn(false);
-    when(remoteNotes.exists(tooLong)).thenReturn(false);
+    when(remoteNotes.kept(kept)).thenReturn(Optional.of(900L));
+    when(remoteNotes.kept(unknown)).thenReturn(Optional.empty());
+    when(remoteNotes.kept(elsewhere)).thenReturn(Optional.empty());
+    when(remoteNotes.kept(tooLong)).thenReturn(Optional.empty());
     InboxClassifier classifier = classifier();
 
     assertThat(classifier.classify(activity("Delete", quoted(kept)), Optional.empty()))
-        .isEqualTo(act(new InboxIntent.Retract(kept)));
+        .isEqualTo(act(new InboxIntent.Retract(kept, 900L)));
     assertThat(classifier.classify(activity("Delete", quoted(unknown)), Optional.empty()))
         .isEqualTo(act(new InboxIntent.Bury(unknown)));
     assertThat(classifier.classify(activity("Delete", quoted(elsewhere)), Optional.empty()))
@@ -351,7 +351,8 @@ class InboxClassifierTest {
   void onlyDeletesOfTheActorOrOfAnUnknownNoteSettleForACachedKey() {
     assertThat(new InboxIntent.Forget().cachedKeyOnly()).isTrue();
     assertThat(new InboxIntent.Bury("https://mastodon.example/s/2").cachedKeyOnly()).isTrue();
-    assertThat(new InboxIntent.Retract("https://mastodon.example/s/1").cachedKeyOnly()).isFalse();
+    assertThat(new InboxIntent.Retract("https://mastodon.example/s/1", 900L).cachedKeyOnly())
+        .isFalse();
     assertThat(new InboxIntent.Follow(OWNER).cachedKeyOnly()).isFalse();
   }
 }

@@ -12,14 +12,22 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.short_link.common.image.ImageVariantLedger.Outcome;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 class ImageVariantGeneratorTest {
 
@@ -29,6 +37,26 @@ class ImageVariantGeneratorTest {
   private final ImageVariantLedger ledger = mock(ImageVariantLedger.class);
   private final ImageVariantGenerator generator =
       new ImageVariantGenerator(storage, new ImageVariantRenderer(), ledger);
+  private final Logger logger = (Logger) LoggerFactory.getLogger(ImageVariantGenerator.class);
+  private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+
+  @BeforeEach
+  void listen() {
+    logged.start();
+    logger.addAppender(logged);
+  }
+
+  @AfterEach
+  void stopListening() {
+    logger.detachAppender(logged);
+  }
+
+  private List<String> lines() {
+    return logged.list.stream()
+        .map(ILoggingEvent::getFormattedMessage)
+        .map(line -> line.replaceAll(" ms=\\d+", ""))
+        .toList();
+  }
 
   @Test
   void writesBothVariantsWithTheOriginalsTypeThenRecordsThem() {
@@ -187,5 +215,52 @@ class ImageVariantGeneratorTest {
     generator.generate(KEY);
 
     verify(ledger, never()).record(eq(KEY), any());
+  }
+
+  @Test
+  void everyGenerationLeavesOneLineWithItsOutcomeAndTheBytesInAndOut() throws Exception {
+    ImageVariantRenderer renderer = mock(ImageVariantRenderer.class);
+    ImageVariantGenerator logging = new ImageVariantGenerator(storage, renderer, ledger);
+    byte[] original = new byte[100];
+    when(ledger.recorded("note-images/7/done.jpg")).thenReturn(true);
+    when(storage.getObject("note-images/7/gone.jpg")).thenReturn(Optional.empty());
+    when(storage.getObject("note-images/7/broken.jpg")).thenReturn(Optional.of(original));
+    when(storage.getObject("note-images/7/fine.jpg")).thenReturn(Optional.of(original));
+    when(storage.getObject("note-images/7/down.jpg"))
+        .thenThrow(new ObjectStorageException("down", null));
+    when(renderer.render(eq(original), anyBoolean()))
+        .thenThrow(new IOException("not an image"))
+        .thenReturn(new ImageVariantRenderer.Rendered(new byte[30], new byte[12]));
+
+    for (String name : List.of("done", "gone", "broken", "fine", "down")) {
+      logging.generate("note-images/7/" + name + ".jpg");
+    }
+
+    assertThat(lines())
+        .containsExactly(
+            "image-variant key=note-images/7/done.jpg outcome=skipped bytes_in=0 bytes_out=0",
+            "image-variant key=note-images/7/gone.jpg outcome=failed bytes_in=0 bytes_out=0 reason=missing",
+            "image-variant key=note-images/7/broken.jpg outcome=failed bytes_in=100 bytes_out=0 reason=undecodable",
+            "image-variant key=note-images/7/fine.jpg outcome=made bytes_in=100 bytes_out=42",
+            "image-variant key=note-images/7/down.jpg outcome=failed bytes_in=0 bytes_out=0"
+                + " reason=ObjectStorageException");
+  }
+
+  @Test
+  void anImageInHandLeavesTheSameLineWithTheRenderersReasonWhenItFails() throws Exception {
+    ImageVariantRenderer renderer = mock(ImageVariantRenderer.class);
+    ImageVariantGenerator logging = new ImageVariantGenerator(storage, renderer, ledger);
+    byte[] original = new byte[64];
+    when(renderer.render(eq(original), anyBoolean(), anyLong()))
+        .thenThrow(new IOException("too many pixels"))
+        .thenReturn(new ImageVariantRenderer.Rendered(new byte[20], new byte[8]));
+
+    assertThat(logging.storeWithVariants("post-images/7/42/a.png", original, 10)).isFalse();
+    assertThat(logging.storeWithVariants("post-images/7/42/b.png", original, 10)).isTrue();
+
+    assertThat(lines())
+        .containsExactly(
+            "image-variant key=post-images/7/42/a.png outcome=failed bytes_in=64 bytes_out=0 reason=too many pixels",
+            "image-variant key=post-images/7/42/b.png outcome=made bytes_in=64 bytes_out=28");
   }
 }

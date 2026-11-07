@@ -72,6 +72,13 @@ public final class ProductCardCarousel {
 
   private record PayloadOut(String title, String layout, List<ItemOut> items) {}
 
+  public static List<String> buyUrls(String normalized) {
+    List<Item> items = readPayload(normalized).items();
+    return items == null
+        ? List.of()
+        : items.stream().map(Item::ctaUrl).filter(url -> url != null && !url.isBlank()).toList();
+  }
+
   public static String normalize(String raw) {
     Payload parsed = readPayload(raw);
     PayloadOut normalized = normalizePayload(parsed);

@@ -36,7 +36,7 @@ sealed interface InboxIntent {
 
   record Revise(JsonNode object, JsonNode activity, Long noteId) implements InboxIntent {}
 
-  record Retract(String uri) implements InboxIntent {}
+  record Retract(String uri, Long noteId) implements InboxIntent {}
 
   record Bury(String uri) implements InboxIntent {
     @Override

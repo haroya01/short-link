@@ -6,11 +6,8 @@ import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-// click_recent_quarter.age_day was counted from link.created_at, which holds UTC wall-clock text,
-// to clicked_at, which holds the instant, so it is nine hours off. Its clicks are still in
-// click_event, so the recent sums are reopened once (V213): aggregated_until drops to rolled_until
-// and both tables are emptied in the same transaction. Reports read those days from click_event at
-// once and the next daily job sums them again. Without the V213 tables there is nothing to reopen.
+// Lowering aggregated_until and emptying both sum tables share one transaction, or reports would
+// count those days twice or not at all.
 public class V216__reopen_recent_click_sums extends BaseJavaMigration {
 
   @Override

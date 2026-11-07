@@ -56,7 +56,10 @@ public class ReferrerChannelClassifier {
     if (referrer == null || referrer.isBlank()) {
       return "direct";
     }
-    String host = extractHost(referrer);
+    return classifyHost(extractHost(referrer));
+  }
+
+  public String classifyHost(String host) {
     if (host == null) {
       return "other";
     }

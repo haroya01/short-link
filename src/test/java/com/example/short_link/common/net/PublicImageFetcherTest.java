@@ -75,6 +75,24 @@ class PublicImageFetcherTest {
           pause(Duration.ofMillis(1500));
           redirect(exchange, "/stall");
         });
+    serve("/exactly-cap", exchange -> respond(exchange, 200, "image/png", pngOf(CAP)));
+    serve("/exactly-cap-unsized", exchange -> respondUnsized(exchange, pngOf(CAP)));
+    serve("/one-over-unsized", exchange -> respondUnsized(exchange, pngOf(CAP + 1)));
+    serve("/chain", this::chain);
+    serve(
+        "/nowhere",
+        exchange -> {
+          exchange.sendResponseHeaders(302, -1);
+          exchange.close();
+        });
+    serve("/shouting", exchange -> respond(exchange, 200, "IMAGE/PNG", PNG));
+    serve("/untyped", this::untyped);
+    serve(
+        "/signature-only",
+        exchange ->
+            respond(
+                exchange, 200, "image/jpeg", new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}));
+    serve("/silent", exchange -> pause(Duration.ofSeconds(3)));
     server.start();
   }
 
@@ -210,6 +228,58 @@ class PublicImageFetcherTest {
     assertThat(headers.get("User-agent").getFirst()).startsWith("kurl-media/");
   }
 
+  @Test
+  void aBodyOfExactlyTheCapIsKeptWhetherOrNotItsLengthWasDeclared() {
+    assertThat(fetcher().fetch(url("/exactly-cap"), CAP))
+        .isInstanceOfSatisfying(Image.class, image -> assertThat(image.bytes()).hasSize(CAP));
+    assertThat(fetcher().fetch(url("/exactly-cap-unsized"), CAP))
+        .isInstanceOfSatisfying(Image.class, image -> assertThat(image.bytes()).hasSize(CAP));
+    assertThat(refusal("/one-over-unsized")).isEqualTo("larger than 65536 bytes");
+  }
+
+  @Test
+  void threeRedirectsAreFollowedAndAFourthIsNot() {
+    assertThat(fetcher().fetch(url("/chain?n=3"), CAP)).isInstanceOf(Image.class);
+    assertThat(refusal("/chain?n=4")).isEqualTo("too many redirects");
+  }
+
+  @Test
+  void aRedirectWithoutALocationIsRefused() {
+    assertThat(refusal("/nowhere")).isEqualTo("redirect without a usable location");
+  }
+
+  @Test
+  void theServedTypeIsReadWithoutCaseAndAMissingOneIsRefused() {
+    assertThat(fetcher().fetch(url("/shouting"), CAP)).isInstanceOf(Image.class);
+    assertThat(refusal("/untyped")).isEqualTo("served as none");
+  }
+
+  @Test
+  void aBodyNoLongerThanItsSignaturePassesTheSniff() {
+    assertThat(fetcher().fetch(url("/signature-only"), CAP))
+        .isInstanceOfSatisfying(
+            Image.class, image -> assertThat(image.type()).isEqualTo("image/jpeg"));
+  }
+
+  @Test
+  @Timeout(10)
+  void aServerThatNeverAnswersIsGivenUpAtTheDeadlineNotAtTheLongerReadTimeout() {
+    long started = System.nanoTime();
+
+    Result result =
+        fetcher(Duration.ofSeconds(5), Duration.ofMillis(300)).fetch(url("/silent"), CAP);
+
+    assertThat(result).isEqualTo(new Refused("slower than the deadline"));
+    assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(2000);
+  }
+
+  @Test
+  void aDeadlineAlreadySpentAsksNothing() {
+    assertThat(fetcher(Duration.ZERO).fetch(url("/a.png"), CAP))
+        .isEqualTo(new Refused("slower than the deadline"));
+    assertThat(hits).hasValue(0);
+  }
+
   private String refusal(String path) {
     Result result = fetcher().fetch(url(path), CAP);
     assertThat(result).isInstanceOf(Refused.class);
@@ -221,6 +291,10 @@ class PublicImageFetcherTest {
   }
 
   private PublicImageFetcher fetcher(Duration deadline) {
+    return fetcher(Duration.ofSeconds(2), deadline);
+  }
+
+  private PublicImageFetcher fetcher(Duration read, Duration deadline) {
     return new PublicImageFetcher(
         url -> {
           URI uri = URI.create(url);
@@ -230,7 +304,7 @@ class PublicImageFetcherTest {
         },
         "http",
         Duration.ofSeconds(1),
-        Duration.ofSeconds(2),
+        read,
         deadline);
   }
 
@@ -265,6 +339,36 @@ class PublicImageFetcherTest {
     exchange.getResponseHeaders().add("Location", location);
     exchange.sendResponseHeaders(302, -1);
     exchange.close();
+  }
+
+  private static byte[] pngOf(int size) {
+    byte[] body = new byte[size];
+    System.arraycopy(PNG, 0, body, 0, 8);
+    return body;
+  }
+
+  private static void respondUnsized(HttpExchange exchange, byte[] body) throws IOException {
+    exchange.getResponseHeaders().add("Content-Type", "image/png");
+    exchange.sendResponseHeaders(200, 0);
+    try (OutputStream out = exchange.getResponseBody()) {
+      out.write(body);
+    }
+  }
+
+  private void chain(HttpExchange exchange) throws IOException {
+    int left = Integer.parseInt(exchange.getRequestURI().getQuery().substring(2));
+    if (left == 0) {
+      respond(exchange, 200, "image/png", PNG);
+    } else {
+      redirect(exchange, "/chain?n=" + (left - 1));
+    }
+  }
+
+  private void untyped(HttpExchange exchange) throws IOException {
+    exchange.sendResponseHeaders(200, PNG.length);
+    try (OutputStream out = exchange.getResponseBody()) {
+      out.write(PNG);
+    }
   }
 
   private void declaredTooLong(HttpExchange exchange) throws IOException {

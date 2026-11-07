@@ -3,13 +3,20 @@ package com.example.short_link.link.stats.presentation.sse;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -17,14 +24,40 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class SseClickStreamRegistry {
 
   private static final int MAX_STREAMS_PER_KEY = 16;
+  private static final int MAX_PENDING_SENDS = 1_000;
 
   private final Map<LinkId, List<SseEmitter>> emittersByLinkId = new ConcurrentHashMap<>();
   private final Map<Long, List<SseEmitter>> emittersByUserId = new ConcurrentHashMap<>();
   private final MeterRegistry meterRegistry;
+  private final Executor sends;
+
+  @Autowired
+  public SseClickStreamRegistry(MeterRegistry meterRegistry) {
+    this(
+        meterRegistry,
+        new ThreadPoolExecutor(
+            1,
+            1,
+            0,
+            TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(MAX_PENDING_SENDS),
+            work -> Thread.ofPlatform().name("kurl-click-stream").daemon().unstarted(work)));
+  }
+
+  SseClickStreamRegistry(MeterRegistry meterRegistry, Executor sends) {
+    this.meterRegistry = meterRegistry;
+    this.sends = sends;
+  }
+
+  @PreDestroy
+  void shutdown() {
+    if (sends instanceof ExecutorService owned) {
+      owned.shutdownNow();
+    }
+  }
 
   public boolean register(LinkId linkId, SseEmitter emitter) {
     return registerInto(emittersByLinkId, linkId, emitter);
@@ -93,8 +126,7 @@ public class SseClickStreamRegistry {
   public void onClickRecorded(ClickRecordedEvent event) {
     List<SseEmitter> linkBucket = emittersByLinkId.get(event.linkId());
     if (linkBucket != null && !linkBucket.isEmpty()) {
-      broadcast(
-          linkBucket,
+      SseEmitter.SseEventBuilder linkClick =
           SseEmitter.event()
               .name("click")
               .data(
@@ -103,15 +135,15 @@ public class SseClickStreamRegistry {
                       "countryCode", nullToEmpty(event.countryCode()),
                       "deviceClass", nullToEmpty(event.deviceClass()),
                       "channel", nullToEmpty(event.referrerHost()),
-                      "bot", event.bot())));
+                      "bot", event.bot()));
+      later(() -> broadcast(linkBucket, linkClick));
     }
 
     // Anonymous links have no account stream; shortCode identifies the owner dashboard row.
     if (event.ownerUserId() == null) return;
     List<SseEmitter> ownerBucket = emittersByUserId.get(event.ownerUserId());
     if (ownerBucket == null || ownerBucket.isEmpty()) return;
-    broadcast(
-        ownerBucket,
+    SseEmitter.SseEventBuilder ownerClick =
         SseEmitter.event()
             .name("click")
             .data(
@@ -121,13 +153,25 @@ public class SseClickStreamRegistry {
                     "countryCode", nullToEmpty(event.countryCode()),
                     "deviceClass", nullToEmpty(event.deviceClass()),
                     "channel", nullToEmpty(event.referrerHost()),
-                    "bot", event.bot())));
+                    "bot", event.bot()));
+    later(() -> broadcast(ownerBucket, ownerClick));
   }
 
   @Scheduled(fixedRate = 25_000, initialDelay = 25_000)
   public void heartbeat() {
-    emittersByLinkId.values().forEach(SseClickStreamRegistry::beat);
-    emittersByUserId.values().forEach(SseClickStreamRegistry::beat);
+    later(
+        () -> {
+          emittersByLinkId.values().forEach(SseClickStreamRegistry::beat);
+          emittersByUserId.values().forEach(SseClickStreamRegistry::beat);
+        });
+  }
+
+  private void later(Runnable send) {
+    try {
+      sends.execute(send);
+    } catch (RejectedExecutionException full) {
+      meterRegistry.counter("sse.click_stream.dropped").increment();
+    }
   }
 
   private static void beat(List<SseEmitter> bucket) {

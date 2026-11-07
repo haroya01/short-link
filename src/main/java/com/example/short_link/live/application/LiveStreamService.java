@@ -67,11 +67,16 @@ public class LiveStreamService {
 
   public void begin(LiveSubscriber subscriber, Long since) {
     LiveTopic topic = subscriber.topic();
-    streams.start(
-        subscriber,
-        readers.get(topic.scope()).latest(topic.id()),
-        since,
-        tokens.createStreamToken(subscriber.userId(), topic.tokenScope(), props.tokenTtl()));
+    long latest;
+    String renewed;
+    try {
+      latest = readers.get(topic.scope()).latest(topic.id());
+      renewed = tokens.createStreamToken(subscriber.userId(), topic.tokenScope(), props.tokenTtl());
+    } catch (RuntimeException e) {
+      streams.remove(subscriber);
+      throw e;
+    }
+    streams.start(subscriber, latest, since, renewed);
   }
 
   public void leave(LiveSubscriber subscriber) {

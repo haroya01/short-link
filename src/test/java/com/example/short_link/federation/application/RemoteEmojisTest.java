@@ -124,4 +124,16 @@ class RemoteEmojisTest {
 
     assertThat(RemoteEmojis.fromRest(emojis)).hasSize(RemoteEmojis.MAX);
   }
+
+  @Test
+  void aPictureAddressIsKeptUpToTheLongestUriAndDroppedOneCharacterPastIt() {
+    String prefix = "https://f.example/";
+    String longest = prefix + "a".repeat(ActivityStreams.MAX_URI - prefix.length());
+    String tooLong = longest + "a";
+
+    assertThat(RemoteEmojis.fromTags(json("[" + tag(":fits:", longest) + "]")))
+        .extracting(CustomEmoji::url)
+        .containsExactly(longest);
+    assertThat(RemoteEmojis.fromTags(json("[" + tag(":over:", tooLong) + "]"))).isEmpty();
+  }
 }

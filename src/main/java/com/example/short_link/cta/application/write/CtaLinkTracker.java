@@ -1,9 +1,13 @@
 package com.example.short_link.cta.application.write;
 
+import com.example.short_link.cta.exception.CtaErrorCode;
+import com.example.short_link.cta.exception.CtaException;
 import com.example.short_link.link.application.ShortLinkDetector;
 import com.example.short_link.link.application.write.CheckedDestination;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +33,12 @@ public class CtaLinkTracker {
     CheckedDestination destination;
     try {
       destination = createLink.check(link);
+    } catch (LinkException refused) {
+      if (refused.errorCode() == LinkErrorCode.MALICIOUS_URL) {
+        throw new CtaException(CtaErrorCode.MALICIOUS_URL);
+      }
+      log.warn("CTA link tracking skipped for user {}: {}", userId, refused.getMessage());
+      return null;
     } catch (RuntimeException e) {
       log.warn("CTA link tracking skipped for user {}: {}", userId, e.getMessage());
       return null;

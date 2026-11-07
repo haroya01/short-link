@@ -167,6 +167,19 @@ class SignedFederationHttpTest {
   }
 
   @Test
+  void webFingerFollowsOnlyTheFiveMovesLikeEveryOtherFetcher() {
+    URI start = URI.create("https://93.184.216.34/.well-known/webfinger?resource=acct%3Aa%40x");
+    when(fetcher.fetch(any()))
+        .thenReturn(
+            new HttpFetcher.Response(
+                300, Map.of("Location", List.of("https://93.184.216.35/wf")), null));
+
+    assertThat(http("https://kurl.me").webFinger(start, SIGNER, host -> true))
+        .isEqualTo(new FederationHttp.Result.Failed(300, "HTTP 300"));
+    verify(fetcher, times(1)).fetch(any());
+  }
+
+  @Test
   void aGetGivenItsOwnPatienceWaitsNoLonger() {
     when(fetcher.fetch(any()))
         .thenReturn(new HttpFetcher.Response(200, Map.of(), "{}".getBytes(StandardCharsets.UTF_8)));

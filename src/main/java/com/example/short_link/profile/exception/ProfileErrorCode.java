@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum ProfileErrorCode {
   PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "profile not found: %s"),
+  MALICIOUS_URL(HttpStatus.BAD_REQUEST, "destination refused"),
   INVALID_USERNAME(HttpStatus.BAD_REQUEST, "%s"),
   INVALID_EMAIL(HttpStatus.BAD_REQUEST, "%s"),
   USERNAME_TAKEN(HttpStatus.CONFLICT, "username taken: %s"),

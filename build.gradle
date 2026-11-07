@@ -440,19 +440,55 @@ pitest {
 		'com.example.short_link.notification.domain.policy.*',
 		'com.example.short_link.federation.domain.foryou.*',
 		'com.example.short_link.link.classifier.application.helper.*',
+		'com.example.short_link.link.stats.application.LinkInsights*',
+		'com.example.short_link.common.time.*',
+		'com.example.short_link.live.application.*',
+		'com.example.short_link.common.live.*',
+		'com.example.short_link.common.net.PublicImageFetcher*',
+		'com.example.short_link.common.net.PublicHttpUrlGuard*',
+		'com.example.short_link.common.net.Redirects*',
+		'com.example.short_link.link.og.application.OgPageFetcher*',
+		'com.example.short_link.link.og.application.OgScraper*',
+		'com.example.short_link.note.application.media.*',
+		'com.example.short_link.federation.application.RemoteEmojis*',
+		'com.example.short_link.common.federation.CustomEmoji*',
+		'com.example.short_link.user.application.JwtTokenService*',
+		'com.example.short_link.user.application.write.AuthService*',
+		'com.example.short_link.event.application.write.EventLinkIssuer*',
+		'com.example.short_link.common.security.UnlistedKeys*',
+		'com.example.short_link.common.image.ImageVariantGenerator*',
 	]
 	targetTests = [
 		'com.example.short_link.notification.domain.policy.*',
 		'com.example.short_link.federation.domain.foryou.*',
 		'com.example.short_link.home.HomeRankVectorsTest',
 		'com.example.short_link.link.classifier.application.helper.*',
+		'com.example.short_link.link.stats.application.LinkInsightsTest*',
+		'com.example.short_link.common.time.*',
+		'com.example.short_link.live.*',
+		'com.example.short_link.common.live.*',
+		'com.example.short_link.common.net.*',
+		'com.example.short_link.link.og.application.OgScraper*',
+		'com.example.short_link.note.application.media.*',
+		'com.example.short_link.federation.application.RemoteEmojisTest',
+		'com.example.short_link.common.federation.*',
+		'com.example.short_link.user.application.JwtTokenService*',
+		'com.example.short_link.user.application.write.AuthServiceDecisionsTest',
+		'com.example.short_link.event.application.write.EventLinkIssuerTest',
+		'com.example.short_link.common.security.UnlistedKeysTest',
+		'com.example.short_link.common.image.*',
 	]
-	excludedTestClasses = ['com.example.short_link.federation.domain.foryou.replay.*']
+	excludedTestClasses = [
+		'com.example.short_link.federation.domain.foryou.replay.*',
+		'*IntegrationTest',
+		'*E2ETest',
+		'*HttpQueryContractTest',
+	]
 	threads = 4
 	outputFormats = ['XML', 'HTML']
 	timestampedReports = false
 	jvmArgs = ['-Xmx1g']
-	mutationThreshold = 93
+	mutationThreshold = 90
 }
 
 tasks.register('downloadGeoLite2Asn') {

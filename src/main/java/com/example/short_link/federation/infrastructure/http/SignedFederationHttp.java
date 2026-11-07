@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.http;
 
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
+import com.example.short_link.common.net.Redirects;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.signature.HttpSignatures;
@@ -157,13 +158,6 @@ public class SignedFederationHttp implements FederationHttp {
   }
 
   private static URI location(URI from, int status, String header) {
-    if (status < 300 || status >= 400 || header == null || header.isBlank()) {
-      return null;
-    }
-    try {
-      return from.resolve(header.strip());
-    } catch (IllegalArgumentException malformed) {
-      return null;
-    }
+    return Redirects.isRedirect(status) ? Redirects.next(from, header).orElse(null) : null;
   }
 }

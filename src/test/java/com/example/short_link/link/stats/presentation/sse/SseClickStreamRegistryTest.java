@@ -6,10 +6,14 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -18,7 +22,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void broadcastsToActiveSubscribersAndIgnoresOtherLinks() throws Exception {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     CountingEmitter watching = new CountingEmitter();
     CountingEmitter otherLink = new CountingEmitter();
 
@@ -45,7 +50,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void ownerChannelReceivesOwnClicksOnly() {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     CountingEmitter owner = new CountingEmitter();
     CountingEmitter stranger = new CountingEmitter();
     assertThat(registry.registerForUser(1L, owner)).isTrue();
@@ -71,7 +77,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void anonymousLinkClickSkipsOwnerChannel() {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     CountingEmitter owner = new CountingEmitter();
     registry.registerForUser(1L, owner);
 
@@ -84,7 +91,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void deadEmitterIsDroppedAfterFailedSend() {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     ThrowingEmitter dead = new ThrowingEmitter();
     CountingEmitter alive = new CountingEmitter();
     registry.register(new LinkId(42L), dead);
@@ -100,7 +108,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void rejectsWhenLinkAlreadyHas16Streams() {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     for (int i = 0; i < 16; i++) {
       assertThat(registry.register(new LinkId(11L), new CountingEmitter())).isTrue();
     }
@@ -109,7 +118,8 @@ class SseClickStreamRegistryTest {
 
   @Test
   void removeEvictsEmptyBucketButKeepsOthers() {
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     CountingEmitter keep = new CountingEmitter();
     CountingEmitter drop = new CountingEmitter();
     registry.register(new LinkId(5L), keep);
@@ -126,7 +136,8 @@ class SseClickStreamRegistryTest {
   void reRegisterAfterBucketEvictionKeepsNewEmitter() {
     // Pre-fix race: remove() evicted the emptied bucket while register() added to it, orphaning the
     // new emitter. A register following a remove-to-empty must recreate the bucket and retain it.
-    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     CountingEmitter first = new CountingEmitter();
     registry.register(new LinkId(8L), first);
     registry.remove(new LinkId(8L), first);
@@ -137,8 +148,51 @@ class SseClickStreamRegistryTest {
   }
 
   @Test
-  void heartbeatKeepsEveryLinkAndAccountStreamTalkingAndDropsDeadOnes() {
+  void aClientThatStopsReadingHoldsNeitherTheClickFlushNorTheScheduler() throws Exception {
     SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountDownLatch reads = new CountDownLatch(1);
+    try {
+      registry.register(new LinkId(7L), new StuckEmitter(reads));
+      registry.registerForUser(1L, new StuckEmitter(reads));
+      ClickRecordedEvent click =
+          new ClickRecordedEvent(
+              new LinkId(7L), "abc1234", 1L, Instant.now(), "KR", "mobile", null, false, null);
+
+      assertThat(CompletableFuture.runAsync(() -> registry.onClickRecorded(click)))
+          .succeedsWithin(Duration.ofSeconds(2));
+      assertThat(CompletableFuture.runAsync(registry::heartbeat))
+          .succeedsWithin(Duration.ofSeconds(2));
+    } finally {
+      reads.countDown();
+      registry.shutdown();
+    }
+  }
+
+  @Test
+  void sendsBeyondTheQueueAreDroppedAndCounted() {
+    SimpleMeterRegistry meters = new SimpleMeterRegistry();
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(
+            meters,
+            work -> {
+              throw new RejectedExecutionException("full");
+            });
+    CountingEmitter watching = new CountingEmitter();
+    registry.register(new LinkId(7L), watching);
+
+    registry.onClickRecorded(
+        new ClickRecordedEvent(
+            new LinkId(7L), "abc1234", null, Instant.now(), "KR", "mobile", null, false, null));
+    registry.heartbeat();
+
+    assertThat(watching.sent).isZero();
+    assertThat(meters.counter("sse.click_stream.dropped").count()).isEqualTo(2);
+  }
+
+  @Test
+  void heartbeatKeepsEveryLinkAndAccountStreamTalkingAndDropsDeadOnes() {
+    SseClickStreamRegistry registry =
+        new SseClickStreamRegistry(new SimpleMeterRegistry(), Runnable::run);
     FrameEmitter link = new FrameEmitter();
     FrameEmitter account = new FrameEmitter();
     registry.register(new LinkId(3L), link);
@@ -186,6 +240,24 @@ class SseClickStreamRegistryTest {
               .map(Map.class::cast)
               .findFirst()
               .orElseThrow();
+    }
+  }
+
+  private static class StuckEmitter extends SseEmitter {
+    private final CountDownLatch reads;
+
+    StuckEmitter(CountDownLatch reads) {
+      super(10_000L);
+      this.reads = reads;
+    }
+
+    @Override
+    public void send(SseEventBuilder builder) {
+      try {
+        reads.await();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 

@@ -10,9 +10,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -39,7 +43,8 @@ class LinkInsightsTest {
         .total(100)
         .human(90)
         .bot(10)
-        .velocity(new LinkStats.Velocity(0, 0, 0));
+        .velocity(new LinkStats.Velocity(0, 0, 0))
+        .today(LocalDate.parse("2026-07-15"));
   }
 
   private static LinkInsights.ReportFacts.ReportFactsBuilder realLinkStats() {
@@ -73,7 +78,8 @@ class LinkInsightsTest {
                 new LinkStats.CountryClick("JP", 214),
                 new LinkStats.CountryClick("unknown", 101)))
         .rawRetentionDays(90)
-        .rawSince(Instant.parse("2026-08-04T00:00:00Z"));
+        .rawSince(Instant.parse("2026-08-04T00:00:00Z"))
+        .today(LocalDate.parse("2026-10-15"));
   }
 
   private List<LinkStats.Insight> journal(LinkInsights.ReportFacts.ReportFactsBuilder facts) {
@@ -127,6 +133,45 @@ class LinkInsightsTest {
     long[] flat = IntStream.range(0, 14).mapToLong(i -> i < 7 ? 0 : 10).toArray();
 
     assertThat(entry("trendUp", stats().dailyClicks(days("07", flat)))).isEmpty();
+  }
+
+  @Test
+  void trendCountsCalendarDaysWhenRecentDaysHadNoClicks() {
+    long[] busyThenQuiet = IntStream.range(0, 20).mapToLong(i -> 20).toArray();
+
+    LinkStats.Insight down =
+        entry(
+                "trendDown",
+                stats().dailyClicks(days("07", busyThenQuiet)).today(LocalDate.parse("2026-07-31")))
+            .orElseThrow();
+
+    assertThat(down.params()).isEqualTo(Map.of("percent", 100L, "count", 0L));
+    assertThat(down.spark())
+        .containsExactly(20L, 20L, 20L, 20L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L);
+  }
+
+  @Test
+  void trendLeavesOutTheDayStillInProgress() {
+    long[] steadyThenTodaySoFar =
+        IntStream.range(0, 15).mapToLong(i -> i < 8 ? 100 : i < 14 ? 95 : 1).toArray();
+
+    assertThat(
+            journal(
+                stats()
+                    .dailyClicks(days("07", steadyThenTodaySoFar))
+                    .today(LocalDate.parse("2026-07-15"))))
+        .noneMatch(i -> i.code().startsWith("trend"));
+  }
+
+  @Test
+  void peakDaySparkKeepsTheQuietDaysBeforeThePeak() {
+    List<LinkStats.DailyClick> gaps =
+        List.of(
+            new LinkStats.DailyClick(LocalDate.parse("2026-07-01"), 1),
+            new LinkStats.DailyClick(LocalDate.parse("2026-07-05"), 9));
+
+    assertThat(entry("peakDay", stats().dailyClicks(gaps)).orElseThrow().spark())
+        .containsExactly(1L, 0L, 0L, 0L, 9L);
   }
 
   @Test
@@ -420,5 +465,160 @@ class LinkInsightsTest {
     assertThat(high.params()).isEqualTo(Map.of("percent", 25L, "human", 75L));
     assertThat(high.evidence()).isEqualTo("automated");
     assertThat(high.ratio()).isEqualTo(0.25);
+  }
+
+  private static LinkInsights.ReportFacts.ReportFactsBuilder quiet() {
+    return LinkInsights.ReportFacts.builder()
+        .total(100)
+        .human(100)
+        .bot(0)
+        .today(LocalDate.parse("2026-07-15"));
+  }
+
+  private static List<LinkStats.DailyClick> weekOverWeek(long previous, long last) {
+    return List.of(
+        new LinkStats.DailyClick(LocalDate.parse("2026-07-01"), previous),
+        new LinkStats.DailyClick(LocalDate.parse("2026-07-14"), last));
+  }
+
+  private static Arguments rule(
+      String code, boolean speaks, String at, LinkInsights.ReportFacts.ReportFactsBuilder facts) {
+    return Arguments.of(code, speaks, at, facts);
+  }
+
+  static Stream<Arguments> thresholds() {
+    LinkStats.Velocity fast = new LinkStats.Velocity(15, 10, 1.5);
+    LinkStats.Velocity almost = new LinkStats.Velocity(15, 10, 1.4999);
+    return Stream.of(
+        rule("velocity", true, "1.5x with 30 humans", quiet().human(30).velocity(fast)),
+        rule("velocity", false, "just under 1.5x", quiet().human(30).velocity(almost)),
+        rule("velocity", false, "29 humans", quiet().human(29).velocity(fast)),
+        rule("trendUp", true, "+15% over 20", quiet().dailyClicks(weekOverWeek(20, 23))),
+        rule("trendUp", false, "+10% over 20", quiet().dailyClicks(weekOverWeek(20, 22))),
+        rule("trendDown", true, "-15% over 20", quiet().dailyClicks(weekOverWeek(20, 17))),
+        rule(
+            "trendUp",
+            true,
+            "10 clicks the week before",
+            quiet().dailyClicks(weekOverWeek(10, 30))),
+        rule(
+            "trendUp", false, "9 clicks the week before", quiet().dailyClicks(weekOverWeek(9, 30))),
+        rule("topSource", true, "25%", quiet().referrerHosts(hosts(25))),
+        rule("topSource", false, "24%", quiet().referrerHosts(hosts(24))),
+        rule(
+            "channelLoyalty",
+            true,
+            "30% of 5",
+            quiet().channelDepth(List.of(depth("a.com", 20, 5, 0.3)))),
+        rule(
+            "channelLoyalty",
+            false,
+            "29% of 5",
+            quiet().channelDepth(List.of(depth("a.com", 20, 5, 0.29)))),
+        rule(
+            "channelLoyalty",
+            false,
+            "30% of 4",
+            quiet().channelDepth(List.of(depth("a.com", 20, 4, 0.3)))),
+        rule("inAppBrowser", true, "20%", quiet().clientApps(apps(20))),
+        rule("inAppBrowser", false, "19%", quiet().clientApps(apps(19))),
+        rule(
+            "returning",
+            true,
+            "15% of 10",
+            quiet().returnRate(new LinkStats.ReturnRate(8, 2, 0.15))),
+        rule(
+            "returning",
+            false,
+            "14% of 10",
+            quiet().returnRate(new LinkStats.ReturnRate(8, 2, 0.14))),
+        rule(
+            "returning",
+            false,
+            "15% of 9",
+            quiet().returnRate(new LinkStats.ReturnRate(7, 2, 0.15))),
+        rule(
+            "returning",
+            true,
+            "a raw window but no retention days",
+            quiet()
+                .returnRate(new LinkStats.ReturnRate(8, 2, 0.15))
+                .rawSince(Instant.parse("2026-04-16T00:00:00Z"))
+                .rawRetentionDays(0)),
+        rule("topCountry", true, "40%", quiet().countries(countries(40))),
+        rule("topCountry", false, "39%", quiet().countries(countries(39))),
+        rule("mobileHeavy", true, "60% mobile", quiet().devices(devices("mobile", 60))),
+        rule("mobileHeavy", false, "59% mobile", quiet().devices(devices("mobile", 59))),
+        rule("desktopHeavy", true, "60% desktop", quiet().devices(devices("desktop", 60))),
+        rule("desktopHeavy", false, "59% desktop", quiet().devices(devices("desktop", 59))),
+        rule("botHigh", true, "20% of 100", quiet().human(80).bot(20)),
+        rule("botFiltered", true, "19% of 100", quiet().human(81).bot(19)),
+        rule("botFiltered", true, "5% of 100", quiet().human(95).bot(5)),
+        rule("botFiltered", false, "4% of 100", quiet().human(96).bot(4)),
+        rule("botHigh", true, "20% of 10", quiet().total(10).human(8).bot(2)),
+        rule("botHigh", false, "22% of 9", quiet().total(9).human(7).bot(2)),
+        rule("peakDay", true, "10 clicks in the window", quiet().dailyClicks(days("07", 1, 2, 7))),
+        rule("peakDay", false, "9 clicks in the window", quiet().dailyClicks(days("07", 1, 2, 6))),
+        rule("fastFirstClick", true, "59 minutes", quiet().timeToFirstClickMinutes(59L)),
+        rule("fastFirstClick", false, "60 minutes", quiet().timeToFirstClickMinutes(60L)));
+  }
+
+  @ParameterizedTest(name = "{0} speaks={1} at {2}")
+  @MethodSource("thresholds")
+  void eachRuleSpeaksFromItsThresholdAndNotJustBelowIt(
+      String code, boolean speaks, String at, LinkInsights.ReportFacts.ReportFactsBuilder facts) {
+    assertThat(entry(code, facts).isPresent()).as(at).isEqualTo(speaks);
+  }
+
+  @Test
+  void theLatestOfTheBusiestDaysIsThePeakAndTheFirstDayCanBeIt() {
+    assertThat(entry("peakDay", quiet().dailyClicks(days("07", 5, 5))).orElseThrow().params())
+        .containsEntry("date", "2026-07-02");
+    assertThat(entry("peakDay", quiet().dailyClicks(days("07", 9, 1))).orElseThrow().params())
+        .containsEntry("date", "2026-07-01");
+  }
+
+  @Test
+  void amongEquallyLoyalChannelsTheFirstListedIsNamed() {
+    assertThat(
+            entry(
+                    "channelLoyalty",
+                    quiet()
+                        .channelDepth(
+                            List.of(depth("a.com", 20, 5, 0.5), depth("b.com", 20, 5, 0.5))))
+                .orElseThrow()
+                .params())
+        .containsEntry("host", "a.com");
+  }
+
+  @Test
+  void aDeviceShareIsReadFromThatDeviceWhereverItIsListed() {
+    assertThat(
+            entry(
+                "mobileHeavy",
+                quiet()
+                    .devices(
+                        List.of(
+                            new LinkStats.DeviceClick("desktop", 70),
+                            new LinkStats.DeviceClick("mobile", 30)))))
+        .isEmpty();
+  }
+
+  private static List<LinkStats.ReferrerHostClick> hosts(long top) {
+    return List.of(
+        new LinkStats.ReferrerHostClick("a.com", top), new LinkStats.ReferrerHostClick("b.com", 1));
+  }
+
+  private static List<LinkStats.ClientAppClick> apps(long count) {
+    return List.of(new LinkStats.ClientAppClick("kakaotalk", count));
+  }
+
+  private static List<LinkStats.CountryClick> countries(long top) {
+    return List.of(
+        new LinkStats.CountryClick("KR", top), new LinkStats.CountryClick("JP", 100 - top));
+  }
+
+  private static List<LinkStats.DeviceClick> devices(String device, long count) {
+    return List.of(new LinkStats.DeviceClick(device, count));
   }
 }

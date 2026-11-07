@@ -7,13 +7,8 @@ import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-// The link report's visitor reads (unique visitors, return rate, channel depth) filter on
-// (link_id, is_bot) and read visitor_hash, clicked_at and referrer_host; this index holds all of
-// them and still serves the (link_id, is_bot = 0, visitor_hash) lookups of idx_click_event_visitor.
-// Building it is online (INPLACE, LOCK = NONE) but holds the app's start for as long as it takes,
-// so
-// on a large click_event it can be built by hand before the deploy; this migration then only drops
-// whichever of the two indexes is left over.
+// The old index can go only because this one still serves its (link_id, is_bot = 0, visitor_hash)
+// lookups.
 public class V214__click_event_visitor_covering_index extends BaseJavaMigration {
 
   private static final String NEW_INDEX = "idx_click_event_link_bot_visitor";

@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -32,7 +31,6 @@ public class PublicImageFetcher {
   private static final String USER_AGENT = "kurl-media/1.0 (+https://kurl.me/bot)";
   private static final int MAX_REDIRECTS = 3;
   private static final int CHUNK = 16 * 1024;
-  private static final Set<Integer> REDIRECTS = Set.of(301, 302, 303, 307, 308);
   private static final Refused SLOWER_THAN_THE_DEADLINE = new Refused("slower than the deadline");
   private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
   private static final byte[] PNG_SIGNATURE = {
@@ -133,7 +131,7 @@ public class PublicImageFetcher {
   private static Step answer(
       URI from, ClassicHttpResponse response, int maxBytes, long deadlineNanos) throws IOException {
     int status = response.getCode();
-    if (REDIRECTS.contains(status)) {
+    if (Redirects.isRedirect(status)) {
       return redirect(from, response.getFirstHeader(HttpHeaders.LOCATION));
     }
     HttpEntity entity = response.getEntity();
@@ -173,14 +171,9 @@ public class PublicImageFetcher {
   }
 
   private static Step redirect(URI from, Header location) {
-    if (location == null || location.getValue() == null || location.getValue().isBlank()) {
-      return done(new Refused("redirect without a location"));
-    }
-    try {
-      return new Step(null, from.resolve(location.getValue().strip()).toString());
-    } catch (IllegalArgumentException malformed) {
-      return done(new Refused("malformed redirect"));
-    }
+    return Redirects.next(from, location == null ? null : location.getValue())
+        .map(next -> new Step(null, next.toString()))
+        .orElseGet(() -> done(new Refused("redirect without a usable location")));
   }
 
   private static String mediaType(String header) {

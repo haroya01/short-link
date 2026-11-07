@@ -2,6 +2,8 @@ package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.NoteDeletedEvent;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.note.domain.NoteEntity;
@@ -138,6 +140,8 @@ public class NoteThreadControls {
               Mentions.remote(note.getBody()),
               note.getQuotedNoteId(),
               note.getVisibility().federates()));
+    } else {
+      events.publishEvent(new LiveRevoke.Closed(LiveTopic.note(noteId)));
     }
   }
 

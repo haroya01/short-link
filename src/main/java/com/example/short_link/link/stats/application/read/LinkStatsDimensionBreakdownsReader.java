@@ -25,19 +25,19 @@ class LinkStatsDimensionBreakdownsReader {
   private final PostTitleReader postTitles;
 
   ChannelBreakdowns channels(LinkId linkId, long direct) {
-    List<LinkStats.ReferrerClick> allReferrers =
-        clickDimensions.findAllReferrerClicks(linkId.value()).stream()
+    List<LinkStats.ReferrerClick> referrers =
+        clickDimensions.findTopReferrerClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
             .toList();
-    List<LinkStats.ReferrerClick> referrers =
-        allReferrers.subList(0, Math.min(TOP_SIZE, allReferrers.size()));
-    List<LinkStats.ReferrerHostClick> referrerHosts =
-        clickDimensions.findTopReferrerHostClicks(linkId.value(), TOP_SIZE).stream()
+    List<LinkStats.ReferrerHostClick> allHosts =
+        clickDimensions.findAllReferrerHostClicks(linkId.value()).stream()
             .map(r -> new LinkStats.ReferrerHostClick(r.getHost(), r.getCount()))
             .toList();
+    List<LinkStats.ReferrerHostClick> referrerHosts =
+        allHosts.subList(0, Math.min(TOP_SIZE, allHosts.size()));
     Map<String, Long> channelTotals = new HashMap<>();
-    allReferrers.forEach(
-        r -> channelTotals.merge(channelClassifier.classify(r.referrer()), r.count(), Long::sum));
+    allHosts.forEach(
+        h -> channelTotals.merge(channelClassifier.classifyHost(h.host()), h.count(), Long::sum));
     if (direct > 0) channelTotals.merge("direct", direct, Long::sum);
     List<LinkStats.ChannelClick> channels =
         channelTotals.entrySet().stream()

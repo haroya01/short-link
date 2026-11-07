@@ -4,6 +4,8 @@ import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.link.LinkPreviewReader;
+import com.example.short_link.common.live.LiveRevoke;
+import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.NoteVisibility;
@@ -259,8 +261,12 @@ class RemoteNoteRecorder implements RemoteNotes {
 
   @Override
   @Transactional
-  public boolean retract(Long remoteActorId, String uri) {
-    return store.deleteRemote(remoteActorId, uri) > 0;
+  public boolean retract(Long remoteActorId, Long noteId, String uri) {
+    if (store.deleteRemote(remoteActorId, uri) == 0) {
+      return false;
+    }
+    events.publishEvent(new LiveRevoke.Closed(LiveTopic.note(noteId)));
+    return true;
   }
 
   @Override
