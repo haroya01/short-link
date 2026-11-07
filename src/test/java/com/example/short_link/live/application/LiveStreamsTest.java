@@ -13,6 +13,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +27,7 @@ class LiveStreamsTest {
   private static final LiveTopic THREAD = LiveTopic.note(10L);
   private static final LiveScope OPEN = new LiveScope(1L, null);
 
+  private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
   private LiveStreams streams = streams(500, 4, Duration.ofHours(1));
 
   @AfterEach
@@ -29,12 +35,17 @@ class LiveStreamsTest {
     streams.shutdown();
   }
 
-  private static LiveStreams streams(int max, int perUser, Duration window) {
+  private LiveStreams streams(int max, int perUser, Duration window) {
     return new LiveStreams(
         new LiveProperties(
             max, perUser, Duration.ofMinutes(5), Duration.ofSeconds(25), window, null, null, null),
         Clock.fixed(NOW, ZoneOffset.UTC),
-        new SimpleMeterRegistry());
+        meters);
+  }
+
+  private double counted(String name, String... tags) {
+    var counter = meters.find(name).tags(tags).counter();
+    return counter == null ? 0 : counter.count();
   }
 
   private RecordingChannel watch(long userId, LiveTopic topic, LiveScope scope) {
@@ -439,5 +450,134 @@ class LiveStreamsTest {
     assertThat(first.closed).isTrue();
     assertThat(second.closed).isTrue();
     assertThat(streams.open()).isZero();
+  }
+
+  @Test
+  void everyWayAStreamEndsIsCountedByWhy() {
+    streams.shutdown();
+    streams = streams(2, 1, Duration.ofHours(1));
+    RecordingChannel crowded = watch(2L, THREAD, OPEN);
+    RecordingChannel lasting = watch(3L, THREAD, OPEN);
+    assertThat(streams.register(new LiveSubscriber(4L, THREAD, OPEN, new RecordingChannel())))
+        .isFalse();
+    RecordingChannel closed = watch(2L, LiveTopic.note(11L), OPEN);
+    await().atMost(Duration.ofSeconds(5)).until(() -> crowded.closed);
+
+    streams.revoke(new LiveRevoke.Closed(LiveTopic.note(11L)));
+    await().atMost(Duration.ofSeconds(5)).until(() -> closed.closed);
+    RecordingChannel rechecked = watch(2L, LiveTopic.note(12L), OPEN);
+    streams.revoke(new LiveRevoke.Recheck(LiveTopic.note(12L)));
+    await().atMost(Duration.ofSeconds(5)).until(() -> rechecked.closed);
+    streams.stop();
+
+    assertThat(lasting.names()).last().isEqualTo("Bye");
+    assertThat(counted("live.streams.rejected")).isEqualTo(1);
+    assertThat(counted("live.streams.crowded-out")).isEqualTo(1);
+    assertThat(counted("live.streams.ended", "revoked", "true")).isEqualTo(1);
+    assertThat(counted("live.streams.ended", "revoked", "false")).isEqualTo(1);
+    assertThat(counted("live.streams.bye", "reason", "restart")).isEqualTo(1);
+  }
+
+  @Test
+  void onlyWhatReachedAStreamIsCountedAsDelivered() {
+    RecordingChannel healthy = watch(2L, THREAD, OPEN);
+    RecordingChannel alsoHealthy = watch(4L, THREAD, OPEN);
+    RecordingChannel broken = watch(3L, THREAD, OPEN);
+    broken.broken = true;
+
+    streams.offer(reply(101));
+    streams.flush(THREAD);
+
+    assertThat(healthy.changes()).hasSize(1);
+    assertThat(alsoHealthy.changes()).hasSize(1);
+    assertThat(broken.closed).isTrue();
+    assertThat(counted("live.changes.delivered")).isEqualTo(2);
+  }
+
+  @Test
+  void whenOneOfTwoWatchersLeavesTheOtherStillHearsTheTopic() {
+    RecordingChannel staying = new RecordingChannel();
+    LiveSubscriber stays = new LiveSubscriber(2L, THREAD, OPEN, staying);
+    LiveSubscriber leaves = new LiveSubscriber(3L, THREAD, OPEN, new RecordingChannel());
+    streams.register(stays);
+    streams.start(stays, 0L, null, "renewed");
+    streams.register(leaves);
+    streams.start(leaves, 0L, null, "renewed");
+
+    streams.remove(leaves);
+    streams.offer(reply(101));
+    streams.flush(THREAD);
+
+    assertThat(staying.changes()).hasSize(1);
+  }
+
+  @Test
+  void aPersonsRemainingStreamStillCountsTowardTheirShareAfterAnotherLeaves() {
+    RecordingChannel remaining = watch(2L, LiveTopic.note(0L), OPEN);
+    LiveSubscriber leaving =
+        new LiveSubscriber(2L, LiveTopic.note(1L), OPEN, new RecordingChannel());
+    streams.register(leaving);
+    streams.remove(leaving);
+    for (long id = 2; id < 5; id++) {
+      watch(2L, LiveTopic.note(id), OPEN);
+    }
+    assertThat(remaining.closed).isFalse();
+
+    watch(2L, LiveTopic.note(5L), OPEN);
+
+    await().atMost(Duration.ofSeconds(5)).until(() -> remaining.closed);
+    assertThat(streams.open()).isEqualTo(4);
+  }
+
+  @Test
+  void askingWhetherSomeoneFitsOrStoppingLeavesAdmissionOpenForOtherThreads() throws Exception {
+    streams.admits(2L);
+    assertThat(
+            CompletableFuture.supplyAsync(
+                () ->
+                    streams.register(new LiveSubscriber(2L, THREAD, OPEN, new RecordingChannel()))))
+        .succeedsWithin(Duration.ofSeconds(2))
+        .isEqualTo(true);
+
+    streams.stop();
+    assertThat(CompletableFuture.supplyAsync(() -> streams.admits(3L)))
+        .succeedsWithin(Duration.ofSeconds(2));
+  }
+
+  @Test
+  void aRotationArrivingAfterTheStreamEndedIsCancelledAtOnceAndEndingCancelsOneAlreadySet()
+      throws Exception {
+    ScheduledExecutorService clockwork = Executors.newSingleThreadScheduledExecutor();
+    try {
+      LiveSubscriber late = new LiveSubscriber(2L, THREAD, OPEN, new RecordingChannel());
+      late.end();
+      ScheduledFuture<?> tooLate = clockwork.schedule(() -> {}, 1, TimeUnit.HOURS);
+      late.rotation(tooLate);
+      assertThat(late.ended()).isTrue();
+      assertThat(tooLate.isCancelled()).isTrue();
+
+      LiveSubscriber early = new LiveSubscriber(2L, THREAD, OPEN, new RecordingChannel());
+      ScheduledFuture<?> set = clockwork.schedule(() -> {}, 1, TimeUnit.HOURS);
+      early.rotation(set);
+      assertThat(set.isCancelled()).isFalse();
+      early.end();
+      assertThat(set.isCancelled()).isTrue();
+    } finally {
+      clockwork.shutdownNow();
+    }
+  }
+
+  @Test
+  void theHubRunsOnlyBetweenStartAndStopAndShuttingDownSaysGoodbye() {
+    assertThat(streams.isRunning()).isFalse();
+    streams.start();
+    assertThat(streams.isRunning()).isTrue();
+    RecordingChannel open = watch(2L, THREAD, OPEN);
+
+    streams.shutdown();
+
+    assertThat(streams.isRunning()).isFalse();
+    assertThat(open.names()).last().isEqualTo("Bye");
+    assertThat(open.closed).isTrue();
   }
 }

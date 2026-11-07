@@ -126,6 +126,8 @@ class LiveStreamServiceTest {
     when(streams.register(subscriber)).thenReturn(true);
 
     assertThat(live.join(subscriber)).isTrue();
+    when(streams.register(subscriber)).thenReturn(false);
+    assertThat(live.join(subscriber)).isFalse();
     live.leave(subscriber);
 
     verify(streams).remove(subscriber);
