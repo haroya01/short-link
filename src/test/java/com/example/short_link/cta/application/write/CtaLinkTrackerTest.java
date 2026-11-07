@@ -1,13 +1,17 @@
 package com.example.short_link.cta.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.cta.exception.CtaErrorCode;
+import com.example.short_link.cta.exception.CtaException;
 import com.example.short_link.link.application.ShortLinkDetector;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.write.CheckedDestination;
@@ -29,7 +33,19 @@ class CtaLinkTrackerTest {
   private final CheckedDestination checked = mock(CheckedDestination.class);
 
   private String track(String url) {
-    return new CtaLinkTracker(createLink, detector).trackingCodeFor(7L, url);
+    return new CtaLinkTracker(createLink, detector, allowed -> true).trackingCodeFor(7L, url);
+  }
+
+  @Test
+  void aDestinationTheOutboundPolicyRefusesIsRefusedBeforeAnyLinkIsMade() {
+    CtaLinkTracker tracker =
+        new CtaLinkTracker(createLink, detector, url -> !url.contains("phish.test"));
+
+    assertThatThrownBy(() -> tracker.trackingCodeFor(7L, "https://phish.test/login"))
+        .isInstanceOfSatisfying(
+            CtaException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CtaErrorCode.MALICIOUS_URL));
+    verifyNoInteractions(createLink);
   }
 
   @Test
@@ -52,10 +68,10 @@ class CtaLinkTrackerTest {
   }
 
   @Test
-  void skipsTrackingWhenTheDestinationIsRefused() {
+  void skipsTrackingWhenAnotherLinkCheckFails() {
     when(detector.extractCode(any())).thenReturn(null);
     when(createLink.check(any(CreateLinkCommand.class)))
-        .thenThrow(new RuntimeException("malicious url"));
+        .thenThrow(new RuntimeException("self reference"));
 
     assertThat(track("https://example.com/x")).isNull();
     verify(createLink, never()).tryExecute(any(), any());

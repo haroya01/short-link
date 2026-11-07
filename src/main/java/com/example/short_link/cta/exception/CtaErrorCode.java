@@ -5,7 +5,8 @@ import org.springframework.http.HttpStatus;
 public enum CtaErrorCode {
   CTA_NOT_FOUND(HttpStatus.NOT_FOUND, "cta not found: %s"),
   CTA_DELETED(HttpStatus.CONFLICT, "cta already deleted: %s"),
-  CTA_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "cta permission denied");
+  CTA_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "cta permission denied"),
+  MALICIOUS_URL(HttpStatus.BAD_REQUEST, "destination refused");
 
   private final HttpStatus status;
   private final String template;

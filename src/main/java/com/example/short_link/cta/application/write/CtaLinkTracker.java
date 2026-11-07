@@ -1,5 +1,8 @@
 package com.example.short_link.cta.application.write;
 
+import com.example.short_link.common.security.OutboundUrlPolicy;
+import com.example.short_link.cta.exception.CtaErrorCode;
+import com.example.short_link.cta.exception.CtaException;
 import com.example.short_link.link.application.ShortLinkDetector;
 import com.example.short_link.link.application.write.CheckedDestination;
 import com.example.short_link.link.application.write.CreateLinkCommand;
@@ -16,10 +19,14 @@ public class CtaLinkTracker {
 
   private final CreateLinkUseCase createLink;
   private final ShortLinkDetector detector;
+  private final OutboundUrlPolicy outbound;
 
   public String trackingCodeFor(Long userId, String url) {
     if (url == null || url.isBlank()) {
       return null;
+    }
+    if (!outbound.allows(url)) {
+      throw new CtaException(CtaErrorCode.MALICIOUS_URL);
     }
     String existing = detector.extractCode(url);
     if (existing != null) {

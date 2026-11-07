@@ -1,5 +1,6 @@
 package com.example.short_link.event.application.write;
 
+import com.example.short_link.common.security.OutboundUrlPolicy;
 import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.application.helper.EventQuestions.QuestionSpec;
 import com.example.short_link.event.domain.EventEntity;
@@ -13,7 +14,7 @@ import com.example.short_link.event.exception.EventException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -22,9 +23,15 @@ public class UpdateEventUseCase {
   private final EventRepository eventRepository;
   private final EventQuestionRepository questionRepository;
   private final EventRegistrationRepository registrationRepository;
+  private final OutboundUrlPolicy outbound;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public EventEntity execute(UpdateEventCommand cmd) {
+    EventUrls.requireAllowed(outbound, cmd.locationUrl(), cmd.onlineUrl());
+    return transaction.execute(status -> update(cmd));
+  }
+
+  private EventEntity update(UpdateEventCommand cmd) {
     EventEntity event =
         eventRepository
             .findById(cmd.eventId())

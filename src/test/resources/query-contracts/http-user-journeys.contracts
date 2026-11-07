@@ -537,7 +537,9 @@
 @junit | profile-block-delete | 2 | 0 | 0 | 1 | 3
 @junit | profile-block-highlight | 4 | 0 | 2 | 0 | 6
 @junit | profile-block-order | 4 | 0 | 2 | 0 | 6
-@junit | profile-block-update | 2 | 0 | 1 | 0 | 3
+# The block is read once outside the transaction to learn its type, so a product card's buy
+# links are checked against the outbound URL policy before the write; the write reads it again.
+@junit | profile-block-update | 3 | 0 | 1 | 0 | 4
 @junit | profile-email-form-create | 3 | 1 | 0 | 0 | 4
 @junit | profile-email-lead-cross-user-delete-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-email-lead-cross-user-optout-rejected | 1 | 0 | 0 | 0 | 1

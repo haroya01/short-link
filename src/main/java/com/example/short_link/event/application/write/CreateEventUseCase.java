@@ -1,5 +1,6 @@
 package com.example.short_link.event.application.write;
 
+import com.example.short_link.common.security.OutboundUrlPolicy;
 import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.application.helper.EventQuestions.QuestionSpec;
 import com.example.short_link.event.application.helper.EventSlugs;
@@ -25,9 +26,11 @@ public class CreateEventUseCase {
   private final EventQuestionRepository questionRepository;
   private final EventLinkIssuer linkIssuer;
   private final TransactionTemplate transaction;
+  private final OutboundUrlPolicy outbound;
 
   public EventEntity execute(CreateEventCommand cmd) {
     EventQuestions.validateSpecs(cmd.questions());
+    EventUrls.requireAllowed(outbound, cmd.locationUrl(), cmd.onlineUrl());
     EventEntity event = transaction.execute(status -> save(cmd));
     linkIssuer
         .issue(cmd.userId(), event.getId(), event.getSlug(), PRIMARY_LINK_LABEL)

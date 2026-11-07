@@ -16,6 +16,7 @@ import com.example.short_link.event.domain.repository.EventRegistrationRepositor
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
+import com.example.short_link.support.FakeTransactions;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +41,13 @@ class UpdateEventUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdateEventUseCase(eventRepository, questionRepository, registrationRepository);
+    useCase =
+        new UpdateEventUseCase(
+            eventRepository,
+            questionRepository,
+            registrationRepository,
+            url -> true,
+            FakeTransactions.template());
   }
 
   private EventEntity event() {
