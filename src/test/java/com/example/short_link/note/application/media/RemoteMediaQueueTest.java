@@ -199,4 +199,15 @@ class RemoteMediaQueueTest {
     }
     assertThat(again).isTrue();
   }
+
+  @Test
+  void aQueueThatIsOnSaysItCopiesAndRefusesASweepOnceItsWorkerStopped() {
+    queue = queue(true, 10, true);
+    assertThat(queue.copying()).isTrue();
+
+    queue.stop();
+
+    assertThat(queue.sweep()).isFalse();
+    verify(copier, never()).sweep();
+  }
 }
