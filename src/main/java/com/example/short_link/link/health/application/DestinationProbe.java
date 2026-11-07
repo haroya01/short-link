@@ -5,7 +5,9 @@ import com.example.short_link.common.net.HttpFetcher.Request;
 import com.example.short_link.common.net.HttpFetcher.Response;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
+import com.example.short_link.common.net.Redirects;
 import com.example.short_link.link.health.domain.DestinationFailure;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -44,19 +46,14 @@ public class DestinationProbe {
         return DestinationCheck.inconclusive();
       }
       int status = response.status();
-      if (!isRedirect(status)) {
+      if (!Redirects.isRedirect(status)) {
         return classify(status);
       }
-      String location = response.header("Location");
-      if (location == null || location.isBlank()) {
+      Optional<URI> location = Redirects.next(current.uri(), response.header("Location"));
+      if (location.isEmpty()) {
         return DestinationCheck.inconclusive();
       }
-      String next;
-      try {
-        next = current.uri().resolve(location.trim()).toString();
-      } catch (IllegalArgumentException e) {
-        return DestinationCheck.inconclusive();
-      }
+      String next = location.get().toString();
       Optional<Resolved> hopResolved = PublicHttpUrlGuard.resolve(next);
       if (hopResolved.isEmpty()) {
         return unresolved(next);
@@ -77,9 +74,5 @@ public class DestinationProbe {
     if (status == 410) return DestinationCheck.broken(DestinationFailure.GONE, status);
     if (status >= 200 && status < 300) return DestinationCheck.healthy(status);
     return DestinationCheck.inconclusive();
-  }
-
-  private static boolean isRedirect(int status) {
-    return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
   }
 }
