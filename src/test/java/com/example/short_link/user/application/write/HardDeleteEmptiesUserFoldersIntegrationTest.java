@@ -3,11 +3,15 @@ package com.example.short_link.user.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
+import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.support.InMemoryObjectStorage;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +34,19 @@ class HardDeleteEmptiesUserFoldersIntegrationTest {
   private Long userId;
 
   static ObjectStorage storage() {
-    return new InMemoryObjectStorage();
+    return new RefusingFolders();
+  }
+
+  static final class RefusingFolders extends InMemoryObjectStorage {
+    final Set<String> refused = ConcurrentHashMap.newKeySet();
+
+    @Override
+    public void deleteFolder(String folder) {
+      if (refused.contains(folder)) {
+        throw new ObjectStorageException("AccessDenied " + folder, null);
+      }
+      super.deleteFolder(folder);
+    }
   }
 
   @BeforeEach
@@ -43,6 +59,8 @@ class HardDeleteEmptiesUserFoldersIntegrationTest {
 
   @AfterEach
   void deleteWhatIsLeft() {
+    ((RefusingFolders) storage).refused.clear();
+    List.copyOf(((InMemoryObjectStorage) storage).keys()).forEach(storage::delete);
     jdbc.update("DELETE FROM users WHERE id = ?", userId);
   }
 
@@ -69,5 +87,22 @@ class HardDeleteEmptiesUserFoldersIntegrationTest {
 
     assertThat(((InMemoryObjectStorage) storage).keys())
         .containsExactlyInAnyOrderElementsOf(neighbours);
+  }
+
+  @Test
+  void aFolderThatCannotBeEmptiedDoesNotStopTheOthersNorBringTheAccountBack() {
+    List<String> theirs =
+        List.of(
+            "avatars/" + userId + "/a.png",
+            "banners/" + userId + "/b.png",
+            "note-images/" + userId + "/f.png");
+    theirs.forEach(key -> storage.putObject(key, "image/png", new byte[] {1}));
+    ((RefusingFolders) storage).refused.add(UserFolder.BANNERS.of(userId));
+
+    deletion.hardDelete(userId);
+
+    assertThat(((InMemoryObjectStorage) storage).keys())
+        .containsExactly("banners/" + userId + "/b.png");
+    assertThat(users.findById(userId)).isEmpty();
   }
 }

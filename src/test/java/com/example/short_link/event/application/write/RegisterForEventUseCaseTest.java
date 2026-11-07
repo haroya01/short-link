@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,6 +100,26 @@ class RegisterForEventUseCaseTest {
     assertThat(result.cancelToken()).hasSize(32);
     verify(attributor).attribute(any(), any(), any(), any());
     verify(mailer).sendConfirmation(any(), any(), any());
+  }
+
+  @Test
+  void register_aSaveThatCollidesWithASimultaneousSignUpGivesTheSeatBack() {
+    EventEntity event = openEvent(10);
+    when(eventRepository.findBySlug("slug123abc")).thenReturn(Optional.of(event));
+    when(questionRepository.findAllByEventIdOrderByPosition(42L)).thenReturn(List.of());
+    when(registrationRepository.findByEventIdAndContact(42L, "a@b.com"))
+        .thenReturn(Optional.empty());
+    when(eventRepository.tryIncrementRegistrationCount(42L)).thenReturn(1);
+    when(registrationRepository.save(any()))
+        .thenThrow(new DataIntegrityViolationException("uk_event_registration_contact"));
+
+    assertThatThrownBy(() -> useCase.execute(command("a@b.com")))
+        .isInstanceOf(EventException.class)
+        .extracting(e -> ((EventException) e).errorCode())
+        .isEqualTo(EventErrorCode.ALREADY_REGISTERED);
+    verify(eventRepository).decrementRegistrationCount(42L);
+    verify(attributor, never()).attribute(any(), any(), any(), any());
+    verify(mailer, never()).sendConfirmation(any(), any(), any());
   }
 
   @Test
