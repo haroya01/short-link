@@ -17,6 +17,7 @@ import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.federation.CustomEmoji;
 import com.example.short_link.common.link.LinkPreviewReader;
 import com.example.short_link.common.live.LiveChange;
+import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNoteFixtures;
@@ -553,6 +554,17 @@ class RemoteNoteRecorderTest {
     assertThat(recorder().retract(42L, URI)).isFalse();
     assertThat(recorder().exists(URI)).isTrue();
     assertThat(recorder().exists(null)).isFalse();
+  }
+
+  @Test
+  void aDeleteFromElsewhereEndsTheStreamsWatchingThatNoteOnlyWhenItRemovedOne() {
+    when(store.idByUri(URI)).thenReturn(Optional.of(900L));
+    when(store.deleteRemote(42L, URI)).thenReturn(1, 0);
+
+    recorder().retract(42L, URI);
+    recorder().retract(42L, URI);
+
+    verify(events, times(1)).publishEvent(new LiveRevoke.Closed(LiveTopic.note(900L)));
   }
 
   @Test
