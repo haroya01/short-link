@@ -21,8 +21,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
@@ -280,6 +283,35 @@ class OgScraperFetchTest {
     assertThat(fetched.og().hasAny()).isFalse();
     assertThat(fetched.result()).isEqualTo("redirect_invalid");
     assertThat(pages.requested()).containsExactly(SHARE);
+  }
+
+  static Stream<Arguments> answers() {
+    String titled = "<html><head><meta property=\"og:title\" content=\"Hello\"></head></html>";
+    return Stream.of(
+        Arguments.of("a 400 that still sends a page", 400, "text/html", titled, "non_2xx", null),
+        Arguments.of("a page served as JSON", 200, "application/json", titled, "non_html", null),
+        Arguments.of("a page without a type", 200, null, titled, "non_html", null),
+        Arguments.of("an empty HTML answer", 200, "text/html", "", "non_html", null),
+        Arguments.of(
+            "HTML named in capitals", 200, "TEXT/HTML; charset=UTF-8", titled, "ok", "Hello"));
+  }
+
+  @ParameterizedTest(name = "{0} is tagged {4}")
+  @MethodSource("answers")
+  void eachAnswerIsTaggedByWhatCameBackAndOnlyAnHtmlPageIsRead(
+      String answer, int status, String type, String body, String tag, String title) {
+    Map<String, List<String>> headers =
+        type == null ? Map.of() : Map.of("Content-Type", List.of(type));
+    Pages pages =
+        new Pages()
+            .page(
+                URL,
+                new HttpFetcher.Response(status, headers, body.getBytes(StandardCharsets.UTF_8)));
+
+    Fetched fetched = fetch(pages, URL, List.of(URL));
+
+    assertThat(fetched.result()).as(answer).isEqualTo(tag);
+    assertThat(fetched.og().title()).as(answer).isEqualTo(title);
   }
 
   private static Fetched fetch(Pages pages, String url, List<String> publicUrls) {
