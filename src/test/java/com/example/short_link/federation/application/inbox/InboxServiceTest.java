@@ -989,7 +989,6 @@ class InboxServiceTest {
   void anEditOrDeleteOfANoteWeKeptChangesIt() {
     String uri = ALICE + "/statuses/9";
     when(remoteNotes.kept(uri)).thenReturn(Optional.of(900L));
-    when(remoteNotes.exists(uri)).thenReturn(true);
     verifiedAs(ALICE_ACTOR);
     when(remoteNotes.revise(
             42L,
@@ -1004,7 +1003,7 @@ class InboxServiceTest {
                         "https://mastodon.example/m/1.png", "a cat", "image/png", null, null)),
                 "ja")))
         .thenReturn(true);
-    when(remoteNotes.retract(42L, uri)).thenReturn(true, false);
+    when(remoteNotes.retract(42L, 900L, uri)).thenReturn(true, false);
     InboxService service = service();
 
     String update =

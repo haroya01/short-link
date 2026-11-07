@@ -153,8 +153,9 @@ class InboxClassifier {
     if (activity.actorUri().equals(deleted)) {
       return act(new InboxIntent.Forget());
     }
-    if (remoteNotes.exists(deleted)) {
-      return act(new InboxIntent.Retract(deleted));
+    Optional<Long> kept = remoteNotes.kept(deleted);
+    if (kept.isPresent()) {
+      return act(new InboxIntent.Retract(deleted, kept.get()));
     }
     if (deleted != null
         && deleted.length() <= MAX_URI

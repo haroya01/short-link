@@ -261,12 +261,11 @@ class RemoteNoteRecorder implements RemoteNotes {
 
   @Override
   @Transactional
-  public boolean retract(Long remoteActorId, String uri) {
-    Optional<Long> noteId = store.idByUri(uri);
+  public boolean retract(Long remoteActorId, Long noteId, String uri) {
     if (store.deleteRemote(remoteActorId, uri) == 0) {
       return false;
     }
-    noteId.ifPresent(id -> events.publishEvent(new LiveRevoke.Closed(LiveTopic.note(id))));
+    events.publishEvent(new LiveRevoke.Closed(LiveTopic.note(noteId)));
     return true;
   }
 

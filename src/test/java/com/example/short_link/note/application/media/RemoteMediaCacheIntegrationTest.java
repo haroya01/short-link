@@ -263,7 +263,7 @@ class RemoteMediaCacheIntegrationTest {
     awaitShown(leaver, 0);
     awaitShown(leaver, 1);
 
-    assertThat(remoteNotes.retract(actor, uri("leaver"))).isTrue();
+    assertThat(remoteNotes.retract(actor, leaver, uri("leaver"))).isTrue();
     assertThat(queue.sweep()).isTrue();
     await(() -> copies(key(alone)) == 0);
 

@@ -152,7 +152,7 @@ public class InboxService {
       case InboxIntent.Receive receive -> receive(receive, actor);
       case InboxIntent.Revise revise -> revise(revise, actor);
       case InboxIntent.Retract retract ->
-          remoteNotes.retract(actor.getId(), retract.uri())
+          remoteNotes.retract(actor.getId(), retract.noteId(), retract.uri())
               ? InboxOutcome.accepted("delete")
               : InboxOutcome.ignored("unknown-note");
       case InboxIntent.Bury buried -> {

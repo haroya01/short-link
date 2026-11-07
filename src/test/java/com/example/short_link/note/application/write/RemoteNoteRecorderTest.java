@@ -550,19 +550,18 @@ class RemoteNoteRecorderTest {
                     RemoteNoteFixtures.revision("edited", null, false, null, List.of(), null)))
         .isFalse();
     verifyNoInteractions(media, events);
-    assertThat(recorder().retract(42L, URI)).isTrue();
-    assertThat(recorder().retract(42L, URI)).isFalse();
+    assertThat(recorder().retract(42L, 900L, URI)).isTrue();
+    assertThat(recorder().retract(42L, 900L, URI)).isFalse();
     assertThat(recorder().exists(URI)).isTrue();
     assertThat(recorder().exists(null)).isFalse();
   }
 
   @Test
   void aDeleteFromElsewhereEndsTheStreamsWatchingThatNoteOnlyWhenItRemovedOne() {
-    when(store.idByUri(URI)).thenReturn(Optional.of(900L));
     when(store.deleteRemote(42L, URI)).thenReturn(1, 0);
 
-    recorder().retract(42L, URI);
-    recorder().retract(42L, URI);
+    recorder().retract(42L, 900L, URI);
+    recorder().retract(42L, 900L, URI);
 
     verify(events, times(1)).publishEvent(new LiveRevoke.Closed(LiveTopic.note(900L)));
   }

@@ -86,7 +86,7 @@ public interface RemoteNotes {
   // address in its text is read once the transaction commits, as a member's note's is.
   void preview(Long noteId, String body, boolean hasMedia, LinkCard card);
 
-  boolean retract(Long remoteActorId, String uri);
+  boolean retract(Long remoteActorId, Long noteId, String uri);
 
   // The account's public and unlisted notes that are not replies, counted up to atMost.
   int countListed(Long remoteActorId, int atMost);
