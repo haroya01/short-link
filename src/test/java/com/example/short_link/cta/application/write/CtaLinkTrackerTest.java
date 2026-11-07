@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.cta.exception.CtaErrorCode;
@@ -18,6 +17,8 @@ import com.example.short_link.link.application.write.CheckedDestination;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,19 +34,30 @@ class CtaLinkTrackerTest {
   private final CheckedDestination checked = mock(CheckedDestination.class);
 
   private String track(String url) {
-    return new CtaLinkTracker(createLink, detector, allowed -> true).trackingCodeFor(7L, url);
+    return new CtaLinkTracker(createLink, detector).trackingCodeFor(7L, url);
   }
 
   @Test
-  void aDestinationTheOutboundPolicyRefusesIsRefusedBeforeAnyLinkIsMade() {
-    CtaLinkTracker tracker =
-        new CtaLinkTracker(createLink, detector, url -> !url.contains("phish.test"));
+  void aDestinationTheLinkCheckRefusesAsMaliciousRefusesTheCtaInsteadOfSavingItUntracked() {
+    when(detector.extractCode(any())).thenReturn(null);
+    when(createLink.check(any(CreateLinkCommand.class)))
+        .thenThrow(new LinkException(LinkErrorCode.MALICIOUS_URL, "abc"));
 
-    assertThatThrownBy(() -> tracker.trackingCodeFor(7L, "https://phish.test/login"))
+    assertThatThrownBy(() -> track("https://phish.test/login"))
         .isInstanceOfSatisfying(
             CtaException.class,
             e -> assertThat(e.errorCode()).isEqualTo(CtaErrorCode.MALICIOUS_URL));
-    verifyNoInteractions(createLink);
+    verify(createLink, never()).tryExecute(any(), any());
+  }
+
+  @Test
+  void anotherRefusalOfTheLinkCheckOnlySkipsTracking() {
+    when(detector.extractCode(any())).thenReturn(null);
+    when(createLink.check(any(CreateLinkCommand.class)))
+        .thenThrow(new LinkException(LinkErrorCode.SELF_REFERENCING_URL, "kurl.me"));
+
+    assertThat(track("https://kurl.me/u/someone")).isNull();
+    verify(createLink, never()).tryExecute(any(), any());
   }
 
   @Test
