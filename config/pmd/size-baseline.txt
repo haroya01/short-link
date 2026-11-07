@@ -118,7 +118,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/applicat
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=20
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, Long, Scope)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/safety/application/UrlSafetyChecker.java|isSafe(String)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert()#1=10
+CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert(String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/presentation/sse/SseClickStreamController.java|stream(ShortCode, String, String, HttpServletResponse)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/link/visit/application/LinkVisitOptionService.java|update(Long, ShortCode, Boolean, SplashChange, Instant, boolean)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/link/webhook/domain/LinkWebhookEntity.java|validateDeliveryMode(WebhookDeliveryMode, Integer, Integer, Integer)#1=14
@@ -134,7 +134,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NotePollService.java|mask(NoteEntity, List<Integer>)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NotePollService.java|vote(Long, Long, List<Integer>)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/NotePublication.java|events(Posted)#1=14
-CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|RemoteNoteRecorder#1=84
+CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|RemoteNoteRecorder#1=85
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|receive(Received)#1=18
 CyclomaticComplexity|src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java|revise(Long, Long, Revision)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/application/NotificationTargetCodec.java|decode(NotificationType, String)#1=28
@@ -161,7 +161,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/post/collection/applic
 CyclomaticComplexity|src/main/java/com/example/short_link/post/collection/application/read/DiscoverFeedQueryService.java|resolve(DiscoverConnectionRow, UserSummary, Map<Long, PostEntity>, Map<Long, PostHighlightEntity>, Map<Long, NoteBlock>, Map<Long, UserSummary>)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/domain/PostEntity.java|PostEntity#1=95
 CyclomaticComplexity|src/main/java/com/example/short_link/post/domain/PostEntity.java|changeAudience(PostAudience, Long, String)#1=10
-CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|fetchFollowingRedirects(Resolved, Map<String, String>, int, String, Long)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|read(String, long, Long)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|sniffImageType(byte[])#1=28
 CyclomaticComplexity|src/main/java/com/example/short_link/profile/application/BlockContentValidator.java|validate(ProfileBlockType, String)#1=27
@@ -231,7 +230,7 @@ NPathComplexity|src/main/java/com/example/short_link/federation/infrastructure/h
 NPathComplexity|src/main/java/com/example/short_link/home/application/read/HomeFeedQueryService.java|page(HomeAsk)#1=785
 NPathComplexity|src/main/java/com/example/short_link/home/application/read/RoomItemsQueryService.java|page(Long, Positions, int, NoteSlice, PostSlice)#1=512
 NPathComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, Long, Scope)#1=1728
-NPathComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert()#1=320
+NPathComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert(String)#1=320
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/domain/WebhookFilter.java|update(Boolean, Integer, Boolean, Integer, String, String)#1=216
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=309
 NPathComplexity|src/main/java/com/example/short_link/note/application/write/NoteComposer.java|check(Long, NoteDraft, List<StoredImage>)#1=12516

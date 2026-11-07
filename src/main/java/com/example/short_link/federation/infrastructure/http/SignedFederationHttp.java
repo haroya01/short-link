@@ -154,8 +154,10 @@ public class SignedFederationHttp implements FederationHttp {
     }
     return new Sent(
         new Result.Failed(status, "HTTP " + status),
-        followRedirects || !Redirects.isRedirect(status)
-            ? null
-            : Redirects.next(uri, response.header("Location")).orElse(null));
+        followRedirects ? null : location(uri, status, response.header("Location")));
+  }
+
+  private static URI location(URI from, int status, String header) {
+    return Redirects.isRedirect(status) ? Redirects.next(from, header).orElse(null) : null;
   }
 }
