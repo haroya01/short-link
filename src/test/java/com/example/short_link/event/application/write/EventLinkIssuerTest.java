@@ -20,6 +20,8 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.QueryTimeoutException;
 
 class EventLinkIssuerTest {
 
@@ -56,6 +58,29 @@ class EventLinkIssuerTest {
     when(createLink.tryCreateForOwnPage("https://kurl.me/e/party", 7L))
         .thenReturn(Optional.of(new LinkCreated(code)));
     when(links.findByShortCode(code)).thenReturn(Optional.empty());
+
+    assertThat(issuer.issue(7L, 5L, "party", "poster")).isEmpty();
+    verify(eventLinks, never()).save(any());
+  }
+
+  @Test
+  void aLinkThatCannotBeRecordedIssuesNothingInsteadOfFailingTheSavedEvent() {
+    ShortCode code = new ShortCode("evt0003");
+    when(createLink.tryCreateForOwnPage("https://kurl.me/e/party", 7L))
+        .thenReturn(Optional.of(new LinkCreated(code)));
+    LinkEntity link = withId(new LinkEntity("https://kurl.me/e/party", "evt0003", 7L, null), 43L);
+    when(links.findByShortCode(code)).thenReturn(Optional.of(link));
+    when(eventLinks.save(any())).thenThrow(new DataIntegrityViolationException("event is gone"));
+
+    assertThat(issuer.issue(7L, 5L, "party", "poster")).isEmpty();
+  }
+
+  @Test
+  void aLinkThatCannotBeReadBackBecauseTheDatabaseFailedIssuesNothing() {
+    ShortCode code = new ShortCode("evt0004");
+    when(createLink.tryCreateForOwnPage("https://kurl.me/e/party", 7L))
+        .thenReturn(Optional.of(new LinkCreated(code)));
+    when(links.findByShortCode(code)).thenThrow(new QueryTimeoutException("slow"));
 
     assertThat(issuer.issue(7L, 5L, "party", "poster")).isEmpty();
     verify(eventLinks, never()).save(any());

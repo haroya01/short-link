@@ -9,9 +9,11 @@ import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.ShortCode;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 // 같은 목적지라도 채널별 클릭을 구분하려고 deduplicate=false로 발급한다. 쿼터 초과 등 발급 실패는 이벤트 저장을 막지 않는다.
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class EventLinkIssuer {
@@ -30,12 +32,18 @@ public class EventLinkIssuer {
   }
 
   private Optional<IssuedLink> record(Long eventId, ShortCode code, String label) {
-    Optional<LinkRef> link = links.find(code);
-    if (link.isEmpty()) {
+    try {
+      Optional<LinkRef> link = links.find(code);
+      if (link.isEmpty()) {
+        return Optional.empty();
+      }
+      Long linkId = link.get().linkId().value();
+      eventLinkRepository.save(new EventLinkEntity(eventId, linkId, label));
+      return Optional.of(new IssuedLink(linkId, code.value()));
+    } catch (RuntimeException e) {
+      log.warn(
+          "event link {} not recorded for event {}: {}", code.value(), eventId, e.getMessage());
       return Optional.empty();
     }
-    Long linkId = link.get().linkId().value();
-    eventLinkRepository.save(new EventLinkEntity(eventId, linkId, label));
-    return Optional.of(new IssuedLink(linkId, code.value()));
   }
 }
