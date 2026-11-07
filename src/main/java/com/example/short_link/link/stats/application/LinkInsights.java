@@ -2,8 +2,10 @@ package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -55,7 +57,8 @@ public class LinkInsights {
       int rawRetentionDays,
       List<LinkStats.CountryClick> countries,
       List<LinkStats.DeviceClick> devices,
-      Long timeToFirstClickMinutes) {
+      Long timeToFirstClickMinutes,
+      LocalDate today) {
     public ReportFacts {
       dailyClicks = orEmpty(dailyClicks);
       referrerHosts = orEmpty(referrerHosts);
@@ -86,7 +89,7 @@ public class LinkInsights {
     if (facts.total() == 0) return List.of();
     List<Fact> found = new ArrayList<>();
     velocity(facts).ifPresent(found::add);
-    trend(facts.dailyClicks()).ifPresent(found::add);
+    trend(facts.dailyClicks(), facts.today()).ifPresent(found::add);
     peakDay(facts.dailyClicks()).ifPresent(found::add);
     topSource(facts).ifPresent(found::add);
     Optional<Fact> loyalty = channelLoyalty(facts.channelDepth());
@@ -113,10 +116,10 @@ public class LinkInsights {
     return fact("velocity", "hourly", null, null, 100, "x", Math.round(ratio * 10) / 10.0);
   }
 
-  private static Optional<Fact> trend(List<LinkStats.DailyClick> daily) {
-    int n = daily.size();
-    long last7 = sum(daily, n - 7, n);
-    long prev7 = sum(daily, n - 14, n - 7);
+  private static Optional<Fact> trend(List<LinkStats.DailyClick> daily, LocalDate today) {
+    Map<LocalDate, Long> byDate = byDate(daily);
+    long last7 = sum(byDate, today.minusDays(7), today);
+    long prev7 = sum(byDate, today.minusDays(14), today.minusDays(7));
     if (prev7 < MIN_TOTAL_FOR_INSIGHTS) return Optional.empty();
     double delta = (double) (last7 - prev7) / prev7;
     if (Math.abs(delta) < TREND_THRESHOLD) return Optional.empty();
@@ -124,7 +127,7 @@ public class LinkInsights {
         delta >= 0 ? "trendUp" : "trendDown",
         "daily",
         null,
-        counts(daily, n - 14, n),
+        counts(byDate, today.minusDays(14), today),
         90,
         "percent",
         Math.abs(Math.round(delta * 100)),
@@ -133,18 +136,23 @@ public class LinkInsights {
   }
 
   private static Optional<Fact> peakDay(List<LinkStats.DailyClick> daily) {
-    if (sum(daily, 0, daily.size()) < MIN_TOTAL_FOR_INSIGHTS) return Optional.empty();
+    if (daily.stream().mapToLong(LinkStats.DailyClick::count).sum() < MIN_TOTAL_FOR_INSIGHTS) {
+      return Optional.empty();
+    }
     int peakIndex = -1;
     for (int i = 0; i < daily.size(); i++) {
       if (peakIndex < 0 || daily.get(i).count() >= daily.get(peakIndex).count()) peakIndex = i;
     }
     if (peakIndex < 0 || daily.get(peakIndex).count() <= 0) return Optional.empty();
     LinkStats.DailyClick peak = daily.get(peakIndex);
+    LocalDate weekBefore = peak.date().minusDays(6);
+    LocalDate from =
+        weekBefore.isAfter(daily.getFirst().date()) ? weekBefore : daily.getFirst().date();
     return fact(
         "peakDay",
         "daily",
         null,
-        counts(daily, peakIndex - 6, peakIndex + 1),
+        counts(byDate(daily), from, peak.date().plusDays(1)),
         80,
         "date",
         peak.date().toString(),
@@ -334,16 +342,18 @@ public class LinkInsights {
     return code.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(Locale.ROOT);
   }
 
-  private static long sum(List<LinkStats.DailyClick> daily, int from, int until) {
-    long total = 0;
-    for (int i = Math.max(0, from); i < Math.max(0, until); i++) total += daily.get(i).count();
-    return total;
+  private static Map<LocalDate, Long> byDate(List<LinkStats.DailyClick> daily) {
+    Map<LocalDate, Long> byDate = new HashMap<>();
+    daily.forEach(d -> byDate.merge(d.date(), d.count(), Long::sum));
+    return byDate;
   }
 
-  private static List<Long> counts(List<LinkStats.DailyClick> daily, int from, int until) {
-    List<Long> counts = new ArrayList<>();
-    for (int i = Math.max(0, from); i < Math.max(0, until); i++) counts.add(daily.get(i).count());
-    return counts;
+  private static long sum(Map<LocalDate, Long> byDate, LocalDate from, LocalDate until) {
+    return counts(byDate, from, until).stream().mapToLong(Long::longValue).sum();
+  }
+
+  private static List<Long> counts(Map<LocalDate, Long> byDate, LocalDate from, LocalDate until) {
+    return from.datesUntil(until).map(day -> byDate.getOrDefault(day, 0L)).toList();
   }
 
   private static long pct(double ratio) {

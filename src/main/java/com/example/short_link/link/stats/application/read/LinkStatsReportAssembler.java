@@ -7,6 +7,7 @@ import com.example.short_link.link.stats.application.ClickRetentionProperties;
 import com.example.short_link.link.stats.application.LinkInsights;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,7 @@ class LinkStatsReportAssembler {
                 .countries(geo.countries())
                 .devices(devices.devices())
                 .timeToFirstClickMinutes(totals.timeToFirstClickMinutes())
+                .today(LocalDate.ofInstant(reportTime, reportZone))
                 .build());
 
     return LinkStats.builder()

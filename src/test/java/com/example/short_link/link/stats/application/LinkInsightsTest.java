@@ -39,7 +39,8 @@ class LinkInsightsTest {
         .total(100)
         .human(90)
         .bot(10)
-        .velocity(new LinkStats.Velocity(0, 0, 0));
+        .velocity(new LinkStats.Velocity(0, 0, 0))
+        .today(LocalDate.parse("2026-07-15"));
   }
 
   private static LinkInsights.ReportFacts.ReportFactsBuilder realLinkStats() {
@@ -73,7 +74,8 @@ class LinkInsightsTest {
                 new LinkStats.CountryClick("JP", 214),
                 new LinkStats.CountryClick("unknown", 101)))
         .rawRetentionDays(90)
-        .rawSince(Instant.parse("2026-08-04T00:00:00Z"));
+        .rawSince(Instant.parse("2026-08-04T00:00:00Z"))
+        .today(LocalDate.parse("2026-10-15"));
   }
 
   private List<LinkStats.Insight> journal(LinkInsights.ReportFacts.ReportFactsBuilder facts) {
@@ -127,6 +129,45 @@ class LinkInsightsTest {
     long[] flat = IntStream.range(0, 14).mapToLong(i -> i < 7 ? 0 : 10).toArray();
 
     assertThat(entry("trendUp", stats().dailyClicks(days("07", flat)))).isEmpty();
+  }
+
+  @Test
+  void trendCountsCalendarDaysWhenRecentDaysHadNoClicks() {
+    long[] busyThenQuiet = IntStream.range(0, 20).mapToLong(i -> 20).toArray();
+
+    LinkStats.Insight down =
+        entry(
+                "trendDown",
+                stats().dailyClicks(days("07", busyThenQuiet)).today(LocalDate.parse("2026-07-31")))
+            .orElseThrow();
+
+    assertThat(down.params()).isEqualTo(Map.of("percent", 100L, "count", 0L));
+    assertThat(down.spark())
+        .containsExactly(20L, 20L, 20L, 20L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L);
+  }
+
+  @Test
+  void trendLeavesOutTheDayStillInProgress() {
+    long[] steadyThenTodaySoFar =
+        IntStream.range(0, 15).mapToLong(i -> i < 8 ? 100 : i < 14 ? 95 : 1).toArray();
+
+    assertThat(
+            journal(
+                stats()
+                    .dailyClicks(days("07", steadyThenTodaySoFar))
+                    .today(LocalDate.parse("2026-07-15"))))
+        .noneMatch(i -> i.code().startsWith("trend"));
+  }
+
+  @Test
+  void peakDaySparkKeepsTheQuietDaysBeforeThePeak() {
+    List<LinkStats.DailyClick> gaps =
+        List.of(
+            new LinkStats.DailyClick(LocalDate.parse("2026-07-01"), 1),
+            new LinkStats.DailyClick(LocalDate.parse("2026-07-05"), 9));
+
+    assertThat(entry("peakDay", stats().dailyClicks(gaps)).orElseThrow().spark())
+        .containsExactly(1L, 0L, 0L, 0L, 9L);
   }
 
   @Test
