@@ -3,6 +3,7 @@ package com.example.short_link.live.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.QueryTimeoutException;
 
 class LiveStreamServiceTest {
 
@@ -105,6 +107,17 @@ class LiveStreamServiceTest {
     live.begin(subscriber, 100L);
 
     verify(streams).start(subscriber, 120L, 100L, "renewed");
+  }
+
+  @Test
+  void aStreamThatCannotBeginGivesBackTheSlotItJoinedWith() {
+    LiveSubscriber subscriber = new LiveSubscriber(2L, THREAD, SCOPE, new RecordingChannel());
+    when(notes.latest(10L)).thenThrow(new QueryTimeoutException("slow"));
+
+    assertThatThrownBy(() -> live.begin(subscriber, 100L))
+        .isInstanceOf(QueryTimeoutException.class);
+    verify(streams).remove(subscriber);
+    verify(streams, never()).start(any(), anyLong(), any(), any());
   }
 
   @Test
