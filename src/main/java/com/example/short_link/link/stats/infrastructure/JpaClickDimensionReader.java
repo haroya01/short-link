@@ -36,13 +36,13 @@ public class JpaClickDimensionReader implements ClickDimensionReader {
   private final JpaClickDimensionReadRepository repository;
 
   @Override
-  public List<ReferrerClickRow> findAllReferrerClicks(Long linkId) {
-    return repository.findReferrerClicks(linkId, Pageable.unpaged());
+  public List<ReferrerClickRow> findTopReferrerClicks(Long linkId, int limit) {
+    return repository.findReferrerClicks(linkId, PageRequest.ofSize(limit));
   }
 
   @Override
-  public List<ReferrerHostClickRow> findTopReferrerHostClicks(Long linkId, int limit) {
-    return repository.findReferrerHostClicks(linkId, PageRequest.ofSize(limit));
+  public List<ReferrerHostClickRow> findAllReferrerHostClicks(Long linkId) {
+    return repository.findReferrerHostClicks(linkId, Pageable.unpaged());
   }
 
   @Override
