@@ -130,10 +130,6 @@ public class JwtTokenService {
 
   // Its own type claim keeps it from passing as an access token; only second-factor verification
   // exchanges it for a session.
-  public String createTwoFactorChallengeToken(Long userId) {
-    return createTwoFactorChallengeToken(userId, false);
-  }
-
   public String createTwoFactorChallengeToken(Long userId, boolean restoresAccount) {
     Instant now = clock.instant();
     var builder =

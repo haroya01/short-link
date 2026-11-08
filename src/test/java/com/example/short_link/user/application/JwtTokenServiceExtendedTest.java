@@ -54,7 +54,7 @@ class JwtTokenServiceExtendedTest {
   @Test
   void twoFactorChallengeRoundTrip() throws Exception {
     JwtTokenService svc = freshService();
-    String token = svc.createTwoFactorChallengeToken(42L);
+    String token = svc.createTwoFactorChallengeToken(42L, false);
     assertThat(svc.parseTwoFactorChallenge(token)).isEqualTo(new TwoFactorChallenge(42L, false));
     assertThat(svc.parseTwoFactorChallenge(svc.createTwoFactorChallengeToken(42L, true)))
         .isEqualTo(new TwoFactorChallenge(42L, true));
