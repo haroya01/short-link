@@ -7,6 +7,8 @@ import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.properties.UserDeletionProperties;
+import com.example.short_link.user.application.twofactor.TotpCodec;
+import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -30,6 +32,7 @@ class SoftDeleteFlowTest {
   @Autowired private AuthService authService;
   @Autowired private SoftDeletedUserCleanupJob cleanupJob;
   @Autowired private UserRepository userRepository;
+  @Autowired private TwoFactorService twoFactor;
 
   @Test
   void deleteAccountSetsDeletedAtAndKeepsRow() {
@@ -118,5 +121,57 @@ class SoftDeleteFlowTest {
     Instant second = userRepository.findById(user.getId()).orElseThrow().getDeletedAt();
 
     assertThat(second).isEqualTo(first);
+  }
+
+  @Test
+  void aDeletedAccountWithTwoFactorStaysDeletedUntilTheSecondFactorPasses() {
+    UserEntity user = userRepository.save(new UserEntity("sd9@local.test", "google", "g-sd9"));
+    List<String> recovery = enableTwoFactor(user);
+    deletionService.deleteAccount(user.getId());
+
+    String challenge =
+        ((AuthService.TokenLoginResult.TwoFactorRequired)
+                authService.loginWithOAuth("sd9@local.test", "google", "g-sd9"))
+            .challengeToken();
+    assertThat(authService.loginWithOAuthMobile("sd9@local.test", "google", "g-sd9"))
+        .isInstanceOf(AuthService.MobileLoginResult.TwoFactorRequired.class);
+    assertThat(userRepository.findById(user.getId()).orElseThrow().isDeleted()).isTrue();
+
+    authService.completeTwoFactor(challenge, recovery.get(0), true, SessionChannel.WEB);
+    assertThat(userRepository.findById(user.getId()).orElseThrow().isDeleted()).isFalse();
+  }
+
+  @Test
+  void appleSignInToADeletedAccountWithTwoFactorAlsoWaitsForTheSecondFactor() {
+    UserEntity user = userRepository.save(new UserEntity("sd10@local.test", "apple", "apple-sd10"));
+    enableTwoFactor(user);
+    deletionService.deleteAccount(user.getId());
+
+    assertThat(authService.loginWithApple("apple-sd10", "sd10@local.test", SessionChannel.MOBILE))
+        .isInstanceOf(AuthService.TokenLoginResult.TwoFactorRequired.class);
+    assertThat(userRepository.findById(user.getId()).orElseThrow().isDeleted()).isTrue();
+  }
+
+  @Test
+  void anAccountDeletedWhileItsChallengeWasOpenIsStillRefused() {
+    UserEntity user = userRepository.save(new UserEntity("sd11@local.test", "google", "g-sd11"));
+    List<String> recovery = enableTwoFactor(user);
+    String challenge =
+        ((AuthService.TokenLoginResult.TwoFactorRequired)
+                authService.loginWithOAuth("sd11@local.test", "google", "g-sd11"))
+            .challengeToken();
+    deletionService.deleteAccount(user.getId());
+
+    assertThatThrownBy(
+            () ->
+                authService.completeTwoFactor(challenge, recovery.get(0), true, SessionChannel.WEB))
+        .isInstanceOf(UserException.class);
+    assertThat(userRepository.findById(user.getId()).orElseThrow().isDeleted()).isTrue();
+  }
+
+  private List<String> enableTwoFactor(UserEntity user) {
+    TwoFactorService.SetupChallenge setup = twoFactor.start(user.getId());
+    return twoFactor.confirm(
+        user.getId(), TotpCodec.generateCode(setup.secret(), Instant.now().getEpochSecond() / 30));
   }
 }

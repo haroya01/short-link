@@ -13,8 +13,8 @@ public class RateLimitCounter {
 
   private final RedisWindowCounter counter;
 
-  public Long incrementEndpoint(String method, String path, String clientIp) {
-    return increment("rate:ep:" + method + ":" + path + ":ip:" + clientIp);
+  public Long incrementEndpoint(String method, String path, String clientNetwork) {
+    return increment("rate:ep:" + method + ":" + path + ":ip:" + clientNetwork);
   }
 
   public Long incrementUser(Long userId) {

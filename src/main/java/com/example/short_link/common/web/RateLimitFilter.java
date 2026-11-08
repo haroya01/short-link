@@ -14,6 +14,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 import tools.jackson.databind.json.JsonMapper;
 
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -28,8 +29,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private static final List<EndpointRule> ENDPOINT_RULES =
       List.of(
           new EndpointRule("POST", "/api/v1/auth/2fa/verify", 5),
+          new EndpointRule("POST", "/api/v1/auth/mobile/2fa/verify", 5),
           new EndpointRule("POST", "/api/v1/2fa/confirm", 5),
           new EndpointRule("POST", "/api/v1/2fa/disable", 5),
+          new EndpointRule("POST", "/api/v1/2fa/recovery-codes/regenerate", 5),
           new EndpointRule("POST", "/api/v1/auth/refresh", 10),
           new EndpointRule("POST", "/api/v1/public/abuse-reports", 10),
           new EndpointRule("POST", "/api/v1/public/abuse-reports/links", 10));
@@ -67,12 +70,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     String method = req.getMethod();
     String clientIp = ClientIp.of(req);
+    String path = UrlPathHelper.defaultInstance.getPathWithinApplication(req);
 
     for (EndpointRule rule : ENDPOINT_RULES) {
-      if (rule.method().equals(method) && rule.path().equals(uri)) {
-        Long epCount = counter.incrementEndpoint(method, uri, clientIp);
+      if (rule.method().equals(method) && rule.path().equals(path)) {
+        Long epCount = counter.incrementEndpoint(method, rule.path(), ClientNetwork.of(clientIp));
         if (epCount != null && epCount > rule.perMinute()) {
-          meterRegistry.counter(METRIC_NAME, "scope", "endpoint", "path", uri).increment();
+          meterRegistry.counter(METRIC_NAME, "scope", "endpoint", "path", rule.path()).increment();
           writeRateLimitResponse(req, res);
           return;
         }

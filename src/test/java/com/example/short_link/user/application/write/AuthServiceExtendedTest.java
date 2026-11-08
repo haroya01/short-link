@@ -61,7 +61,7 @@ class AuthServiceExtendedTest {
 
   @Test
   void completeTwoFactorRejectsWhenUserMissing() {
-    String challenge = jwt.createTwoFactorChallengeToken(999_999_999L);
+    String challenge = jwt.createTwoFactorChallengeToken(999_999_999L, false);
     assertThatThrownBy(
             () -> authService.completeTwoFactor(challenge, "000000", false, SessionChannel.WEB))
         .satisfiesAnyOf(
@@ -74,7 +74,7 @@ class AuthServiceExtendedTest {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-sd"));
     user.softDelete();
     userRepository.save(user);
-    String challenge = jwt.createTwoFactorChallengeToken(user.getId());
+    String challenge = jwt.createTwoFactorChallengeToken(user.getId(), false);
 
     assertThatThrownBy(
             () -> authService.completeTwoFactor(challenge, "000000", false, SessionChannel.WEB))

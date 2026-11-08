@@ -52,8 +52,9 @@ public final class TotpCodec {
   }
 
   static OptionalLong matchingStep(String base32Secret, String code, long currentEpochSecond) {
-    if (code == null || code.length() != CODE_DIGITS) return OptionalLong.empty();
-    String trimmed = code.trim();
+    if (code == null) return OptionalLong.empty();
+    String trimmed = code.strip();
+    if (trimmed.length() != CODE_DIGITS) return OptionalLong.empty();
     long step = currentEpochSecond / PERIOD_SECONDS;
     for (int delta = -VERIFY_WINDOW_STEPS; delta <= VERIFY_WINDOW_STEPS; delta++) {
       if (constantTimeEquals(generateCode(base32Secret, step + delta), trimmed)) {

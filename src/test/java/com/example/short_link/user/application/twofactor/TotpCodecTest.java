@@ -38,6 +38,16 @@ class TotpCodecTest {
   }
 
   @Test
+  void acceptsTheCurrentCodeWithSurroundingWhitespace() {
+    String secret = TotpCodec.generateBase32Secret();
+    long now = 1_700_000_000L;
+    String code = TotpCodec.generateCode(secret, now / TotpCodec.PERIOD_SECONDS);
+
+    assertThat(TotpCodec.verify(secret, " " + code, now)).isTrue();
+    assertThat(TotpCodec.verify(secret, code + "\n", now)).isTrue();
+  }
+
+  @Test
   void rejectsMalformedCode() {
     String secret = TotpCodec.generateBase32Secret();
     assertThat(TotpCodec.verify(secret, "12345", 1_700_000_000L)).isFalse();

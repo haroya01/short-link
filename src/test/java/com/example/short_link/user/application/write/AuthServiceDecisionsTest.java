@@ -15,6 +15,7 @@ import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
+import com.example.short_link.user.application.dto.TwoFactorChallenge;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.RefreshToken;
@@ -147,7 +148,7 @@ class AuthServiceDecisionsTest {
     UserEntity guarded = member(10L, "apple");
     when(users.findByOauthProviderAndOauthId("apple", SUBJECT)).thenReturn(Optional.of(guarded));
     when(twoFactor.isEnabled(10L)).thenReturn(true);
-    when(jwt.createTwoFactorChallengeToken(10L)).thenReturn("challenge");
+    when(jwt.createTwoFactorChallengeToken(10L, false)).thenReturn("challenge");
 
     assertThat(auth.loginWithApple(SUBJECT, EMAIL, SessionChannel.WEB))
         .isEqualTo(new AuthService.TokenLoginResult.TwoFactorRequired("challenge"));
@@ -194,7 +195,7 @@ class AuthServiceDecisionsTest {
           """)
   void aSecondStepChecksTheCodeWithTheVerifierItNamesAndOnlyThenOpensASession(
       boolean recovery, boolean accepted) {
-    when(jwt.parseTwoFactorChallengeToken("challenge")).thenReturn(12L);
+    when(jwt.parseTwoFactorChallenge("challenge")).thenReturn(new TwoFactorChallenge(12L, false));
     when(users.findById(12L)).thenReturn(Optional.of(member(12L, "google")));
     when(twoFactor.verify(12L, "123456")).thenReturn(!recovery && accepted);
     when(twoFactor.verifyRecovery(12L, "123456")).thenReturn(recovery && accepted);
@@ -223,7 +224,7 @@ class AuthServiceDecisionsTest {
     UserEntity guarded = member(13L, "google");
     when(users.findByOauthProviderAndOauthId("google", "g-13")).thenReturn(Optional.of(guarded));
     when(twoFactor.isEnabled(13L)).thenReturn(true);
-    when(jwt.createTwoFactorChallengeToken(13L)).thenReturn("challenge");
+    when(jwt.createTwoFactorChallengeToken(13L, false)).thenReturn("challenge");
 
     assertThat(auth.loginWithOAuth(EMAIL, "google", "g-13"))
         .isEqualTo(new AuthService.TokenLoginResult.TwoFactorRequired("challenge"));
@@ -246,7 +247,7 @@ class AuthServiceDecisionsTest {
 
   @Test
   void aRightCodeForAnAccountRemovedMeanwhileOpensNothing() {
-    when(jwt.parseTwoFactorChallengeToken("challenge")).thenReturn(15L);
+    when(jwt.parseTwoFactorChallenge("challenge")).thenReturn(new TwoFactorChallenge(15L, false));
     when(twoFactor.verify(15L, "123456")).thenReturn(true);
     when(users.findById(15L)).thenReturn(Optional.empty());
 

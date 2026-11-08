@@ -155,7 +155,8 @@ class AuthControllerTest {
     mvc.perform(
             post("/api/v1/auth/2fa/verify")
                 .cookie(
-                    new Cookie("twofa_challenge", jwt.createTwoFactorChallengeToken(user.getId())))
+                    new Cookie(
+                        "twofa_challenge", jwt.createTwoFactorChallengeToken(user.getId(), false)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"123456\",\"recovery\":false}"))
         .andExpect(status().isOk())
@@ -173,7 +174,7 @@ class AuthControllerTest {
   void twoFactorVerifyPrefersTheBodyChallengeOverALeftoverCookie() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("tf2@example.com", "google", "g-tf2"));
     when(twoFactor.verify(user.getId(), "123456")).thenReturn(true);
-    String challenge = jwt.createTwoFactorChallengeToken(user.getId());
+    String challenge = jwt.createTwoFactorChallengeToken(user.getId(), false);
 
     mvc.perform(
             post("/api/v1/auth/2fa/verify")
