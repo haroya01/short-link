@@ -80,7 +80,7 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(name = "max_views")
   private Integer maxViews;
 
-  @Column(name = "view_count", nullable = false)
+  @Column(name = "view_count", nullable = false, updatable = false)
   private int viewCount = 0;
 
   @Column(name = "og_title_override", length = 300)
