@@ -2,6 +2,7 @@ package com.example.short_link.user.application;
 
 import com.example.short_link.user.application.dto.ParsedAccess;
 import com.example.short_link.user.application.dto.ParsedRefresh;
+import com.example.short_link.user.application.dto.TwoFactorChallenge;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -35,6 +36,7 @@ public class JwtTokenService {
 
   private static final String CLAIM_SESSION = "sid";
   private static final String CLAIM_CHANNEL = "ch";
+  private static final String CLAIM_RESTORES_ACCOUNT = "restore";
   private static final String CHANNEL_WEB = "web";
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
@@ -129,22 +131,29 @@ public class JwtTokenService {
   // Its own type claim keeps it from passing as an access token; only second-factor verification
   // exchanges it for a session.
   public String createTwoFactorChallengeToken(Long userId) {
-    Instant now = clock.instant();
-    return Jwts.builder()
-        .subject(String.valueOf(userId))
-        .issuedAt(Date.from(now))
-        .expiration(Date.from(now.plus(CHALLENGE_TTL)))
-        .claim(CLAIM_TYPE, TYPE_TWOFA_CHALLENGE)
-        .signWith(privateKey, Jwts.SIG.RS256)
-        .compact();
+    return createTwoFactorChallengeToken(userId, false);
   }
 
-  public Long parseTwoFactorChallengeToken(String token) {
+  public String createTwoFactorChallengeToken(Long userId, boolean restoresAccount) {
+    Instant now = clock.instant();
+    var builder =
+        Jwts.builder()
+            .subject(String.valueOf(userId))
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(now.plus(CHALLENGE_TTL)))
+            .claim(CLAIM_TYPE, TYPE_TWOFA_CHALLENGE);
+    if (restoresAccount) builder.claim(CLAIM_RESTORES_ACCOUNT, true);
+    return builder.signWith(privateKey, Jwts.SIG.RS256).compact();
+  }
+
+  public TwoFactorChallenge parseTwoFactorChallenge(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_TWOFA_CHALLENGE.equals(claims.get(CLAIM_TYPE))) {
       throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected 2FA challenge token");
     }
-    return Long.valueOf(claims.getSubject());
+    return new TwoFactorChallenge(
+        Long.valueOf(claims.getSubject()),
+        Boolean.TRUE.equals(claims.get(CLAIM_RESTORES_ACCOUNT, Boolean.class)));
   }
 
   public String createStreamToken(Long userId, String shortCode) {

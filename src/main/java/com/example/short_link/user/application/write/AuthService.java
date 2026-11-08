@@ -4,6 +4,7 @@ import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.SessionChannel;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
+import com.example.short_link.user.application.dto.TwoFactorChallenge;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.RefreshToken;
@@ -54,9 +55,9 @@ public class AuthService {
   public TokenLoginResult loginWithOAuth(String email, String oauthProvider, String oauthId) {
     UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
     if (twoFactor.isEnabled(user.getId())) {
-      return new TokenLoginResult.TwoFactorRequired(
-          jwt.createTwoFactorChallengeToken(user.getId()));
+      return new TokenLoginResult.TwoFactorRequired(challengeFor(user));
     }
+    restoreIfDeleted(user);
     return new TokenLoginResult.Tokens(issue(user, SessionChannel.WEB));
   }
 
@@ -67,9 +68,9 @@ public class AuthService {
       String email, String oauthProvider, String oauthId) {
     UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
     if (twoFactor.isEnabled(user.getId())) {
-      return new MobileLoginResult.TwoFactorRequired(
-          jwt.createTwoFactorChallengeToken(user.getId()));
+      return new MobileLoginResult.TwoFactorRequired(challengeFor(user));
     }
+    restoreIfDeleted(user);
     return new MobileLoginResult.ExchangeCode(exchangeCodes.create(user.getId()));
   }
 
@@ -83,16 +84,20 @@ public class AuthService {
   }
 
   private UserEntity upsertOAuthUser(String email, String oauthProvider, String oauthId) {
-    UserEntity user =
-        userRepository
-            .findByOauthProviderAndOauthId(oauthProvider, oauthId)
-            .orElseGet(
-                () -> userRepository.save(newUserWithConsent(email, oauthProvider, oauthId)));
+    return userRepository
+        .findByOauthProviderAndOauthId(oauthProvider, oauthId)
+        .orElseGet(() -> userRepository.save(newUserWithConsent(email, oauthProvider, oauthId)));
+  }
+
+  private String challengeFor(UserEntity user) {
+    return jwt.createTwoFactorChallengeToken(user.getId(), user.isDeleted());
+  }
+
+  private static void restoreIfDeleted(UserEntity user) {
     if (user.isDeleted()) {
-      log.info("restoring soft-deleted user {} on OAuth login", user.getId());
+      log.info("restoring soft-deleted user {} on login", user.getId());
       user.restore();
     }
-    return user;
   }
 
   // Requires subject/email verified by AppleIdentityVerifier. An existing IdP-verified email links
@@ -106,14 +111,10 @@ public class AuthService {
             .findByOauthProviderAndOauthId("apple", appleSubject)
             .or(() -> findLinkableByEmail(email))
             .orElseGet(() -> createAppleUser(email, appleSubject));
-    if (user.isDeleted()) {
-      log.info("restoring soft-deleted user {} on Apple login", user.getId());
-      user.restore();
-    }
     if (twoFactor.isEnabled(user.getId())) {
-      return new TokenLoginResult.TwoFactorRequired(
-          jwt.createTwoFactorChallengeToken(user.getId()));
+      return new TokenLoginResult.TwoFactorRequired(challengeFor(user));
     }
+    restoreIfDeleted(user);
     return new TokenLoginResult.Tokens(issue(user, channel));
   }
 
@@ -141,19 +142,23 @@ public class AuthService {
   @Transactional
   public IssuedTokens completeTwoFactor(
       String challengeToken, String code, boolean recovery, SessionChannel channel) {
-    Long userId;
+    TwoFactorChallenge challenge;
     try {
-      userId = jwt.parseTwoFactorChallengeToken(challengeToken);
+      challenge = jwt.parseTwoFactorChallenge(challengeToken);
     } catch (Exception e) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
+    Long userId = challenge.userId();
     boolean ok = recovery ? twoFactor.verifyRecovery(userId, code) : twoFactor.verify(userId, code);
     if (!ok) throw new UserException(UserErrorCode.INVALID_TOTP);
     UserEntity user =
         userRepository
             .findById(userId)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    if (user.isDeleted()) throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+    if (user.isDeleted() && !challenge.restoresAccount()) {
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+    }
+    restoreIfDeleted(user);
     return issue(user, channel);
   }
 
