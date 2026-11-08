@@ -42,8 +42,7 @@ class EventClickLookupAdapter implements RegistrationClickLookup {
       query.setParameter("link" + i, candidates.get(i).linkId());
       query.setParameter("hash" + i, candidates.get(i).visitorHash());
     }
-    return query
-        .getResultStream()
+    return query.getResultList().stream()
         .findFirst()
         .map(
             row ->

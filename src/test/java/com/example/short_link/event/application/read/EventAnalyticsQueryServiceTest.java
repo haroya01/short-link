@@ -124,11 +124,13 @@ class EventAnalyticsQueryServiceTest {
     when(clickTotals.humanClientAppCountsByLinkIds(Set.of(7L))).thenReturn(clicks);
 
     EventRegistrationEntity byLink = registration(1L, Instant.parse("2026-09-01T01:00:00Z"));
-    byLink.attribute(7L, "messenger", "kakaotalk", null, null, null);
+    ReflectionTestUtils.setField(byLink, "linkId", 7L);
+    ReflectionTestUtils.setField(byLink, "sourceChannel", "messenger");
+    ReflectionTestUtils.setField(byLink, "clientApp", "kakaotalk");
     EventRegistrationEntity byApp = registration(2L, Instant.parse("2026-09-01T02:00:00Z"));
-    byApp.attribute(null, null, "instagram", null, null, null);
+    ReflectionTestUtils.setField(byApp, "clientApp", "instagram");
     EventRegistrationEntity byReferrer = registration(3L, Instant.parse("2026-09-02T01:00:00Z"));
-    byReferrer.attribute(null, null, null, "twitter.example", null, null);
+    ReflectionTestUtils.setField(byReferrer, "referrerHost", "twitter.example");
     when(registrationRepository.findAllByEventIdOrderByCreatedAtAsc(10L))
         .thenReturn(List.of(byLink, byApp, byReferrer));
 

@@ -18,4 +18,13 @@ public interface EventRegistrationRepository {
   long countByEventIdAndStatus(Long eventId, RegistrationStatus status);
 
   int purgePiiByEventId(Long eventId);
+
+  int recordSource(
+      Long registrationId,
+      Long linkId,
+      String sourceChannel,
+      String clientApp,
+      String referrerHost,
+      String utmSource,
+      String visitorHash);
 }

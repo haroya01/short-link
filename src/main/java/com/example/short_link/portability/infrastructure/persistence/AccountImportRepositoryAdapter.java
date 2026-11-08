@@ -105,8 +105,9 @@ class AccountImportRepositoryAdapter implements AccountImportRepository {
   @Override
   public int finishDone(Instant now) {
     return em.createNativeQuery(
-            "UPDATE account_import SET finished_at = :now"
-                + " WHERE finished_at IS NULL AND processed_items >= total_items")
+            "UPDATE account_import i SET i.finished_at = :now WHERE i.finished_at IS NULL"
+                + " AND NOT EXISTS (SELECT 1 FROM account_import_row r"
+                + " WHERE r.import_id = i.id AND r.processed_at IS NULL)")
         .setParameter("now", now)
         .executeUpdate();
   }

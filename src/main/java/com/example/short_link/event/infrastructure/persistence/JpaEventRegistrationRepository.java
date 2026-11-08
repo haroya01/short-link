@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface JpaEventRegistrationRepository
     extends JpaRepository<EventRegistrationEntity, Long>, EventRegistrationRepository {
@@ -21,4 +22,20 @@ public interface JpaEventRegistrationRepository
           + "WHERE r.eventId = :eventId AND "
           + HOLDS_PII)
   int purgePiiByEventId(@Param("eventId") Long eventId);
+
+  @Override
+  @Transactional
+  @Modifying
+  @Query(
+      "UPDATE EventRegistrationEntity r SET r.linkId = :linkId, r.sourceChannel = :sourceChannel, "
+          + "r.clientApp = :clientApp, r.referrerHost = :referrerHost, r.utmSource = :utmSource, "
+          + "r.visitorHash = :visitorHash WHERE r.id = :registrationId")
+  int recordSource(
+      @Param("registrationId") Long registrationId,
+      @Param("linkId") Long linkId,
+      @Param("sourceChannel") String sourceChannel,
+      @Param("clientApp") String clientApp,
+      @Param("referrerHost") String referrerHost,
+      @Param("utmSource") String utmSource,
+      @Param("visitorHash") String visitorHash);
 }

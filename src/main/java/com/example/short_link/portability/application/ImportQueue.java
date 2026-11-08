@@ -18,6 +18,7 @@ class ImportQueue {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public List<AccountImportRepository.Claimed> claim(int limit, Instant now) {
+    imports.finishDone(now);
     return imports.claim(limit, now);
   }
 
