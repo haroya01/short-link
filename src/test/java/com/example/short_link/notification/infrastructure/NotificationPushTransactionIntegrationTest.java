@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -99,6 +100,27 @@ class NotificationPushTransactionIntegrationTest {
 
     assertThat(notifications.countUnread(userId)).isEqualTo(1L);
     verify(transport).send(eq(userId), any());
+  }
+
+  @Test
+  void aLinkPushThatFailsLeavesTheLinkBellRowStoredAndTheSenderUntouched() {
+    doThrow(new IllegalStateException("push submission failed"))
+        .when(transport)
+        .send(eq(userId), any());
+
+    assertThatCode(
+            () ->
+                linkNotifications.dispatch(
+                    userId, LinkNotificationType.WARNING, "abc1234", null, "Warning"))
+        .doesNotThrowAnyException();
+
+    verify(transport).send(eq(userId), any());
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from link_notification where recipient_user_id = ?",
+                Long.class,
+                userId))
+        .isEqualTo(1L);
   }
 
   @Test
