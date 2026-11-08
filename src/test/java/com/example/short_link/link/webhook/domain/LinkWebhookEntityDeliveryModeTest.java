@@ -215,4 +215,20 @@ class LinkWebhookEntityDeliveryModeTest {
     assertThat(h.getSummaryHourOfDay()).isEqualTo(9);
     assertThat(h.getSpikeThreshold()).isNull();
   }
+
+  @Test
+  void theEdgesOfEachRangeAreAccepted() {
+    LinkWebhookEntity midnight = hook();
+    LinkWebhookEntity lastHour = hook();
+    LinkWebhookEntity smallestSpike = hook();
+
+    midnight.changeDeliveryMode(WebhookDeliveryMode.DAILY_SUMMARY, 0, null, null);
+    lastHour.changeDeliveryMode(WebhookDeliveryMode.DAILY_SUMMARY, 23, null, null);
+    smallestSpike.changeDeliveryMode(WebhookDeliveryMode.THRESHOLD_SPIKE, null, 1, 1);
+
+    assertThat(midnight.getSummaryHourOfDay()).isZero();
+    assertThat(lastHour.getSummaryHourOfDay()).isEqualTo(23);
+    assertThat(smallestSpike.getSpikeThreshold()).isEqualTo(1);
+    assertThat(smallestSpike.getSpikeWindowMinutes()).isEqualTo(1);
+  }
 }

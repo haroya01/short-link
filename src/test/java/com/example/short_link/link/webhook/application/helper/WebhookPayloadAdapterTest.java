@@ -155,4 +155,59 @@ class WebhookPayloadAdapterTest {
     List<Map<String, Object>> fields = (List<Map<String, Object>>) embeds.get(0).get("fields");
     assertThat(fields).isEmpty();
   }
+
+  @SuppressWarnings("unchecked")
+  private static List<Object> slackFieldTexts(Map<String, Object> body) {
+    List<Map<String, Object>> blocks = (List<Map<String, Object>>) body.get("blocks");
+    List<Map<String, Object>> fields = (List<Map<String, Object>>) blocks.get(1).get("fields");
+    return fields.stream().map(f -> f.get("text")).toList();
+  }
+
+  @Test
+  void aSlackClickListsEachKnownDetailAndFlagsABot() {
+    Map<String, Object> botClick = new java.util.HashMap<>(SAMPLE_CLICK);
+    botClick.put("bot", true);
+
+    Map<String, Object> body = WebhookPayloadAdapter.buildClick(WebhookFormat.SLACK, botClick);
+
+    assertThat(body.get("text"))
+        .isEqualTo("kurl click: link #42 — KR · mobile · via twitter.com · utm=newsletter · (bot)");
+    assertThat(slackFieldTexts(body))
+        .containsExactly(
+            "*Occurred:* 2026-01-02T03:04:05Z",
+            "*Country:* KR",
+            "*Device:* mobile",
+            "*Channel:* twitter.com",
+            "*UTM Source:* newsletter",
+            "*Bot:* yes");
+  }
+
+  @Test
+  void aSlackClickWithNothingKnownStillSaysAClickHappenedAndWhen() {
+    Map<String, Object> bare = Map.of("linkId", 7L, "countryCode", " ", "bot", false);
+
+    Map<String, Object> body = WebhookPayloadAdapter.buildClick(WebhookFormat.SLACK, bare);
+
+    assertThat(body.get("text")).isEqualTo("kurl click: link #7 — click recorded");
+    assertThat(slackFieldTexts(body)).singleElement().asString().startsWith("*Occurred:* 20");
+  }
+
+  @Test
+  void aDiscordClickDescribesTheClickInOneLineAtItsOwnTime() {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> embed =
+        ((List<Map<String, Object>>)
+                WebhookPayloadAdapter.buildClick(WebhookFormat.DISCORD, SAMPLE_CLICK).get("embeds"))
+            .get(0);
+
+    assertThat(embed.get("description"))
+        .isEqualTo("KR · mobile · via twitter.com · utm=newsletter");
+    assertThat(embed.get("timestamp")).isEqualTo("2026-01-02T03:04:05Z");
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> fields = (List<Map<String, Object>>) embed.get("fields");
+    assertThat(fields)
+        .extracting(f -> f.get("name") + "=" + f.get("value"))
+        .containsExactly(
+            "Country=KR", "Device=mobile", "Channel=twitter.com", "UTM Source=newsletter");
+  }
 }
