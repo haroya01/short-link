@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.OgMetadata;
@@ -40,10 +41,15 @@ class LinkPreviewServiceTest {
   @Test
   void nonHttpUrlReturnsBareWithoutScraping() {
     LinkPreview p = service.fetch("ftp://files.example.com/x");
+    LinkPreview file = service.fetch("file:///etc/passwd");
+    LinkPreview blank = service.fetch(" ");
 
     assertThat(p.url()).isEqualTo("ftp://files.example.com/x");
     assertThat(p.title()).isNull();
     assertThat(p.image()).isNull();
+    assertThat(file.title()).isNull();
+    assertThat(blank.title()).isNull();
+    verifyNoInteractions(ogScraper);
   }
 
   @Test

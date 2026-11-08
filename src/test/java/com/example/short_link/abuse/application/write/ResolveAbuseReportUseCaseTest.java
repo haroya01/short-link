@@ -288,6 +288,23 @@ class ResolveAbuseReportUseCaseTest {
   }
 
   @Test
+  void rejectingClosesTheReportWithTheNoteAndLeavesTheSubjectAlone() {
+    AbuseReportEntity r = postReport();
+    when(abuseReportRepository.findById(1L)).thenReturn(Optional.of(r));
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    AbuseReportEntity result =
+        useCase.execute(
+            cmd(1L, ResolveAbuseReportCommand.Resolution.REJECTED, ModerationAction.NONE, null));
+
+    assertThat(result.getStatus()).isEqualTo(AbuseReportStatus.REJECTED);
+    assertThat(result.getResolvedAt()).isNotNull();
+    assertThat(result.getAdminNote()).isEqualTo("note");
+    verifyNoInteractions(postModerationPort, commentModerationPort, userModerationPort);
+  }
+
+  @Test
   void rejectsResolveOfAlreadyResolved() {
     AbuseReportEntity r = postReport();
     r.resolve("done");

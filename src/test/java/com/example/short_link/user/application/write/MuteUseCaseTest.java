@@ -92,6 +92,19 @@ class MuteUseCaseTest {
   }
 
   @Test
+  void aMuteOfExactlyAMinuteOrExactlyAYearIsAccepted() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(muteRepository.find(9L, 2L)).thenReturn(Optional.empty());
+    when(muteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    MuteStatus minute = useCase().mute(9L, "bob", true, 60L);
+    MuteStatus year = useCase().mute(9L, "bob", true, UserMuteEntity.MAX_DURATION_SECONDS);
+
+    assertThat(minute.expiresAt()).isEqualTo(NOW.plusSeconds(60));
+    assertThat(year.expiresAt()).isEqualTo(NOW.plusSeconds(UserMuteEntity.MAX_DURATION_SECONDS));
+  }
+
+  @Test
   void statusReadsOnlyALiveMuteAndUnmuteDeletesIt() {
     UserMuteEntity live = new UserMuteEntity(9L, 2L, false, NOW.plusSeconds(60));
     UserMuteEntity over = new UserMuteEntity(9L, 3L, true, NOW);

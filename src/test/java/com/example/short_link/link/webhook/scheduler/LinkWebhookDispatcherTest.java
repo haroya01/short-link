@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -131,6 +132,30 @@ class LinkWebhookDispatcherTest {
     h.updateConfig(null, null, null, 100, null, null);
     when(counter.increment(anyString(), eq(Duration.ofDays(1)))).thenReturn(5L);
     assertThat(deliveryGate.shouldDeliver(h, event(false, "x", null))).isTrue();
+  }
+
+  @Test
+  void theClickThatReachesTheDailyQuotaIsStillDelivered() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, null, null, 100, null, null);
+    when(counter.increment(anyString(), eq(Duration.ofDays(1)))).thenReturn(100L);
+
+    assertThat(deliveryGate.shouldDeliver(h, event(false, "x", null))).isTrue();
+  }
+
+  @Test
+  void aOnePercentSampleSkipsAlmostEveryClick() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, 1, null, null, null, null);
+
+    long delivered =
+        IntStream.range(0, 400)
+            .filter(i -> deliveryGate.shouldDeliver(h, event(false, "x", null)))
+            .count();
+
+    assertThat(delivered).isLessThan(40);
+    assertThat(meterRegistry.counter("webhook.delivery", "result", "skipped_sample").count())
+        .isEqualTo(400.0 - delivered);
   }
 
   @Test

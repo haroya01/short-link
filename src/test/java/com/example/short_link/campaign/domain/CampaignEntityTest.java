@@ -272,4 +272,25 @@ class CampaignEntityTest {
     assertThat(campaign.getDefaultDestinationUrl()).isNull();
     assertThat(campaign.getPostEndDestinationUrl()).isNull();
   }
+
+  @Test
+  void archivedCampaignDetailsCannotBeEdited() {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+    CampaignEntity campaign = sample(start, start.plusSeconds(60));
+    campaign.archive();
+
+    assertThatThrownBy(
+            () ->
+                campaign.updateDetails(
+                    "Renamed",
+                    start.plusSeconds(120),
+                    null,
+                    CampaignPostEndAction.KEEP,
+                    null,
+                    null))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.CAMPAIGN_ARCHIVED));
+    assertThat(campaign.getEndsAt()).isEqualTo(start.plusSeconds(60));
+  }
 }

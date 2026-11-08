@@ -43,4 +43,9 @@ class SecretCipherTest {
     assertThat(cipher.decrypt(a)).isEqualTo("hello");
     assertThat(cipher.decrypt(b)).isEqualTo("hello");
   }
+
+  @Test
+  void anAbsentSecretStaysAbsent() {
+    assertThat(new SecretCipher("").decrypt(null)).isNull();
+  }
 }

@@ -42,8 +42,9 @@ class EndCampaignNowUseCaseTest {
     c.activateIfStarted(Instant.now());
     when(ownership.require(1L, 7L)).thenReturn(c);
 
-    useCase.execute(1L, 7L);
+    CampaignEntity ended = useCase.execute(1L, 7L);
 
+    assertThat(ended).isSameAs(c);
     assertThat(c.getStatus()).isEqualTo(CampaignStatus.ENDED);
   }
 

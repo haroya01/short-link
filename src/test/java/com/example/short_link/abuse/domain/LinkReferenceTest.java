@@ -18,6 +18,8 @@ class LinkReferenceTest {
         "https://kurl.me/abc123?src=sms#top",
         "https://kurl.me/abc123+",
         "http://go.example.com/abc123/",
+        "/abc123",
+        "://kurl.me/abc123",
       })
   void findsTheCodeInWhatReportersPaste(String input) {
     assertThat(LinkReference.shortCodeOf(input)).contains("abc123");

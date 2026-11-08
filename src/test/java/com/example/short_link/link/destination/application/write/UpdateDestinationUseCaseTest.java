@@ -61,6 +61,7 @@ class UpdateDestinationUseCaseTest {
         null);
 
     assertThat(d.getUrl()).isEqualTo("https://new.example.com");
+    verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc"));
   }
 
   @Test

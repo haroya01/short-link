@@ -45,9 +45,11 @@ class UpdateCampaignPolicyUseCaseTest {
   void unspecifiedFieldsKeepExistingPolicyAndMessage() {
     CampaignEntity campaign = campaign();
 
-    useCase.execute(
-        new UpdateCampaignPolicyCommand(1L, 7L, "renamed", null, null, null, null, null));
+    CampaignEntity updated =
+        useCase.execute(
+            new UpdateCampaignPolicyCommand(1L, 7L, "renamed", null, null, null, null, null));
 
+    assertThat(updated).isSameAs(campaign);
     assertThat(campaign.getName()).isEqualTo("renamed");
     assertThat(campaign.getEndsAt()).isEqualTo(START.plusSeconds(3600));
     assertThat(campaign.getDefaultDestinationUrl()).isEqualTo("https://default.example.com");

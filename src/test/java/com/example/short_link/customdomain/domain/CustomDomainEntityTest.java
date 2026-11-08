@@ -21,6 +21,18 @@ class CustomDomainEntityTest {
   }
 
   @Test
+  void aDomainMayBeUpTo253CharactersLong() {
+    String longest =
+        "a".repeat(61) + "." + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(60) + ".io";
+    String tooLong = "a" + longest;
+
+    assertThat(longest).hasSize(253);
+    assertThat(new CustomDomainEntity(1L, longest, "token").getDomain()).isEqualTo(longest);
+    assertThatThrownBy(() -> new CustomDomainEntity(1L, tooLong, "token"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   @ResourceLock("java.util.Locale.default")
   void domainIdentityDoesNotDependOnTheServerLocale() {
     Locale original = Locale.getDefault();

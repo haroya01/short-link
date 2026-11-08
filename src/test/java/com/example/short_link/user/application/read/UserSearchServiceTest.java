@@ -105,4 +105,23 @@ class UserSearchServiceTest {
     assertThat(items.get(1).bio()).isNull();
     assertThat(items.get(1).followerCount()).isZero();
   }
+
+  @Test
+  void twoLettersAreEnoughAndAPageThatIsExactlyFullHasNoNext() {
+    List<UserSearchReader.Match> rows =
+        IntStream.range(0, 3).mapToObj(i -> match("ki" + i)).toList();
+    when(reader.search(7L, "ki", NOW, 0, 4)).thenReturn(rows);
+
+    UserSearchView view = service().search(7L, "ki", 0, 3);
+
+    assertThat(view.items()).hasSize(3);
+    assertThat(view.hasNext()).isFalse();
+  }
+
+  @Test
+  void aBioOfExactlyTheLimitIsKeptWhole() {
+    String bio = "가".repeat(UserSearchService.BIO_LENGTH);
+
+    assertThat(UserSearchService.shortBio(bio)).isEqualTo(bio);
+  }
 }

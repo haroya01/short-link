@@ -68,6 +68,8 @@ class BatchPolicyApplierTest {
 
     applier.apply(campaign, END);
 
+    assertThat(expired.getExpiresAt()).isEqualTo(END);
+    assertThat(expired.getExpiredRedirectUrl()).isNull();
     verify(cache).evictLinksAfterCommit(List.of(expired));
   }
 

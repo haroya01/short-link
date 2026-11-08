@@ -94,6 +94,17 @@ class LinkModerationServiceTest {
   }
 
   @Test
+  void switchingOffAnAlreadyDisabledShortCodeReportsNoChange() {
+    when(links.findByShortCode(ShortCode.of("abc123"))).thenReturn(Optional.of(link));
+    when(moderations.findByLinkId(5L))
+        .thenReturn(
+            Optional.of(new LinkModerationEntity(5L, LinkDisableReason.SAFE_BROWSING, null, NOW)));
+
+    assertThat(service.disable(1L, ShortCode.of("abc123"), LinkDisableReason.ADMIN)).isFalse();
+    verify(moderations, never()).insert(any());
+  }
+
+  @Test
   void enablingRemovesTheModerationAndDropsTheCachedPage() {
     LinkModerationEntity moderation =
         new LinkModerationEntity(5L, LinkDisableReason.ADMIN, 1L, NOW);
