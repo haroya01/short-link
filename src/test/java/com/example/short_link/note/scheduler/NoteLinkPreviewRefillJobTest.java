@@ -72,7 +72,7 @@ class NoteLinkPreviewRefillJobTest {
   }
 
   @Test
-  void closingTheAppInterruptsTheRunningStepAndEndsTheRefillThread() {
+  void closingTheAppInterruptsTheRunningStepAndEndsTheRefillThread() throws InterruptedException {
     AtomicReference<NoteLinkPreviewRefillJob> job = new AtomicReference<>();
     AtomicReference<Duration> closing = new AtomicReference<>();
 
@@ -91,6 +91,7 @@ class NoteLinkPreviewRefillJobTest {
 
     assertThat(closing.get()).isLessThan(Duration.ofSeconds(2));
     assertThat(interrupted).isTrue();
+    ranOn.get().join(SECONDS.toMillis(2));
     assertThat(ranOn.get().isAlive()).isFalse();
     job.get().step();
     verify(refill, times(1)).step();
