@@ -168,4 +168,55 @@ class CampaignRecommendationServiceTest {
         .extracting(CampaignRecommendationView.BatchRecommendation::recommendedQuantity)
         .containsExactly(0, 50);
   }
+
+  @Test
+  void verdictBandsIncludeTheirLowerEdges() {
+    CampaignRecommendationView view =
+        recommendWith(
+            batch(1, 100, 12),
+            batch(2, 100, 8),
+            batch(3, 100, 3),
+            batch(4, 100, 2),
+            batch(5, 100, 25));
+
+    assertThat(view.avgRatePerHundred()).isEqualTo(10.0);
+    assertThat(view.recommendations())
+        .extracting(r -> r.verdict())
+        .containsExactly(
+            RecommendationVerdict.BOOST,
+            RecommendationVerdict.KEEP,
+            RecommendationVerdict.REDUCE,
+            RecommendationVerdict.PRUNE,
+            RecommendationVerdict.BOOST);
+  }
+
+  @Test
+  void quantityFreedByPruningIsSpreadInProportionToEachBatchsWeight() {
+    CampaignRecommendationView view =
+        recommendWith(
+            batch(1, 100, 12),
+            batch(2, 100, 8),
+            batch(3, 100, 3),
+            batch(4, 100, 2),
+            batch(5, 100, 25));
+
+    assertThat(view.recommendations())
+        .extracting(r -> r.recommendedQuantity())
+        .containsExactly(125, 83, 50, 0, 242);
+  }
+
+  @Test
+  void batchesWithoutAQuantityHaveNoRateAndAreDropped() {
+    CampaignRecommendationView view = recommendWith(batch(1, 0, 6), batch(2, 0, 6));
+
+    assertThat(view.insufficient()).isFalse();
+    assertThat(view.avgRatePerHundred()).isZero();
+    assertThat(view.recommendations())
+        .allSatisfy(
+            r -> {
+              assertThat(r.currentRatePerHundred()).isZero();
+              assertThat(r.verdict()).isEqualTo(RecommendationVerdict.PRUNE);
+              assertThat(r.recommendedQuantity()).isZero();
+            });
+  }
 }

@@ -20,6 +20,7 @@ import com.example.short_link.customdomain.application.write.RegisterCustomDomai
 import com.example.short_link.customdomain.application.write.VerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
+import com.example.short_link.customdomain.exception.CustomDomainErrorCode;
 import com.example.short_link.customdomain.exception.CustomDomainException;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -32,6 +33,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -210,9 +212,80 @@ class CustomDomainServiceTest {
   }
 
   @Test
-  void findPendingWithinWindowDelegates() {
-    queryService.findPendingWithinWindow();
-    verify(repository).findAllByVerifiedFalseAndCreatedAtAfter(any(Instant.class));
+  void pendingDomainsAreThoseCreatedWithinTheAutoVerifyWindow() {
+    CustomDomainEntity pending = domain(1L, 7L, "go.example.com", false);
+    when(repository.findAllByVerifiedFalseAndCreatedAtAfter(any(Instant.class)))
+        .thenReturn(List.of(pending));
+    Instant before = Instant.now();
+
+    List<CustomDomainEntity> out = queryService.findPendingWithinWindow();
+
+    Instant after = Instant.now();
+    ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+    verify(repository).findAllByVerifiedFalseAndCreatedAtAfter(cutoff.capture());
+    assertThat(out).containsExactly(pending);
+    assertThat(cutoff.getValue())
+        .isBetween(
+            before.minus(CustomDomainPolicy.AUTO_VERIFY_WINDOW),
+            after.minus(CustomDomainPolicy.AUTO_VERIFY_WINDOW));
+  }
+
+  @Test
+  void onlyAPendingDomainShowsUntilWhenItIsCheckedAutomatically() {
+    CustomDomainEntity pending = domain(1L, 7L, "go.example.com", false);
+    CustomDomainEntity verified = domain(2L, 7L, "links.example.com", true);
+    when(repository.findAllByUserIdOrderByIdAsc(7L)).thenReturn(List.of(pending, verified));
+
+    List<DomainSummary> out = queryService.list(7L);
+
+    assertThat(out.get(0).autoVerifyUntil())
+        .isEqualTo(pending.getCreatedAt().plus(CustomDomainPolicy.AUTO_VERIFY_WINDOW));
+    assertThat(out.get(1).autoVerifyUntil()).isNull();
+  }
+
+  @Test
+  void recordingAResultForSomeoneElsesDomainIsNotFoundAndLeavesItUnverified() {
+    CustomDomainEntity d = domain(1L, 99L, "go.example.com", false);
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(d));
+
+    assertThatThrownBy(
+            () -> new RecordCustomDomainVerificationUseCase(repository).execute(7L, 1L, true))
+        .isInstanceOf(CustomDomainException.class)
+        .extracting(e -> ((CustomDomainException) e).errorCode())
+        .isEqualTo(CustomDomainErrorCode.CUSTOM_DOMAIN_NOT_FOUND);
+    assertThat(d.isVerified()).isFalse();
+    assertThat(d.getLastCheckedAt()).isNull();
+  }
+
+  @Test
+  void anInvalidDomainIsReportedAsInvalidEvenWhenTheUserIsAtTheCap() {
+    List<CustomDomainEntity> full = new ArrayList<>();
+    for (int i = 0; i < CustomDomainPolicy.MAX_PER_USER; i++) {
+      full.add(domain(i + 1L, 7L, "a" + i + ".example.com", false));
+    }
+    when(repository.findAllByUserIdOrderByIdAsc(7L)).thenReturn(full);
+
+    assertThatThrownBy(() -> register.execute(7L, "no-tld"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid domain");
+  }
+
+  @Test
+  void eachRegistrationGetsItsOwnUnguessableToken() {
+    when(repository.findAllByUserIdOrderByIdAsc(7L)).thenReturn(List.of());
+    when(repository.save(any(CustomDomainEntity.class)))
+        .thenAnswer(
+            inv -> {
+              CustomDomainEntity saved = inv.getArgument(0);
+              TestEntities.setField(saved, "createdAt", Instant.now());
+              return saved;
+            });
+
+    String first = register.execute(7L, "one.example.com").verificationToken();
+    String second = register.execute(7L, "two.example.com").verificationToken();
+
+    assertThat(first).matches("kurl-verify=[0-9a-f]{32}").isNotEqualTo(second);
+    assertThat(first).isNotEqualTo("kurl-verify=" + "0".repeat(32));
   }
 
   @Test

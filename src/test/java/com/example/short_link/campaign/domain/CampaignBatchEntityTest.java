@@ -73,4 +73,20 @@ class CampaignBatchEntityTest {
     assertThat(batch.getQuantity()).isEqualTo(1);
     assertThat(batch.getMemo()).hasSize(500);
   }
+
+  @Test
+  void eachTextFieldHasItsOwnLengthLimit() {
+    String at255 = "x".repeat(255);
+    String at256 = "x".repeat(256);
+
+    CampaignBatchEntity atLimit =
+        new CampaignBatchEntity(10L, new LinkId(100L), at255, at255, at255, 1, null);
+    assertThat(atLimit.getName()).hasSize(255);
+    assertThatThrownBy(() -> atLimit.editMetadata(at256, null, null, 1, null))
+        .isInstanceOf(CampaignException.class);
+    assertThatThrownBy(() -> atLimit.editMetadata("Name", at256, null, 1, null))
+        .isInstanceOf(CampaignException.class);
+    assertThatThrownBy(() -> atLimit.editMetadata("Name", null, at256, 1, null))
+        .isInstanceOf(CampaignException.class);
+  }
 }
