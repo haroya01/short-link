@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
@@ -90,11 +91,31 @@ class S3ObjectStorageTest {
   }
 
   @Test
-  void objectSizeReturnsEmptyWhenSdkFails() {
+  void anUploadThatIsNotThereHasNoSize() {
     when(s3.headObject(any(HeadObjectRequest.class)))
-        .thenThrow(S3Exception.builder().message("404").build());
+        .thenThrow(NoSuchKeyException.builder().statusCode(404).build());
 
     assertThat(storage(true).objectSize("avatars/missing.png")).isEmpty();
+  }
+
+  @Test
+  void anUploadTheBucketDoesNotShowHasNoSize() {
+    when(s3.headObject(any(HeadObjectRequest.class)))
+        .thenThrow(S3Exception.builder().statusCode(403).message("Forbidden").build());
+
+    assertThat(storage(true).objectSize("avatars/other.png")).isEmpty();
+  }
+
+  @Test
+  void aStorageOutageIsNotTakenForAMissingUpload() {
+    when(s3.headObject(any(HeadObjectRequest.class)))
+        .thenThrow(S3Exception.builder().statusCode(503).message("Slow Down").build())
+        .thenThrow(SdkClientException.create("Unable to execute HTTP request: Read timed out"));
+
+    assertThatThrownBy(() -> storage(true).objectSize("avatars/u-5.png"))
+        .isInstanceOf(ObjectStorageException.class);
+    assertThatThrownBy(() -> storage(true).objectSize("avatars/u-5.png"))
+        .isInstanceOf(ObjectStorageException.class);
   }
 
   @Test

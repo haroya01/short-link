@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -111,8 +112,13 @@ public class S3ObjectStorage implements ObjectStorage {
       HeadObjectResponse head =
           s3Client.headObject(HeadObjectRequest.builder().bucket(props.bucket()).key(key).build());
       return Optional.ofNullable(head.contentLength());
+    } catch (S3Exception refused) {
+      if (refused.statusCode() / 100 == 4) {
+        return Optional.empty();
+      }
+      throw new ObjectStorageException("S3 headObject failed for key=" + key, refused);
     } catch (RuntimeException e) {
-      return Optional.empty();
+      throw new ObjectStorageException("S3 headObject failed for key=" + key, e);
     }
   }
 

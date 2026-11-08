@@ -188,6 +188,27 @@ class NotificationPushTransactionIntegrationTest {
   }
 
   @Test
+  void aFanoutWhoseTransportFailsKeepsTheBellRowsItWrote() {
+    doThrow(new IllegalStateException("channel unavailable"))
+        .when(transport)
+        .sendToAll(any(), any());
+
+    assertThatCode(
+            () ->
+                recordNotification.recordForEach(
+                    List.of(userId), NotificationType.FOLLOW, Actor.member(userId), null))
+        .doesNotThrowAnyException();
+
+    verify(transport).sendToAll(eq(List.of(userId)), any());
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from notification where recipient_user_id = ?",
+                Long.class,
+                userId))
+        .isEqualTo(1L);
+  }
+
+  @Test
   void aSuccessfulLinkWriteCallsTheReplacementTransportOnlyAfterCommit() {
     transactions.executeWithoutResult(
         status -> {
