@@ -96,6 +96,7 @@ class HttpSignaturesTest {
     assertThat(HttpSignatures.parse("keyId=\"k\",signature=\"not base64!\"")).isEmpty();
     assertThat(HttpSignatures.parse("signature=\"AAAA\"")).isEmpty();
     assertThat(HttpSignatures.parse("keyId=\"k\",signature=\"unterminated")).isEmpty();
+    assertThat(HttpSignatures.parse("keyId=\"k\",signature=\"AAAA\",headers=\"date")).isEmpty();
     assertThat(HttpSignatures.parse("nonsense")).isEmpty();
     assertThat(HttpSignatures.parse("")).isEmpty();
     assertThat(HttpSignatures.parse(null)).isEmpty();

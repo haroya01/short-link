@@ -105,35 +105,46 @@ public final class HttpSignatures {
     if (header == null || header.isBlank()) {
       return Optional.empty();
     }
+    return fields(header.trim()).flatMap(HttpSignatures::params);
+  }
+
+  private static Optional<Map<String, String>> fields(String value) {
     Map<String, String> fields = new LinkedHashMap<>();
     int i = 0;
-    String value = header.trim();
     while (i < value.length()) {
       int eq = value.indexOf('=', i);
       if (eq < 0) {
         return Optional.empty();
       }
-      String name = value.substring(i, eq).trim().toLowerCase(Locale.ROOT);
-      int start = eq + 1;
-      String field;
-      int next;
-      if (start < value.length() && value.charAt(start) == '"') {
-        int end = value.indexOf('"', start + 1);
-        if (end < 0) {
-          return Optional.empty();
-        }
-        field = value.substring(start + 1, end);
-        next = value.indexOf(',', end);
-      } else {
-        next = value.indexOf(',', start);
-        field = (next < 0 ? value.substring(start) : value.substring(start, next)).trim();
+      Optional<Field> field = field(value, eq + 1);
+      if (field.isEmpty()) {
+        return Optional.empty();
       }
-      fields.putIfAbsent(name, field);
-      if (next < 0) {
+      fields.putIfAbsent(
+          value.substring(i, eq).trim().toLowerCase(Locale.ROOT), field.get().text());
+      if (field.get().next() < 0) {
         break;
       }
-      i = next + 1;
+      i = field.get().next() + 1;
     }
+    return Optional.of(fields);
+  }
+
+  private record Field(String text, int next) {}
+
+  private static Optional<Field> field(String value, int start) {
+    if (start < value.length() && value.charAt(start) == '"') {
+      int end = value.indexOf('"', start + 1);
+      return end < 0
+          ? Optional.empty()
+          : Optional.of(new Field(value.substring(start + 1, end), value.indexOf(',', end)));
+    }
+    int next = value.indexOf(',', start);
+    return Optional.of(
+        new Field((next < 0 ? value.substring(start) : value.substring(start, next)).trim(), next));
+  }
+
+  private static Optional<Params> params(Map<String, String> fields) {
     String keyId = fields.get("keyid");
     String signature = fields.get("signature");
     if (keyId == null || keyId.isBlank() || signature == null || signature.isBlank()) {

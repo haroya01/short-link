@@ -2,7 +2,6 @@ package com.example.short_link.federation.application.trends;
 
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationUrls;
-import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
@@ -10,8 +9,8 @@ import com.example.short_link.federation.domain.repository.RemoteAccountStanding
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -191,24 +190,8 @@ public class LatestPosts {
       return 0;
     }
     try {
-      Signer signer = signingKeys.forInstance();
-      BlockedHosts blocked = new BlockedHosts(serverBlocks);
-      List<CompletableFuture<List<Kept>>> asks = new ArrayList<>();
-      for (String host : props.hosts()) {
-        if (!rests.resting(host, clock.instant()) && !blocked.contains(host)) {
-          asks.add(CompletableFuture.supplyAsync(() -> pullFrom(host, signer), askers));
-        }
-      }
-      Map<String, Kept> byUri = new LinkedHashMap<>();
-      for (CompletableFuture<List<Kept>> ask : asks) {
-        for (Kept kept : ask.join()) {
-          if (!blocked.contains(kept.read().domain())) {
-            byUri.putIfAbsent(kept.read().note().uri(), kept);
-          }
-        }
-      }
       List<Kept> newest =
-          byUri.values().stream()
+          pulled().stream()
               .sorted(
                   Comparator.comparing((Kept kept) -> kept.read().note().createdAt()).reversed())
               .limit(store.leftToday())
@@ -225,13 +208,37 @@ public class LatestPosts {
     }
   }
 
+  private Collection<Kept> pulled() {
+    Signer signer = signingKeys.forInstance();
+    BlockedHosts blocked = new BlockedHosts(serverBlocks);
+    List<CompletableFuture<List<Kept>>> asks = new ArrayList<>();
+    for (String host : props.hosts()) {
+      if (!rests.resting(host, clock.instant()) && !blocked.contains(host)) {
+        asks.add(CompletableFuture.supplyAsync(() -> pullFrom(host, signer), askers));
+      }
+    }
+    Map<String, Kept> byUri = new LinkedHashMap<>();
+    for (CompletableFuture<List<Kept>> ask : asks) {
+      for (Kept kept : ask.join()) {
+        if (!blocked.contains(kept.read().domain())) {
+          byUri.putIfAbsent(kept.read().note().uri(), kept);
+        }
+      }
+    }
+    return byUri.values();
+  }
+
   private List<Kept> pullFrom(String host, Signer signer) {
     Edge edge = edges.get(host);
-    if (edge != null) {
-      Optional<Answer> answer = ask(host, "&since_id=" + edge.newest(), signer);
-      answer.ifPresent(newer -> edges.put(host, edge.afterNewer(newer.first())));
-      return answer.map(LatestPosts::kept).orElse(List.of());
+    if (edge == null) {
+      return backfill(host, signer);
     }
+    Optional<Answer> answer = ask(host, "&since_id=" + edge.newest(), signer);
+    answer.ifPresent(newer -> moveEdge(newer, true));
+    return answer.map(LatestPosts::kept).orElse(List.of());
+  }
+
+  private List<Kept> backfill(String host, Signer signer) {
     Instant reached = store.newest(host).orElse(null);
     List<Kept> pulled = new ArrayList<>();
     String window = "";
@@ -242,20 +249,29 @@ public class LatestPosts {
       }
       Answer older = answer.get();
       pulled.addAll(kept(older));
-      boolean bottom = older.raw() < props.perHost();
-      Edge before = edges.get(host);
-      edges.put(
-          host,
-          before == null
-              ? Edge.firstAnswer(older.first(), older.last(), bottom)
-              : before.afterOlder(older.last(), bottom));
-      if (bottom
-          || (reached != null && older.lastAt() != null && !older.lastAt().isAfter(reached))) {
+      moveEdge(older, false);
+      if (older.raw() < props.perHost() || reaches(older, reached)) {
         break;
       }
       window = "&max_id=" + older.last();
     }
     return pulled;
+  }
+
+  private static boolean reaches(Answer older, Instant reached) {
+    return reached != null && older.lastAt() != null && !older.lastAt().isAfter(reached);
+  }
+
+  private void moveEdge(Answer answer, boolean newer) {
+    Edge edge = edges.get(answer.host());
+    boolean shortPage = answer.raw() < props.perHost();
+    if (edge == null) {
+      edges.put(answer.host(), Edge.firstAnswer(answer.first(), answer.last(), shortPage));
+    } else if (newer) {
+      edges.put(answer.host(), edge.afterNewer(answer.first()));
+    } else {
+      edges.put(answer.host(), edge.afterOlder(answer.last(), shortPage));
+    }
   }
 
   private static List<Kept> kept(Answer answer) {
@@ -303,6 +319,20 @@ public class LatestPosts {
   }
 
   private Optional<Answer> ask(String host, String query, Signer signer) {
+    Optional<JsonNode> statuses = timeline(host, query, signer);
+    if (statuses.isEmpty()) {
+      return Optional.empty();
+    }
+    Answer answer = answer(host, statuses.get());
+    if (statuses.get().isEmpty() && !edges.containsKey(host)) {
+      rest(host);
+      return Optional.empty();
+    }
+    rests.answered(host);
+    return Optional.of(answer);
+  }
+
+  private Optional<JsonNode> timeline(String host, String query, Signer signer) {
     URI uri =
         URI.create(
             "https://"
@@ -327,9 +357,10 @@ public class LatestPosts {
     } catch (JacksonException malformed) {
       return Optional.empty();
     }
-    if (statuses == null || !statuses.isArray()) {
-      return Optional.empty();
-    }
+    return statuses != null && statuses.isArray() ? Optional.of(statuses) : Optional.empty();
+  }
+
+  private Answer answer(String host, JsonNode statuses) {
     List<TrendingStatusReader.Read> reads = new ArrayList<>();
     String first = null;
     String last = null;
@@ -341,56 +372,21 @@ public class LatestPosts {
       }
       first = first == null ? id : first;
       last = id;
-      lastAt = instant(status.path("created_at").asString(null));
+      lastAt = PublicStatuses.createdAt(status);
       // A pulled post naming a member is left to its server's delivery to them, which would
       // otherwise find it kept and drop it as a duplicate.
-      if (safe(status) && !(props.pulling() && namesUs(status, urls))) {
+      if (PublicStatuses.safe(status)
+          && !(props.pulling() && PublicStatuses.namesUs(status, urls))) {
         reader.read(status, host).ifPresent(reads::add);
       }
     }
-    if (statuses.isEmpty() && !edges.containsKey(host)) {
-      rest(host);
-      return Optional.empty();
-    }
-    rests.answered(host);
-    return Optional.of(new Answer(host, reads, first, last, lastAt, statuses.size()));
+    return new Answer(host, reads, first, last, lastAt, statuses.size());
   }
 
   // A server that keeps its public timeline from visitors answers 4xx, or 200 with nothing at all
   // on the first ask.
   private void rest(String host) {
     log.info("federation latest no preview host={} wait={}", host, rests.rest(host));
-  }
-
-  static boolean keepable(JsonNode status, FederationUrls urls) {
-    return safe(status) && !namesUs(status, urls);
-  }
-
-  private static boolean namesUs(JsonNode status, FederationUrls urls) {
-    for (JsonNode mention : status.path("mentions")) {
-      String acct = mention.path("acct").asString("");
-      int at = acct.lastIndexOf('@');
-      String host = at < 0 ? null : RemoteActorParser.host("https://" + acct.substring(at + 1));
-      if (urls.isOurs(mention.path("url").asString(null))
-          || (host != null && host.equals(urls.domain()))) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static Instant instant(String at) {
-    try {
-      return at == null ? null : Instant.parse(at);
-    } catch (DateTimeParseException malformed) {
-      return null;
-    }
-  }
-
-  private static boolean safe(JsonNode status) {
-    return !status.path("sensitive").asBoolean(false)
-        && status.path("spoiler_text").asString("").isBlank()
-        && !status.path("account").path("bot").asBoolean(false);
   }
 
   private void keep(List<Answer> answers, boolean newer) {
@@ -400,15 +396,7 @@ public class LatestPosts {
       byUri.put(kept.read().note().uri(), kept);
     }
     for (Answer answer : answers) {
-      Edge edge = edges.get(answer.host());
-      boolean shortPage = answer.raw() < props.perHost();
-      if (edge == null) {
-        edges.put(answer.host(), Edge.firstAnswer(answer.first(), answer.last(), shortPage));
-      } else if (newer) {
-        edges.put(answer.host(), edge.afterNewer(answer.first()));
-      } else {
-        edges.put(answer.host(), edge.afterOlder(answer.last(), shortPage));
-      }
+      moveEdge(answer, newer);
       for (TrendingStatusReader.Read read : answer.reads()) {
         if (!blocked.contains(read.domain())) {
           byUri.putIfAbsent(read.note().uri(), new Kept(read, answer.host()));

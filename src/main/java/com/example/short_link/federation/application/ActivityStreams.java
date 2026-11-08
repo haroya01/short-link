@@ -1,5 +1,7 @@
 package com.example.short_link.federation.application;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,6 +59,18 @@ public final class ActivityStreams {
     }
     String value = node.asString().strip();
     return value.isEmpty() ? null : value;
+  }
+
+  public static Instant dateTime(JsonNode node) {
+    String raw = text(node);
+    if (raw == null) {
+      return null;
+    }
+    try {
+      return Instant.parse(raw);
+    } catch (DateTimeParseException e) {
+      return null;
+    }
   }
 
   // Activity properties may hold either a bare id or the embedded object.
