@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.helper;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -69,8 +70,11 @@ public final class ReservedShortCodes {
 
   private ReservedShortCodes() {}
 
+  private static final List<String> FRONTEND_ASSET_PREFIXES = List.of("favicon", "icon");
+
   public static boolean isReserved(String code) {
     if (code == null) return false;
-    return RESERVED.contains(code.toLowerCase(Locale.ROOT));
+    return RESERVED.contains(code.toLowerCase(Locale.ROOT))
+        || FRONTEND_ASSET_PREFIXES.stream().anyMatch(code::startsWith);
   }
 }
