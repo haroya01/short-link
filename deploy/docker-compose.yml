@@ -114,6 +114,8 @@ services:
       REMOTE_MEDIA_CACHE_ENABLED: ${REMOTE_MEDIA_CACHE_ENABLED:-false}
       # 실시간 스트림(노트 답글·댓글·방) 서버 전체 상한 — application.yml 기본값과 같게. 0 이면 모두 새로고침으로 받는다.
       LIVE_MAX_STREAMS: ${LIVE_MAX_STREAMS:-500}
+      # 웹(blog.kurl.me/revalidate)의 같은 값과 맞춘다. 비어 있으면 공개 글이 바뀌어도 웹에 알리지 않는다.
+      WEB_REVALIDATE_SECRET: ${WEB_REVALIDATE_SECRET:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-prod}
       SENTRY_RELEASE: ${APP_IMAGE_TAG:-latest}
