@@ -15,7 +15,7 @@ import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
 import com.example.short_link.note.application.write.NoteInteractions;
@@ -88,7 +88,7 @@ class NoteControllerTest {
 
   @Test
   void theOriginalBodyOnlyRequestStillCreatesANote() throws Exception {
-    when(composer.create(any(), eq(new NoteDraft("hi", List.of(), null, null)))).thenReturn(null);
+    when(composer.create(any(), eq(NoteDrafts.draft("hi").build()))).thenReturn(null);
 
     mvc.perform(
             post("/api/v1/notes")

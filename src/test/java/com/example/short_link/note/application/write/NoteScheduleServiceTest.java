@@ -37,16 +37,11 @@ class NoteScheduleServiceTest {
   private static final Instant NOW = Instant.parse("2026-10-07T10:00:00Z");
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final NoteDraft DRAFT =
-      new NoteDraft(
-          "내일 아침에 올릴 노트",
-          List.of(new NoteDraft.Image("note-images/7/a.png", "alt")),
-          null,
-          null,
-          null,
-          "스포일러",
-          false,
-          "UNLISTED",
-          null);
+      NoteDrafts.draft("내일 아침에 올릴 노트")
+          .images(List.of(new NoteDraft.Image("note-images/7/a.png", "alt")))
+          .warning("스포일러")
+          .visibility("UNLISTED")
+          .build();
 
   private static final List<NoteImages.StoredImage> STORED =
       List.of(
@@ -83,7 +78,7 @@ class NoteScheduleServiceTest {
 
     NoteScheduleService.View view = service().schedule(7L, DRAFT, at);
 
-    verify(composer).validate(7L, DRAFT, STORED);
+    verify(composer).validate(7L, DRAFT);
     ArgumentCaptor<NoteScheduleEntity> saved = ArgumentCaptor.forClass(NoteScheduleEntity.class);
     verify(schedules).save(saved.capture());
     assertThat(JSON.readValue(saved.getValue().getDraft(), NoteDraft.class)).isEqualTo(DRAFT);
@@ -103,7 +98,7 @@ class NoteScheduleServiceTest {
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_SCHEDULE_TOO_SOON));
     assertThatThrownBy(() -> service().schedule(7L, DRAFT, null)).isInstanceOf(NoteException.class);
-    verify(composer, never()).validate(any(), any(), any());
+    verify(composer, never()).validate(any(), any());
     verifyNoInteractions(images);
   }
 
@@ -184,7 +179,7 @@ class NoteScheduleServiceTest {
               return null;
             })
         .when(composer)
-        .validate(7L, DRAFT, STORED);
+        .validate(7L, DRAFT);
     when(composer.write(7L, DRAFT, STORED))
         .thenAnswer(
             inv -> {

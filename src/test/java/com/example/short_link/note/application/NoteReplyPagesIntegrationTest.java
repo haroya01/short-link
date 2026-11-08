@@ -11,7 +11,7 @@ import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.exception.NoteException;
 import com.example.short_link.room.application.write.RoomCommandService;
@@ -23,7 +23,6 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -153,12 +152,7 @@ class NoteReplyPagesIntegrationTest {
   }
 
   private long roomNote(long author, long room, String body) {
-    return composer
-        .create(
-            author,
-            new NoteDraft(
-                body, List.of(), null, null, null, null, false, null, null, null, null, room))
-        .id();
+    return composer.create(author, NoteDrafts.draft(body).inRoom(room).build()).id();
   }
 
   private long post(long author, String body, Long inReplyTo, String policy) {
@@ -169,18 +163,11 @@ class NoteReplyPagesIntegrationTest {
     return composer
         .create(
             author,
-            new NoteDraft(
-                body,
-                List.of(),
-                null,
-                inReplyTo,
-                null,
-                null,
-                false,
-                visibility,
-                null,
-                null,
-                policy))
+            NoteDrafts.draft(body)
+                .replyingTo(inReplyTo)
+                .visibility(visibility)
+                .replyPolicy(policy)
+                .build())
         .id();
   }
 

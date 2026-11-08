@@ -48,7 +48,7 @@ public class NoteScheduleService {
 
   public View schedule(Long userId, NoteDraft draft, Instant at) {
     Instant when = ahead(at);
-    List<NoteImages.StoredImage> stored = images.verifyAll(userId, draft.images());
+    images.verifyAll(userId, draft.images());
     return transaction.execute(
         status -> {
           Instant day = when.truncatedTo(ChronoUnit.DAYS);
@@ -62,7 +62,7 @@ public class NoteScheduleService {
             throw new NoteException(
                 NoteErrorCode.NOTE_SCHEDULE_LIMIT, NoteScheduleEntity.MAX_PER_DAY);
           }
-          composer.validate(userId, draft, stored);
+          composer.validate(userId, draft);
           return view(
               schedules.save(new NoteScheduleEntity(userId, when, json.writeValueAsString(draft))));
         });

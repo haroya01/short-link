@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteInteractions;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.FollowEdge;
@@ -140,19 +140,12 @@ class NoteNotificationReadersE2ETest {
           composer
               .create(
                   author,
-                  new NoteDraft(
-                      marker + " @" + mentioned + (vis == Vis.ROOM ? " @" + roommate : ""),
-                      null,
-                      null,
-                      null,
-                      null,
-                      null,
-                      false,
-                      vis.name().toLowerCase(Locale.ROOT),
-                      null,
-                      null,
-                      null,
-                      vis == Vis.ROOM ? room : null))
+                  NoteDrafts.draft(
+                          marker + " @" + mentioned + (vis == Vis.ROOM ? " @" + roommate : ""))
+                      .images(null)
+                      .visibility(vis.name().toLowerCase(Locale.ROOT))
+                      .inRoom(vis == Vis.ROOM ? room : null)
+                      .build())
               .id());
     }
     interactions.setRepost(ids.get(Viewer.SHARER), written.get(Vis.PUBLIC), true);

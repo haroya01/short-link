@@ -19,33 +19,6 @@ public record CreateNoteRequest(
     String replyPolicy,
     Long roomId) {
 
-  public CreateNoteRequest(
-      String body,
-      List<ImageRequest> images,
-      Long quotedPostId,
-      Long inReplyToId,
-      Long quotedNoteId,
-      String contentWarning,
-      Boolean sensitive,
-      String visibility,
-      PollRequest poll,
-      String language,
-      String replyPolicy) {
-    this(
-        body,
-        images,
-        quotedPostId,
-        inReplyToId,
-        quotedNoteId,
-        contentWarning,
-        sensitive,
-        visibility,
-        poll,
-        language,
-        replyPolicy,
-        null);
-  }
-
   public record ImageRequest(String key, String altText, Integer width, Integer height) {}
 
   public record PollRequest(List<String> options, Long expiresIn, Boolean multiple) {}

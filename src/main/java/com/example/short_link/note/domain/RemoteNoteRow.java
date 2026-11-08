@@ -9,22 +9,24 @@ public record RemoteNoteRow(
     Long remoteActorId,
     String uri,
     String url,
-    String body,
     Instant createdAt,
-    String contentWarning,
-    boolean sensitive,
+    Content content,
     NoteVisibility visibility,
-    Long inReplyToId,
-    Long conversationId,
-    boolean reply,
-    NoteReplyPolicy replyPolicy,
-    String language,
-    String kind,
-    String title,
-    String community,
-    Poll poll,
-    Long quotedNoteId,
-    List<CustomEmoji> emojis) {
+    Conversation conversation,
+    Form form,
+    Long quotedNoteId) {
+
+  public record Content(
+      String body,
+      String contentWarning,
+      boolean sensitive,
+      String language,
+      List<CustomEmoji> emojis) {}
+
+  public record Conversation(
+      Long inReplyToId, Long conversationId, boolean reply, NoteReplyPolicy replyPolicy) {}
+
+  public record Form(String kind, String title, String community, Poll poll) {}
 
   public record Poll(
       List<String> options,

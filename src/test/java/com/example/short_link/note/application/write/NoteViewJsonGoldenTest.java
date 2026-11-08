@@ -123,17 +123,18 @@ class NoteViewJsonGoldenTest {
   }
 
   private NoteComposer composer() {
+    NoteWriteGuard guard = new NoteWriteGuard(notes, new NoteAccess(lookups), blocks);
     return new NoteComposer(
         notes,
         media,
-        quotedPosts,
         people,
         images,
         views,
         new NoteAccess(lookups),
         rooms,
         moderation,
-        new NoteWriteGuard(notes, new NoteAccess(lookups), blocks),
+        guard,
+        new NoteDraftCheck(notes, quotedPosts, people, rooms, moderation, guard),
         events,
         FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
@@ -298,36 +299,31 @@ class NoteViewJsonGoldenTest {
         List.of(
             command.create(
                 7L,
-                new NoteDraft(
-                    "사진과 글 @mina https://example.com/b",
-                    List.of(new NoteDraft.Image("note-images/7/a.png", "고양이")),
-                    5L,
-                    null,
-                    null,
-                    "약간의 스포일러",
-                    false,
-                    "unlisted",
-                    null,
-                    "ko",
-                    "mentioned")),
-            command.create(
-                7L, new NoteDraft("앨리스 글을 인용", null, null, null, 20L, null, true, null, null)),
+                NoteDrafts.draft("사진과 글 @mina https://example.com/b")
+                    .images(List.of(new NoteDraft.Image("note-images/7/a.png", "고양이")))
+                    .quotingPost(5L)
+                    .warning("약간의 스포일러")
+                    .visibility("unlisted")
+                    .language("ko")
+                    .replyPolicy("mentioned")
+                    .build()),
             command.create(
                 7L,
-                new NoteDraft(
-                    "방에서 투표",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    false,
-                    "room",
-                    new NoteDraft.Poll(List.of("하나", "둘"), 3600L, false),
-                    null,
-                    null,
-                    30L)),
-            command.create(7L, new NoteDraft("답합니다 @mina", null, null, 21L)));
+                NoteDrafts.draft("앨리스 글을 인용")
+                    .images(null)
+                    .quotingNote(20L)
+                    .sensitive(true)
+                    .build()),
+            command.create(
+                7L,
+                NoteDrafts.draft("방에서 투표")
+                    .images(null)
+                    .visibility("room")
+                    .poll(new NoteDraft.Poll(List.of("하나", "둘"), 3600L, false))
+                    .inRoom(30L)
+                    .build()),
+            command.create(
+                7L, NoteDrafts.draft("답합니다 @mina").images(null).replyingTo(21L).build()));
 
     assertGolden("create.json", posted);
   }
