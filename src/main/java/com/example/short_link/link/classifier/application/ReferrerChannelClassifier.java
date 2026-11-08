@@ -63,17 +63,18 @@ public class ReferrerChannelClassifier {
     if (host == null) {
       return "other";
     }
-    String lower = host.toLowerCase(Locale.ROOT);
-    String exact = DOMAIN_TO_CHANNEL.get(lower);
-    if (exact != null) {
-      return exact;
-    }
-    for (Map.Entry<String, String> entry : DOMAIN_TO_CHANNEL.entrySet()) {
-      if (lower.endsWith("." + entry.getKey())) {
-        return entry.getValue();
+    String domain = host.toLowerCase(Locale.ROOT);
+    while (true) {
+      String channel = DOMAIN_TO_CHANNEL.get(domain);
+      if (channel != null) {
+        return channel;
       }
+      int dot = domain.indexOf('.');
+      if (dot < 0) {
+        return "other";
+      }
+      domain = domain.substring(dot + 1);
     }
-    return "other";
   }
 
   private static String extractHost(String url) {
