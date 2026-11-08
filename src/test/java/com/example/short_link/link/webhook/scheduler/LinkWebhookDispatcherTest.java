@@ -32,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.QueryTimeoutException;
 
 @ExtendWith(MockitoExtension.class)
 class LinkWebhookDispatcherTest {
@@ -182,6 +183,24 @@ class LinkWebhookDispatcherTest {
 
     assertThat(batchBuffer.size(99L)).isEqualTo(1);
     verify(deliveryClient, never()).deliver(any(), any());
+  }
+
+  @Test
+  void aQuotaCheckThatRedisCannotAnswerSkipsOnlyThatHook() {
+    LinkWebhookEntity quoted = hook(WebhookFormat.GENERIC);
+    quoted.updateConfig(null, null, null, 100, null, null);
+    LinkWebhookEntity plain =
+        new LinkWebhookEntity(
+            new LinkId(1L), "https://example.org/hook", "s", "t", WebhookFormat.GENERIC);
+    TestEntities.withId(plain, 100L);
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(quoted, plain));
+    when(counter.increment(anyString(), eq(Duration.ofDays(1))))
+        .thenThrow(new QueryTimeoutException("Redis command timed out"));
+
+    dispatcher.onClickRecorded(event(false, "google.com", "google"));
+
+    verify(deliveryClient, never()).deliver(eq(quoted), any());
+    verify(deliveryClient).deliver(eq(plain), any());
   }
 
   @Test
