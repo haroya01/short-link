@@ -1,5 +1,10 @@
 package com.example.short_link.note.application.write;
 
+import static com.example.short_link.note.application.write.RemoteNoteColumns.MAX_TITLE;
+import static com.example.short_link.note.application.write.RemoteNoteColumns.cut;
+import static com.example.short_link.note.application.write.RemoteNoteColumns.mediaRows;
+import static com.example.short_link.note.application.write.RemoteNoteColumns.sameMedia;
+
 import com.example.short_link.common.event.Actor;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
@@ -8,11 +13,11 @@ import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.Excerpt;
 import com.example.short_link.common.note.Hashtags;
-import com.example.short_link.common.note.NoteVisibility;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.common.note.RemoteNotes.Poll;
 import com.example.short_link.common.note.RemoteNotes.Shape;
 import com.example.short_link.note.application.media.RemoteMediaCopies;
+import com.example.short_link.note.application.write.RemoteNoteColumns.Marks;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -28,7 +33,6 @@ import com.example.short_link.note.domain.repository.RemoteNoteRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -39,14 +43,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-// Rows keep the remote address until a copy moves it to remote_url; compare by originalUrl().
 @Component
 @RequiredArgsConstructor
 class RemoteNoteRecorder implements RemoteNotes {
-
-  private static final int MAX_WARNING = NoteEntity.MAX_WARNING_LENGTH;
-  private static final int MAX_TITLE = 255;
-  private static final int MAX_CONTENT_TYPE = 32;
 
   private final NoteRepository notes;
   private final RemoteNoteRepository store;
@@ -100,50 +99,8 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Override
   @Transactional
   public Optional<Long> receive(Received received) {
-    Long parentId = received.inReplyToLocalId();
-    if (parentId == null && received.inReplyToUri() != null) {
-      parentId = store.idByUri(received.inReplyToUri()).orElse(null);
-    }
-    NoteEntity parent = parentId == null ? null : notes.findById(parentId).orElse(null);
-    if (parent != null && !mayAnswer(received.remoteActorId(), parent)) {
-      parent = null;
-    }
-    Long answered = parent == null ? null : parent.getId();
-    NoteVisibility visibility = received.visibility();
-    String warning = warning(received.contentWarning());
-    Shape shape = received.shape();
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-    Poll poll = shape.poll();
-    Optional<Long> stored =
-        store.insertRemote(
-            new RemoteNoteRow(
-                received.remoteActorId(),
-                received.uri(),
-                received.url(),
-                received.body(),
-                createdAt(received.publishedAt()),
-                warning,
-                received.sensitive() || warning != null,
-                visibility,
-                answered,
-                parent == null ? null : parent.conversation(),
-                parent != null || received.inReplyToUri() != null,
-                parent == null ? NoteReplyPolicy.EVERYONE : parent.getReplyPolicy(),
-                received.language(),
-                shape.kind().name(),
-                cut(shape.title(), MAX_TITLE),
-                cut(shape.community(), MAX_TITLE),
-                poll == null
-                    ? null
-                    : new RemoteNoteRow.Poll(
-                        poll.options(),
-                        pollEnds(poll, now),
-                        poll.multiple(),
-                        now,
-                        poll.votes(),
-                        poll.voters()),
-                received.quotedNoteId(),
-                received.emojis()));
+    NoteEntity parent = answered(received);
+    Optional<Long> stored = store.insertRemote(row(received, parent));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
@@ -151,13 +108,69 @@ class RemoteNoteRecorder implements RemoteNotes {
     copies.request(media.saveAll(mediaRows(noteId, received.media())));
     notes.tag(noteId, Hashtags.of(received.body()));
     Set<Long> addressed = new LinkedHashSet<>(received.addressedUserIds());
-    if (visibility.restricted() && !addressed.isEmpty()) {
+    if (received.visibility().restricted() && !addressed.isEmpty()) {
       notes.addRecipients(noteId, List.copyOf(addressed));
     }
-    if (!received.notifies()) {
-      return stored;
+    if (received.notifies()) {
+      tell(received, noteId, parent, addressed);
     }
-    NoteLiveChanges.of(noteId, answered, null, visibility.direct()).ifPresent(events::publishEvent);
+    return stored;
+  }
+
+  private NoteEntity answered(Received received) {
+    Long parentId = received.inReplyToLocalId();
+    if (parentId == null && received.inReplyToUri() != null) {
+      parentId = store.idByUri(received.inReplyToUri()).orElse(null);
+    }
+    NoteEntity parent = parentId == null ? null : notes.findById(parentId).orElse(null);
+    return parent != null && mayAnswer(received.remoteActorId(), parent) ? parent : null;
+  }
+
+  private RemoteNoteRow row(Received received, NoteEntity parent) {
+    Marks marks = Marks.of(received.contentWarning(), received.sensitive());
+    return new RemoteNoteRow(
+        received.remoteActorId(),
+        received.uri(),
+        received.url(),
+        createdAt(received.publishedAt()),
+        new RemoteNoteRow.Content(
+            received.body(),
+            marks.warning(),
+            marks.sensitive(),
+            received.language(),
+            received.emojis()),
+        received.visibility(),
+        parent == null
+            ? new RemoteNoteRow.Conversation(
+                null, null, received.inReplyToUri() != null, NoteReplyPolicy.EVERYONE)
+            : new RemoteNoteRow.Conversation(
+                parent.getId(), parent.conversation(), true, parent.getReplyPolicy()),
+        form(received.shape()),
+        received.quotedNoteId());
+  }
+
+  private RemoteNoteRow.Form form(Shape shape) {
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    Poll poll = shape.poll();
+    return new RemoteNoteRow.Form(
+        shape.kind().name(),
+        cut(shape.title(), MAX_TITLE),
+        cut(shape.community(), MAX_TITLE),
+        poll == null
+            ? null
+            : new RemoteNoteRow.Poll(
+                poll.options(),
+                pollEnds(poll, now),
+                poll.multiple(),
+                now,
+                poll.votes(),
+                poll.voters()));
+  }
+
+  private void tell(Received received, Long noteId, NoteEntity parent, Set<Long> addressed) {
+    NoteLiveChanges.of(
+            noteId, parent == null ? null : parent.getId(), null, received.visibility().direct())
+        .ifPresent(events::publishEvent);
     String excerpt = Excerpt.of(received.body());
     if (parent != null && parent.getUserId() != null) {
       events.publishEvent(
@@ -184,7 +197,6 @@ class RemoteNoteRecorder implements RemoteNotes {
               null,
               parent == null ? noteId : parent.conversation()));
     }
-    return stored;
   }
 
   private boolean mayAnswer(Long remoteActorId, NoteEntity parent) {
@@ -217,39 +229,20 @@ class RemoteNoteRecorder implements RemoteNotes {
     NoteEntity note = found.get();
     Instant editedAt =
         revision.editedAt() == null ? null : revision.editedAt().truncatedTo(ChronoUnit.MICROS);
-    if (editedAt != null && note.getEditedAt() != null && note.getEditedAt().isAfter(editedAt)) {
+    if (outdated(note, editedAt)) {
       return true;
     }
-    String warning = warning(revision.contentWarning());
-    boolean sensitive = revision.sensitive() || warning != null;
+    Marks marks = Marks.of(revision.contentWarning(), revision.sensitive());
     List<NoteMediaEntity> attached = mediaRows(noteId, revision.media());
     boolean mediaChanged = !sameMedia(media.findByNoteIds(List.of(noteId)), attached);
     note.writeIn(revision.language());
-    Shape shape = revision.shape();
-    String title = cut(shape.title(), MAX_TITLE);
-    boolean reshaped =
-        !Objects.equals(title, note.getRemoteTitle())
-            || !Objects.equals(note.pollOptions(), pollOptions(shape.poll()));
-    note.describeElsewhere(shape.kind().name(), title, cut(shape.community(), MAX_TITLE));
-    tally(note, shape.poll());
+    boolean reshaped = reshape(note, revision.shape());
     note.useRemoteEmojis(revision.emojis());
-    String body =
-        revision.quoteLink() != null && note.getQuotedNoteId() == null
-            ? revision.body() + "\n\n" + revision.quoteLink()
-            : revision.body();
-    if (body.equals(note.getBody())
-        && Objects.equals(warning, note.getContentWarning())
-        && sensitive == note.isSensitive()
-        && !mediaChanged
-        && !reshaped) {
+    String body = revisedBody(note, revision);
+    if (!mediaChanged && !reshaped && sameText(note, body, marks)) {
       return true;
     }
-    boolean retagged = !Hashtags.sameTags(note.getBody(), body);
-    note.edit(body, editedAt == null ? clock.instant().truncatedTo(ChronoUnit.MICROS) : editedAt);
-    note.markContent(warning, sensitive);
-    if (retagged) {
-      notes.retag(noteId, Hashtags.of(body));
-    }
+    rewrite(noteId, note, body, marks, editedAt);
     if (mediaChanged) {
       media.deleteAllByNoteId(noteId);
       copies.request(media.saveAll(attached));
@@ -257,6 +250,41 @@ class RemoteNoteRecorder implements RemoteNotes {
     events.publishEvent(
         new NoteRevisedEvent(noteId, Actor.remote(remoteActorId), Excerpt.of(body)));
     return true;
+  }
+
+  private static boolean outdated(NoteEntity note, Instant editedAt) {
+    return editedAt != null && note.getEditedAt() != null && note.getEditedAt().isAfter(editedAt);
+  }
+
+  private void rewrite(Long noteId, NoteEntity note, String body, Marks marks, Instant editedAt) {
+    boolean retagged = !Hashtags.sameTags(note.getBody(), body);
+    note.edit(body, editedAt == null ? clock.instant().truncatedTo(ChronoUnit.MICROS) : editedAt);
+    note.markContent(marks.warning(), marks.sensitive());
+    if (retagged) {
+      notes.retag(noteId, Hashtags.of(body));
+    }
+  }
+
+  private boolean reshape(NoteEntity note, Shape shape) {
+    String title = cut(shape.title(), MAX_TITLE);
+    boolean reshaped =
+        !Objects.equals(title, note.getRemoteTitle())
+            || !Objects.equals(note.pollOptions(), pollOptions(shape.poll()));
+    note.describeElsewhere(shape.kind().name(), title, cut(shape.community(), MAX_TITLE));
+    tally(note, shape.poll());
+    return reshaped;
+  }
+
+  private static String revisedBody(NoteEntity note, Revision revision) {
+    return revision.quoteLink() != null && note.getQuotedNoteId() == null
+        ? revision.body() + "\n\n" + revision.quoteLink()
+        : revision.body();
+  }
+
+  private static boolean sameText(NoteEntity note, String body, Marks marks) {
+    return body.equals(note.getBody())
+        && Objects.equals(marks.warning(), note.getContentWarning())
+        && marks.sensitive() == note.isSensitive();
   }
 
   @Override
@@ -300,76 +328,11 @@ class RemoteNoteRecorder implements RemoteNotes {
     return ends;
   }
 
-  private static List<NoteMediaEntity> mediaRows(Long noteId, List<Media> attached) {
-    List<NoteMediaEntity> rows = new ArrayList<>();
-    if (attached == null) {
-      return rows;
-    }
-    for (Media image : attached) {
-      if (rows.size() == NoteMediaEntity.MAX_PER_NOTE) {
-        break;
-      }
-      rows.add(
-          new NoteMediaEntity(
-              noteId,
-              rows.size(),
-              "",
-              image.url(),
-              contentType(image.contentType()),
-              cut(image.altText(), NoteMediaEntity.MAX_ALT_TEXT_LENGTH),
-              image.width(),
-              image.height()));
-    }
-    return rows;
-  }
-
-  private static boolean sameMedia(List<NoteMediaEntity> kept, List<NoteMediaEntity> sent) {
-    if (kept.size() != sent.size()) {
-      return false;
-    }
-    for (int i = 0; i < kept.size(); i++) {
-      NoteMediaEntity a = kept.get(i);
-      NoteMediaEntity b = sent.get(i);
-      if (!a.originalUrl().equals(b.getUrl())
-          || !a.getContentType().equals(b.getContentType())
-          || !Objects.equals(a.getAltText(), b.getAltText())
-          || !Objects.equals(a.getWidth(), b.getWidth())
-          || !Objects.equals(a.getHeight(), b.getHeight())) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   // A clock running ahead elsewhere must not pin a note to the top of the feed.
   private Instant createdAt(Instant published) {
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
     return published == null || published.isAfter(now)
         ? now
         : published.truncatedTo(ChronoUnit.MICROS);
-  }
-
-  private static String contentType(String type) {
-    if (type == null || type.isBlank()) {
-      return "image/jpeg";
-    }
-    String stripped = type.strip();
-    return stripped.length() <= MAX_CONTENT_TYPE
-        ? stripped
-        : stripped.substring(0, MAX_CONTENT_TYPE);
-  }
-
-  private static String warning(String warning) {
-    return cut(warning, MAX_WARNING);
-  }
-
-  private static String cut(String value, int max) {
-    if (value == null || value.isBlank()) {
-      return null;
-    }
-    String stripped = value.strip();
-    return stripped.codePointCount(0, stripped.length()) <= max
-        ? stripped
-        : stripped.substring(0, stripped.offsetByCodePoints(0, max - 1)) + "…";
   }
 }

@@ -363,7 +363,8 @@ src/main/java/com/example/short_link/note/application/write/NotePublication.java
 src/main/java/com/example/short_link/note/application/write/NoteScheduleService.java=1
 src/main/java/com/example/short_link/note/application/write/NoteThreadControls.java=3
 src/main/java/com/example/short_link/note/application/write/NoteWriteGuard.java=1
-src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java=5
+src/main/java/com/example/short_link/note/application/write/RemoteNoteColumns.java=1
+src/main/java/com/example/short_link/note/application/write/RemoteNoteRecorder.java=4
 src/main/java/com/example/short_link/note/application/write/RoomNoteErasures.java=3
 src/main/java/com/example/short_link/note/domain/NoteAuthor.java=2
 src/main/java/com/example/short_link/note/domain/NoteEntity.java=4

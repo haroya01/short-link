@@ -18,15 +18,11 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
-import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteVersion;
-import com.example.short_link.note.domain.QuotedPost;
-import com.example.short_link.note.domain.ReplyGate;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
-import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -37,11 +33,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -52,11 +46,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RequiredArgsConstructor
 public class NoteComposer {
 
-  private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
-
   private final NoteRepository notes;
   private final NoteMediaRepository media;
-  private final QuotedPostReader quotedPosts;
   private final NotePeopleReader people;
   private final NoteImages images;
   private final NoteViews views;
@@ -64,156 +55,13 @@ public class NoteComposer {
   private final NoteRoomReader rooms;
   private final UserModerationGuard moderation;
   private final NoteWriteGuard guard;
+  private final NoteDraftCheck drafts;
   private final ApplicationEventPublisher events;
   private final TransactionTemplate transaction;
   private final Clock clock;
 
-  private record Checked(
-      String body,
-      List<NoteImages.StoredImage> stored,
-      List<String> pollOptions,
-      NoteVisibility requested,
-      NoteEntity parent,
-      NoteEntity quotedNote,
-      NoteAuthor quotedAuthor,
-      QuotedPost quoted,
-      List<String> handles,
-      Map<Long, NoteAuthor> authors,
-      String language,
-      NoteReplyPolicy replyPolicy,
-      Long roomId) {}
-
-  void validate(Long userId, NoteDraft draft, List<NoteImages.StoredImage> stored) {
-    check(userId, draft, stored);
-  }
-
-  private Checked check(Long userId, NoteDraft draft, List<NoteImages.StoredImage> stored) {
-    moderation.requireCanWrite(userId);
-    String body = normalize(draft.body());
-    List<NoteDraft.Image> attached = draft.images() == null ? List.of() : draft.images();
-    requireContent(body, !attached.isEmpty());
-    List<String> pollOptions = draft.poll() == null ? null : pollOptions(draft.poll());
-    if (pollOptions != null && !attached.isEmpty()) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_WITH_MEDIA);
-    }
-    NoteVisibility requested =
-        draft.visibility() == null
-            ? null
-            : NoteVisibility.parse(draft.visibility())
-                .orElseThrow(
-                    () ->
-                        new NoteException(
-                            NoteErrorCode.NOTE_VISIBILITY_INVALID, draft.visibility()));
-    NoteEntity parent = null;
-    if (draft.inReplyToId() != null) {
-      parent = guard.find(draft.inReplyToId());
-      guard.requireReadable(userId, parent);
-      guard.requireNoBlockBetween(userId, parent, NoteErrorCode.NOTE_REPLY_BLOCKED);
-    }
-    if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
-      throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
-    }
-    NoteEntity quotedNote = null;
-    if (draft.quotedNoteId() != null) {
-      quotedNote =
-          notes
-              .findById(draft.quotedNoteId())
-              .orElseThrow(
-                  () ->
-                      new NoteException(
-                          NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
-      guard.requireReadable(userId, quotedNote);
-      if (!quotedNote.getVisibility().shareable()) {
-        throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
-      }
-      guard.requireNoBlockBetween(userId, quotedNote, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
-    }
-    QuotedPost quoted = null;
-    if (draft.quotedPostId() != null) {
-      quoted = quotedPosts.publishedByIds(Set.of(draft.quotedPostId())).get(draft.quotedPostId());
-      if (quoted == null) {
-        throw new NoteException(NoteErrorCode.NOTE_QUOTE_NOT_FOUND, draft.quotedPostId());
-      }
-    }
-    Set<Long> authorIds = new HashSet<>(Set.of(userId));
-    if (quotedNote != null && !quotedNote.isRemote()) {
-      authorIds.add(quotedNote.getUserId());
-    }
-    List<String> handles = Mentions.of(body);
-    Map<Long, NoteAuthor> authors =
-        handles.isEmpty()
-            ? people.activeAuthors(authorIds)
-            : people.activeAuthors(authorIds, handles);
-    NoteAuthor quotedAuthor = null;
-    if (quotedNote != null) {
-      quotedAuthor =
-          quotedNote.isRemote()
-              ? people
-                  .remoteAuthors(Set.of(quotedNote.getRemoteActorId()), userId)
-                  .get(quotedNote.getRemoteActorId())
-              : authors.get(quotedNote.getUserId());
-      if (quotedAuthor == null) {
-        throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
-      }
-    }
-    if (parent != null) {
-      requireMayAnswer(userId, parent, authors.get(userId));
-    }
-    Long roomId = room(userId, draft.roomId(), requested, parent);
-
-    return new Checked(
-        body,
-        stored,
-        pollOptions,
-        requested,
-        parent,
-        quotedNote,
-        quotedAuthor,
-        quoted,
-        handles,
-        authors,
-        language(draft.language()),
-        replyPolicy(draft.replyPolicy()),
-        roomId);
-  }
-
-  private Long room(Long userId, Long asked, NoteVisibility requested, NoteEntity parent) {
-    Long roomId = parent != null ? parent.getRoomId() : asked;
-    if (asked != null && !asked.equals(roomId)) {
-      throw new NoteException(NoteErrorCode.NOTE_ROOM_MISMATCH);
-    }
-    if (requested != null && requested.inRoom() != (roomId != null)) {
-      throw new NoteException(NoteErrorCode.NOTE_VISIBILITY_INVALID, requested.apiName());
-    }
-    if (roomId != null && !rooms.isMember(roomId, userId)) {
-      throw new NoteException(NoteErrorCode.NOTE_ROOM_NOT_FOUND, roomId);
-    }
-    return roomId;
-  }
-
-  private static NoteReplyPolicy replyPolicy(String raw) {
-    return raw == null
-        ? null
-        : NoteReplyPolicy.parse(raw)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_INVALID, raw));
-  }
-
-  private void requireMayAnswer(Long userId, NoteEntity parent, NoteAuthor replier) {
-    if (!parent.getReplyPolicy().limited()) {
-      return;
-    }
-    NoteEntity root =
-        parent.conversation().equals(parent.getId())
-            ? parent
-            : notes.findById(parent.conversation()).orElse(null);
-    boolean admitted =
-        ReplyGate.admits(
-            root,
-            new ReplyGate.Member(userId, replier == null ? null : replier.username()),
-            () -> !people.followersOf(userId, Set.of(root.getUserId())).isEmpty());
-    if (!admitted) {
-      throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
-    }
+  void validate(Long userId, NoteDraft draft) {
+    drafts.check(userId, draft);
   }
 
   // All notes of a thread land or none does.
@@ -249,40 +97,73 @@ public class NoteComposer {
     return transaction.execute(status -> write(userId, draft, stored));
   }
 
-  NoteView write(Long userId, NoteDraft draft, List<NoteImages.StoredImage> verified) {
-    Checked checked = check(userId, draft, verified);
-    String body = checked.body();
-    List<NoteImages.StoredImage> stored = checked.stored();
-    List<String> pollOptions = checked.pollOptions();
-    NoteVisibility requested = checked.requested();
+  NoteView write(Long userId, NoteDraft draft, List<NoteImages.StoredImage> stored) {
+    NoteDraftCheck.Checked checked = drafts.check(userId, draft);
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    NoteEntity note = notes.save(drafted(userId, draft, checked, now));
+    List<NoteMediaEntity> rows = mediaRows(note, stored);
+    media.saveAll(rows);
+    notes.tag(note.getId(), Hashtags.of(checked.text().body()));
+    List<NoteAuthor> mentioned = members(checked.authors(), checked.handles());
+    if (note.getVisibility().namesReaders()) {
+      notes.addRecipients(note.getId(), namedRecipients(mentioned, checked.parent(), userId));
+    }
+    announce(note, userId, checked, mentioned, rows);
+    NoteDraftCheck.Quote quote = checked.quote();
+    return NoteViews.assemble(
+        note,
+        NoteBatch.justWritten(
+            note,
+            checked.authors(),
+            quote.note(),
+            quote.author(),
+            quote.post(),
+            images(note, rows, quote.note()),
+            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
+            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
+        userId);
+  }
+
+  private static NoteEntity drafted(
+      Long userId, NoteDraft draft, NoteDraftCheck.Checked checked, Instant now) {
     NoteEntity parent = checked.parent();
-    Long parentId = parent == null ? null : parent.getId();
-    NoteEntity quotedNote = checked.quotedNote();
-    QuotedPost quoted = checked.quoted();
-    List<String> handles = checked.handles();
-    Map<Long, NoteAuthor> authors = checked.authors();
+    NoteDraftCheck.Audience audience = checked.audience();
     NoteEntity fresh =
-        new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
+        new NoteEntity(
+            userId,
+            checked.text().body(),
+            parent == null ? null : parent.getId(),
+            draft.quotedPostId(),
+            draft.quotedNoteId());
     if (parent != null) {
       fresh.answer(parent);
-    } else if (checked.replyPolicy() != null) {
-      fresh.limitReplies(checked.replyPolicy());
+    } else if (audience.replyPolicy() != null) {
+      fresh.limitReplies(audience.replyPolicy());
     }
     fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
     fresh.writeIn(checked.language());
-    fresh.showTo(
-        requested != null
-            ? requested
-            : parent != null ? parent.getVisibility() : NoteVisibility.DEFAULT);
-    if (checked.roomId() != null) {
-      fresh.postIn(checked.roomId());
+    fresh.showTo(visibility(audience.requested(), parent));
+    if (audience.roomId() != null) {
+      fresh.postIn(audience.roomId());
     }
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-    if (pollOptions != null) {
+    if (checked.text().pollOptions() != null) {
       fresh.attachPoll(
-          pollOptions, now.plusSeconds(draft.poll().expiresIn()), draft.poll().multiple());
+          checked.text().pollOptions(),
+          now.plusSeconds(draft.poll().expiresIn()),
+          draft.poll().multiple());
     }
-    NoteEntity note = notes.save(fresh);
+    return fresh;
+  }
+
+  private static NoteVisibility visibility(NoteVisibility requested, NoteEntity parent) {
+    if (requested != null) {
+      return requested;
+    }
+    return parent != null ? parent.getVisibility() : NoteVisibility.DEFAULT;
+  }
+
+  private static List<NoteMediaEntity> mediaRows(
+      NoteEntity note, List<NoteImages.StoredImage> stored) {
     List<NoteMediaEntity> rows = new ArrayList<>(stored.size());
     for (int i = 0; i < stored.size(); i++) {
       NoteImages.StoredImage image = stored.get(i);
@@ -297,16 +178,26 @@ public class NoteComposer {
               image.width(),
               image.height()));
     }
-    media.saveAll(rows);
-    notes.tag(note.getId(), Hashtags.of(body));
-    List<NoteAuthor> mentioned = members(authors, handles);
-    if (note.getVisibility().namesReaders()) {
-      Set<Long> recipients = new LinkedHashSet<>(recipients(mentioned, userId));
-      if (parent != null && parent.getUserId() != null && !parent.getUserId().equals(userId)) {
-        recipients.add(parent.getUserId());
-      }
-      notes.addRecipients(note.getId(), recipients);
+    return rows;
+  }
+
+  private static Set<Long> namedRecipients(
+      List<NoteAuthor> mentioned, NoteEntity parent, Long userId) {
+    Set<Long> recipients = new LinkedHashSet<>(recipients(mentioned, userId));
+    if (parent != null && parent.getUserId() != null && !parent.getUserId().equals(userId)) {
+      recipients.add(parent.getUserId());
     }
+    return recipients;
+  }
+
+  private void announce(
+      NoteEntity note,
+      Long userId,
+      NoteDraftCheck.Checked checked,
+      List<NoteAuthor> mentioned,
+      List<NoteMediaEntity> rows) {
+    NoteEntity parent = checked.parent();
+    NoteEntity quotedNote = checked.quote().note();
     Set<Long> readers = unnamedReaders(note, mentioned, parent);
     boolean quoteSeen =
         quotedNote != null
@@ -318,24 +209,12 @@ public class NoteComposer {
                 userId,
                 parent,
                 quotedNote,
-                quoted,
+                checked.quote().post(),
                 mentioned,
                 readers,
                 quoteSeen,
                 rows.stream().map(NoteMediaEntity::getStorageKey).toList()))
         .forEach(events::publishEvent);
-    return NoteViews.assemble(
-        note,
-        NoteBatch.justWritten(
-            note,
-            authors,
-            quotedNote,
-            checked.quotedAuthor(),
-            quoted,
-            images(note, rows, quotedNote),
-            note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
-            note.getRoomId() == null ? Map.of() : rooms.names(Set.of(note.getRoomId()))),
-        userId);
   }
 
   private Map<Long, List<NoteView.Media>> images(
@@ -350,42 +229,6 @@ public class NoteComposer {
               .toList());
     }
     return images;
-  }
-
-  static String language(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return null;
-    }
-    String code = raw.strip().toLowerCase(Locale.ROOT);
-    if (!LANGUAGE.matcher(code).matches()) {
-      throw new NoteException(NoteErrorCode.NOTE_LANGUAGE_INVALID, raw);
-    }
-    return code;
-  }
-
-  private static List<String> pollOptions(NoteDraft.Poll poll) {
-    List<String> options =
-        (poll.options() == null ? List.<String>of() : poll.options())
-            .stream()
-                .map(option -> option == null ? "" : option.strip().replaceAll("\\s+", " "))
-                .toList();
-    boolean valid =
-        options.size() >= NoteEntity.MIN_POLL_OPTIONS
-            && options.size() <= NoteEntity.MAX_POLL_OPTIONS
-            && options.stream()
-                .allMatch(
-                    option ->
-                        !option.isEmpty()
-                            && option.codePointCount(0, option.length())
-                                <= NoteEntity.MAX_POLL_OPTION_LENGTH)
-            && new HashSet<>(options).size() == options.size()
-            && poll.expiresIn() != null
-            && poll.expiresIn() >= NoteEntity.MIN_POLL_SECONDS
-            && poll.expiresIn() <= NoteEntity.MAX_POLL_SECONDS;
-    if (!valid) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_INVALID);
-    }
-    return options;
   }
 
   // null when everyone named or answered may read the note.
@@ -416,62 +259,66 @@ public class NoteComposer {
       Long userId, Long noteId, String rawBody, String rawWarning, Boolean sensitive) {
     moderation.requireCanWrite(userId);
     NoteEntity note = guard.owned(userId, noteId);
-    String body = normalize(rawBody);
     boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();
-    requireContent(body, hasMedia);
+    String body = NoteDraftCheck.body(rawBody, hasMedia);
     String nextWarning = rawWarning == null ? note.getContentWarning() : warning(rawWarning);
     boolean nextSensitive =
         (sensitive == null ? note.isSensitive() : sensitive) || nextWarning != null;
-    if (body.equals(note.getBody())
-        && Objects.equals(nextWarning, note.getContentWarning())
-        && nextSensitive == note.isSensitive()) {
+    if (unchanged(note, body, nextWarning, nextSensitive)) {
       return views.of(List.of(note), userId).getFirst();
     }
-    boolean hasQuote = note.getQuotedPostId() != null || note.getQuotedNoteId() != null;
-    String before = NoteLinks.previewUrl(note.getBody(), hasMedia || note.hasPoll(), hasQuote);
+    String before = previewUrl(note, note.getBody(), hasMedia);
     if (!Hashtags.sameTags(note.getBody(), body)) {
       notes.retag(noteId, Hashtags.of(body));
     }
     List<String> added = new ArrayList<>(Mentions.of(body));
     added.removeAll(Mentions.of(note.getBody()));
-    notes.recordVersion(
-        noteId,
-        new NoteVersion(
-            note.getBody(),
-            note.getContentWarning(),
-            note.isSensitive(),
-            note.getEditedAt() == null ? note.getCreatedAt() : note.getEditedAt()));
+    notes.recordVersion(noteId, NoteVersion.of(note));
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
     note.markContent(nextWarning, nextSensitive);
     if (!added.isEmpty()) {
-      List<NoteAuthor> newlyMentioned = members(people.activeAuthors(List.of(), added), added);
-      if (note.getVisibility().namesReaders()) {
-        notes.addRecipients(noteId, recipients(newlyMentioned, userId));
-      }
-      NotePublication.mentions(
-              note,
-              userId,
-              NotePublication.readersOf(newlyMentioned, unnamedReaders(note, newlyMentioned, null)),
-              Set.of(userId))
-          .forEach(events::publishEvent);
+      tellNewlyMentioned(noteId, note, userId, added);
     }
-    events.publishEvent(
-        new NoteEditedEvent(
-            noteId,
-            userId,
-            note.getInReplyToId() != null
-                || note.getQuotedNoteId() != null
-                || !Mentions.remote(body).isEmpty()));
+    events.publishEvent(new NoteEditedEvent(noteId, userId, reachesElsewhere(note, body)));
     events.publishEvent(new NoteRevisedEvent(noteId, Actor.member(userId), note.excerpt()));
-    String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
+    String after = previewUrl(note, body, hasMedia);
     if (!Objects.equals(before, after)) {
       events.publishEvent(new NoteLinkPreviewRequested(noteId, after));
     }
     return views.of(List.of(note), userId).getFirst();
   }
 
-  private static String normalize(String body) {
-    return body == null ? "" : body.strip();
+  private static String previewUrl(NoteEntity note, String body, boolean hasMedia) {
+    return NoteLinks.previewUrl(
+        body,
+        hasMedia || note.hasPoll(),
+        note.getQuotedPostId() != null || note.getQuotedNoteId() != null);
+  }
+
+  private static boolean unchanged(
+      NoteEntity note, String body, String warning, boolean sensitive) {
+    return body.equals(note.getBody())
+        && Objects.equals(warning, note.getContentWarning())
+        && sensitive == note.isSensitive();
+  }
+
+  private void tellNewlyMentioned(Long noteId, NoteEntity note, Long userId, List<String> added) {
+    List<NoteAuthor> newlyMentioned = members(people.activeAuthors(List.of(), added), added);
+    if (note.getVisibility().namesReaders()) {
+      notes.addRecipients(noteId, recipients(newlyMentioned, userId));
+    }
+    NotePublication.mentions(
+            note,
+            userId,
+            NotePublication.readersOf(newlyMentioned, unnamedReaders(note, newlyMentioned, null)),
+            Set.of(userId))
+        .forEach(events::publishEvent);
+  }
+
+  private static boolean reachesElsewhere(NoteEntity note, String body) {
+    return note.getInReplyToId() != null
+        || note.getQuotedNoteId() != null
+        || !Mentions.remote(body).isEmpty();
   }
 
   private static String warning(String raw) {
@@ -483,14 +330,5 @@ public class NoteComposer {
       throw new NoteException(NoteErrorCode.NOTE_WARNING_TOO_LONG, NoteEntity.MAX_WARNING_LENGTH);
     }
     return warning;
-  }
-
-  private static void requireContent(String body, boolean hasImages) {
-    if (body.isEmpty() && !hasImages) {
-      throw new NoteException(NoteErrorCode.NOTE_BODY_REQUIRED);
-    }
-    if (body.codePointCount(0, body.length()) > NoteEntity.MAX_BODY_LENGTH) {
-      throw new NoteException(NoteErrorCode.NOTE_BODY_TOO_LONG, NoteEntity.MAX_BODY_LENGTH);
-    }
   }
 }

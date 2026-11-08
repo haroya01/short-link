@@ -84,24 +84,21 @@ class NoteImagesOutsideTransactionIntegrationTest {
   }
 
   private NoteDraft withImage(String body, String name) {
-    return new NoteDraft(
-        body,
-        List.of(new NoteDraft.Image("note-images/" + writer + "/" + name + ".png", null)),
-        null,
-        null);
+    return NoteDrafts.draft(body)
+        .images(List.of(new NoteDraft.Image("note-images/" + writer + "/" + name + ".png", null)))
+        .build();
   }
 
   @Test
   void aNoteAsksStorageAboutItsImagesBeforeItsTransactionOpens() {
     composer.create(
         writer,
-        new NoteDraft(
-            "두 장",
-            List.of(
-                new NoteDraft.Image("note-images/" + writer + "/a.png", null),
-                new NoteDraft.Image("note-images/" + writer + "/b.png", null)),
-            null,
-            null));
+        NoteDrafts.draft("두 장")
+            .images(
+                List.of(
+                    new NoteDraft.Image("note-images/" + writer + "/a.png", null),
+                    new NoteDraft.Image("note-images/" + writer + "/b.png", null)))
+            .build());
 
     assertThat(calls)
         .containsExactly("size outside", "cache outside", "size outside", "cache outside");

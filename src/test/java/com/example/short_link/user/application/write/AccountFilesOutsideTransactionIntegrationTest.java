@@ -12,6 +12,7 @@ import com.example.short_link.common.storage.UserFolder;
 import com.example.short_link.link.application.LinkAccountData;
 import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -56,7 +57,8 @@ class AccountFilesOutsideTransactionIntegrationTest {
     when(storage.isConfigured()).thenReturn(true);
     when(storage.objectSize(anyString())).thenReturn(Optional.of(4L));
     composer.create(
-        userId, new NoteDraft("사진 한 장", List.of(new NoteDraft.Image(image, null)), null, null));
+        userId,
+        NoteDrafts.draft("사진 한 장").images(List.of(new NoteDraft.Image(image, null))).build());
     doAnswer(
             inv -> {
               calls.add("delete " + inv.getArgument(0) + " " + where());
