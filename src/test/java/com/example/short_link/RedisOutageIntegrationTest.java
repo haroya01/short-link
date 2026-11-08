@@ -11,6 +11,8 @@ import com.example.short_link.link.application.read.CachedLinkLoader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.moderation.application.LinkModerationService;
+import com.example.short_link.link.moderation.domain.LinkDisableReason;
 import com.example.short_link.support.FaultyRedis;
 import java.time.Duration;
 import java.time.Instant;
@@ -44,6 +46,7 @@ class RedisOutageIntegrationTest {
   @Autowired private LinkRepository linkRepository;
   @Autowired private StringRedisTemplate redis;
   @Autowired private JdbcTemplate jdbc;
+  @Autowired private LinkModerationService moderation;
 
   private String code;
 
@@ -51,7 +54,12 @@ class RedisOutageIntegrationTest {
   void healAndForget() {
     REDIS.heal();
     assertTimeoutPreemptively(Duration.ofSeconds(40), this::waitUntilRedisAnswers);
-    if (code != null) jdbc.update("DELETE FROM link WHERE short_code = ?", code);
+    if (code != null) {
+      jdbc.update(
+          "DELETE m FROM link_moderation m JOIN link l ON l.id = m.link_id WHERE l.short_code = ?",
+          code);
+      jdbc.update("DELETE FROM link WHERE short_code = ?", code);
+    }
   }
 
   @Test
@@ -89,6 +97,28 @@ class RedisOutageIntegrationTest {
             ONE_COMMAND.multipliedBy(2), () -> links.loadByShortCode(new ShortCode(code)));
 
     assertThat(link.originalUrl()).isEqualTo("https://example.com/landing");
+  }
+
+  @Test
+  void aLinkTakenDownWhileRedisIsAwayStaysTakenDownWithoutFailingTheCall() {
+    code = "ro" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+    linkRepository.save(
+        new LinkEntity("https://example.com/landing", code, null, Instant.now().plusSeconds(3600)));
+    REDIS.drop();
+
+    boolean disabled =
+        assertTimeoutPreemptively(
+            ONE_COMMAND.multipliedBy(2),
+            () -> moderation.disable(null, new ShortCode(code), LinkDisableReason.ADMIN));
+
+    assertThat(disabled).isTrue();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM link_moderation m JOIN link l ON l.id = m.link_id"
+                    + " WHERE l.short_code = ?",
+                Long.class,
+                code))
+        .isEqualTo(1L);
   }
 
   private void waitUntilRedisAnswers() throws InterruptedException {
