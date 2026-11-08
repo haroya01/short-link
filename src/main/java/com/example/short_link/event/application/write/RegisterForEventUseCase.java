@@ -34,6 +34,11 @@ public class RegisterForEventUseCase {
 
   public RegistrationResult execute(RegisterForEventCommand cmd) {
     Registered registered = transaction.execute(status -> register(cmd));
+    attributor.attribute(
+        registered.event().getId(),
+        registered.registration().getId(),
+        cmd.clientIp(),
+        cmd.userAgent());
     mailer.sendConfirmation(
         registered.event(), registered.registration(), registered.cancelToken());
     meterRegistry.counter("event.registration", "result", "ok").increment();
@@ -78,8 +83,6 @@ public class RegisterForEventUseCase {
       eventRepository.decrementRegistrationCount(event.getId());
       throw new EventException(EventErrorCode.ALREADY_REGISTERED);
     }
-
-    attributor.attribute(event.getId(), registration, cmd.clientIp(), cmd.userAgent());
 
     Integer spotsLeft =
         event.getCapacity() == null

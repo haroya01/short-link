@@ -3,8 +3,8 @@ package com.example.short_link.event.application;
 import com.example.short_link.event.application.RegistrationClickLookup.ClickSnapshot;
 import com.example.short_link.event.application.RegistrationClickLookup.LinkVisitor;
 import com.example.short_link.event.domain.EventLinkEntity;
-import com.example.short_link.event.domain.EventRegistrationEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
+import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +21,9 @@ public class RegistrationAttributor {
 
   private final EventLinkRepository eventLinkRepository;
   private final RegistrationClickLookup clickLookup;
+  private final EventRegistrationRepository registrationRepository;
 
-  public void attribute(
-      Long eventId, EventRegistrationEntity registration, String clientIp, String userAgent) {
+  public void attribute(Long eventId, Long registrationId, String clientIp, String userAgent) {
     try {
       List<EventLinkEntity> links = eventLinkRepository.findAllByEventId(eventId);
       if (links.isEmpty()) return;
@@ -38,7 +38,8 @@ public class RegistrationAttributor {
       Optional<ClickSnapshot> click = clickLookup.findLatestHumanClick(candidates);
       click.ifPresent(
           snapshot ->
-              registration.attribute(
+              registrationRepository.recordSource(
+                  registrationId,
                   snapshot.linkId(),
                   snapshot.sourceChannel(),
                   snapshot.clientApp(),

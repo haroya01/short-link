@@ -153,11 +153,15 @@ class EventQueryServiceTest {
         .thenReturn(List.of(new EventLinkEntity(10L, 7L, "단톡용")));
 
     EventRegistrationEntity byLink = registration(1L, "가", "a@x.com");
-    byLink.attribute(7L, "messenger", "kakaotalk", "kakao.example", null, "vh");
+    ReflectionTestUtils.setField(byLink, "linkId", 7L);
+    ReflectionTestUtils.setField(byLink, "sourceChannel", "messenger");
+    ReflectionTestUtils.setField(byLink, "clientApp", "kakaotalk");
+    ReflectionTestUtils.setField(byLink, "referrerHost", "kakao.example");
     EventRegistrationEntity unknownLink = registration(2L, "나", "b@x.com");
-    unknownLink.attribute(99L, null, "instagram", null, null, null);
+    ReflectionTestUtils.setField(unknownLink, "linkId", 99L);
+    ReflectionTestUtils.setField(unknownLink, "clientApp", "instagram");
     EventRegistrationEntity byReferrer = registration(3L, "다", "c@x.com");
-    byReferrer.attribute(null, null, null, "twitter.example", null, null);
+    ReflectionTestUtils.setField(byReferrer, "referrerHost", "twitter.example");
     EventRegistrationEntity direct = registration(4L, "라", "d@x.com");
     when(registrationRepository.findAllByEventIdOrderByCreatedAtAsc(10L))
         .thenReturn(List.of(byLink, unknownLink, byReferrer, direct));

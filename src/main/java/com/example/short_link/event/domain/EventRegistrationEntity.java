@@ -81,21 +81,6 @@ public class EventRegistrationEntity extends BaseCreatedEntity {
     return status == RegistrationStatus.CONFIRMED;
   }
 
-  public void attribute(
-      Long linkId,
-      String sourceChannel,
-      String clientApp,
-      String referrerHost,
-      String utmSource,
-      String visitorHash) {
-    this.linkId = linkId;
-    this.sourceChannel = sourceChannel;
-    this.clientApp = clientApp;
-    this.referrerHost = referrerHost;
-    this.utmSource = utmSource;
-    this.visitorHash = visitorHash;
-  }
-
   public boolean cancel(Instant at) {
     if (!isConfirmed()) return false;
     this.status = RegistrationStatus.CANCELED;
