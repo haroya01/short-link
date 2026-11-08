@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
 import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
@@ -30,7 +31,13 @@ class PasswordUnlockUseCaseTest {
   private final LinkRedirectFlow flow = mock(LinkRedirectFlow.class);
   private final TurnstileVerifier captcha = mock(TurnstileVerifier.class);
   private final PasswordUnlockUseCase useCase =
-      new PasswordUnlockUseCase(lookup, passwords, attempts, flow, captcha);
+      new PasswordUnlockUseCase(
+          lookup,
+          passwords,
+          attempts,
+          flow,
+          captcha,
+          mock(CustomDomainQueryService.class, invocation -> null));
   private final ShortCode code = new ShortCode("abc123");
   private final RedirectVisit visit =
       new RedirectVisit("referrer", "agent", "192.0.2.1", "ko", "yt", null, false, null, false);
@@ -40,7 +47,7 @@ class PasswordUnlockUseCaseTest {
     when(captcha.enabled()).thenReturn(true);
     when(captcha.verify("invalid", null)).thenReturn(false);
 
-    assertThat(useCase.execute(code, "password", "invalid", visit))
+    assertThat(useCase.execute(code, "password", "invalid", visit, null))
         .isEqualTo(
             new PasswordUnlockResult.Rejected(PasswordUnlockResult.RejectionReason.CAPTCHA_FAILED));
     verifyNoInteractions(lookup, passwords, attempts, flow);
@@ -50,7 +57,7 @@ class PasswordUnlockUseCaseTest {
   void lockedOutVisitDoesNotReadLinkOrCheckPassword() {
     when(attempts.tryAttempt(code.value(), visit.clientIp())).thenReturn(false);
 
-    assertThat(useCase.execute(code, "password", null, visit))
+    assertThat(useCase.execute(code, "password", null, visit, null))
         .isEqualTo(
             new PasswordUnlockResult.Rejected(PasswordUnlockResult.RejectionReason.LOCKED_OUT));
     verifyNoInteractions(lookup, passwords, flow);
@@ -63,7 +70,7 @@ class PasswordUnlockUseCaseTest {
     when(attempts.tryAttempt(code.value(), visit.clientIp())).thenReturn(true);
     when(passwords.checkPassword(entity, "wrong")).thenReturn(false);
 
-    assertThat(useCase.execute(code, "wrong", null, visit))
+    assertThat(useCase.execute(code, "wrong", null, visit, null))
         .isEqualTo(
             new PasswordUnlockResult.Rejected(PasswordUnlockResult.RejectionReason.WRONG_PASSWORD));
     var order = inOrder(attempts, lookup, passwords);
@@ -83,7 +90,7 @@ class PasswordUnlockUseCaseTest {
     when(flow.execute(any(), any(), any()))
         .thenThrow(new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, code));
 
-    assertThatThrownBy(() -> useCase.execute(code, "correct", null, visit))
+    assertThatThrownBy(() -> useCase.execute(code, "correct", null, visit, null))
         .isInstanceOf(LinkException.class);
     var order = inOrder(attempts, passwords, flow);
     order.verify(attempts).tryAttempt(code.value(), visit.clientIp());

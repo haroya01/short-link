@@ -62,7 +62,7 @@ class PasswordUnlockAttemptLimitTest {
       attempts.add(
           () -> {
             start.await();
-            return unlock.execute(code, "wrong-guess", null, visit("203.0.113.20"));
+            return unlock.execute(code, "wrong-guess", null, visit("203.0.113.20"), null);
           });
     }
     ExecutorService pool = Executors.newFixedThreadPool(guesses);
@@ -92,13 +92,19 @@ class PasswordUnlockAttemptLimitTest {
     for (int i = 1; i <= LIMIT; i++) {
       assertThat(
               unlock.execute(
-                  code, "wrong-guess", null, visit("2001:db8:1:2::" + Integer.toHexString(i))))
+                  code,
+                  "wrong-guess",
+                  null,
+                  visit("2001:db8:1:2::" + Integer.toHexString(i)),
+                  null))
           .isEqualTo(new Rejected(RejectionReason.WRONG_PASSWORD));
     }
 
-    assertThat(unlock.execute(code, "wrong-guess", null, visit("2001:db8:1:2:ffff:ffff:ffff:ffff")))
+    assertThat(
+            unlock.execute(
+                code, "wrong-guess", null, visit("2001:db8:1:2:ffff:ffff:ffff:ffff"), null))
         .isEqualTo(new Rejected(RejectionReason.LOCKED_OUT));
-    assertThat(unlock.execute(code, "wrong-guess", null, visit("2001:db8:1:3::1")))
+    assertThat(unlock.execute(code, "wrong-guess", null, visit("2001:db8:1:3::1"), null))
         .isEqualTo(new Rejected(RejectionReason.WRONG_PASSWORD));
   }
 

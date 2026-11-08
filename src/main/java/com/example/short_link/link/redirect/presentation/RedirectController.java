@@ -112,8 +112,13 @@ public class RedirectController {
     } catch (LinkException e) {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
         LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
+        if (expired != null
+            && (expired.getExpiredRedirectUrl() != null || expired.getExpiredMessage() != null)
+            && servesAnotherOwner(req, expired.getUserId())) {
+          throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
+        }
         if (expired != null && expired.getExpiredRedirectUrl() != null) {
-          return afterExpiry(expired, req, locale);
+          return afterExpiry(expired, locale);
         }
         if (expired != null && expired.getExpiredMessage() != null) {
           return html.expiredPageResponse(locale, expired.getExpiredMessage());
@@ -122,8 +127,7 @@ public class RedirectController {
       throw e;
     }
     // Match the inbound Host owner before exposing a link on a custom domain.
-    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(link.userId())) {
+    if (servesAnotherOwner(req, link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
     // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
@@ -198,11 +202,12 @@ public class RedirectController {
         locale);
   }
 
-  private ResponseEntity<?> afterExpiry(LinkEntity expired, HttpServletRequest req, Locale locale) {
+  private boolean servesAnotherOwner(HttpServletRequest req, Long ownerId) {
     Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(expired.getUserId())) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, expired.getShortCode());
-    }
+    return customOwner != null && !customOwner.equals(ownerId);
+  }
+
+  private ResponseEntity<?> afterExpiry(LinkEntity expired, Locale locale) {
     if (blockedDomainChecker.isBlocked(expired.getExpiredRedirectUrl())) {
       meterRegistry.counter("redirect.domain_blocked").increment();
       return html.domainBlockedPageResponse(locale);

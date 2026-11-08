@@ -202,7 +202,8 @@
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
 @junit | campaign-scheduled-create | 1 | 1 | 0 | 0 | 2
 @junit | campaign-scheduled-end-tick | 5 | 0 | 3 | 0 | 8
-@junit | campaign-scheduled-expired-visitor | 3 | 0 | 0 | 0 | 3
+# An expired link with its own message reads the custom-domain owner of the Host before showing it.
+@junit | campaign-scheduled-expired-visitor | 4 | 0 | 0 | 0 | 4
 @junit | campaign-scheduled-read-active | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-read-ended | 2 | 0 | 0 | 0 | 2
 @junit | campaign-scheduled-repeat-tick | 2 | 0 | 0 | 0 | 2
@@ -417,8 +418,10 @@
 @junit | link-stream-token | 1 | 0 | 0 | 0 | 1
 @junit | link-tags-read | 3 | 0 | 0 | 0 | 3
 @junit | link-tags-replace | 3 | 1 | 0 | 1 | 5
-@junit | link-unlock-correct | 1 | 0 | 1 | 0 | 2
-@junit | link-unlock-view-limit | 3 | 0 | 1 | 0 | 4
+# A correct password reads the custom-domain owner of the Host before revealing the destination,
+# as the GET visit does; a wrong one stops before that.
+@junit | link-unlock-correct | 2 | 0 | 1 | 0 | 3
+@junit | link-unlock-view-limit | 4 | 0 | 1 | 0 | 5
 @junit | link-visit-options-update | 4 | 1 | 0 | 0 | 5
 @junit | link-unlock-wrong | 1 | 0 | 0 | 0 | 1
 @junit | link-update-foreign-denied | 2 | 0 | 0 | 0 | 2
