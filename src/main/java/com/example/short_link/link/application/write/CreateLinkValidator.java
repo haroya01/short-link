@@ -43,7 +43,7 @@ public class CreateLinkValidator {
   // allowSelfHost=true 는 우리 자신이 목적지인 1st-party 링크(이벤트 공개 페이지 등)용 — 단축 코드가 아닌 콘텐츠 경로라 리다이렉트 루프가 아니다.
   // 차단 도메인/안전성 검사는 그대로 통과해야 한다.
   void validateUrl(String url, boolean allowSelfHost) {
-    if (!WebAddress.is(url)) {
+    if (!WebAddress.isWellFormed(url)) {
       throw new LinkException(LinkErrorCode.UNSUPPORTED_URL_SCHEME);
     }
     if (!allowSelfHost) {
