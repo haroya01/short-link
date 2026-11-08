@@ -129,77 +129,104 @@ public class DirectorySync {
     if (serverBlocks.severityFor(host).isPresent()) {
       return record(source, new Outcome(host, 0, 0, 0, 0, 0, "blocked here"));
     }
-    int listed = 0;
-    int known = 0;
-    int added = 0;
-    int later = 0;
-    int skipped = 0;
-    int fetches = 0;
+    Tally tally = new Tally();
     for (int offset = 0; offset < source.getCap(); offset += PAGE) {
       if (offset > 0) {
         pacer.pause(props.pageGap());
       }
       int limit = Math.min(PAGE, source.getCap() - offset);
-      URI page =
-          URI.create(
-              "https://"
-                  + host
-                  + "/api/v1/directory?local=true&order=active&limit="
-                  + limit
-                  + "&offset="
-                  + offset);
       FederationHttp.Result answer =
-          http.getJson(page, signingKeys.forInstance(), props.pagePatience());
+          http.getJson(page(host, limit, offset), signingKeys.forInstance(), props.pagePatience());
       JsonNode accounts = answer instanceof FederationHttp.Result.Ok ok ? accounts(ok) : null;
       if (accounts == null) {
-        return record(
-            source, new Outcome(host, listed, known, added, later, skipped, failure(answer)));
+        return record(source, tally.outcome(host, failure(answer)));
       }
-      Set<String> wanted = new LinkedHashSet<>();
-      for (JsonNode account : accounts) {
-        listed++;
-        String uri = text(account.get("uri"));
-        if (uri == null
-            || !host.equals(RemoteActorParser.host(uri))
-            || !account.path("discoverable").asBoolean(false)
-            || account.hasNonNull("moved")) {
-          skipped++;
-        } else {
-          wanted.add(uri);
-        }
-      }
-      Map<String, RemoteActorEntity> stored =
-          actors.findAllByActorUri(wanted).stream()
-              .collect(Collectors.toMap(RemoteActorEntity::getActorUri, Function.identity()));
-      List<Long> seen = new ArrayList<>();
-      for (String uri : wanted) {
-        RemoteActorEntity actor = stored.get(uri);
-        if (actor != null) {
-          known++;
-          seen.add(actor.getId());
-          continue;
-        }
-        if (fetches >= props.newPerRun()) {
-          later++;
-          continue;
-        }
-        fetches++;
-        pacer.pause(props.fetchGap());
-        Optional<RemoteActorEntity> fetched =
-            resolver.byActorUri(uri).filter(remote -> !remote.onSuspendedServer());
-        if (fetched.isPresent()) {
-          added++;
-          seen.add(fetched.get().getId());
-        } else {
-          skipped++;
-        }
-      }
-      actors.markListed(seen, clock.instant());
+      actors.markListed(listed(host, accounts, tally), clock.instant());
       if (accounts.size() < limit) {
         break;
       }
     }
-    return record(source, new Outcome(host, listed, known, added, later, skipped, null));
+    return record(source, tally.outcome(host, null));
+  }
+
+  private static final class Tally {
+
+    private int listed;
+    private int known;
+    private int added;
+    private int later;
+    private int skipped;
+    private int fetches;
+
+    Outcome outcome(String host, String failure) {
+      return new Outcome(host, listed, known, added, later, skipped, failure);
+    }
+  }
+
+  private static URI page(String host, int limit, int offset) {
+    return URI.create(
+        "https://"
+            + host
+            + "/api/v1/directory?local=true&order=active&limit="
+            + limit
+            + "&offset="
+            + offset);
+  }
+
+  private List<Long> listed(String host, JsonNode accounts, Tally tally) {
+    Set<String> wanted = wanted(host, accounts, tally);
+    Map<String, RemoteActorEntity> stored =
+        actors.findAllByActorUri(wanted).stream()
+            .collect(Collectors.toMap(RemoteActorEntity::getActorUri, Function.identity()));
+    List<Long> seen = new ArrayList<>();
+    for (String uri : wanted) {
+      RemoteActorEntity actor = stored.get(uri);
+      if (actor != null) {
+        tally.known++;
+        seen.add(actor.getId());
+      } else {
+        fetch(uri, tally).ifPresent(seen::add);
+      }
+    }
+    return seen;
+  }
+
+  private static Set<String> wanted(String host, JsonNode accounts, Tally tally) {
+    Set<String> wanted = new LinkedHashSet<>();
+    for (JsonNode account : accounts) {
+      tally.listed++;
+      String uri = text(account.get("uri"));
+      if (findable(host, uri, account)) {
+        wanted.add(uri);
+      } else {
+        tally.skipped++;
+      }
+    }
+    return wanted;
+  }
+
+  private static boolean findable(String host, String uri, JsonNode account) {
+    return uri != null
+        && host.equals(RemoteActorParser.host(uri))
+        && account.path("discoverable").asBoolean(false)
+        && !account.hasNonNull("moved");
+  }
+
+  private Optional<Long> fetch(String uri, Tally tally) {
+    if (tally.fetches >= props.newPerRun()) {
+      tally.later++;
+      return Optional.empty();
+    }
+    tally.fetches++;
+    pacer.pause(props.fetchGap());
+    Optional<RemoteActorEntity> fetched =
+        resolver.byActorUri(uri).filter(remote -> !remote.onSuspendedServer());
+    if (fetched.isEmpty()) {
+      tally.skipped++;
+      return Optional.empty();
+    }
+    tally.added++;
+    return Optional.of(fetched.get().getId());
   }
 
   private JsonNode accounts(FederationHttp.Result.Ok ok) {

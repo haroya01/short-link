@@ -86,13 +86,7 @@ public class RemoteSeen {
     if (dwelt == null) {
       return;
     }
-    Map<String, Integer> valid = new HashMap<>();
-    dwelt.stream()
-        .limit(MAX_PER_REQUEST)
-        .filter(dwell -> dwell != null && dwell.ms() >= MIN_DWELL_MS)
-        .filter(dwell -> SeenUri.sent(dwell.uri()).isPresent())
-        .forEach(
-            dwell -> valid.merge(dwell.uri(), (int) Math.min(dwell.ms(), MAX_DWELL_MS), Math::max));
+    Map<String, Integer> valid = dwells(dwelt);
     if (valid.isEmpty()) {
       return;
     }
@@ -100,6 +94,24 @@ public class RemoteSeen {
         .values()
         .forEach(
             ms -> meters.summary("federation_dwell", "feed", known ? feed : "unknown").record(ms));
+    int over = buffer(viewer, valid);
+    if (over > 0) {
+      meters.counter("federation_dwell_rows", "result", "dropped").increment(over);
+    }
+  }
+
+  private static Map<String, Integer> dwells(Collection<Dwell> dwelt) {
+    Map<String, Integer> valid = new HashMap<>();
+    dwelt.stream()
+        .limit(MAX_PER_REQUEST)
+        .filter(dwell -> dwell != null && dwell.ms() >= MIN_DWELL_MS)
+        .filter(dwell -> SeenUri.sent(dwell.uri()).isPresent())
+        .forEach(
+            dwell -> valid.merge(dwell.uri(), (int) Math.min(dwell.ms(), MAX_DWELL_MS), Math::max));
+    return valid;
+  }
+
+  private int buffer(SeenViewer viewer, Map<String, Integer> valid) {
     int over = 0;
     synchronized (lock) {
       Map<String, Integer> mine = dwelling.computeIfAbsent(viewer, key -> new HashMap<>());
@@ -117,9 +129,7 @@ public class RemoteSeen {
         dwelling.remove(viewer);
       }
     }
-    if (over > 0) {
-      meters.counter("federation_dwell_rows", "result", "dropped").increment(over);
-    }
+    return over;
   }
 
   public int record(SeenViewer viewer, Collection<String> uris) {

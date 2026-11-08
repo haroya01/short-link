@@ -30,16 +30,7 @@ public class ServerBlockImport {
 
   public Imported importList(String csv, boolean dryRun) {
     List<List<String>> rows = CsvRows.parse(csv == null ? "" : csv);
-    List<String> header =
-        rows.isEmpty()
-            ? List.of()
-            : rows.getFirst().stream().map(cell -> cell.toLowerCase(Locale.ROOT)).toList();
-    int domainAt = header.indexOf("#domain");
-    int severityAt = header.indexOf("#severity");
-    int commentAt = header.indexOf("#public_comment");
-    if (domainAt < 0 || severityAt < 0 || rows.size() - 1 > MAX_SERVERS) {
-      throw new FederationException(FederationErrorCode.SERVER_LIST_INVALID, MAX_SERVERS);
-    }
+    Columns columns = columns(rows);
     Set<String> blocked = new HashSet<>();
     serverBlocks.list().forEach(block -> blocked.add(block.domain()));
     int added = 0;
@@ -47,19 +38,9 @@ public class ServerBlockImport {
     int skipped = 0;
     List<String> invalid = new ArrayList<>();
     for (List<String> row : rows.subList(1, rows.size())) {
-      String raw = cell(row, domainAt);
-      ServerBlockSeverity severity = severity(cell(row, severityAt));
-      if (severity == null) {
-        skipped++;
-        continue;
-      }
-      String domain;
-      try {
-        domain = DomainBlocks.normalize(raw, urls.domain());
-      } catch (FederationException notADomain) {
-        if (invalid.size() < MAX_LISTED_INVALID) {
-          invalid.add(raw);
-        }
+      ServerBlockSeverity severity = severity(cell(row, columns.severity()));
+      String domain = severity == null ? null : domain(cell(row, columns.domain()), invalid);
+      if (domain == null) {
         skipped++;
         continue;
       }
@@ -68,11 +49,40 @@ public class ServerBlockImport {
         continue;
       }
       if (!dryRun) {
-        serverBlocks.block(domain, severity, reason(cell(row, commentAt)));
+        serverBlocks.block(domain, severity, reason(cell(row, columns.comment())));
       }
       added++;
     }
     return new Imported(added, kept, skipped, List.copyOf(invalid));
+  }
+
+  private record Columns(int domain, int severity, int comment) {}
+
+  private static Columns columns(List<List<String>> rows) {
+    List<String> header =
+        rows.isEmpty()
+            ? List.of()
+            : rows.getFirst().stream().map(cell -> cell.toLowerCase(Locale.ROOT)).toList();
+    Columns columns =
+        new Columns(
+            header.indexOf("#domain"),
+            header.indexOf("#severity"),
+            header.indexOf("#public_comment"));
+    if (columns.domain() < 0 || columns.severity() < 0 || rows.size() - 1 > MAX_SERVERS) {
+      throw new FederationException(FederationErrorCode.SERVER_LIST_INVALID, MAX_SERVERS);
+    }
+    return columns;
+  }
+
+  private String domain(String raw, List<String> invalid) {
+    try {
+      return DomainBlocks.normalize(raw, urls.domain());
+    } catch (FederationException notADomain) {
+      if (invalid.size() < MAX_LISTED_INVALID) {
+        invalid.add(raw);
+      }
+      return null;
+    }
   }
 
   private static ServerBlockSeverity severity(String value) {

@@ -253,7 +253,7 @@ class RemoteNoteParserTest {
   @Test
   void aMultipleChoicePollClosedEarlyEndsWhenItClosed() {
     RemoteNotes.Poll poll =
-        RemoteNoteParser.poll(
+        RemotePolls.poll(
             json(
                 """
                 {"type":"Question","endTime":"2026-10-11T09:00:00Z",
@@ -272,7 +272,7 @@ class RemoteNoteParserTest {
     assertThat(poll.closed()).isTrue();
 
     RemoteNotes.Poll ended =
-        RemoteNoteParser.poll(
+        RemotePolls.poll(
             json(
                 """
                 {"closed":true,"votersCount":"many",
@@ -282,7 +282,7 @@ class RemoteNoteParserTest {
     assertThat(ended.endsAt()).isNull();
     assertThat(ended.voters()).isZero();
     assertThat(
-            RemoteNoteParser.poll(
+            RemotePolls.poll(
                     json(
                         """
                         {"endTime":"2026-10-11T09:00:00Z","closed":"2026-10-12T09:00:00Z",
@@ -294,17 +294,16 @@ class RemoteNoteParserTest {
 
   @Test
   void aPollThatDoesNotFitIsLeftOffItsNote() {
-    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":[{\"name\":\"only\"}]}"))).isNull();
+    assertThat(RemotePolls.poll(json("{\"oneOf\":[{\"name\":\"only\"}]}"))).isNull();
     assertThat(
-            RemoteNoteParser.poll(
+            RemotePolls.poll(
                 json(
                     "{\"anyOf\":[{\"name\":\"a\"},{\"name\":\"b\"},{\"name\":\"c\"},"
                         + "{\"name\":\"d\"},{\"name\":\"e\"}]}")))
         .isNull();
-    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":[{\"name\":\"a\"},{\"name\":\" \"}]}")))
-        .isNull();
-    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":{\"name\":\"a\"}}"))).isNull();
-    assertThat(RemoteNoteParser.poll(json("{}"))).isNull();
+    assertThat(RemotePolls.poll(json("{\"oneOf\":[{\"name\":\"a\"},{\"name\":\" \"}]}"))).isNull();
+    assertThat(RemotePolls.poll(json("{\"oneOf\":{\"name\":\"a\"}}"))).isNull();
+    assertThat(RemotePolls.poll(json("{}"))).isNull();
     assertThat(
             parser.parse(json("{\"type\":\"Question\",\"content\":\"pick\"}"), json("{}")).shape())
         .isEqualTo(new Shape(Kind.QUESTION, null, null, null));

@@ -114,44 +114,63 @@ public class RemoteReach {
     Map<String, List<Due>> byHost =
         reach.due(now.minus(ReachSchedule.LATE), now, props.perRound()).stream()
             .collect(Collectors.groupingBy(Due::host, LinkedHashMap::new, Collectors.toList()));
-    List<Counted> counted = new ArrayList<>();
-    List<Postponed> postponed = new ArrayList<>();
-    Signer signer = null;
-    boolean first = true;
+    Round round = new Round(now);
     for (Map.Entry<String, List<Due>> host : byHost.entrySet()) {
       if (rests.resting(host.getKey(), now)) {
         continue;
       }
       if (serverBlocks.severityFor(host.getKey()).isPresent()) {
-        host.getValue().forEach(due -> postponed.add(new Postponed(due.noteId(), null, 0, null)));
+        host.getValue()
+            .forEach(due -> round.postponed.add(new Postponed(due.noteId(), null, 0, null)));
         continue;
       }
+      askHost(round, host.getKey(), host.getValue());
+    }
+    reach.counted(round.counted);
+    reach.postponed(round.postponed);
+    return round.counted.size();
+  }
+
+  private final class Round {
+
+    private final Instant now;
+    private final List<Counted> counted = new ArrayList<>();
+    private final List<Postponed> postponed = new ArrayList<>();
+    private Signer signer;
+    private boolean asked;
+
+    private Round(Instant now) {
+      this.now = now;
+    }
+
+    private Signer signer() {
       if (signer == null) {
         signer = signingKeys.forInstance();
       }
-      List<List<Due>> chunks = chunks(host.getKey(), host.getValue());
-      for (List<Due> chunk : chunks) {
-        if (!spend()) {
-          meters.counter("federation_reach", "result", "capped").increment(chunk.size());
-          break;
-        }
-        if (!first) {
-          pause();
-        }
-        first = false;
-        Optional<Answer> answer = ask(host.getKey(), chunk, signer);
-        if (answer.isEmpty()) {
-          break;
-        }
-        settle(chunk, answer.get(), now, counted, postponed);
-        if (!answer.get().answered()) {
-          break;
-        }
+      return signer;
+    }
+  }
+
+  private void askHost(Round round, String host, List<Due> due) {
+    Signer signer = round.signer();
+    for (List<Due> chunk : chunks(host, due)) {
+      if (!spend()) {
+        meters.counter("federation_reach", "result", "capped").increment(chunk.size());
+        break;
+      }
+      if (round.asked) {
+        pause();
+      }
+      round.asked = true;
+      Optional<Answer> answer = ask(host, chunk, signer);
+      if (answer.isEmpty()) {
+        break;
+      }
+      settle(chunk, answer.get(), round.now, round.counted, round.postponed);
+      if (!answer.get().answered()) {
+        break;
       }
     }
-    reach.counted(counted);
-    reach.postponed(postponed);
-    return counted.size();
   }
 
   private List<List<Due>> chunks(String host, List<Due> due) {
@@ -202,30 +221,60 @@ public class RemoteReach {
     FederationHttp.Result result =
         http.getJson(URI.create("https://" + host + path), signer, props.patience());
     if (result instanceof FederationHttp.Result.Failed failed) {
-      int status = failed.status();
-      if (status == 429 || failed.deniedAccess()) {
-        rest(host);
-        meters.counter("federation_reach", "result", "limited").increment(chunk.size());
-        return Optional.empty();
-      }
-      if (!single && (status == 404 || status == 400 || status == 422)) {
-        oneByOne.add(host);
-        return Optional.empty();
-      }
-      if (single && (status == 404 || status == 410)) {
-        return Optional.of(new Answer(Map.of(), true));
-      }
+      return failed(host, chunk.size(), single, failed);
     }
     if (!(result instanceof FederationHttp.Result.Ok ok)) {
-      log.info("federation reach unanswered host={} outcome={}", host, result);
-      return Optional.of(new Answer(Map.of(), false));
+      return unanswered(host, result);
     }
+    return read(host, single, ok.body());
+  }
+
+  private Optional<Answer> failed(
+      String host, int asked, boolean single, FederationHttp.Result.Failed failed) {
+    int status = failed.status();
+    if (status == 429 || failed.deniedAccess()) {
+      rest(host);
+      meters.counter("federation_reach", "result", "limited").increment(asked);
+      return Optional.empty();
+    }
+    if (!single && knowsNoBatches(status)) {
+      oneByOne.add(host);
+      return Optional.empty();
+    }
+    if (single && gone(status)) {
+      return Optional.of(new Answer(Map.of(), true));
+    }
+    return unanswered(host, failed);
+  }
+
+  private static boolean knowsNoBatches(int status) {
+    return status == 404 || status == 400 || status == 422;
+  }
+
+  private static boolean gone(int status) {
+    return status == 404 || status == 410;
+  }
+
+  private static Optional<Answer> unanswered(String host, FederationHttp.Result result) {
+    log.info("federation reach unanswered host={} outcome={}", host, result);
+    return Optional.of(new Answer(Map.of(), false));
+  }
+
+  private Optional<Answer> read(String host, boolean single, byte[] bytes) {
     JsonNode body;
     try {
-      body = json.readTree(ok.body());
+      body = json.readTree(bytes);
     } catch (JacksonException malformed) {
       return Optional.of(new Answer(Map.of(), false));
     }
+    boolean answered = body != null && (single ? body.isObject() : body.isArray());
+    if (answered) {
+      rests.answered(host);
+    }
+    return Optional.of(new Answer(counts(body, single), answered));
+  }
+
+  private static Map<String, Counts> counts(JsonNode body, boolean single) {
     Map<String, Counts> found = new HashMap<>();
     for (JsonNode status : body == null ? List.<JsonNode>of() : single ? List.of(body) : body) {
       String id = status.path("id").asString(null);
@@ -238,11 +287,7 @@ public class RemoteReach {
                 count(status.get("replies_count"))));
       }
     }
-    boolean answered = body != null && (single ? body.isObject() : body.isArray());
-    if (answered) {
-      rests.answered(host);
-    }
-    return Optional.of(new Answer(found, answered));
+    return found;
   }
 
   private void rest(String host) {

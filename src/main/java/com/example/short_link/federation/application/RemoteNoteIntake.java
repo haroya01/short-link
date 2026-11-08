@@ -99,19 +99,24 @@ public class RemoteNoteIntake {
           .map(found -> note.quoting(note.body(), found.id()))
           .orElseGet(() -> linked(note));
     }
-    if (!follow || (!quote.accepted() && quote.authorization() == null)) {
+    if (!follow || !vouchedFor(note.uri(), quote)) {
       return linked(note);
     }
-    if (!quote.accepted() && !authorized(note.uri(), quote)) {
-      return linked(note);
-    }
-    Optional<Long> kept = remoteNotes.kept(quote.uri());
+    return quotedElsewhere(note, quote.uri());
+  }
+
+  private boolean vouchedFor(String quoting, RemoteNoteParser.Quote quote) {
+    return quote.accepted() || (quote.authorization() != null && authorized(quoting, quote));
+  }
+
+  private RemoteNoteParser.Parsed quotedElsewhere(RemoteNoteParser.Parsed note, String quoteUri) {
+    Optional<Long> kept = remoteNotes.kept(quoteUri);
     if (kept.isPresent()) {
       return note.quoting(note.body(), kept.get());
     }
-    JsonNode document = document(quote.uri());
+    JsonNode document = document(quoteUri);
     Optional<Long> stored =
-        document == null ? Optional.empty() : fetched(document, URI.create(quote.uri()), false);
+        document == null ? Optional.empty() : fetched(document, URI.create(quoteUri), false);
     if (stored.isEmpty()) {
       return linked(note);
     }
@@ -194,15 +199,7 @@ public class RemoteNoteIntake {
     if (kept.isPresent()) {
       return kept;
     }
-    String attributedTo = idsOf(object.get("attributedTo")).stream().findFirst().orElse(null);
-    if (attributedTo == null || !sameHost(uri, attributedTo)) {
-      return Optional.empty();
-    }
-    String host = RemoteActorParser.host(uri);
-    Optional<RemoteActorEntity> author =
-        resolver
-            .byActorUri(attributedTo)
-            .filter(actor -> !actor.onSuspendedServer() && host.equals(actor.getDomain()));
+    Optional<RemoteActorEntity> author = author(uri, object);
     if (author.isEmpty() || earlyDeletes.remembered(author.get().getId(), uri)) {
       return Optional.empty();
     }
@@ -212,6 +209,17 @@ public class RemoteNoteIntake {
     }
     NoteSnapshot parent = urls.noteIdOf(note.inReplyToUri()).flatMap(notes::find).orElse(null);
     return keep(author.get(), note, parent, follow).or(() -> remoteNotes.kept(uri));
+  }
+
+  private Optional<RemoteActorEntity> author(String uri, JsonNode object) {
+    String attributedTo = idsOf(object.get("attributedTo")).stream().findFirst().orElse(null);
+    if (attributedTo == null || !sameHost(uri, attributedTo)) {
+      return Optional.empty();
+    }
+    String host = RemoteActorParser.host(uri);
+    return resolver
+        .byActorUri(attributedTo)
+        .filter(actor -> !actor.onSuspendedServer() && host.equals(actor.getDomain()));
   }
 
   // Mastodon's rule for who may like, answer or vote on a note: anyone on a public or unlisted
