@@ -150,6 +150,22 @@
 # place and the dropped one deleted.
 @junit | author-unpublished-body-edit | 2 | 0 | 2 | 2 | 6
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
+# A destination whose domain has been gone for three days, measured against Docker MySQL 2026-11-06.
+# The gone state rides in the cached redirect row (one LEFT JOIN), so a cold visit is the same three
+# selects as a redirect (cached row, destinations, custom-domain owner) whether it ends in the
+# notice or a 302, and a warm visit reads only the custom-domain owner. A health change drops the
+# cached row, so the next visit after recovery or after the domain goes is cold again. A preview bot
+# keeps its own path.
+@junit | dead-destination-create | 6 | 5 | 2 | 0 | 13
+@junit | dead-destination-create-first | 7 | 5 | 2 | 0 | 14
+@junit | dead-destination-healthy-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-newly-gone-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-not-found-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-preview-bot | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-recent-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-recovered-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-visit | 3 | 0 | 0 | 0 | 3
+@junit | dead-destination-visit-ja | 1 | 0 | 0 | 0 | 1
 @junit | campaign-archive | 2 | 0 | 1 | 0 | 3
 @junit | campaign-batch-bulk | 12 | 12 | 4 | 0 | 28
 @junit | campaign-batch-create | 8 | 6 | 2 | 0 | 16

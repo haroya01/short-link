@@ -90,6 +90,7 @@ public class LinkHtmlRenderer {
       text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
       .splash .stay:hover{color:var(--ink)}
       .splash .pow{margin-top:8px}
+      p.url{overflow-wrap:anywhere;color:var(--ink-soft)}
       @media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important}}
       """;
 
@@ -186,6 +187,11 @@ public class LinkHtmlRenderer {
 
   public VisitPage notYetOpenPageResponse(Locale locale, Instant opensAt) {
     return visitPage(notYetOpenPage(locale, opensAt), HttpStatus.FORBIDDEN, "not_open");
+  }
+
+  public VisitPage deadDestinationPageResponse(Locale locale, String destinationUrl) {
+    return visitPage(
+        deadDestinationPage(locale, destinationUrl), HttpStatus.OK, "dead_destination");
   }
 
   public VisitPage inAppHandoffPageResponse(
@@ -371,6 +377,29 @@ public class LinkHtmlRenderer {
             + "{dateStyle:'long',timeStyle:'short'})}catch(e){}"
             + "var ms=at-Date.now();if(ms>0&&ms<2147483647){setTimeout(function(){location.reload()},ms+1000)}"
             + "})()</script>";
+    return page(locale, title, inner);
+  }
+
+  String deadDestinationPage(Locale locale, String destinationUrl) {
+    String title = text(locale, "visitor.deadDestination.title");
+    String open =
+        navigable(destinationUrl) == null
+            ? ""
+            : "<a class=\"go\" href=\""
+                + escape(destinationUrl)
+                + "\" rel=\"nofollow noopener\">"
+                + escape(text(locale, "visitor.deadDestination.open"))
+                + "<span aria-hidden=\"true\">→</span></a>";
+    String inner =
+        "<h1>"
+            + escape(title)
+            + "</h1><p class=\"url\">"
+            + escape(destinationUrl)
+            + "</p><div class=\"row\"><span class=\"pow\">"
+            + poweredBy(locale)
+            + "</span>"
+            + open
+            + "</div>";
     return page(locale, title, inner);
   }
 

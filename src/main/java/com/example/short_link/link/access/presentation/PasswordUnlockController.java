@@ -70,15 +70,7 @@ public class PasswordUnlockController {
       }
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
       ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
-      outcome =
-          switch (result) {
-            case RedirectOutcome.CountryBlocked b -> "blocked";
-            case RedirectOutcome.DomainBlocked db -> "blocked";
-            case RedirectOutcome.ExpiredWithMessage em -> "expired";
-            case RedirectOutcome.NotYetOpen n -> "not_open";
-            case RedirectOutcome.PrefetchDeclined pd -> "preview";
-            default -> "redirect";
-          };
+      outcome = outcomeOf(result);
       return response;
     } catch (LinkException e) {
       outcome =
@@ -100,6 +92,18 @@ public class PasswordUnlockController {
     }
   }
 
+  private static String outcomeOf(RedirectOutcome result) {
+    return switch (result) {
+      case RedirectOutcome.CountryBlocked b -> "blocked";
+      case RedirectOutcome.DomainBlocked db -> "blocked";
+      case RedirectOutcome.ExpiredWithMessage em -> "expired";
+      case RedirectOutcome.NotYetOpen n -> "not_open";
+      case RedirectOutcome.PrefetchDeclined pd -> "preview";
+      case RedirectOutcome.DeadDestination dd -> "dead_destination";
+      default -> "redirect";
+    };
+  }
+
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
       case RedirectOutcome.Redirect r -> handoff.unlocked(r, userAgent, locale);
@@ -108,6 +112,7 @@ public class PasswordUnlockController {
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
+      case RedirectOutcome.DeadDestination dd -> html.deadDestinationPageResponse(locale, dd.url());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
     };

@@ -220,6 +220,7 @@ short-link:
     batch-size: ${DESTINATION_HEALTH_BATCH_SIZE:60}
     recheck-hours: ${DESTINATION_HEALTH_RECHECK_HOURS:20}
     confirm-after: ${DESTINATION_HEALTH_CONFIRM_AFTER:2}
+    notice-after-days: ${DESTINATION_HEALTH_NOTICE_AFTER_DAYS:3}
   federation:
     base-url: ${FEDERATION_BASE_URL:${SHORT_LINK_BASE_URL:http://localhost:8080}}
     profile-base-url: ${SHORT_LINK_BLOG_BASE_URL:https://blog.kurl.me}

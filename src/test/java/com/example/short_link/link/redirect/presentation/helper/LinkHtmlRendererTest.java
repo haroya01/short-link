@@ -357,4 +357,40 @@ class LinkHtmlRendererTest {
         .filter(k -> k.startsWith("visitor."))
         .collect(Collectors.toSet());
   }
+
+  @Test
+  void aGoneDestinationShowsItsAddressAndALinkToOpenItAnyway() {
+    VisitPage page =
+        renderer.deadDestinationPageResponse(KO, "https://pepefc2.onamarudsi/?a=1&b=<2>");
+    String html = new String(page.getBody(), StandardCharsets.UTF_8);
+
+    assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(page.outcome()).isEqualTo("dead_destination");
+    assertThat(html)
+        .contains("<h1>이 링크의 목적지가 지금 열리지 않아요</h1>")
+        .contains("<p class=\"url\">https://pepefc2.onamarudsi/?a=1&amp;b=&lt;2&gt;</p>")
+        .contains(
+            "<a class=\"go\" href=\"https://pepefc2.onamarudsi/?a=1&amp;b=&lt;2&gt;\""
+                + " rel=\"nofollow noopener\">그래도 열기")
+        .doesNotContain("<2>");
+  }
+
+  @Test
+  void aGoneDestinationIsWordedForTheVisitorsLanguage() {
+    String html =
+        new String(
+            renderer
+                .deadDestinationPageResponse(Locale.JAPANESE, "https://gone.example/")
+                .getBody(),
+            StandardCharsets.UTF_8);
+
+    assertThat(html).contains("lang=\"ja\"").contains("このリンクの移動先が今は開けません");
+  }
+
+  @Test
+  void anAddressThatIsNotAWebPageGetsNoOpenLink() {
+    String html = renderer.deadDestinationPage(KO, "javascript:alert(1)");
+
+    assertThat(html).doesNotContain("class=\"go\"").contains("javascript:alert(1)");
+  }
 }
