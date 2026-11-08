@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.write;
 
+import com.example.short_link.common.net.BrowserHost;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
@@ -8,9 +9,6 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -84,19 +82,10 @@ public class CreateLinkValidator {
   }
 
   private static String canonicalHost(String url) {
-    if (url == null) {
-      return null;
-    }
-    String host;
-    try {
-      host = new URI(url.trim()).getHost();
-    } catch (URISyntaxException e) {
-      return null;
-    }
+    String host = BrowserHost.of(url);
     if (host == null) {
       return null;
     }
-    host = host.toLowerCase(Locale.ROOT);
     return host.startsWith("www.") ? host.substring("www.".length()) : host;
   }
 }
