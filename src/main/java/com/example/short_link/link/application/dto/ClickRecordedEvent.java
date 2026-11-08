@@ -15,4 +15,29 @@ public record ClickRecordedEvent(
     String deviceClass,
     String referrerHost,
     boolean bot,
-    String utmSource) {}
+    String utmSource,
+    Long clickId) {
+
+  public ClickRecordedEvent(
+      LinkId linkId,
+      String shortCode,
+      Long ownerUserId,
+      Instant occurredAt,
+      String countryCode,
+      String deviceClass,
+      String referrerHost,
+      boolean bot,
+      String utmSource) {
+    this(
+        linkId,
+        shortCode,
+        ownerUserId,
+        occurredAt,
+        countryCode,
+        deviceClass,
+        referrerHost,
+        bot,
+        utmSource,
+        null);
+  }
+}

@@ -47,7 +47,7 @@ class LinkClickNoticeListenerTest {
 
   private static ClickRecordedEvent event(boolean bot) {
     return new ClickRecordedEvent(
-        LinkId.of(1L), "abc1234", 5L, AT, "KR", "mobile", "direct", bot, null);
+        LinkId.of(1L), "abc1234", 5L, AT, "KR", "mobile", "direct", bot, null, 77L);
   }
 
   private static LinkEntity link(String note) {
@@ -62,7 +62,7 @@ class LinkClickNoticeListenerTest {
 
   private void clicks(long human) {
     when(links.findById(1L)).thenReturn(Optional.of(link(null)));
-    when(totals.countHumanByLinkId(1L)).thenReturn(human);
+    when(totals.countHumanByLinkIdThrough(1L, 77L)).thenReturn(human);
   }
 
   @Test
@@ -81,7 +81,7 @@ class LinkClickNoticeListenerTest {
     listener.onClickRecorded(event(false));
 
     assertThat(sent).isEmpty();
-    verify(totals, never()).countHumanByLinkId(anyLong());
+    verify(totals, never()).countHumanByLinkIdThrough(anyLong(), anyLong());
   }
 
   @Test
@@ -98,7 +98,7 @@ class LinkClickNoticeListenerTest {
   @Test
   void theNoteNamesTheLinkWhenItHasOne() {
     when(links.findById(1L)).thenReturn(Optional.of(link("봄 세일")));
-    when(totals.countHumanByLinkId(1L)).thenReturn(1L);
+    when(totals.countHumanByLinkIdThrough(1L, 77L)).thenReturn(1L);
 
     listener.onClickRecorded(event(false));
 
@@ -108,7 +108,7 @@ class LinkClickNoticeListenerTest {
   @Test
   void aMilestoneBelowTheSpikeFloorReadsNoRanges() {
     when(links.findById(1L)).thenReturn(Optional.of(link(null)));
-    when(totals.countHumanByLinkId(1L)).thenReturn(10L);
+    when(totals.countHumanByLinkIdThrough(1L, 77L)).thenReturn(10L);
     LinkClickNoticeListener strict =
         new LinkClickNoticeListener(
             links,

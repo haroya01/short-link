@@ -52,7 +52,7 @@ public class LinkClickNoticeListener {
       if (link == null || link.getUserId() == null) {
         return;
       }
-      long human = totals.countHumanByLinkId(linkId);
+      long human = totals.countHumanByLinkIdThrough(linkId, event.clickId());
 
       if (human == 1L) {
         notices.send(notice(link, LinkNoticeKind.FIRST_CLICK, "첫 클릭이 들어왔어요 🎉"));

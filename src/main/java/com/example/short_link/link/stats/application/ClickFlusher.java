@@ -139,6 +139,7 @@ public class ClickFlusher {
             saved.getDeviceClass(),
             saved.getReferrerHost(),
             saved.isBot(),
-            saved.getUtmSource()));
+            saved.getUtmSource(),
+            saved.getId()));
   }
 }
