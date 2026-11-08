@@ -1,6 +1,7 @@
 package com.example.short_link.abuse.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -115,6 +116,17 @@ class AbuseReportQueryServiceTest {
     assertThat(subjects.lookups)
         .isEqualTo(
             Map.of(AbuseSubjectType.POST, List.of(1L, 2L), AbuseSubjectType.LINK, List.of(40L)));
+  }
+
+  @Test
+  void theFullListIsEnrichedLikeAFilteredOne() {
+    when(reports.findAllByOrderByCreatedAtDesc())
+        .thenReturn(
+            List.of(report(AbuseSubjectType.USER, 31L), report(AbuseSubjectType.NOTE, MISSING)));
+
+    assertThat(service.listAll())
+        .extracting(AbuseReportView::subjectAuthorHandle, AbuseReportView::subjectRemoved)
+        .containsExactly(tuple("eve", true), tuple(null, true));
   }
 
   @Test
