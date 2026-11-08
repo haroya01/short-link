@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -10,8 +11,22 @@ import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.application.push.WebPushTargets;
+import com.example.short_link.user.domain.WebPushSubscriptionEntity;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECGenParameterSpec;
+import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -40,6 +55,76 @@ class WebPushSenderTest {
         new WebPushTargets(subscriptions),
         jsonMapper,
         BLOG);
+  }
+
+  @Test
+  void aPushServiceThatNeverAnswersFreesTheSenderForTheNextSubscription() throws Exception {
+    List<Socket> held = new CopyOnWriteArrayList<>();
+    HttpServer gone =
+        HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+    gone.createContext(
+        "/push",
+        exchange -> {
+          exchange.getRequestBody().readAllBytes();
+          exchange.sendResponseHeaders(410, -1);
+          exchange.close();
+        });
+    gone.start();
+    try (ServerSocket silent = new ServerSocket(0, 10, InetAddress.getLoopbackAddress())) {
+      Thread.ofVirtual().start(() -> holdEveryConnection(silent, held));
+      String silentPush = "http://127.0.0.1:" + silent.getLocalPort() + "/push/";
+      String gonePush = "http://127.0.0.1:" + gone.getAddress().getPort() + "/push";
+      when(subscriptions.findAllByUserId(1L))
+          .thenReturn(
+              List.of(
+                  subscription(silentPush + "a"),
+                  subscription(silentPush + "b"),
+                  subscription(gonePush)));
+      WebPushSender sender =
+          new WebPushSender(
+              new VapidProperties(VAPID_PUB, VAPID_PRIV, "mailto:test@kurl.me"),
+              new WebPushTargets(subscriptions),
+              jsonMapper,
+              BLOG,
+              Duration.ofMillis(500));
+
+      sender.send(1L, new PushSender.PushMessage("kurl", "글 제목", "새 글"));
+
+      verify(subscriptions, timeout(5_000)).deleteByEndpoint(gonePush);
+    } finally {
+      gone.stop(0);
+      for (Socket socket : held) socket.close();
+    }
+  }
+
+  private static void holdEveryConnection(ServerSocket silent, List<Socket> held) {
+    while (true) {
+      try {
+        held.add(silent.accept());
+      } catch (IOException closed) {
+        return;
+      }
+    }
+  }
+
+  private static WebPushSubscriptionEntity subscription(String endpoint) throws Exception {
+    KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+    generator.initialize(new ECGenParameterSpec("secp256r1"));
+    ECPublicKey key = (ECPublicKey) generator.generateKeyPair().getPublic();
+    byte[] point = new byte[65];
+    point[0] = 4;
+    copy32(key.getW().getAffineX(), point, 1);
+    copy32(key.getW().getAffineY(), point, 33);
+    Base64.Encoder url = Base64.getUrlEncoder().withoutPadding();
+    return new WebPushSubscriptionEntity(
+        1L, endpoint, url.encodeToString(point), url.encodeToString(new byte[16]));
+  }
+
+  private static void copy32(BigInteger value, byte[] into, int at) {
+    byte[] bytes = value.toByteArray();
+    int skip = Math.max(0, bytes.length - 32);
+    int length = bytes.length - skip;
+    System.arraycopy(bytes, skip, into, at + 32 - length, length);
   }
 
   @Test
