@@ -13,6 +13,15 @@ public final class BrowserHost {
   private BrowserHost() {}
 
   public static String of(String url) {
+    String authority = authorityOf(url);
+    if (authority == null) return null;
+    String host = withoutPort(authority.substring(authority.lastIndexOf('@') + 1));
+    if (host.isEmpty()) return null;
+    if (host.startsWith("[")) return host.toLowerCase(Locale.ROOT);
+    return withoutTrailingDots(toAscii(percentDecoded(host)).toLowerCase(Locale.ROOT));
+  }
+
+  private static String authorityOf(String url) {
     if (url == null) return null;
     String input = url.replaceAll("[\\t\\n\\r]", "").strip();
     int colon = input.indexOf(':');
@@ -23,15 +32,7 @@ public final class BrowserHost {
     while (start < input.length() && isSlash(input.charAt(start))) start++;
     int end = start;
     while (end < input.length() && AUTHORITY_ENDS.indexOf(input.charAt(end)) < 0) end++;
-    String authority = input.substring(start, end);
-    String hostAndPort = authority.substring(authority.lastIndexOf('@') + 1);
-    String host = withoutPort(hostAndPort);
-    if (host.isEmpty()) return null;
-    if (host.startsWith("[")) return host.toLowerCase(Locale.ROOT);
-    String ascii = toAscii(percentDecoded(host)).toLowerCase(Locale.ROOT);
-    int last = ascii.length();
-    while (last > 0 && ascii.charAt(last - 1) == '.') last--;
-    return last == 0 ? null : ascii.substring(0, last);
+    return input.substring(start, end);
   }
 
   private static boolean isSlash(char c) {
@@ -45,6 +46,12 @@ public final class BrowserHost {
     }
     int portColon = hostAndPort.lastIndexOf(':');
     return portColon < 0 ? hostAndPort : hostAndPort.substring(0, portColon);
+  }
+
+  private static String withoutTrailingDots(String host) {
+    int last = host.length();
+    while (last > 0 && host.charAt(last - 1) == '.') last--;
+    return last == 0 ? null : host.substring(0, last);
   }
 
   private static String percentDecoded(String host) {

@@ -111,17 +111,9 @@ public class RedirectController {
       link = lookup.findActiveLink(shortCode);
     } catch (LinkException e) {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
-        LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
-        if (expired != null
-            && (expired.getExpiredRedirectUrl() != null || expired.getExpiredMessage() != null)
-            && servesAnotherOwner(req, expired.getUserId())) {
-          throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
-        }
-        if (expired != null && expired.getExpiredRedirectUrl() != null) {
-          return afterExpiry(expired, locale);
-        }
-        if (expired != null && expired.getExpiredMessage() != null) {
-          return html.expiredPageResponse(locale, expired.getExpiredMessage());
+        Optional<ResponseEntity<?>> ended = endedLinkPage(shortCode, req, locale);
+        if (ended.isPresent()) {
+          return ended.get();
         }
       }
       throw e;
@@ -200,6 +192,22 @@ public class RedirectController {
             LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
         userAgent,
         locale);
+  }
+
+  private Optional<ResponseEntity<?>> endedLinkPage(
+      ShortCode shortCode, HttpServletRequest req, Locale locale) {
+    LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
+    if (expired == null
+        || (expired.getExpiredRedirectUrl() == null && expired.getExpiredMessage() == null)) {
+      return Optional.empty();
+    }
+    if (servesAnotherOwner(req, expired.getUserId())) {
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
+    }
+    if (expired.getExpiredRedirectUrl() != null) {
+      return Optional.of(afterExpiry(expired, locale));
+    }
+    return Optional.of(html.expiredPageResponse(locale, expired.getExpiredMessage()));
   }
 
   private boolean servesAnotherOwner(HttpServletRequest req, Long ownerId) {
