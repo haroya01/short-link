@@ -2,6 +2,8 @@ package com.example.short_link.user.application.twofactor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class TotpCodecTest {
@@ -65,5 +67,29 @@ class TotpCodecTest {
     assertThat(TotpCodec.generateCode(secret, 1L)).isEqualTo("287082");
     // T=1111111109 → step = 37037036 → expected 07081804
     assertThat(TotpCodec.generateCode(secret, 37037036L)).isEqualTo("081804");
+  }
+
+  @Test
+  void aSecretIsThirtyTwoBase32CharactersAndEveryPositionVaries() {
+    List<String> secrets =
+        IntStream.range(0, 200).mapToObj(i -> TotpCodec.generateBase32Secret()).toList();
+
+    assertThat(secrets).allSatisfy(s -> assertThat(s).matches("[A-Z2-7]{32}"));
+    for (int position = 0; position < 32; position++) {
+      int at = position;
+      assertThat(secrets.stream().map(s -> s.charAt(at)).distinct().count())
+          .as("characters seen at position %d", position)
+          .isGreaterThan(1);
+    }
+  }
+
+  @Test
+  void aFiveDigitCodePaddedToSixCharactersIsRejected() {
+    String secret = TotpCodec.generateBase32Secret();
+    long now = 1_700_000_000L;
+    String code = TotpCodec.generateCode(secret, now / TotpCodec.PERIOD_SECONDS);
+
+    assertThat(TotpCodec.verify(secret, " " + code.substring(1), now)).isFalse();
+    assertThat(TotpCodec.verify(secret, code.substring(1) + " ", now)).isFalse();
   }
 }

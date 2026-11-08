@@ -129,6 +129,18 @@ class FollowListQueryServiceTest {
   }
 
   @Test
+  void aPageThatEndsExactlyAtTheLastPersonHasNoNext() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRepository.findFollowerIds(2L, 1, 2)).thenReturn(List.of());
+    when(followRepository.findFollowingIds(2L, 1, 2)).thenReturn(List.of());
+    when(followRepository.countByFollowingId(2L)).thenReturn(4L);
+    when(followRepository.countByFollowerId(2L)).thenReturn(4L);
+
+    assertThat(service.followers(9L, "bob", 1, 2).hasNext()).isFalse();
+    assertThat(service.following(9L, "bob", 1, 2).hasNext()).isFalse();
+  }
+
+  @Test
   void emptyPageReturnsNoRows() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findFollowerIds(2L, 1, 20)).thenReturn(List.of());
