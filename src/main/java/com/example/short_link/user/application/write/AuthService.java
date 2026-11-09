@@ -174,7 +174,7 @@ public class AuthService {
     if (refreshStore.consume(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace())) {
       return continueSession(parsed, channel);
     }
-    if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
+    if (withinRotationGrace(parsed)) {
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
       return continueSession(parsed, channel);
     }
@@ -183,6 +183,12 @@ public class AuthService {
             + "(other sessions kept)",
         parsed.userId());
     throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+  }
+
+  private boolean withinRotationGrace(ParsedRefresh parsed) {
+    if (!refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) return false;
+    return parsed.sessionId() == null
+        || !refreshStore.sessionEnded(parsed.userId(), parsed.sessionId());
   }
 
   private UserEntity loadActiveUser(Long userId) {
@@ -206,6 +212,8 @@ public class AuthService {
       ParsedRefresh parsed = jwt.parseRefreshToken(refreshToken);
       refreshStore.delete(parsed.userId(), parsed.jti());
       if (parsed.sessionId() != null) {
+        refreshStore.endSession(
+            parsed.userId(), parsed.sessionId(), jwtProperties.refreshRotationGrace());
         deviceTokens.endSession(parsed.userId(), parsed.sessionId());
       }
     } catch (Exception ignored) {
