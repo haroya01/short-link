@@ -1,11 +1,8 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.ProfileErrorCode;
-import com.example.short_link.profile.exception.ProfileException;
+import static com.example.short_link.profile.domain.contact.BlockConfig.trimTo;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.util.Set;
 
 // Places are resolved on the frontend; the backend validates and stores resolved fields without
@@ -35,81 +32,57 @@ public record Place(
   private static final Set<String> CATEGORIES =
       Set.of("cafe", "bakery", "restaurant", "retail", "studio", "gallery", "popup", "space");
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   public static String normalize(String raw) {
-    if (raw == null || raw.isBlank()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: config required");
-    }
-    Place parsed;
-    try {
-      parsed = MAPPER.readValue(raw.trim(), Place.class);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: malformed json");
-    }
-
-    String name = trimTo(parsed.name, NAME_MAX);
-    if (name == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: name required");
-    }
-    String address = trimTo(parsed.address, ADDRESS_MAX);
-    if (address == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: address required");
-    }
-    if (parsed.lat == null || parsed.lng == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lat/lng required");
-    }
-    if (parsed.lat < -90 || parsed.lat > 90) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lat out of range");
-    }
-    if (parsed.lng < -180 || parsed.lng > 180) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lng out of range");
-    }
-
+    Place parsed = BlockConfig.read(raw, Place.class, "place");
+    String name = required(parsed.name, NAME_MAX, "place: name required");
+    String address = required(parsed.address, ADDRESS_MAX, "place: address required");
+    requireCoordinates(parsed.lat, parsed.lng);
     String placeId = trimTo(parsed.placeId, PLACE_ID_MAX);
     String phone = trimTo(parsed.phone, PHONE_MAX);
     String coverUrl = trimTo(parsed.coverUrl, COVER_URL_MAX);
     if (coverUrl != null) {
-      validateHttpUrl(coverUrl);
+      BlockConfig.requireHttpUrl(coverUrl, "place: cover url");
     }
-
-    String categoryIn = trimTo(parsed.category, CATEGORY_MAX);
-    String category = categoryIn != null && CATEGORIES.contains(categoryIn) ? categoryIn : null;
-
-    String hoursText = trimTo(parsed.hoursText, HOURS_TEXT_MAX);
-
     Place out =
         new Place(
-            name, address, parsed.lat, parsed.lng, placeId, phone, coverUrl, category, hoursText);
-    try {
-      return MAPPER.writeValueAsString(out);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: serialization failed");
+            name,
+            address,
+            parsed.lat,
+            parsed.lng,
+            placeId,
+            phone,
+            coverUrl,
+            category(parsed.category),
+            trimTo(parsed.hoursText, HOURS_TEXT_MAX));
+    return BlockConfig.write(out, "place");
+  }
+
+  private static String required(String value, int max, String missing) {
+    String kept = trimTo(value, max);
+    if (kept == null) {
+      throw BlockConfig.invalid(missing);
+    }
+    return kept;
+  }
+
+  private static void requireCoordinates(Double lat, Double lng) {
+    if (lat == null || lng == null) {
+      throw BlockConfig.invalid("place: lat/lng required");
+    }
+    if (outside(lat, 90)) {
+      throw BlockConfig.invalid("place: lat out of range");
+    }
+    if (outside(lng, 180)) {
+      throw BlockConfig.invalid("place: lng out of range");
     }
   }
 
-  private static String trimTo(String s, int max) {
-    if (s == null) return null;
-    String t = s.trim();
-    if (t.isEmpty()) return null;
-    return t.length() <= max ? t : t.substring(0, max);
+  private static boolean outside(double value, double bound) {
+    return value < -bound || value > bound;
   }
 
-  private static void validateHttpUrl(String url) {
-    URI uri;
-    try {
-      uri = URI.create(url);
-    } catch (IllegalArgumentException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: cover url malformed");
-    }
-    String scheme = uri.getScheme();
-    if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "place: cover url must be http(s)");
-    }
-    if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "place: cover url missing host");
-    }
+  private static String category(String raw) {
+    String category = trimTo(raw, CATEGORY_MAX);
+    return category != null && CATEGORIES.contains(category) ? category : null;
   }
 }

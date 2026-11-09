@@ -21,17 +21,23 @@ public final class EventContacts {
       throw new EventException(EventErrorCode.INVALID_CONTACT, field);
     }
     String value = raw.trim();
-    boolean valid =
-        switch (field) {
-          case EMAIL -> EMAIL.matcher(value).matches();
-          case PHONE -> PHONE.matcher(value.replaceAll("\\s", "")).matches();
-          case KAKAO -> KAKAO.matcher(value).matches();
-          case LINE -> LINE.matcher(value).matches();
-          case INSTAGRAM -> INSTAGRAM.matcher(value).matches();
-        };
-    if (!valid) {
+    if (!valid(field, value)) {
       throw new EventException(EventErrorCode.INVALID_CONTACT, field);
     }
+    return canonical(field, value);
+  }
+
+  private static boolean valid(ContactField field, String value) {
+    return switch (field) {
+      case EMAIL -> EMAIL.matcher(value).matches();
+      case PHONE -> PHONE.matcher(value.replaceAll("\\s", "")).matches();
+      case KAKAO -> KAKAO.matcher(value).matches();
+      case LINE -> LINE.matcher(value).matches();
+      case INSTAGRAM -> INSTAGRAM.matcher(value).matches();
+    };
+  }
+
+  private static String canonical(ContactField field, String value) {
     return switch (field) {
       case EMAIL -> value.toLowerCase(Locale.ROOT);
       case PHONE -> value.replaceAll("[\\s.-]", "");

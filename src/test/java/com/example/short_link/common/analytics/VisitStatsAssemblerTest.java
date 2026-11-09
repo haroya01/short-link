@@ -47,8 +47,25 @@ class VisitStatsAssemblerTest {
 
   record UtmSource(String getSource, Long getCount) implements UtmSourceVisitRow {}
 
-  private static VisitStatsAssembler.Rows noRows() {
+  private static VisitStatsAssembler.Rows rows(
+      List<DailyVisitRow> daily,
+      List<HourVisitRow> hourly,
+      List<HeatmapVisitRow> heatmap,
+      List<CountryVisitRow> countries,
+      List<DeviceVisitRow> devices,
+      List<BrowserVisitRow> browsers,
+      List<ReferrerHostVisitRow> referrerHosts,
+      List<SourceChannelVisitRow> sourceChannels,
+      List<UtmCampaignVisitRow> utmCampaigns,
+      List<UtmSourceVisitRow> utmSources) {
     return new VisitStatsAssembler.Rows(
+        new VisitStatsAssembler.Timing(daily, hourly, heatmap),
+        new VisitStatsAssembler.Audience(countries, devices, browsers),
+        new VisitStatsAssembler.Sources(referrerHosts, sourceChannels, utmCampaigns, utmSources));
+  }
+
+  private static VisitStatsAssembler.Rows noRows() {
+    return rows(
         List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
         List.of(), List.of());
   }
@@ -72,7 +89,7 @@ class VisitStatsAssemblerTest {
   @Test
   void mapsEveryRowInOrder() {
     VisitStatsAssembler.Rows rows =
-        new VisitStatsAssembler.Rows(
+        rows(
             List.of(
                 new Daily(LocalDate.of(2026, 6, 29), 2L), new Daily(LocalDate.of(2026, 6, 30), 1L)),
             List.of(new Hour(8, 1L), new Hour(21, 2L)),
@@ -110,7 +127,7 @@ class VisitStatsAssemblerTest {
   @Test
   void rowsFromSeveralOffsetPeriodsAddUpPerDayHourAndCellInOrder() {
     VisitStatsAssembler.Rows rows =
-        new VisitStatsAssembler.Rows(
+        rows(
             List.of(
                 new Daily(LocalDate.of(2026, 11, 1), 1L),
                 new Daily(LocalDate.of(2026, 10, 31), 4L),
@@ -161,7 +178,7 @@ class VisitStatsAssemblerTest {
   @Test
   void thePeakHourIsTheBusiestAndTheEarliestOnATie() {
     VisitStatsAssembler.Rows rows =
-        new VisitStatsAssembler.Rows(
+        rows(
             List.of(),
             List.of(new Hour(3, 5L), new Hour(9, 7L), new Hour(15, 7L)),
             List.of(),
@@ -179,7 +196,7 @@ class VisitStatsAssemblerTest {
   @Test
   void namesSqlDaysOfWeekFromSunday() {
     VisitStatsAssembler.Rows rows =
-        new VisitStatsAssembler.Rows(
+        rows(
             List.of(),
             List.of(),
             List.of(
@@ -215,7 +232,7 @@ class VisitStatsAssemblerTest {
   @Test
   void labelsMissingCountryDeviceAndBrowserUnknownButLeavesTheOthersNull() {
     VisitStatsAssembler.Rows rows =
-        new VisitStatsAssembler.Rows(
+        rows(
             List.of(),
             List.of(),
             List.of(),

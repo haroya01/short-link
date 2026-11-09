@@ -86,53 +86,52 @@ public record PublicProfile(
     }
 
     public static ProfileEntry text(Long id, String content) {
-      return new ProfileEntry("TEXT", id, null, null, null, null, null, null, null, content, null);
+      return block("TEXT", id, null, content);
     }
 
     public static ProfileEntry divider(Long id) {
-      return new ProfileEntry("DIVIDER", id, null, null, null, null, null, null, null, null, null);
+      return block("DIVIDER", id, null, null);
     }
 
     public static ProfileEntry image(Long id, String url) {
-      return new ProfileEntry("IMAGE", id, null, null, null, null, null, null, null, url, null);
+      return block("IMAGE", id, null, url);
     }
 
     public static ProfileEntry embed(Long id, String url) {
-      return new ProfileEntry("EMBED", id, null, null, null, null, null, null, null, url, null);
+      return block("EMBED", id, null, url);
     }
 
     public static ProfileEntry emailForm(Long id, String config) {
-      return new ProfileEntry(
-          "EMAIL_FORM", id, null, null, null, null, null, null, null, config, null);
+      return block("EMAIL_FORM", id, null, config);
     }
 
     public static ProfileEntry contactCard(Long id, String config) {
-      return new ProfileEntry(
-          "CONTACT_CARD", id, null, null, null, null, null, null, null, config, null);
+      return block("CONTACT_CARD", id, null, config);
     }
 
     public static ProfileEntry gallery(Long id, String config) {
-      return new ProfileEntry(
-          "GALLERY", id, null, null, null, null, null, null, null, config, null);
+      return block("GALLERY", id, null, config);
     }
 
     public static ProfileEntry productCard(Long id, String config, boolean highlighted) {
-      return new ProfileEntry(
-          "PRODUCT_CARD", id, null, null, null, null, null, null, highlighted, config, null);
+      return block("PRODUCT_CARD", id, highlighted, config);
     }
 
     public static ProfileEntry booking(Long id, String config) {
-      return new ProfileEntry(
-          "BOOKING", id, null, null, null, null, null, null, null, config, null);
+      return block("BOOKING", id, null, config);
     }
 
     public static ProfileEntry event(Long id, String config, boolean highlighted) {
-      return new ProfileEntry(
-          "EVENT", id, null, null, null, null, null, null, highlighted, config, null);
+      return block("EVENT", id, highlighted, config);
     }
 
     public static ProfileEntry place(Long id, String config) {
-      return new ProfileEntry("PLACE", id, null, null, null, null, null, null, null, config, null);
+      return block("PLACE", id, null, config);
+    }
+
+    private static ProfileEntry block(String kind, Long id, Boolean highlighted, String content) {
+      return new ProfileEntry(
+          kind, id, null, null, null, null, null, null, highlighted, content, null);
     }
   }
 }

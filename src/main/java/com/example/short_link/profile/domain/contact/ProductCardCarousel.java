@@ -1,11 +1,10 @@
 package com.example.short_link.profile.domain.contact;
 
+import static com.example.short_link.profile.domain.contact.BlockConfig.trimTo;
+
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -35,8 +34,6 @@ public final class ProductCardCarousel {
   private static final int FOCAL_DEFAULT = 50;
   private static final int FOCAL_MIN = 0;
   private static final int FOCAL_MAX = 100;
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private ProductCardCarousel() {}
 
@@ -86,35 +83,15 @@ public final class ProductCardCarousel {
   }
 
   private static Payload readPayload(String raw) {
-    if (raw == null || raw.isBlank()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: config required");
-    }
-    try {
-      return MAPPER.readValue(raw.trim(), Payload.class);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "product card: malformed json");
-    }
+    return BlockConfig.read(raw, Payload.class, "product card");
   }
 
   private static String writePayload(PayloadOut payload) {
-    try {
-      return MAPPER.writeValueAsString(payload);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: serialization failed");
-    }
+    return BlockConfig.write(payload, "product card");
   }
 
   private static PayloadOut normalizePayload(Payload parsed) {
-    if (parsed == null || parsed.items == null || parsed.items.isEmpty()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
-    }
-    if (parsed.items.size() > MAX_ITEMS) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: max " + MAX_ITEMS + " items");
-    }
+    requireItems(parsed);
     String title = trimTo(parsed.title, TITLE_MAX);
     String layout = normalizeLayout(parsed.layout);
     List<ItemOut> out = new ArrayList<>(parsed.items.size());
@@ -129,6 +106,17 @@ public final class ProductCardCarousel {
     return new PayloadOut(title, layout, out);
   }
 
+  private static void requireItems(Payload parsed) {
+    if (parsed == null || parsed.items == null || parsed.items.isEmpty()) {
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
+    }
+    if (parsed.items.size() > MAX_ITEMS) {
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: max " + MAX_ITEMS + " items");
+    }
+  }
+
   private static ItemOut normalizeItem(Item item) {
     String name = trimTo(item.name, NAME_MAX);
     if (name == null || name.isEmpty()) {
@@ -137,7 +125,7 @@ public final class ProductCardCarousel {
     }
     List<ImageEntry> images = normalizeImages(readCompatibleImages(item));
     String ctaUrl = trimTo(item.ctaUrl, CTA_URL_MAX);
-    if (ctaUrl != null) validateHttpUrl(ctaUrl, "cta");
+    if (ctaUrl != null) BlockConfig.requireHttpUrl(ctaUrl, "product card: cta url");
     return new ItemOut(
         name,
         images,
@@ -167,7 +155,7 @@ public final class ProductCardCarousel {
       if (entry == null) continue;
       String url = trimTo(entry.url, IMAGE_MAX);
       if (url == null) continue;
-      validateHttpUrl(url, "image");
+      BlockConfig.requireHttpUrl(url, "product card: image url");
       out.add(new ImageEntry(url, clampFocal(entry.focalX), clampFocal(entry.focalY)));
     }
     return out;
@@ -193,31 +181,5 @@ public final class ProductCardCarousel {
     if (v < FOCAL_MIN) return FOCAL_MIN;
     if (v > FOCAL_MAX) return FOCAL_MAX;
     return v;
-  }
-
-  private static String trimTo(String s, int max) {
-    if (s == null) return null;
-    String t = s.trim();
-    if (t.isEmpty()) return null;
-    return t.length() <= max ? t : t.substring(0, max);
-  }
-
-  private static void validateHttpUrl(String url, String field) {
-    URI uri;
-    try {
-      uri = URI.create(url);
-    } catch (IllegalArgumentException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url malformed");
-    }
-    String scheme = uri.getScheme();
-    if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url must be http(s)");
-    }
-    if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url missing host");
-    }
   }
 }

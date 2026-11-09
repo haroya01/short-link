@@ -1,10 +1,8 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.ProfileErrorCode;
-import com.example.short_link.profile.exception.ProfileException;
+import static com.example.short_link.profile.domain.contact.BlockConfig.trimTo;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Optional;
@@ -21,25 +19,14 @@ public record Booking(String url, String title, String description, String ctaLa
   private static final int DESCRIPTION_MAX = 160;
   private static final int CTA_LABEL_MAX = 30;
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   public static String normalize(String raw) {
-    if (raw == null || raw.isBlank()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: config required");
-    }
-    Booking parsed;
-    try {
-      parsed = MAPPER.readValue(raw.trim(), Booking.class);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: malformed json");
-    }
+    Booking parsed = BlockConfig.read(raw, Booking.class, "booking");
     String url = trimTo(parsed.url, URL_MAX);
     if (url == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: url required");
+      throw BlockConfig.invalid("booking: url required");
     }
     if (Provider.resolve(url).isEmpty()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "booking: unsupported provider");
+      throw BlockConfig.invalid("booking: unsupported provider");
     }
     Booking out =
         new Booking(
@@ -47,19 +34,7 @@ public record Booking(String url, String title, String description, String ctaLa
             trimTo(parsed.title, TITLE_MAX),
             trimTo(parsed.description, DESCRIPTION_MAX),
             trimTo(parsed.ctaLabel, CTA_LABEL_MAX));
-    try {
-      return MAPPER.writeValueAsString(out);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "booking: serialization failed");
-    }
-  }
-
-  private static String trimTo(String s, int max) {
-    if (s == null) return null;
-    String t = s.trim();
-    if (t.isEmpty()) return null;
-    return t.length() <= max ? t : t.substring(0, max);
+    return BlockConfig.write(out, "booking");
   }
 
   public enum Provider {
@@ -104,22 +79,11 @@ public record Booking(String url, String title, String description, String ctaLa
     }
 
     public static Optional<Provider> resolve(String url) {
-      if (url == null || url.isBlank()) return Optional.empty();
-      URI uri;
-      try {
-        uri = URI.create(url.trim());
-      } catch (IllegalArgumentException ex) {
-        return Optional.empty();
-      }
-      String scheme = uri.getScheme();
-      if (scheme == null) return Optional.empty();
-      String s = scheme.toLowerCase(Locale.ROOT);
-      if (!s.equals("http") && !s.equals("https")) return Optional.empty();
-      String host = uri.getHost();
-      if (host == null || host.isBlank()) return Optional.empty();
-      String h = host.toLowerCase(Locale.ROOT);
+      Optional<URI> uri = BlockConfig.httpUri(url);
+      if (uri.isEmpty()) return Optional.empty();
+      String h = uri.get().getHost().toLowerCase(Locale.ROOT);
       for (Provider p : values()) {
-        if (p.serves(h, uri)) return Optional.of(p);
+        if (p.serves(h, uri.get())) return Optional.of(p);
       }
       return Optional.empty();
     }

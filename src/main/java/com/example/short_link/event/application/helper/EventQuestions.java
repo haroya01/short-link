@@ -47,22 +47,33 @@ public final class EventQuestions {
       throw new EventException(EventErrorCode.INVALID_QUESTIONS, "max " + MAX_QUESTIONS);
     }
     for (QuestionSpec spec : specs) {
-      QuestionType type = parseType(spec.type());
-      if (spec.label() == null || spec.label().isBlank() || spec.label().length() > 200) {
-        throw new EventException(EventErrorCode.INVALID_QUESTIONS, "label");
-      }
-      if (type == QuestionType.SINGLE_CHOICE) {
-        List<String> options = spec.options();
-        if (options == null || options.size() < 2 || options.size() > 10) {
-          throw new EventException(EventErrorCode.INVALID_QUESTIONS, "options 2..10");
-        }
-        for (String option : options) {
-          if (option == null || option.isBlank() || option.length() > 100) {
-            throw new EventException(EventErrorCode.INVALID_QUESTIONS, "option");
-          }
-        }
+      validateSpec(spec);
+    }
+  }
+
+  private static void validateSpec(QuestionSpec spec) {
+    QuestionType type = parseType(spec.type());
+    if (spec.label() == null || spec.label().isBlank() || spec.label().length() > 200) {
+      throw new EventException(EventErrorCode.INVALID_QUESTIONS, "label");
+    }
+    if (type == QuestionType.SINGLE_CHOICE) {
+      validateOptions(spec.options());
+    }
+  }
+
+  private static void validateOptions(List<String> options) {
+    if (options == null || options.size() < 2 || options.size() > 10) {
+      throw new EventException(EventErrorCode.INVALID_QUESTIONS, "options 2..10");
+    }
+    for (String option : options) {
+      if (!fitsOption(option)) {
+        throw new EventException(EventErrorCode.INVALID_QUESTIONS, "option");
       }
     }
+  }
+
+  private static boolean fitsOption(String option) {
+    return option != null && !option.isBlank() && option.length() <= 100;
   }
 
   public static QuestionType parseType(String raw) {
@@ -96,22 +107,10 @@ public final class EventQuestions {
     Map<Long, String> given = answers == null ? Map.of() : answers;
     Map<String, String> stored = new LinkedHashMap<>();
     for (EventQuestionEntity question : questions) {
-      String answer = given.get(question.getId());
-      boolean blank = answer == null || answer.isBlank();
-      if (blank) {
-        if (question.isRequired()) {
-          throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
-        }
-        continue;
+      String answer = answer(question, given.get(question.getId()));
+      if (answer != null) {
+        stored.put(String.valueOf(question.getId()), answer);
       }
-      if (answer.length() > MAX_ANSWER_LENGTH) {
-        throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
-      }
-      if (question.getType() == QuestionType.SINGLE_CHOICE
-          && !deserializeOptions(question.getOptionsJson()).contains(answer)) {
-        throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
-      }
-      stored.put(String.valueOf(question.getId()), answer.trim());
     }
     if (stored.isEmpty()) return null;
     try {
@@ -119,6 +118,27 @@ public final class EventQuestions {
     } catch (JsonProcessingException e) {
       throw new EventException(EventErrorCode.INVALID_ANSWER, "serialization");
     }
+  }
+
+  private static String answer(EventQuestionEntity question, String answer) {
+    if (answer == null || answer.isBlank()) {
+      if (question.isRequired()) {
+        throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
+      }
+      return null;
+    }
+    if (answer.length() > MAX_ANSWER_LENGTH) {
+      throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
+    }
+    if (!accepts(question, answer)) {
+      throw new EventException(EventErrorCode.INVALID_ANSWER, question.getLabel());
+    }
+    return answer.trim();
+  }
+
+  private static boolean accepts(EventQuestionEntity question, String answer) {
+    return question.getType() != QuestionType.SINGLE_CHOICE
+        || deserializeOptions(question.getOptionsJson()).contains(answer);
   }
 
   public static Map<String, String> deserializeAnswers(String answersJson) {

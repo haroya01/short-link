@@ -1,11 +1,8 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.ProfileErrorCode;
-import com.example.short_link.profile.exception.ProfileException;
+import static com.example.short_link.profile.domain.contact.BlockConfig.trimTo;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -55,38 +52,19 @@ public record ContactCard(
   private static final Pattern EMAIL_PATTERN =
       Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   public static String normalize(String raw) {
-    if (raw == null || raw.isBlank()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "contact card: config required");
-    }
-    ContactCard parsed;
-    try {
-      parsed = MAPPER.readValue(raw.trim(), ContactCard.class);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "contact card: malformed json");
-    }
+    ContactCard parsed = BlockConfig.read(raw, ContactCard.class, "contact card");
     String name = trimTo(parsed.name, NAME_MAX);
     if (name == null || name.isEmpty()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "contact card: name required");
+      throw BlockConfig.invalid("contact card: name required");
     }
     String email = trimTo(parsed.email, EMAIL_MAX);
     if (email != null && !EMAIL_PATTERN.matcher(email).matches()) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "contact card: email malformed");
+      throw BlockConfig.invalid("contact card: email malformed");
     }
-    String website = trimTo(parsed.website, WEBSITE_MAX);
-    if (website != null) validateHttpUrl(website, "website");
-    String logoUrl = trimTo(parsed.logoUrl, LOGO_URL_MAX);
-    if (logoUrl != null) validateHttpUrl(logoUrl, "logoUrl");
-    String palette = trimTo(parsed.palette, 32);
-    if (palette != null && !ALLOWED_PALETTES.contains(palette)) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME,
-          "contact card: palette must be one of " + ALLOWED_PALETTES);
-    }
+    String website = httpUrl(parsed.website, WEBSITE_MAX, "website");
+    String logoUrl = httpUrl(parsed.logoUrl, LOGO_URL_MAX, "logoUrl");
+    String palette = palette(parsed.palette);
     ContactCard out =
         new ContactCard(
             name,
@@ -100,12 +78,23 @@ public record ContactCard(
             clampFocal(parsed.logoFocalX),
             clampFocal(parsed.logoFocalY),
             palette);
-    try {
-      return MAPPER.writeValueAsString(out);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "contact card: serialization failed");
+    return BlockConfig.write(out, "contact card");
+  }
+
+  private static String palette(String raw) {
+    String palette = trimTo(raw, 32);
+    if (palette != null && !ALLOWED_PALETTES.contains(palette)) {
+      throw BlockConfig.invalid("contact card: palette must be one of " + ALLOWED_PALETTES);
     }
+    return palette;
+  }
+
+  private static String httpUrl(String raw, int max, String field) {
+    String url = trimTo(raw, max);
+    if (url != null) {
+      BlockConfig.requireHttpUrl(url, "contact card: " + field);
+    }
+    return url;
   }
 
   private static Integer clampFocal(Integer raw) {
@@ -114,31 +103,5 @@ public record ContactCard(
     if (v < FOCAL_MIN) return FOCAL_MIN;
     if (v > FOCAL_MAX) return FOCAL_MAX;
     return v;
-  }
-
-  private static String trimTo(String s, int max) {
-    if (s == null) return null;
-    String t = s.trim();
-    if (t.isEmpty()) return null;
-    return t.length() <= max ? t : t.substring(0, max);
-  }
-
-  private static void validateHttpUrl(String url, String field) {
-    try {
-      URI uri = URI.create(url);
-      String scheme = uri.getScheme();
-      if (scheme == null
-          || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-        throw new ProfileException(
-            ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " must be http(s)");
-      }
-      if (uri.getHost() == null || uri.getHost().isBlank()) {
-        throw new ProfileException(
-            ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " missing host");
-      }
-    } catch (IllegalArgumentException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " malformed");
-    }
   }
 }

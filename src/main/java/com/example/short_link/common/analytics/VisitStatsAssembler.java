@@ -41,13 +41,17 @@ public final class VisitStatsAssembler {
     }
   }
 
-  public record Rows(
-      List<DailyVisitRow> daily,
-      List<HourVisitRow> hourly,
-      List<HeatmapVisitRow> heatmap,
+  public record Rows(Timing timing, Audience audience, Sources sources) {}
+
+  public record Timing(
+      List<DailyVisitRow> daily, List<HourVisitRow> hourly, List<HeatmapVisitRow> heatmap) {}
+
+  public record Audience(
       List<CountryVisitRow> countries,
       List<DeviceVisitRow> devices,
-      List<BrowserVisitRow> browsers,
+      List<BrowserVisitRow> browsers) {}
+
+  public record Sources(
       List<ReferrerHostVisitRow> referrerHosts,
       List<SourceChannelVisitRow> sourceChannels,
       List<UtmCampaignVisitRow> utmCampaigns,
@@ -61,7 +65,7 @@ public final class VisitStatsAssembler {
   public static VisitStats assemble(ZoneId zone, Totals totals, Rows rows) {
     List<VisitStats.HourVisit> hourly =
         sums(
-                rows.hourly(),
+                rows.timing().hourly(),
                 HourVisitRow::getHour,
                 HourVisitRow::getCount,
                 Comparator.naturalOrder())
@@ -79,7 +83,7 @@ public final class VisitStatsAssembler {
         totals.lastVisitAt(),
         peakHour(hourly),
         sums(
-                rows.daily(),
+                rows.timing().daily(),
                 DailyVisitRow::getDay,
                 DailyVisitRow::getCount,
                 Comparator.naturalOrder())
@@ -89,7 +93,7 @@ public final class VisitStatsAssembler {
             .toList(),
         hourly,
         sums(
-                rows.heatmap(),
+                rows.timing().heatmap(),
                 r -> new DowHour(r.getDow(), r.getHour()),
                 HeatmapVisitRow::getCount,
                 DowHour.ORDER)
@@ -101,22 +105,26 @@ public final class VisitStatsAssembler {
                         dayOfWeekName(e.getKey().dow()), e.getKey().hour(), e.getValue()))
             .toList(),
         map(
-            rows.countries(),
+            rows.audience().countries(),
             r -> new VisitStats.CountryVisit(orUnknown(r.getCountry()), r.getCount())),
         map(
-            rows.devices(),
+            rows.audience().devices(),
             r -> new VisitStats.DeviceVisit(orUnknown(r.getDevice()), r.getCount())),
         map(
-            rows.browsers(),
+            rows.audience().browsers(),
             r -> new VisitStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount())),
-        map(rows.referrerHosts(), r -> new VisitStats.ReferrerHostVisit(r.getHost(), r.getCount())),
         map(
-            rows.sourceChannels(),
+            rows.sources().referrerHosts(),
+            r -> new VisitStats.ReferrerHostVisit(r.getHost(), r.getCount())),
+        map(
+            rows.sources().sourceChannels(),
             r -> new VisitStats.SourceChannelVisit(r.getSource(), r.getCount())),
         map(
-            rows.utmCampaigns(),
+            rows.sources().utmCampaigns(),
             r -> new VisitStats.UtmCampaignVisit(r.getCampaign(), r.getCount())),
-        map(rows.utmSources(), r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount())));
+        map(
+            rows.sources().utmSources(),
+            r -> new VisitStats.UtmSourceVisit(r.getSource(), r.getCount())));
   }
 
   private static <R, K> SortedMap<K, Long> sums(
