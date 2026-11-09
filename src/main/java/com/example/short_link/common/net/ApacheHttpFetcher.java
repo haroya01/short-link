@@ -8,6 +8,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
@@ -24,6 +28,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApacheHttpFetcher implements HttpFetcher {
 
+  private static final ScheduledExecutorService DEADLINES =
+      Executors.newSingleThreadScheduledExecutor(
+          Thread.ofPlatform().name("http-fetch-deadline").daemon().factory());
+
   @Override
   public Response fetch(Request request) {
     Timeout connect = Timeout.ofMilliseconds(request.connectTimeout().toMillis());
@@ -31,13 +39,23 @@ public class ApacheHttpFetcher implements HttpFetcher {
     Timeout total =
         Timeout.ofMilliseconds(
             request.connectTimeout().toMillis() + request.readTimeout().toMillis());
+    HttpUriRequestBase httpReq = buildRequest(request);
+    ScheduledFuture<?> deadline =
+        DEADLINES.schedule(httpReq::cancel, total.toMilliseconds(), TimeUnit.MILLISECONDS);
     try (CloseableHttpClient client =
         PinnedHttpClientFactory.build(
             request.pinned(), connect, read, total, request.followRedirects())) {
-      HttpUriRequestBase httpReq = buildRequest(request);
-      return client.execute(httpReq, response -> readResponse(response, request.maxBodyBytes()));
+      ClassicHttpResponse response = client.executeOpen(null, httpReq, null);
+      try {
+        return readResponse(response, request.maxBodyBytes());
+      } finally {
+        httpReq.cancel();
+        closeQuietly(response);
+      }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
+    } finally {
+      deadline.cancel(false);
     }
   }
 
@@ -68,15 +86,19 @@ public class ApacheHttpFetcher implements HttpFetcher {
     for (Header h : response.getHeaders()) {
       headers.computeIfAbsent(h.getName(), k -> new ArrayList<>()).add(h.getValue());
     }
-    byte[] body;
-    if (response.getEntity() == null) {
-      body = new byte[0];
-    } else {
-      try (InputStream in = response.getEntity().getContent()) {
-        body = readUpTo(in, maxBodyBytes);
-      }
-    }
+    byte[] body =
+        response.getEntity() == null
+            ? new byte[0]
+            : readUpTo(response.getEntity().getContent(), maxBodyBytes);
     return new Response(response.getCode(), headers, body);
+  }
+
+  private static void closeQuietly(ClassicHttpResponse response) {
+    try {
+      response.close();
+    } catch (IOException ignored) {
+      return;
+    }
   }
 
   private static byte[] readUpTo(InputStream in, int max) throws IOException {

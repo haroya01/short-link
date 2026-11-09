@@ -111,7 +111,6 @@ class NoteWriteActionsTest {
     return new NoteComposer(
         notes,
         media,
-        quotedPosts,
         people,
         images,
         views,
@@ -119,6 +118,7 @@ class NoteWriteActionsTest {
         rooms,
         moderation,
         guard(),
+        new NoteDraftCheck(notes, quotedPosts, people, rooms, moderation, guard()),
         events,
         FakeTransactions.template(),
         Clock.fixed(NOW, ZoneOffset.UTC));
@@ -187,9 +187,9 @@ class NoteWriteActionsTest {
             .createThread(
                 7L,
                 List.of(
-                    new NoteDraft("첫째", List.of(), null, null, null, null, false, "unlisted"),
-                    new NoteDraft("둘째", List.of(), null, 999L, null, null, false, "public"),
-                    new NoteDraft("셋째", List.of(), null, null)));
+                    NoteDrafts.draft("첫째").visibility("unlisted").build(),
+                    NoteDrafts.draft("둘째").replyingTo(999L).visibility("public").build(),
+                    NoteDrafts.draft("셋째").build()));
 
     assertThat(thread).extracting(NoteView::id).containsExactly(100L, 101L, 102L);
     assertThat(saved.get(100L).getInReplyToId()).isNull();
@@ -220,10 +220,10 @@ class NoteWriteActionsTest {
             .createThread(
                 7L,
                 List.of(
-                    new NoteDraft("첫째", List.of(), null, null, null, "결말 포함", false),
-                    new NoteDraft("둘째", List.of(), null, null, null, " ", false),
-                    new NoteDraft("셋째", List.of(), null, null, null, "다른 경고", false),
-                    new NoteDraft("넷째", List.of(), null, null)));
+                    NoteDrafts.draft("첫째").warning("결말 포함").build(),
+                    NoteDrafts.draft("둘째").warning(" ").build(),
+                    NoteDrafts.draft("셋째").warning("다른 경고").build(),
+                    NoteDrafts.draft("넷째").build()));
 
     assertThat(thread)
         .extracting(NoteView::contentWarning)
@@ -237,8 +237,8 @@ class NoteWriteActionsTest {
             .createThread(
                 7L,
                 List.of(
-                    new NoteDraft("사진", List.of(), null, null, null, null, true),
-                    new NoteDraft("이어서", List.of(), null, null)));
+                    NoteDrafts.draft("사진").sensitive(true).build(),
+                    NoteDrafts.draft("이어서").build()));
 
     assertThat(marked).extracting(NoteView::contentWarning).containsOnly((String) null);
     assertThat(marked).extracting(NoteView::sensitive).containsExactly(true, true);
@@ -246,7 +246,7 @@ class NoteWriteActionsTest {
 
   @Test
   void aThreadHoldsTwoToTenNotes() {
-    NoteDraft one = new NoteDraft("하나", List.of(), null, null);
+    NoteDraft one = NoteDrafts.draft("하나").build();
     for (List<NoteDraft> drafts :
         List.of(List.of(one), Collections.nCopies(NoteEntity.MAX_THREAD_NOTES + 1, one))) {
       assertThatThrownBy(() -> composer().createThread(7L, drafts))
@@ -275,11 +275,12 @@ class NoteWriteActionsTest {
         composer()
             .create(
                 7L,
-                new NoteDraft(
-                    "  hello  ",
-                    List.of(new NoteDraft.Image("k1", "first"), new NoteDraft.Image("k2", null)),
-                    5L,
-                    null));
+                NoteDrafts.draft("  hello  ")
+                    .images(
+                        List.of(
+                            new NoteDraft.Image("k1", "first"), new NoteDraft.Image("k2", null)))
+                    .quotingPost(5L)
+                    .build());
 
     verify(moderation).requireCanWrite(7L);
     @SuppressWarnings("unchecked")
@@ -309,7 +310,10 @@ class NoteWriteActionsTest {
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    composer().create(7L, new NoteDraft("only us", null, 5L, null, null, null, false, "PRIVATE"));
+    composer()
+        .create(
+            7L,
+            NoteDrafts.draft("only us").images(null).quotingPost(5L).visibility("PRIVATE").build());
 
     verify(events, never()).publishEvent(any(PostQuotedEvent.class));
     verify(events, never()).publishEvent(any(ImageVariantsRequested.class));
@@ -320,9 +324,10 @@ class NoteWriteActionsTest {
     saving();
     when(images.verifyAll(any(), any()))
         .thenReturn(List.of(new NoteImages.StoredImage("k", "u", "image/png", null)));
-    composer().create(7L, new NoteDraft(null, List.of(new NoteDraft.Image("k", null)), null, null));
+    composer()
+        .create(7L, NoteDrafts.draft(null).images(List.of(new NoteDraft.Image("k", null))).build());
 
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("   ", null, null, null)))
+    assertThatThrownBy(() -> composer().create(7L, NoteDrafts.draft("   ").images(null).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_BODY_REQUIRED));
@@ -332,10 +337,12 @@ class NoteWriteActionsTest {
   void bodyLengthCountsCharactersNotUtf16Units() {
     saving();
     String fiveHundredEmoji = "😀".repeat(NoteEntity.MAX_BODY_LENGTH);
-    composer().create(7L, new NoteDraft(fiveHundredEmoji, null, null, null));
+    composer().create(7L, NoteDrafts.draft(fiveHundredEmoji).images(null).build());
 
     assertThatThrownBy(
-            () -> composer().create(7L, new NoteDraft(fiveHundredEmoji + "x", null, null, null)))
+            () ->
+                composer()
+                    .create(7L, NoteDrafts.draft(fiveHundredEmoji + "x").images(null).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_BODY_TOO_LONG));
@@ -364,7 +371,8 @@ class NoteWriteActionsTest {
             });
     when(notes.findById(anyLong()))
         .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
-    NoteDraft photo = new NoteDraft("사진", List.of(new NoteDraft.Image("k", null)), null, null);
+    NoteDraft photo =
+        NoteDrafts.draft("사진").images(List.of(new NoteDraft.Image("k", null))).build();
 
     composer().create(7L, photo);
     composer().createThread(7L, List.of(photo, photo));
@@ -383,7 +391,8 @@ class NoteWriteActionsTest {
   void aQuoteMustBeAPublishedPost() {
     when(quotedPosts.publishedByIds(Set.of(9L))).thenReturn(Map.of());
 
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, 9L, null)))
+    assertThatThrownBy(
+            () -> composer().create(7L, NoteDrafts.draft("x").images(null).quotingPost(9L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_NOT_FOUND));
@@ -393,7 +402,8 @@ class NoteWriteActionsTest {
   void repliesFollowTheParentAndRespectBlocksBothWays() {
     saving();
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
-    NoteView reply = composer().create(7L, new NoteDraft("re", null, null, 50L));
+    NoteView reply =
+        composer().create(7L, NoteDrafts.draft("re").images(null).replyingTo(50L).build());
     assertThat(reply.inReplyToId()).isEqualTo(50L);
     verify(events)
         .publishEvent(
@@ -408,17 +418,23 @@ class NoteWriteActionsTest {
                 50L));
 
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("re").images(null).replyingTo(50L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_BLOCKED));
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(false);
     when(blocks.isBlocked(BlockEdge.blocker(7L).blocked(8L))).thenReturn(true);
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 50L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("re").images(null).replyingTo(50L).build()))
         .isInstanceOf(NoteException.class);
 
     when(notes.findById(51L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("re", null, null, 51L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("re").images(null).replyingTo(51L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_FOUND));
@@ -430,9 +446,9 @@ class NoteWriteActionsTest {
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
     when(notes.findById(60L)).thenReturn(Optional.of(note(60L, 7L, "first")));
 
-    composer().create(7L, new NoteDraft("hello", null, null, null));
-    composer().create(7L, new NoteDraft("re", null, null, 50L));
-    composer().create(7L, new NoteDraft("and then", null, null, 60L));
+    composer().create(7L, NoteDrafts.draft("hello").images(null).build());
+    composer().create(7L, NoteDrafts.draft("re").images(null).replyingTo(50L).build());
+    composer().create(7L, NoteDrafts.draft("and then").images(null).replyingTo(60L).build());
 
     ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
     verify(events, org.mockito.Mockito.atLeastOnce()).publishEvent(published.capture());
@@ -448,19 +464,13 @@ class NoteWriteActionsTest {
     saving();
 
     NoteView view =
-        composer()
-            .create(
-                7L,
-                new NoteDraft("hello", null, null, null, null, null, false, null, null, " EN "));
+        composer().create(7L, NoteDrafts.draft("hello").images(null).language(" EN ").build());
 
     assertThat(view.language()).isEqualTo("en");
     assertThatThrownBy(
             () ->
                 composer()
-                    .create(
-                        7L,
-                        new NoteDraft(
-                            "hi", null, null, null, null, null, false, null, null, "english")))
+                    .create(7L, NoteDrafts.draft("hi").images(null).language("english").build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_LANGUAGE_INVALID));
@@ -470,7 +480,7 @@ class NoteWriteActionsTest {
   void aNewNoteComesBackWithItsWritersOwnMarksAllOff() {
     saving();
 
-    NoteView view = composer().create(7L, new NoteDraft("hello", null, null, null));
+    NoteView view = composer().create(7L, NoteDrafts.draft("hello").images(null).build());
 
     assertThat(view.likedByMe()).isFalse();
     assertThat(view.repostedByMe()).isFalse();
@@ -482,8 +492,7 @@ class NoteWriteActionsTest {
   @Test
   void aDirectNoteIsNeverBroadcast() {
     saving();
-    composer()
-        .create(7L, new NoteDraft("psst", null, null, null, null, null, false, "DIRECT", null));
+    composer().create(7L, NoteDrafts.draft("psst").images(null).visibility("DIRECT").build());
 
     verify(events, never()).publishEvent(any(NoteBroadcastEvent.class));
   }
@@ -497,7 +506,8 @@ class NoteWriteActionsTest {
     when(media.findByNoteIds(List.of(50L)))
         .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
 
-    NoteView view = composer().create(7L, new NoteDraft("so true", null, null, null, 50L));
+    NoteView view =
+        composer().create(7L, NoteDrafts.draft("so true").images(null).quotingNote(50L).build());
 
     ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
     verify(notes).save(saved.capture());
@@ -525,7 +535,16 @@ class NoteWriteActionsTest {
 
   @Test
   void aNoteQuotesAPostOrANoteButNeverBoth() {
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, 5L, null, 50L)))
+    assertThatThrownBy(
+            () ->
+                composer()
+                    .create(
+                        7L,
+                        NoteDrafts.draft("x")
+                            .images(null)
+                            .quotingPost(5L)
+                            .quotingNote(50L)
+                            .build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_CONFLICT));
@@ -535,20 +554,26 @@ class NoteWriteActionsTest {
   @Test
   void aQuotedNoteMustExistHaveAnActiveAuthorAndNotCrossABlock() {
     when(notes.findById(51L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 51L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("x").images(null).quotingNote(51L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
 
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER));
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 50L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("x").images(null).quotingNote(50L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
 
     when(blocks.isBlocked(BlockEdge.blocker(8L).blocked(7L))).thenReturn(true);
-    assertThatThrownBy(() -> composer().create(7L, new NoteDraft("x", null, null, null, 50L)))
+    assertThatThrownBy(
+            () ->
+                composer().create(7L, NoteDrafts.draft("x").images(null).quotingNote(50L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
@@ -611,7 +636,7 @@ class NoteWriteActionsTest {
     assertThat(interactions().setBookmark(8L, 1L, true).bookmarked()).isTrue();
     interactions().setRepost(8L, 1L, true);
     interactions().setRepost(8L, 1L, false);
-    composer().create(8L, new NoteDraft("an answer", null, null, 1L, null));
+    composer().create(8L, NoteDrafts.draft("an answer").images(null).replyingTo(1L).build());
 
     verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, true));
     verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, false));
@@ -632,7 +657,8 @@ class NoteWriteActionsTest {
     when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of(42L, alice));
     saving();
 
-    NoteView quoting = composer().create(8L, new NoteDraft("look", null, null, null, 1L));
+    NoteView quoting =
+        composer().create(8L, NoteDrafts.draft("look").images(null).quotingNote(1L).build());
 
     assertThat(quoting.quotedNote().id()).isEqualTo(1L);
     assertThat(quoting.quotedNote().author()).isEqualTo(alice);
@@ -649,7 +675,10 @@ class NoteWriteActionsTest {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
     when(people.remoteAuthors(Set.of(42L), 8L)).thenReturn(Map.of());
 
-    assertThatThrownBy(() -> composer().create(8L, new NoteDraft("look", null, null, null, 1L)))
+    assertThatThrownBy(
+            () ->
+                composer()
+                    .create(8L, NoteDrafts.draft("look").images(null).quotingNote(1L).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
@@ -661,7 +690,7 @@ class NoteWriteActionsTest {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    composer().create(7L, new NoteDraft("hi @bob@mastodon.social", null, null, null));
+    composer().create(7L, NoteDrafts.draft("hi @bob@mastodon.social").images(null).build());
 
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L, true));
   }
@@ -669,7 +698,7 @@ class NoteWriteActionsTest {
   @Test
   void aNoteWithAnAddressAsksForItsCardButPhotosAndQuotesAlreadyCarryOne() {
     saving();
-    composer().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));
+    composer().create(7L, NoteDrafts.draft("see https://example.com/a.").images(null).build());
     verify(events).publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/a"));
 
     when(images.verifyAll(any(), any()))
@@ -677,11 +706,9 @@ class NoteWriteActionsTest {
     composer()
         .create(
             7L,
-            new NoteDraft(
-                "photo https://example.com/b",
-                List.of(new NoteDraft.Image("k", null)),
-                null,
-                null));
+            NoteDrafts.draft("photo https://example.com/b")
+                .images(List.of(new NoteDraft.Image("k", null)))
+                .build());
     verify(events, never())
         .publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/b"));
   }
@@ -722,7 +749,7 @@ class NoteWriteActionsTest {
   void aNoteKeepsItsHashtagsAndAnEditRewritesThemOnlyWhenTheSetChanges() {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
-    composer().create(7L, new NoteDraft("오늘 #스프링 #Boot", List.of(), null, null));
+    composer().create(7L, NoteDrafts.draft("오늘 #스프링 #Boot").build());
     verify(notes).tag(100L, List.of("스프링", "Boot"));
 
     NoteEntity mine = note(1L, 7L, "#a #b");
@@ -747,7 +774,8 @@ class NoteWriteActionsTest {
         .thenReturn(Map.of(7L, WRITER, 9L, mina, 11L, yuki));
 
     NoteView view =
-        composer().create(7L, new NoteDraft("@mina @Yuki @writer @ghost 안녕", List.of(), null, 5L));
+        composer()
+            .create(7L, NoteDrafts.draft("@mina @Yuki @writer @ghost 안녕").replyingTo(5L).build());
 
     assertThat(view.mentions()).containsExactly("mina", "yuki", "writer");
     verify(events)
@@ -800,22 +828,16 @@ class NoteWriteActionsTest {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    NoteView warned =
-        composer().create(7L, new NoteDraft("결말", List.of(), null, null, null, "  스포일러  ", false));
+    NoteView warned = composer().create(7L, NoteDrafts.draft("결말").warning("  스포일러  ").build());
     assertThat(warned.contentWarning()).isEqualTo("스포일러");
     assertThat(warned.sensitive()).isTrue();
 
-    NoteView plain =
-        composer().create(7L, new NoteDraft("평범", List.of(), null, null, null, "   ", false));
+    NoteView plain = composer().create(7L, NoteDrafts.draft("평범").warning("   ").build());
     assertThat(plain.contentWarning()).isNull();
     assertThat(plain.sensitive()).isFalse();
 
     assertThatThrownBy(
-            () ->
-                composer()
-                    .create(
-                        7L,
-                        new NoteDraft("x", List.of(), null, null, null, "가".repeat(101), false)))
+            () -> composer().create(7L, NoteDrafts.draft("x").warning("가".repeat(101)).build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_WARNING_TOO_LONG));
@@ -900,7 +922,14 @@ class NoteWriteActionsTest {
     when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
     when(lookups.visibleTo(8L, Set.of(100L))).thenReturn(Set.of());
 
-    composer().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
+    composer()
+        .create(
+            7L,
+            NoteDrafts.draft("우리끼리 얘기")
+                .images(null)
+                .quotingNote(50L)
+                .visibility("PRIVATE")
+                .build());
 
     verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
   }
@@ -916,15 +945,14 @@ class NoteWriteActionsTest {
     when(people.activeAuthors(Set.of(7L), List.of("mina")))
         .thenReturn(Map.of(7L, WRITER, 11L, mina));
 
-    NoteView reply = composer().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
+    NoteView reply = composer().create(7L, NoteDrafts.draft("@mina 같이 봐요").replyingTo(5L).build());
 
     assertThat(reply.visibility()).isEqualTo("private");
     verify(notes).addRecipients(100L, Set.of(11L, 9L));
   }
 
   private static NoteDraft draftWithPolicy(String body, Long inReplyTo, String policy) {
-    return new NoteDraft(
-        body, List.of(), null, inReplyTo, null, null, false, null, null, null, policy);
+    return NoteDrafts.draft(body).replyingTo(inReplyTo).replyPolicy(policy).build();
   }
 
   @Test
@@ -1078,11 +1106,7 @@ class NoteWriteActionsTest {
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_SHAREABLE));
 
     assertThatThrownBy(
-            () ->
-                composer()
-                    .create(
-                        7L,
-                        new NoteDraft("x", List.of(), null, null, null, null, false, "everyone")))
+            () -> composer().create(7L, NoteDrafts.draft("x").visibility("everyone").build()))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_VISIBILITY_INVALID));
@@ -1208,7 +1232,7 @@ class NoteWriteActionsTest {
     when(notes.findById(60L)).thenReturn(Optional.of(middle));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
-    composer().create(7L, new NoteDraft("deeper", null, null, 60L));
+    composer().create(7L, NoteDrafts.draft("deeper").images(null).replyingTo(60L).build());
 
     ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
     verify(notes).save(saved.capture());
@@ -1257,16 +1281,9 @@ class NoteWriteActionsTest {
   }
 
   private static NoteDraft polled(List<String> options, Long expiresIn, boolean multiple) {
-    return new NoteDraft(
-        "어디서 볼까?",
-        List.of(),
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        new NoteDraft.Poll(options, expiresIn, multiple));
+    return NoteDrafts.draft("어디서 볼까?")
+        .poll(new NoteDraft.Poll(options, expiresIn, multiple))
+        .build();
   }
 
   @Test
@@ -1296,16 +1313,9 @@ class NoteWriteActionsTest {
     saving();
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
     NoteDraft draft =
-        new NoteDraft(
-            "어느 쪽? https://kurl.me/about",
-            List.of(),
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
+        NoteDrafts.draft("어느 쪽? https://kurl.me/about")
+            .poll(new NoteDraft.Poll(List.of("a", "b"), 3600L, false))
+            .build();
 
     composer().create(7L, draft);
 
@@ -1332,16 +1342,10 @@ class NoteWriteActionsTest {
               e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_POLL_INVALID));
     }
     NoteDraft withImage =
-        new NoteDraft(
-            "x",
-            List.of(new NoteDraft.Image("k1", null)),
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
+        NoteDrafts.draft("x")
+            .images(List.of(new NoteDraft.Image("k1", null)))
+            .poll(new NoteDraft.Poll(List.of("a", "b"), 3600L, false))
+            .build();
     assertThatThrownBy(() -> composer().create(7L, withImage))
         .isInstanceOfSatisfying(
             NoteException.class,

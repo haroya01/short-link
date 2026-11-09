@@ -199,24 +199,33 @@ public class TrendingPosts {
       if (statuses.isEmpty()) {
         return page == 0 ? Optional.empty() : Optional.of(reads);
       }
-      for (JsonNode status : statuses.get()) {
-        if (status.isObject()) {
-          reader
-              .read(status, server)
-              .ifPresent(
-                  read -> {
-                    reads.add(read);
-                    if (LatestPosts.keepable(status, urls)) {
-                      keepable.add(read.note().uri());
-                    }
-                  });
-        }
-      }
+      read(server, statuses.get(), reads, keepable);
       if (statuses.get().size() < props.perHost()) {
         break;
       }
     }
     return Optional.of(reads);
+  }
+
+  private void read(
+      String server,
+      JsonNode statuses,
+      List<TrendingStatusReader.Read> reads,
+      Set<String> keepable) {
+    for (JsonNode status : statuses) {
+      if (!status.isObject()) {
+        continue;
+      }
+      reader
+          .read(status, server)
+          .ifPresent(
+              read -> {
+                reads.add(read);
+                if (PublicStatuses.keepable(status, urls)) {
+                  keepable.add(read.note().uri());
+                }
+              });
+    }
   }
 
   private Optional<JsonNode> askPage(String server, Signer signer, int offset) {

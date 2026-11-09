@@ -41,12 +41,21 @@ public class LinkWebhookDispatcher {
         "webhook: dispatching click for linkId={} to {} hook(s)", event.linkId(), hooks.size());
     Map<String, Object> payload = clickPayload(event);
     for (LinkWebhookEntity hook : hooks) {
-      if (!deliveryGate.shouldDeliver(hook, event)) continue;
-      if (hook.isBatchEnabled()) {
-        batchBuffer.enqueue(hook.getId(), payload);
-      } else {
-        deliveryClient.deliver(hook, new WebhookNotification.Click(payload));
+      try {
+        dispatch(hook, event, payload);
+      } catch (RuntimeException e) {
+        log.warn("webhook: click for hookId={} skipped: {}", hook.getId(), e.toString());
       }
+    }
+  }
+
+  private void dispatch(
+      LinkWebhookEntity hook, ClickRecordedEvent event, Map<String, Object> payload) {
+    if (!deliveryGate.shouldDeliver(hook, event)) return;
+    if (hook.isBatchEnabled()) {
+      batchBuffer.enqueue(hook.getId(), payload);
+    } else {
+      deliveryClient.deliver(hook, new WebhookNotification.Click(payload));
     }
   }
 

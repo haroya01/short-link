@@ -44,6 +44,19 @@ class CreateCtaUseCaseTest {
   }
 
   @Test
+  void aNewCtaRemembersTheShortLinkThatTracksIt() {
+    when(linkTracker.trackingCodeFor(7L, "https://cal.com/me")).thenReturn("abc123");
+    when(ctaRepository.save(any(CtaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    CtaEntity created =
+        useCase.execute(
+            new CreateCtaCommand(
+                7L, "30 min consult", "https://cal.com/me", CtaStyle.PRIMARY, CtaPurpose.BOOKING));
+
+    assertThat(created.getTrackedShortCode()).isEqualTo("abc123");
+  }
+
+  @Test
   void rejectsBlankLabel() {
     assertThatThrownBy(
             () ->

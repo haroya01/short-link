@@ -89,4 +89,24 @@ class JwtTokenServiceTest {
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
+
+  @Test
+  void tokensCarryTheSessionTheyWereIssuedFor() {
+    String access = service.createAccessToken(42L, "USER", "sess-1");
+    RefreshToken refresh = service.createRefreshToken(42L, "sess-1", SessionChannel.MOBILE);
+
+    assertThat(service.parseAccessTokenDetailed(access).sessionId()).isEqualTo("sess-1");
+    assertThat(service.parseRefreshToken(refresh.token()).sessionId()).isEqualTo("sess-1");
+    assertThat(service.parseAccessTokenDetailed(service.createAccessToken(42L, "USER")).sessionId())
+        .isNull();
+  }
+
+  @Test
+  void onlyAWebRefreshTokenIsMarkedWebOnly() {
+    RefreshToken web = service.createRefreshToken(42L, "sess-1", SessionChannel.WEB);
+    RefreshToken mobile = service.createRefreshToken(42L, "sess-1", SessionChannel.MOBILE);
+
+    assertThat(service.parseRefreshToken(web.token()).webOnly()).isTrue();
+    assertThat(service.parseRefreshToken(mobile.token()).webOnly()).isFalse();
+  }
 }

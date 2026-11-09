@@ -76,6 +76,31 @@ class UpdateCtaUseCaseTest {
   }
 
   @Test
+  void aNewAddressIsTrackedByItsOwnShortLink() {
+    CtaEntity cta = owned();
+    cta.trackVia("old123");
+    when(ctaOwnership.requireOwned(7L, 42L)).thenReturn(cta);
+    when(linkTracker.trackingCodeFor(7L, "https://new")).thenReturn("new123");
+    when(ctaRepository.save(any(CtaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new UpdateCtaCommand(7L, 42L, null, "https://new", null, null));
+
+    assertThat(cta.getTrackedShortCode()).isEqualTo("new123");
+  }
+
+  @Test
+  void editingOnlyTheLabelKeepsTheTrackingLink() {
+    CtaEntity cta = owned();
+    cta.trackVia("old123");
+    when(ctaOwnership.requireOwned(7L, 42L)).thenReturn(cta);
+    when(ctaRepository.save(any(CtaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new UpdateCtaCommand(7L, 42L, "New", null, null, null));
+
+    assertThat(cta.getTrackedShortCode()).isEqualTo("old123");
+  }
+
+  @Test
   void rejectsBlankLabel() {
     assertThatThrownBy(() -> useCase.execute(new UpdateCtaCommand(7L, 42L, "  ", null, null, null)))
         .isInstanceOf(IllegalArgumentException.class);

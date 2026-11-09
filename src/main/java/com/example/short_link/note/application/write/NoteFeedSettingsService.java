@@ -35,7 +35,7 @@ public class NoteFeedSettingsService {
     if (languages != null) {
       Set<String> codes = new LinkedHashSet<>();
       for (String raw : languages) {
-        String code = NoteComposer.language(raw);
+        String code = NoteDraftCheck.language(raw);
         if (code != null) {
           codes.add(code);
         }

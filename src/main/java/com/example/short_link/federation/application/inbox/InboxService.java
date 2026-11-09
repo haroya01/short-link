@@ -120,34 +120,14 @@ public class InboxService {
         yield InboxOutcome.accepted("follow");
       }
       case InboxIntent.Unfollow unfollow -> unfollow(unfollow, actor);
-      case InboxIntent.React react -> {
-        if (!intake.mayRead(actor, react.note())) {
-          yield InboxOutcome.ignored("unknown-target");
-        }
-        reactions.add(react.note().id(), actor.getId(), react.kind(), id);
-        yield InboxOutcome.accepted(react.kind() == Kind.LIKE ? "like" : "announce");
-      }
-      case InboxIntent.Unreact unreact -> {
-        if (unreact.noteId() != null) {
-          reactions.remove(unreact.noteId(), actor.getId(), unreact.kind());
-        } else {
-          reactions.removeByActivity(actor.getId(), unreact.activityId());
-        }
-        yield InboxOutcome.accepted(unreact.kind() == Kind.LIKE ? "undo-like" : "undo-announce");
-      }
+      case InboxIntent.React react -> react(react, actor, id);
+      case InboxIntent.Unreact unreact -> unreact(unreact, actor);
       case InboxIntent.UndoById undo -> {
         followers.unfollow(actor, undo.activityId());
         reactions.removeByActivity(actor.getId(), undo.activityId());
         yield InboxOutcome.accepted("undo");
       }
-      case InboxIntent.Vote vote -> {
-        if (!intake.mayRead(actor, vote.poll())) {
-          yield InboxOutcome.ignored("unknown-target");
-        }
-        yield votes.recordRemoteVote(vote.poll().id(), actor.getId(), vote.option())
-            ? InboxOutcome.accepted("vote")
-            : InboxOutcome.ignored("vote-rejected");
-      }
+      case InboxIntent.Vote vote -> vote(vote, actor);
       case InboxIntent.Answer answer -> answer(answer, actor);
       case InboxIntent.Receive receive -> receive(receive, actor);
       case InboxIntent.Revise revise -> revise(revise, actor);
@@ -155,24 +135,54 @@ public class InboxService {
           remoteNotes.retract(actor.getId(), retract.noteId(), retract.uri())
               ? InboxOutcome.accepted("delete")
               : InboxOutcome.ignored("unknown-note");
-      case InboxIntent.Bury buried -> {
-        if (!onServerOf(actor, buried.uri())) {
-          yield InboxOutcome.ignored("foreign-id");
-        }
-        earlyDeletes.remember(actor.getId(), buried.uri());
-        yield InboxOutcome.accepted("delete-early");
-      }
-      case InboxIntent.Relayed relayed -> {
-        String outcome = relayIntake.offer(relayed.objectUri(), actor.getActorUri());
-        yield "queued".equals(outcome)
-            ? InboxOutcome.accepted("relay")
-            : InboxOutcome.ignored("relay-" + outcome);
-      }
+      case InboxIntent.Bury buried -> bury(buried, actor);
+      case InboxIntent.Relayed relayed -> relayed(relayed, actor);
       case InboxIntent.Forget gone -> {
         followers.forget(actor);
         yield InboxOutcome.accepted("delete-actor");
       }
     };
+  }
+
+  private InboxOutcome react(InboxIntent.React react, RemoteActorEntity actor, String id) {
+    if (!intake.mayRead(actor, react.note())) {
+      return InboxOutcome.ignored("unknown-target");
+    }
+    reactions.add(react.note().id(), actor.getId(), react.kind(), id);
+    return InboxOutcome.accepted(react.kind() == Kind.LIKE ? "like" : "announce");
+  }
+
+  private InboxOutcome unreact(InboxIntent.Unreact unreact, RemoteActorEntity actor) {
+    if (unreact.noteId() != null) {
+      reactions.remove(unreact.noteId(), actor.getId(), unreact.kind());
+    } else {
+      reactions.removeByActivity(actor.getId(), unreact.activityId());
+    }
+    return InboxOutcome.accepted(unreact.kind() == Kind.LIKE ? "undo-like" : "undo-announce");
+  }
+
+  private InboxOutcome vote(InboxIntent.Vote vote, RemoteActorEntity actor) {
+    if (!intake.mayRead(actor, vote.poll())) {
+      return InboxOutcome.ignored("unknown-target");
+    }
+    return votes.recordRemoteVote(vote.poll().id(), actor.getId(), vote.option())
+        ? InboxOutcome.accepted("vote")
+        : InboxOutcome.ignored("vote-rejected");
+  }
+
+  private InboxOutcome bury(InboxIntent.Bury buried, RemoteActorEntity actor) {
+    if (!onServerOf(actor, buried.uri())) {
+      return InboxOutcome.ignored("foreign-id");
+    }
+    earlyDeletes.remember(actor.getId(), buried.uri());
+    return InboxOutcome.accepted("delete-early");
+  }
+
+  private InboxOutcome relayed(InboxIntent.Relayed relayed, RemoteActorEntity actor) {
+    String outcome = relayIntake.offer(relayed.objectUri(), actor.getActorUri());
+    return "queued".equals(outcome)
+        ? InboxOutcome.accepted("relay")
+        : InboxOutcome.ignored("relay-" + outcome);
   }
 
   private InboxOutcome unfollow(InboxIntent.Unfollow unfollow, RemoteActorEntity actor) {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.dto.ParsedAccess;
+import com.example.short_link.user.application.dto.TwoFactorChallenge;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
@@ -53,15 +54,17 @@ class JwtTokenServiceExtendedTest {
   @Test
   void twoFactorChallengeRoundTrip() throws Exception {
     JwtTokenService svc = freshService();
-    String token = svc.createTwoFactorChallengeToken(42L);
-    assertThat(svc.parseTwoFactorChallengeToken(token)).isEqualTo(42L);
+    String token = svc.createTwoFactorChallengeToken(42L, false);
+    assertThat(svc.parseTwoFactorChallenge(token)).isEqualTo(new TwoFactorChallenge(42L, false));
+    assertThat(svc.parseTwoFactorChallenge(svc.createTwoFactorChallengeToken(42L, true)))
+        .isEqualTo(new TwoFactorChallenge(42L, true));
   }
 
   @Test
   void twoFactorChallengeRejectsAccessToken() throws Exception {
     JwtTokenService svc = freshService();
     String access = svc.createAccessToken(42L, "USER");
-    assertThatThrownBy(() -> svc.parseTwoFactorChallengeToken(access))
+    assertThatThrownBy(() -> svc.parseTwoFactorChallenge(access))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);

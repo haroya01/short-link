@@ -149,6 +149,7 @@ class AddDestinationUseCaseTest {
             42L, new ShortCode("abc1234"), "https://dest.com", 50, null, null, null, null);
 
     assertThat(result.id()).isEqualTo(99L);
+    verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc1234"));
   }
 
   private static <T> T withId(T entity, Long id) {

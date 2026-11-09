@@ -1,6 +1,7 @@
 package com.example.short_link.analytics.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
@@ -39,6 +40,7 @@ class RecordBehaviorEventsUseCaseTest {
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
 
+  private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
   private RecordBehaviorEventsUseCase useCase;
 
   @BeforeEach
@@ -49,7 +51,7 @@ class RecordBehaviorEventsUseCaseTest {
             userAgentClassifier,
             asnResolver,
             new BotClassifier(botHeuristic),
-            new SimpleMeterRegistry(),
+            meters,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -160,5 +162,87 @@ class RecordBehaviorEventsUseCaseTest {
   void emptyBatchIsNoop() {
     assertThat(useCase.execute(SESSION, Collections.emptyList(), ctx())).isZero();
     verify(repository, never()).saveAll(anyList());
+  }
+
+  @Test
+  void targetIdsUpToSixtyFourCharactersAreKeptAndLongerOnesDropped() {
+    stubHuman();
+    String longest = "x".repeat(64);
+    String tooLong = "x".repeat(65);
+
+    int accepted =
+        useCase.execute(
+            SESSION,
+            List.of(
+                new BehaviorEventCommand("second_action", 7L, "post", longest, null, null),
+                new BehaviorEventCommand("second_action", 7L, "post", tooLong, null, null),
+                new BehaviorEventCommand("cta_click", 7L, null, longest, null, null),
+                new BehaviorEventCommand("cta_click", 7L, null, tooLong, null, null)),
+            ctx());
+
+    assertThat(accepted).isEqualTo(2);
+    ArgumentCaptor<List<BehaviorEventEntity>> rows = ArgumentCaptor.captor();
+    verify(repository).saveAll(rows.capture());
+    assertThat(rows.getValue())
+        .extracting(BehaviorEventEntity::getEventName, BehaviorEventEntity::getTargetId)
+        .containsExactly(tuple("second_action", longest), tuple("cta_click", longest));
+  }
+
+  @Test
+  void dwellIsKeptFromZeroToSixHoursAndDroppedOutsideThatRange() {
+    stubHuman();
+    long sixHours = 6L * 60 * 60 * 1000;
+
+    int accepted =
+        useCase.execute(
+            SESSION,
+            List.of(
+                new BehaviorEventCommand("read_progress", 7L, null, null, null, -1L),
+                new BehaviorEventCommand("read_progress", 7L, null, null, null, 0L),
+                new BehaviorEventCommand("read_progress", 7L, null, null, null, sixHours),
+                new BehaviorEventCommand("read_progress", 7L, null, null, null, sixHours + 1)),
+            ctx());
+
+    assertThat(accepted).isEqualTo(2);
+    ArgumentCaptor<List<BehaviorEventEntity>> rows = ArgumentCaptor.captor();
+    verify(repository).saveAll(rows.capture());
+    assertThat(rows.getValue())
+        .extracting(BehaviorEventEntity::getDwellMs)
+        .containsExactly(0L, sixHours);
+  }
+
+  @Test
+  void acceptedAndDroppedEventsAreCountedSeparately() {
+    stubHuman();
+
+    useCase.execute(
+        SESSION,
+        List.of(
+            new BehaviorEventCommand("read_progress", 7L, null, null, 50, null),
+            new BehaviorEventCommand("keylog", 7L, null, null, null, null),
+            new BehaviorEventCommand("read_progress", 7L, null, null, 10, null)),
+        ctx());
+
+    assertThat(meters.counter("behavior.events.accepted").count()).isEqualTo(1.0);
+    assertThat(meters.counter("behavior.events.dropped").count()).isEqualTo(2.0);
+  }
+
+  @Test
+  void aClassifierFailureStillRecordsTheEventAsUnclassifiedHuman() {
+    when(userAgentClassifier.classify(any())).thenThrow(new IllegalStateException("parser down"));
+
+    int accepted =
+        useCase.execute(
+            SESSION,
+            List.of(new BehaviorEventCommand("read_progress", 7L, null, null, 25, null)),
+            ctx());
+
+    assertThat(accepted).isEqualTo(1);
+    ArgumentCaptor<List<BehaviorEventEntity>> rows = ArgumentCaptor.captor();
+    verify(repository).saveAll(rows.capture());
+    BehaviorEventEntity row = rows.getValue().get(0);
+    assertThat(row.getDeviceClass()).isNull();
+    assertThat(row.isBot()).isFalse();
+    assertThat(row.getBotName()).isNull();
   }
 }

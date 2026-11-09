@@ -39,31 +39,13 @@ public class NotePollService implements RemoteNotePollVotes {
 
   @Transactional
   public NoteView.Poll vote(Long userId, Long noteId, List<Integer> choices) {
-    NoteEntity note =
-        notes
-            .findById(noteId)
-            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    if (!access.readable(note, userId)) {
-      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
-    }
-    if (!note.hasPoll()) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_NOT_FOUND, noteId);
-    }
-    if (note.isOwnedBy(userId)) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_OWN);
-    }
-    if (note.isRemote()) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_ELSEWHERE);
-    }
+    NoteEntity note = localPoll(userId, noteId);
     Instant now = clock.instant();
     if (note.pollEndedBy(now)) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_ENDED);
     }
     int picked = mask(note, choices);
-    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
-        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
-      throw new NoteException(NoteErrorCode.NOTE_POLL_BLOCKED);
-    }
+    requireNoBlockBetween(userId, note);
     if (!polls.vote(noteId, userId, picked)) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_ALREADY_VOTED);
     }
@@ -105,6 +87,33 @@ public class NotePollService implements RemoteNotePollVotes {
     return due.size();
   }
 
+  private NoteEntity localPoll(Long userId, Long noteId) {
+    NoteEntity note =
+        notes
+            .findById(noteId)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
+    if (!access.readable(note, userId)) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
+    }
+    if (!note.hasPoll()) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_NOT_FOUND, noteId);
+    }
+    if (note.isOwnedBy(userId)) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_OWN);
+    }
+    if (note.isRemote()) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_ELSEWHERE);
+    }
+    return note;
+  }
+
+  private void requireNoBlockBetween(Long userId, NoteEntity note) {
+    if (blocks.isBlocked(BlockEdge.blocker(note.getUserId()).blocked(userId))
+        || blocks.isBlocked(BlockEdge.blocker(userId).blocked(note.getUserId()))) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_BLOCKED);
+    }
+  }
+
   private static int mask(NoteEntity note, List<Integer> choices) {
     if (choices == null || choices.isEmpty() || (!note.isPollMultiple() && choices.size() > 1)) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_CHOICES_INVALID);
@@ -112,11 +121,15 @@ public class NotePollService implements RemoteNotePollVotes {
     int options = note.pollOptions().size();
     int mask = 0;
     for (Integer choice : choices) {
-      if (choice == null || choice < 0 || choice >= options || (mask & (1 << choice)) != 0) {
+      if (!pickable(choice, options, mask)) {
         throw new NoteException(NoteErrorCode.NOTE_POLL_CHOICES_INVALID);
       }
       mask |= 1 << choice;
     }
     return mask;
+  }
+
+  private static boolean pickable(Integer choice, int options, int picked) {
+    return choice != null && choice >= 0 && choice < options && (picked & (1 << choice)) == 0;
   }
 }

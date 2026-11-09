@@ -40,6 +40,12 @@ class LinkDestinationEntityTest {
   }
 
   @Test
+  void aDestinationWithoutACountryHasNoCountryAtAll() {
+    LinkDestinationEntity d = new LinkDestinationEntity(new LinkId(7L), "https://x", 1, null, null);
+    assertThat(d.getCountryCode()).isNull();
+  }
+
+  @Test
   void countryCodeWrongLengthThrows() {
     assertThatThrownBy(() -> new LinkDestinationEntity(new LinkId(7L), "https://x", 1, null, "KOR"))
         .isInstanceOf(IllegalArgumentException.class);

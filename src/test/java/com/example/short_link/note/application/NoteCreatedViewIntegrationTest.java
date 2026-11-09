@@ -6,12 +6,11 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PageAsk;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,7 @@ class NoteCreatedViewIntegrationTest {
     user.claimUsername(handle);
     long writer = users.save(user).getId();
 
-    NoteView created = command.create(writer, new NoteDraft("새 노트", List.of(), null, null));
+    NoteView created = command.create(writer, NoteDrafts.draft("새 노트").build());
     em.flush();
     em.clear();
     NoteView listed =

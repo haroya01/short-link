@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -94,32 +93,46 @@ public class NoteFilterService {
   }
 
   private Valid validate(Draft draft) {
-    String phrase = draft.phrase() == null ? "" : draft.phrase().strip();
+    return new Valid(
+        phrase(draft.phrase()),
+        Boolean.TRUE.equals(draft.wholeWord()),
+        contexts(draft.context()),
+        action(draft.action()),
+        expiresAt(draft.expiresIn()));
+  }
+
+  private static String phrase(String raw) {
+    String phrase = raw == null ? "" : raw.strip();
     int length = phrase.codePointCount(0, phrase.length());
-    Set<Context> contexts = EnumSet.noneOf(Context.class);
-    for (String raw : draft.context() == null ? List.<String>of() : draft.context()) {
-      Optional<Context> context = Context.parse(raw);
-      if (context.isEmpty()) {
-        throw invalid();
-      }
-      contexts.add(context.get());
-    }
-    Optional<Action> action =
-        draft.action() == null ? Optional.of(Action.WARN) : Action.parse(draft.action());
-    Long seconds = draft.expiresIn();
-    if (length == 0
-        || length > NoteFilterEntity.MAX_PHRASE_LENGTH
-        || contexts.isEmpty()
-        || action.isEmpty()
-        || (seconds != null && (seconds < 60 || seconds > MAX_SECONDS))) {
+    if (length == 0 || length > NoteFilterEntity.MAX_PHRASE_LENGTH) {
       throw invalid();
     }
-    Instant expiresAt =
-        seconds == null
-            ? null
-            : clock.instant().truncatedTo(ChronoUnit.MICROS).plusSeconds(seconds);
-    return new Valid(
-        phrase, Boolean.TRUE.equals(draft.wholeWord()), contexts, action.get(), expiresAt);
+    return phrase;
+  }
+
+  private static Set<Context> contexts(List<String> names) {
+    Set<Context> contexts = EnumSet.noneOf(Context.class);
+    for (String name : names == null ? List.<String>of() : names) {
+      contexts.add(Context.parse(name).orElseThrow(NoteFilterService::invalid));
+    }
+    if (contexts.isEmpty()) {
+      throw invalid();
+    }
+    return contexts;
+  }
+
+  private static Action action(String name) {
+    return name == null ? Action.WARN : Action.parse(name).orElseThrow(NoteFilterService::invalid);
+  }
+
+  private Instant expiresAt(Long seconds) {
+    if (seconds == null) {
+      return null;
+    }
+    if (seconds < 60 || seconds > MAX_SECONDS) {
+      throw invalid();
+    }
+    return clock.instant().truncatedTo(ChronoUnit.MICROS).plusSeconds(seconds);
   }
 
   private static NoteException invalid() {

@@ -66,10 +66,23 @@ public class NoteImages {
   StoredImage verify(Long userId, NoteDraft.Image image) {
     requireStorage();
     String key = image.key();
+    String contentType = ownedContentType(userId, key);
+    requireUploadWithinLimit(key);
+    String alt = altText(image.altText());
+    storage.applyImmutableCacheControl(key);
+    return new StoredImage(
+        key, publicUrls.forKey(key), contentType, alt, image.width(), image.height());
+  }
+
+  private static String ownedContentType(Long userId, String key) {
     String contentType = key == null ? null : contentTypeOf(key);
     if (key == null || !key.startsWith(UserFolder.NOTE_IMAGES.of(userId)) || contentType == null) {
       throw new NoteException(NoteErrorCode.NOTE_IMAGE_INVALID, "image key not owned by user");
     }
+    return contentType;
+  }
+
+  private void requireUploadWithinLimit(String key) {
     long size =
         storage
             .objectSize(key)
@@ -79,19 +92,15 @@ public class NoteImages {
       deleteQuietly(key);
       throw new NoteException(NoteErrorCode.NOTE_IMAGE_INVALID, "image exceeds maxBytes");
     }
-    String alt = image.altText() == null ? null : image.altText().strip();
+  }
+
+  private static String altText(String raw) {
+    String alt = raw == null ? null : raw.strip();
     if (alt != null && alt.codePointCount(0, alt.length()) > NoteMediaEntity.MAX_ALT_TEXT_LENGTH) {
       throw new NoteException(
           NoteErrorCode.NOTE_ALT_TEXT_TOO_LONG, NoteMediaEntity.MAX_ALT_TEXT_LENGTH);
     }
-    storage.applyImmutableCacheControl(key);
-    return new StoredImage(
-        key,
-        publicUrls.forKey(key),
-        contentType,
-        alt == null || alt.isEmpty() ? null : alt,
-        image.width(),
-        image.height());
+    return alt == null || alt.isEmpty() ? null : alt;
   }
 
   void deleteQuietly(String key) {

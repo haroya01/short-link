@@ -78,4 +78,15 @@ class CtaEntityTest {
         .extracting(e -> ((CtaException) e).errorCode())
         .isEqualTo(CtaErrorCode.CTA_DELETED);
   }
+
+  @Test
+  void noFieldOfADeletedCtaCanBeEdited() {
+    CtaEntity cta = sample();
+    cta.softDelete();
+
+    assertThatThrownBy(() -> cta.updateUrl("https://new")).isInstanceOf(CtaException.class);
+    assertThatThrownBy(() -> cta.updateStyle(CtaStyle.SECONDARY)).isInstanceOf(CtaException.class);
+    assertThatThrownBy(() -> cta.updatePurpose(CtaPurpose.SUBSCRIBE))
+        .isInstanceOf(CtaException.class);
+  }
 }

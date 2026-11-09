@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.net.HttpFetcher;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 class WebhookSenderTest {
@@ -95,5 +98,29 @@ class WebhookSenderTest {
     assertThat(r.outcome()).isEqualTo(WebhookSender.Outcome.SIGN_ERROR);
     assertThat(r.error()).contains("signature failed");
     assertThat(registry.counter("webhook.delivery", "result", "sign_error").count()).isEqualTo(1.0);
+  }
+
+  @Test
+  void aSignedDeliveryCarriesTheHmacSha256OfTheBodyAndAnUnsignedOneCarriesNone() {
+    HttpFetcher fetcher = returning(200);
+    ArgumentCaptor<HttpFetcher.Request> sent = ArgumentCaptor.forClass(HttpFetcher.Request.class);
+
+    try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
+      Resolved resolved = new Resolved(URI.create(URL), List.<InetAddress>of());
+      guard.when(() -> PublicHttpUrlGuard.resolve(URL)).thenReturn(Optional.of(resolved));
+      String body = "The quick brown fox jumps over the lazy dog";
+      WebhookSender.send(fetcher, new SimpleMeterRegistry(), URL, "key", true, body, "click");
+      WebhookSender.send(fetcher, new SimpleMeterRegistry(), URL, "key", false, body, "click");
+    }
+
+    verify(fetcher, times(2)).fetch(sent.capture());
+    assertThat(sent.getAllValues().get(0).headers())
+        .containsEntry(
+            "X-Kurl-Signature",
+            "sha256=f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8")
+        .containsEntry("X-Kurl-Event", "click");
+    assertThat(sent.getAllValues().get(1).headers())
+        .doesNotContainKey("X-Kurl-Signature")
+        .containsEntry("X-Kurl-Event", "click");
   }
 }

@@ -14,7 +14,7 @@ import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -176,8 +176,7 @@ class RemoteEmojiIntegrationTest {
     UserEntity member = new UserEntity(run + "@x.com", "google", "g-" + run);
     member.claimUsername("em" + run);
     long writer = users.save(member).getId();
-    NoteView written =
-        composer.create(writer, new NoteDraft("hi :neoghost:", List.of(), null, null));
+    NoteView written = composer.create(writer, NoteDrafts.draft("hi :neoghost:").build());
     reread();
 
     assertThat(written.emojis()).isEmpty();

@@ -70,12 +70,8 @@ com.example.short_link.note.application.read.NoteBatch.justWritten calls the con
 com.example.short_link.note.application.read.NoteSnapshotProvider.find calls the constructor of com.example.short_link.common.note.NoteSnapshotReader$NoteSnapshot
 com.example.short_link.note.application.read.NoteView.compose calls the constructor of com.example.short_link.note.application.read.NoteView
 com.example.short_link.note.application.read.NoteViews.load calls the constructor of com.example.short_link.note.application.read.NoteBatch
-com.example.short_link.note.application.write.NoteComposer.check calls the constructor of com.example.short_link.note.application.write.NoteComposer$Checked
-com.example.short_link.note.application.write.NoteDraft.<init> calls the constructor of com.example.short_link.note.application.write.NoteDraft
 com.example.short_link.note.application.write.NoteDraft.continuing calls the constructor of com.example.short_link.note.application.write.NoteDraft
 com.example.short_link.note.application.write.NoteScheduleService.view calls the constructor of com.example.short_link.note.application.write.NoteScheduleService$View
-com.example.short_link.note.application.write.RemoteNoteRecorder.receive calls the constructor of com.example.short_link.note.domain.RemoteNoteRow
-com.example.short_link.note.presentation.request.CreateNoteRequest.<init> calls the constructor of com.example.short_link.note.presentation.request.CreateNoteRequest
 com.example.short_link.note.presentation.request.CreateNoteRequest.toDraft calls the constructor of com.example.short_link.note.application.write.NoteDraft
 com.example.short_link.notification.application.read.NotificationQueryService.toView calls the constructor of com.example.short_link.notification.application.dto.NotificationView
 com.example.short_link.notification.presentation.response.NotificationResponse.from calls the constructor of com.example.short_link.notification.presentation.response.NotificationResponse

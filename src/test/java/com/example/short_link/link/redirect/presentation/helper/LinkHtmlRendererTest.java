@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 class LinkHtmlRendererTest {
@@ -332,6 +333,27 @@ class LinkHtmlRendererTest {
   void responsesVaryByLanguage() {
     assertThat(renderer.notFoundPageResponse(KO).getHeaders().getFirst("Vary"))
         .isEqualTo("Accept-Language");
+  }
+
+  @Test
+  void aVisitorPageIsServedAsUtf8HtmlOfItsExactLength() {
+    ResponseEntity<byte[]> response = renderer.notFoundPageResponse(KO);
+
+    assertThat(response.getHeaders().getContentType())
+        .isEqualTo(MediaType.parseMediaType("text/html; charset=utf-8"));
+    assertThat(response.getHeaders().getContentLength()).isEqualTo(response.getBody().length);
+  }
+
+  @Test
+  void everyVisitorPageCarriesTheMarkInTheWebLogosGeometry() {
+    String body = new String(renderer.notFoundPageResponse(KO).getBody(), StandardCharsets.UTF_8);
+
+    assertThat(body)
+        .contains(
+            "<svg class=\"mark\" viewBox=\"0 0 28 18\"",
+            "<rect x=\"6\" y=\"1\" width=\"20\" height=\"3.4\" rx=\"1.0\"/>",
+            "<rect x=\"0\" y=\"7.3\" width=\"28\" height=\"3.4\" rx=\"1.0\"/>",
+            "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.0\"/>");
   }
 
   @Test

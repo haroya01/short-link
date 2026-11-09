@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -89,19 +90,17 @@ public class RemoteTrendingFeed {
 
   public Page latest(Long viewerId, SeenViewer viewer, String cursor, String since, int limit) {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
-    if (viewer != null && (cursor == null ? since == null : seenCursor(cursor))) {
+    if (viewer != null && unseenFirstAsked(cursor, since)) {
       return unseenFirst(viewerId, viewer, cursor, size);
     }
     if (latestProps.pulling()) {
       return stored(viewerId, cursor, since, size);
     }
-    if (since != null && cursor == null) {
-      LatestPosts.Page top = latest.page(viewerId, 0, TrendingPosts.MAX_LIMIT);
-      List<String> uris = top.items().stream().map(TrendingNote::uri).toList();
-      int at = uris.indexOf(since);
-      if (at >= 0) {
-        warm(viewerId, top.unknownAuthors());
-        return new Page(List.copyOf(top.items().subList(0, at)), null, false);
+    boolean fresh = since != null && cursor == null;
+    if (fresh) {
+      Optional<Page> newer = newerThanHeld(viewerId, since);
+      if (newer.isPresent()) {
+        return newer.get();
       }
     }
     LatestPosts.Page page = latest.page(viewerId, offset(cursor), size);
@@ -109,7 +108,22 @@ public class RemoteTrendingFeed {
     return new Page(
         List.copyOf(page.items()),
         page.more() ? "t" + (offset(cursor) + page.items().size()) : null,
-        since != null && cursor == null ? Boolean.TRUE : null);
+        fresh ? Boolean.TRUE : null);
+  }
+
+  private static boolean unseenFirstAsked(String cursor, String since) {
+    return cursor == null ? since == null : seenCursor(cursor);
+  }
+
+  private Optional<Page> newerThanHeld(Long viewerId, String since) {
+    LatestPosts.Page top = latest.page(viewerId, 0, TrendingPosts.MAX_LIMIT);
+    List<String> uris = top.items().stream().map(TrendingNote::uri).toList();
+    int at = uris.indexOf(since);
+    if (at < 0) {
+      return Optional.empty();
+    }
+    warm(viewerId, top.unknownAuthors());
+    return Optional.of(new Page(List.copyOf(top.items().subList(0, at)), null, false));
   }
 
   private void warm(Long viewerId, List<String> unknownAuthors) {
@@ -140,50 +154,79 @@ public class RemoteTrendingFeed {
   }
 
   private Page unseenFirst(Long viewerId, SeenViewer viewer, String cursor, int size) {
-    Phase phase = Phase.UNSEEN;
-    Instant asOf = clock.instant().truncatedTo(ChronoUnit.MILLIS);
-    String at = "";
-    if (cursor != null) {
-      int dot = cursor.indexOf('.');
-      phase = phaseOf(cursor.charAt(0));
-      asOf = Instant.ofEpochMilli(Long.parseLong(cursor.substring(1, dot)));
-      at = cursor.substring(dot + 1);
-    }
-    List<Object> items = new ArrayList<>(size);
-    Integer seenFrom = null;
-    for (int reads = 0; reads < MAX_READS && items.size() < size; reads++) {
-      Below below = below(viewerId, at, size);
+    Walk walk = Walk.from(cursor, clock.instant().truncatedTo(ChronoUnit.MILLIS), size);
+    for (int reads = 0; reads < MAX_READS && walk.items.size() < size; reads++) {
+      Below below = below(viewerId, walk.at, size);
       Set<String> seenBefore =
-          seen.seenBefore(viewer, below.items().stream().map(Candidate::uri).toList(), asOf);
-      boolean full = false;
-      for (Candidate candidate : below.items()) {
-        if (items.size() == size) {
-          full = true;
-          break;
-        }
-        boolean wasSeen = seenBefore.contains(candidate.uri());
-        if (phase.unseen() && wasSeen) {
-          phase = Phase.UNSEEN_PAST_SEEN;
-        } else if (phase.unseen() || wasSeen) {
-          if (phase == Phase.SEEN_AHEAD) {
-            seenFrom = items.size();
-            phase = Phase.SEEN;
-          }
-          items.add(candidate.item());
-        }
-        at = candidate.after();
-      }
+          seen.seenBefore(viewer, below.items().stream().map(Candidate::uri).toList(), walk.asOf);
+      boolean full = walk.takeAll(below.items(), seenBefore);
       if (full || below.more()) {
         continue;
       }
-      if (phase != Phase.UNSEEN_PAST_SEEN) {
-        return new Page(items, null, null, seenFrom);
+      if (walk.phase != Phase.UNSEEN_PAST_SEEN) {
+        return new Page(walk.items, null, null, walk.seenFrom);
       }
-      phase = Phase.SEEN_AHEAD;
-      at = "";
+      walk.phase = Phase.SEEN_AHEAD;
+      walk.at = "";
     }
     return new Page(
-        items, phase.mark + String.valueOf(asOf.toEpochMilli()) + "." + at, null, seenFrom);
+        walk.items,
+        walk.phase.mark + String.valueOf(walk.asOf.toEpochMilli()) + "." + walk.at,
+        null,
+        walk.seenFrom);
+  }
+
+  private static final class Walk {
+
+    private final int size;
+    private final Instant asOf;
+    private final List<Object> items;
+    private Phase phase;
+    private String at;
+    private Integer seenFrom;
+
+    private Walk(int size, Instant asOf, Phase phase, String at) {
+      this.size = size;
+      this.asOf = asOf;
+      this.items = new ArrayList<>(size);
+      this.phase = phase;
+      this.at = at;
+    }
+
+    static Walk from(String cursor, Instant now, int size) {
+      if (cursor == null) {
+        return new Walk(size, now, Phase.UNSEEN, "");
+      }
+      int dot = cursor.indexOf('.');
+      return new Walk(
+          size,
+          Instant.ofEpochMilli(Long.parseLong(cursor.substring(1, dot))),
+          phaseOf(cursor.charAt(0)),
+          cursor.substring(dot + 1));
+    }
+
+    boolean takeAll(List<Candidate> candidates, Set<String> seenBefore) {
+      for (Candidate candidate : candidates) {
+        if (items.size() == size) {
+          return true;
+        }
+        take(candidate, seenBefore.contains(candidate.uri()));
+        at = candidate.after();
+      }
+      return false;
+    }
+
+    private void take(Candidate candidate, boolean wasSeen) {
+      if (phase.unseen() && wasSeen) {
+        phase = Phase.UNSEEN_PAST_SEEN;
+      } else if (phase.unseen() || wasSeen) {
+        if (phase == Phase.SEEN_AHEAD) {
+          seenFrom = items.size();
+          phase = Phase.SEEN;
+        }
+        items.add(candidate.item());
+      }
+    }
   }
 
   private Below below(Long viewerId, String at, int size) {

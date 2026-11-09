@@ -58,5 +58,19 @@ class AbuseReportEntityTest {
     r.reject("not a violation");
     assertThat(r.getStatus()).isEqualTo(AbuseReportStatus.REJECTED);
     assertThat(r.getResolvedAt()).isNotNull();
+    assertThat(r.getAdminNote()).isEqualTo("not a violation");
+  }
+
+  @Test
+  void aDecisionWithoutANoteKeepsTheNoteFromReview() {
+    AbuseReportEntity rejected = sample();
+    rejected.markReviewing("checking");
+    rejected.reject(null);
+    AbuseReportEntity resolved = sample();
+    resolved.markReviewing("checking");
+    resolved.resolve(null);
+
+    assertThat(rejected.getAdminNote()).isEqualTo("checking");
+    assertThat(resolved.getAdminNote()).isEqualTo("checking");
   }
 }

@@ -32,59 +32,82 @@ final class NotePublication {
       List<NoteAuthor> mentioned,
       Set<Long> readers,
       boolean quoteSeen,
-      List<String> imageKeys) {}
+      List<String> imageKeys) {
+
+    boolean reachesElsewhere() {
+      return (parent != null && parent.isRemote())
+          || (quotedNote != null && quotedNote.isRemote())
+          || !Mentions.remote(note.getBody()).isEmpty();
+    }
+
+    boolean answerSeen() {
+      return parent != null && (readers == null || readers.contains(parent.getUserId()));
+    }
+
+    boolean broadcast() {
+      return note.getVisibility().followersRead()
+          && (parent == null || writerId.equals(parent.getUserId()));
+    }
+
+    boolean quotesPostPublicly() {
+      return quotedPost != null && note.getVisibility().shareable();
+    }
+
+    Set<Long> toldOtherwise() {
+      Set<Long> told = new HashSet<>(Set.of(writerId));
+      if (parent != null) {
+        told.add(parent.getUserId());
+      }
+      if (quoteSeen) {
+        told.add(quotedNote.getUserId());
+      }
+      if (quotesPostPublicly()) {
+        told.add(quotedPost.authorId());
+      }
+      return told;
+    }
+
+    String previewUrl() {
+      return NoteLinks.previewUrl(
+          note.getBody(),
+          !imageKeys.isEmpty() || note.hasPoll(),
+          quotedPost != null || quotedNote != null);
+    }
+  }
 
   static List<Object> events(Posted posted) {
     NoteEntity note = posted.note();
-    NoteEntity parent = posted.parent();
-    NoteEntity quotedNote = posted.quotedNote();
-    QuotedPost quotedPost = posted.quotedPost();
     Long writerId = posted.writerId();
-    Set<Long> readers = posted.readers();
     List<Object> told = new ArrayList<>();
     if (!posted.imageKeys().isEmpty()) {
       told.add(new ImageVariantsRequested(posted.imageKeys()));
     }
-    told.add(
-        new NotePublishedEvent(
-            note.getId(),
-            writerId,
-            (parent != null && parent.isRemote())
-                || (quotedNote != null && quotedNote.isRemote())
-                || !Mentions.remote(note.getBody()).isEmpty()));
-    if (parent != null && (readers == null || readers.contains(parent.getUserId()))) {
+    told.add(new NotePublishedEvent(note.getId(), writerId, posted.reachesElsewhere()));
+    if (posted.answerSeen()) {
       told.add(
-          NoteInteractions.interaction(NoteInteractionEvent.Type.REPLY, parent, writerId, note));
+          NoteInteractions.interaction(
+              NoteInteractionEvent.Type.REPLY, posted.parent(), writerId, note));
     }
-    if (note.getVisibility().followersRead()
-        && (parent == null || writerId.equals(parent.getUserId()))) {
+    if (posted.broadcast()) {
       told.add(new NoteBroadcastEvent(note.getId(), writerId, note.excerpt()));
     }
     if (posted.quoteSeen()) {
       told.add(
           NoteInteractions.interaction(
-              NoteInteractionEvent.Type.QUOTE, quotedNote, writerId, note));
+              NoteInteractionEvent.Type.QUOTE, posted.quotedNote(), writerId, note));
     }
-    boolean quotesPostPublicly = quotedPost != null && note.getVisibility().shareable();
-    if (quotesPostPublicly) {
-      told.add(new PostQuotedEvent(quotedPost.authorId(), writerId, note.getId(), note.excerpt()));
+    if (posted.quotesPostPublicly()) {
+      told.add(
+          new PostQuotedEvent(
+              posted.quotedPost().authorId(), writerId, note.getId(), note.excerpt()));
     }
-    Set<Long> toldOtherwise = new HashSet<>(Set.of(writerId));
-    if (parent != null) {
-      toldOtherwise.add(parent.getUserId());
-    }
-    if (posted.quoteSeen()) {
-      toldOtherwise.add(quotedNote.getUserId());
-    }
-    if (quotesPostPublicly) {
-      toldOtherwise.add(quotedPost.authorId());
-    }
-    told.addAll(mentions(note, writerId, readersOf(posted.mentioned(), readers), toldOtherwise));
-    String previewUrl =
-        NoteLinks.previewUrl(
-            note.getBody(),
-            !posted.imageKeys().isEmpty() || note.hasPoll(),
-            quotedPost != null || quotedNote != null);
+    told.addAll(
+        mentions(
+            note,
+            writerId,
+            readersOf(posted.mentioned(), posted.readers()),
+            posted.toldOtherwise()));
+    String previewUrl = posted.previewUrl();
     if (previewUrl != null) {
       told.add(new NoteLinkPreviewRequested(note.getId(), previewUrl));
     }

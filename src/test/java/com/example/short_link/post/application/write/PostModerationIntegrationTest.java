@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.post.application.access.PostViewer;
 import com.example.short_link.post.application.read.PostExportQueryService;
@@ -296,8 +296,7 @@ class PostModerationIntegrationTest {
       case LIVE_RESTORE ->
           restoreRevision.execute(new RestorePostRevisionCommand(authorId, postId, 1));
       case PREVIEW_TOKEN -> issuePreview.issue(authorId, postId);
-      case NOTE_CREATE ->
-          composer.create(authorId, new NoteDraft("while suspended", List.of(), null, null));
+      case NOTE_CREATE -> composer.create(authorId, NoteDrafts.draft("while suspended").build());
       case NOTE_EDIT -> composer.edit(authorId, noteId, "while suspended", null, null);
     }
   }
@@ -328,7 +327,7 @@ class PostModerationIntegrationTest {
   }
 
   private Long note(String body) {
-    Long id = composer.create(authorId, new NoteDraft(body, List.of(), null, null)).id();
+    Long id = composer.create(authorId, NoteDrafts.draft(body).build()).id();
     noteIds.add(id);
     return id;
   }

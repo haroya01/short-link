@@ -9,7 +9,7 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.write.NoteComposer;
-import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -250,10 +250,7 @@ class NoteReplyControlsIntegrationTest {
 
   private long post(long author, String body, Long inReplyTo, String policy) {
     return composer
-        .create(
-            author,
-            new NoteDraft(
-                body, List.of(), null, inReplyTo, null, null, false, null, null, null, policy))
+        .create(author, NoteDrafts.draft(body).replyingTo(inReplyTo).replyPolicy(policy).build())
         .id();
   }
 

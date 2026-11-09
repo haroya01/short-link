@@ -9,15 +9,20 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.Security;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -32,15 +37,27 @@ public class WebPushSender implements PushSender {
   private final ExecutorService executor;
   private final PushService pushService;
   private final String blogBaseUrl;
+  private final Duration timeout;
 
+  @Autowired
   public WebPushSender(
       VapidProperties props,
       WebPushTargets subscriptions,
       JsonMapper jsonMapper,
       @Value("${short-link.blog-base-url}") String blogBaseUrl) {
+    this(props, subscriptions, jsonMapper, blogBaseUrl, Duration.ofSeconds(10));
+  }
+
+  WebPushSender(
+      VapidProperties props,
+      WebPushTargets subscriptions,
+      JsonMapper jsonMapper,
+      String blogBaseUrl,
+      Duration timeout) {
     this.subscriptions = subscriptions;
     this.jsonMapper = jsonMapper;
     this.blogBaseUrl = blogBaseUrl;
+    this.timeout = timeout;
     this.executor = Executors.newFixedThreadPool(2);
     // web-push does not register the BouncyCastle provider required for VAPID parsing and ECDH.
     PushService service = null;
@@ -88,7 +105,7 @@ public class WebPushSender implements PushSender {
     try {
       Notification notification =
           new Notification(sub.endpoint(), sub.p256dh(), sub.auth(), payload);
-      HttpResponse response = pushService.send(notification);
+      HttpResponse response = await(pushService.sendAsync(notification));
       int status = response.getStatusLine().getStatusCode();
       String outcome = status < 300 ? "sent" : "rejected";
       if (status == 404 || status == 410) {
@@ -108,6 +125,15 @@ public class WebPushSender implements PushSender {
           message.type(),
           host(sub.endpoint()),
           e.toString());
+    }
+  }
+
+  private HttpResponse await(Future<HttpResponse> pending) throws Exception {
+    try {
+      return pending.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      pending.cancel(true);
+      throw e;
     }
   }
 

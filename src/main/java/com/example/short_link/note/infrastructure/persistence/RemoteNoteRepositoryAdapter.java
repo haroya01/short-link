@@ -35,7 +35,10 @@ class RemoteNoteRepositoryAdapter implements RemoteNoteRepository {
   // stored once, and the second delivery reads back the first row.
   @Override
   public Optional<Long> insertRemote(RemoteNoteRow row) {
-    RemoteNoteRow.Poll poll = row.poll();
+    RemoteNoteRow.Content content = row.content();
+    RemoteNoteRow.Conversation conversation = row.conversation();
+    RemoteNoteRow.Form form = row.form();
+    RemoteNoteRow.Poll poll = form.poll();
     int inserted =
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
@@ -50,19 +53,19 @@ class RemoteNoteRepositoryAdapter implements RemoteNoteRepository {
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
-            .setParameter("body", row.body())
+            .setParameter("body", content.body())
             .setParameter("createdAt", row.createdAt())
-            .setParameter("warning", row.contentWarning())
-            .setParameter("sensitive", row.sensitive())
+            .setParameter("warning", content.contentWarning())
+            .setParameter("sensitive", content.sensitive())
             .setParameter("visibility", row.visibility().name())
-            .setParameter("parent", row.inReplyToId())
-            .setParameter("conversation", row.conversationId())
-            .setParameter("reply", row.reply())
-            .setParameter("replyPolicy", row.replyPolicy().name())
-            .setParameter("language", row.language())
-            .setParameter("kind", row.kind())
-            .setParameter("title", row.title())
-            .setParameter("community", row.community())
+            .setParameter("parent", conversation.inReplyToId())
+            .setParameter("conversation", conversation.conversationId())
+            .setParameter("reply", conversation.reply())
+            .setParameter("replyPolicy", conversation.replyPolicy().name())
+            .setParameter("language", content.language())
+            .setParameter("kind", form.kind())
+            .setParameter("title", form.title())
+            .setParameter("community", form.community())
             .setParameter(
                 "pollOptions", poll == null ? null : NoteEntity.optionsColumn(poll.options()))
             .setParameter("pollExpiresAt", poll == null ? null : poll.expiresAt())
@@ -72,7 +75,7 @@ class RemoteNoteRepositoryAdapter implements RemoteNoteRepository {
             .setParameter(
                 "pollVoters", poll == null ? null : Math.clamp(poll.voters(), 0, Integer.MAX_VALUE))
             .setParameter("quoted", row.quotedNoteId())
-            .setParameter("emojis", CustomEmoji.column(row.emojis()))
+            .setParameter("emojis", CustomEmoji.column(content.emojis()))
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }

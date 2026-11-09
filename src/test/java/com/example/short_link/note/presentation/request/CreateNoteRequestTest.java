@@ -24,7 +24,8 @@ class CreateNoteRequestTest {
             null,
             null,
             null,
-            "mentioned");
+            "mentioned",
+            null);
 
     assertThat(request.toDraft().replyPolicy()).isEqualTo("mentioned");
     assertThat(request.toDraft().images())

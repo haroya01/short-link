@@ -98,4 +98,27 @@ class PowServiceVerificationTest {
     assertThat(metrics.get("pow.verify").tag("result", "unknown_or_used").counter().count())
         .isEqualTo(1);
   }
+
+  @Test
+  void aValidProofForAStoredChallengeIsAccepted() {
+    when(redis.delete("pow:challenge:" + CHALLENGE)).thenReturn(true);
+
+    assertThat(service.verifyAndConsume(CHALLENGE, VALID_NONCE)).isTrue();
+
+    assertThat(metrics.get("pow.verify").tag("result", "ok").counter().count()).isEqualTo(1);
+  }
+
+  @Test
+  void everyChallengeIsFreshAndEnforcementFollowsTheSetting() {
+    when(redis.opsForValue()).thenReturn(values);
+    PowService relaxed =
+        new PowService(
+            new PowProof(),
+            new PowChallengeStore(redis),
+            new PowMetrics(metrics),
+            new PowProperties(2, false));
+
+    assertThat(service.issue().challenge()).isNotEqualTo(service.issue().challenge());
+    assertThat(relaxed.isEnforced()).isFalse();
+  }
 }

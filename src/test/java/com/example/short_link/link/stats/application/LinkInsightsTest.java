@@ -272,6 +272,22 @@ class LinkInsightsTest {
   }
 
   @Test
+  void aLinkCanPeakOnItsFirstDay() {
+    LinkStats.Insight peak =
+        entry("peakDay", stats().dailyClicks(days("07", 9, 1, 3))).orElseThrow();
+
+    assertThat(peak.params()).isEqualTo(Map.of("date", "2026-07-01", "count", 9L));
+  }
+
+  @Test
+  void aTieForTheBusiestDayGoesToTheLaterDay() {
+    LinkStats.Insight peak =
+        entry("peakDay", stats().dailyClicks(days("07", 6, 2, 6))).orElseThrow();
+
+    assertThat(peak.params()).isEqualTo(Map.of("date", "2026-07-03", "count", 6L));
+  }
+
+  @Test
   void peakDayNeedsTheSampleFloorInItsDailyWindow() {
     assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 3)))).isEmpty();
     assertThat(entry("peakDay", stats().dailyClicks(days("07", 1, 2, 7))).orElseThrow().params())

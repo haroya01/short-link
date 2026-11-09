@@ -86,45 +86,63 @@ public class RemoteForYou {
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
     Position at = position(cursor);
     boolean stored = latestProps.pulling();
-    List<String> accepted = ForYouProfile.accepted(languages);
+    Ranking ranking =
+        ranking(viewerId, viewer, ForYouProfile.accepted(languages), at.asOf(), stored);
+    int end = hideSeen && ranking.seenFrom() >= 0 ? ranking.seenFrom() : ranking.refs().size();
+    int from = Math.min(at.offset(), end);
+    int to = Math.min(from + size, end);
+    Shown shown =
+        stored ? shownStored(viewerId, ranking, from, to) : shownHeld(viewerId, ranking, from, to);
+    String next = to < end ? "f" + at.asOf().toEpochMilli() + "." + to : null;
+    return new RemoteTrendingFeed.Page(shown.items(), next, null, shown.seenFrom());
+  }
+
+  private record Shown(List<Object> items, Integer seenFrom) {}
+
+  private Ranking ranking(
+      Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf, boolean stored) {
     String key =
         (stored ? "s|" : "m|")
             + (viewer == null
                 ? "anon:" + String.join(",", accepted)
                 : viewer.kind() + ":" + viewer.key())
             + "|"
-            + at.asOf().toEpochMilli();
+            + asOf.toEpochMilli();
     Ranking ranking = rankings.getIfPresent(key);
     if (ranking == null) {
-      ranking = rank(viewerId, viewer, accepted, at.asOf(), stored);
+      ranking = rank(viewerId, viewer, accepted, asOf, stored);
       rankings.put(key, ranking);
     }
-    int end = hideSeen && ranking.seenFrom() >= 0 ? ranking.seenFrom() : ranking.refs().size();
-    int from = Math.min(at.offset(), end);
-    int to = Math.min(from + size, end);
+    return ranking;
+  }
+
+  private Shown shownStored(Long viewerId, Ranking ranking, int from, int to) {
     List<Object> slice = ranking.refs().subList(from, to);
     List<Object> items = new ArrayList<>(slice.size());
-    Integer seenFrom = null;
-    if (stored && !slice.isEmpty()) {
-      Map<Long, NoteViewReader.Listed> byId = new HashMap<>();
-      notes
-          .listed(viewerId, slice.stream().map(Long.class::cast).toList())
-          .forEach(row -> byId.put(row.id(), row));
-      for (int i = from; i < to; i++) {
-        NoteViewReader.Listed row = byId.get((Long) ranking.refs().get(i));
-        if (row != null) {
-          seenFrom = seenFrom == null ? seenAt(ranking, from, i, items.size()) : seenFrom;
-          items.add(new RemoteTrendingFeed.KeptNote(row.view(), row.uri()));
-        }
-      }
-    } else if (!stored) {
-      for (int i = from; i < to; i++) {
-        seenFrom = seenFrom == null ? seenAt(ranking, from, i, i - from) : seenFrom;
-      }
-      items.addAll(showHeld(viewerId, slice));
+    if (slice.isEmpty()) {
+      return new Shown(items, null);
     }
-    String next = to < end ? "f" + at.asOf().toEpochMilli() + "." + to : null;
-    return new RemoteTrendingFeed.Page(items, next, null, seenFrom);
+    Map<Long, NoteViewReader.Listed> byId = new HashMap<>();
+    notes
+        .listed(viewerId, slice.stream().map(Long.class::cast).toList())
+        .forEach(row -> byId.put(row.id(), row));
+    Integer seenFrom = null;
+    for (int i = from; i < to; i++) {
+      NoteViewReader.Listed row = byId.get((Long) ranking.refs().get(i));
+      if (row != null) {
+        seenFrom = seenFrom == null ? seenAt(ranking, from, i, items.size()) : seenFrom;
+        items.add(new RemoteTrendingFeed.KeptNote(row.view(), row.uri()));
+      }
+    }
+    return new Shown(items, seenFrom);
+  }
+
+  private Shown shownHeld(Long viewerId, Ranking ranking, int from, int to) {
+    Integer seenFrom = null;
+    for (int i = from; i < to; i++) {
+      seenFrom = seenFrom == null ? seenAt(ranking, from, i, i - from) : seenFrom;
+    }
+    return new Shown(showHeld(viewerId, ranking.refs().subList(from, to)), seenFrom);
   }
 
   private static Integer seenAt(Ranking ranking, int from, int index, int shown) {
@@ -235,10 +253,8 @@ public class RemoteForYou {
     for (TrendingStatusReader.Read read : byUri.values()) {
       TrendingNote note = read.note();
       Long remoteId = note.author().remoteId();
-      if (note.createdAt().isBefore(since)
-          || note.createdAt().isAfter(asOf)
-          || note.sensitive()
-          || (note.contentWarning() != null && !note.contentWarning().isBlank())
+      if (!within(note.createdAt(), since, asOf)
+          || marked(note)
           || (remoteId != null && followed.contains(remoteId))) {
         continue;
       }
@@ -260,6 +276,14 @@ public class RemoteForYou {
               null));
     }
     return pool;
+  }
+
+  private static boolean within(Instant createdAt, Instant since, Instant asOf) {
+    return !createdAt.isBefore(since) && !createdAt.isAfter(asOf);
+  }
+
+  private static boolean marked(TrendingNote note) {
+    return note.sensitive() || (note.contentWarning() != null && !note.contentWarning().isBlank());
   }
 
   private static double weight(ForYouSignalReader.Kind kind) {

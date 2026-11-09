@@ -16,6 +16,8 @@ spring:
     type: redis
   data:
     redis:
+      timeout: 1s
+      connect-timeout: 1s
       repositories:
         enabled: false
   jpa:

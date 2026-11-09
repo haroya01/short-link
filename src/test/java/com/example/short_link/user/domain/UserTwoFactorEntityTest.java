@@ -63,4 +63,13 @@ class UserTwoFactorEntityTest {
     assertThat(enrollment.consumeTotpStep(102L, NOW.plusSeconds(60))).isFalse();
     assertThat(enrollment.getLastVerifiedStep()).isNull();
   }
+
+  @Test
+  void aBlankLineIsNeverARecoveryCode() {
+    UserTwoFactorEntity enrollment = new UserTwoFactorEntity(7L, "encrypted");
+
+    enrollment.replaceRecoveryCodes(List.of("hash-a", " ", "hash-b"));
+
+    assertThat(enrollment.recoveryCodeHashes()).containsExactly("hash-a", "hash-b");
+  }
 }

@@ -2,6 +2,7 @@ package com.example.short_link.common.net;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.example.short_link.common.net.HttpFetcher.Request;
 import com.example.short_link.common.net.HttpFetcher.Response;
@@ -88,6 +89,8 @@ class ApacheHttpFetcherTest {
                     + " "
                     + new String(
                         exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8)));
+    server.createContext("/trickle", exchange -> trickle(exchange, 1_000, 0));
+    server.createContext("/endless", exchange -> trickle(exchange, 10_000_000, 5));
     server.createContext(
         "/drop",
         exchange -> {
@@ -117,6 +120,23 @@ class ApacheHttpFetcherTest {
     exchange.sendResponseHeaders(status, bytes.length);
     exchange.getResponseBody().write(bytes);
     exchange.close();
+  }
+
+  private static void trickle(HttpExchange exchange, long length, int burst) throws IOException {
+    exchange.sendResponseHeaders(200, length);
+    OutputStream body = exchange.getResponseBody();
+    try {
+      body.write(new byte[burst]);
+      for (long sent = burst; sent < length; sent++) {
+        body.flush();
+        Thread.sleep(200);
+        body.write('x');
+      }
+    } catch (IOException | InterruptedException clientLeft) {
+      return;
+    } finally {
+      exchange.close();
+    }
   }
 
   private static void redirect(HttpExchange exchange, String location) throws IOException {
@@ -194,6 +214,35 @@ class ApacheHttpFetcherTest {
         fetcher.fetch(Request.get(pinned("http", port(), "/ok"), Map.of(), CONNECT, READ, 3));
 
     assertThat(text(response)).isEqualTo("hel");
+  }
+
+  @Test
+  void aBodyThatTricklesInIsAbandonedOnceTheConnectAndReadBudgetIsSpent() {
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(5),
+        () ->
+            assertThatThrownBy(
+                    () ->
+                        fetcher.fetch(
+                            Request.get(
+                                pinned("http", port(), "/trickle"),
+                                Map.of(),
+                                CONNECT,
+                                READ,
+                                1_000)))
+                .isInstanceOf(UncheckedIOException.class));
+  }
+
+  @Test
+  void theRestOfABodyPastTheCapIsNotWaitedFor() {
+    Response response =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2),
+            () ->
+                fetcher.fetch(
+                    Request.get(pinned("http", port(), "/endless"), Map.of(), CONNECT, READ, 5)));
+
+    assertThat(response.body()).hasSize(5);
   }
 
   @Test

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -123,6 +124,32 @@ class UserImagesOutsideTransactionIntegrationTest {
         .containsExactly("delete " + oldAvatar + " outside", "delete " + oldBanner + " outside");
     assertThat(column("avatar_key")).isNull();
     assertThat(column("banner_key")).isNull();
+  }
+
+  @Test
+  void clearingStillClearsWhenStorageCannotDeleteTheOldFile() {
+    doThrow(new ObjectStorageException("S3 delete failed", new IllegalStateException("503")))
+        .when(storage)
+        .delete(anyString());
+
+    avatars.clearAvatar(userId);
+    banners.clearBanner(userId);
+
+    assertThat(column("avatar_key")).isNull();
+    assertThat(column("banner_key")).isNull();
+  }
+
+  @Test
+  void aStorageOutageDuringACommitLeavesTheOldImageInPlace() {
+    when(storage.objectSize(anyString()))
+        .thenThrow(
+            new ObjectStorageException("S3 headObject failed", new IllegalStateException("503")));
+
+    assertThatThrownBy(() -> avatars.commitUpload(userId, "avatars/" + userId + "/new.jpg"))
+        .isInstanceOf(ObjectStorageException.class);
+
+    assertThat(calls).noneMatch(call -> call.startsWith("delete"));
+    assertThat(column("avatar_key")).isEqualTo(oldAvatar);
   }
 
   @Test

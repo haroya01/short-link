@@ -129,6 +129,18 @@ class FollowListQueryServiceTest {
   }
 
   @Test
+  void aPageThatEndsExactlyAtTheLastPersonHasNoNext() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRepository.findFollowerIds(2L, 1, 2)).thenReturn(List.of());
+    when(followRepository.findFollowingIds(2L, 1, 2)).thenReturn(List.of());
+    when(followRepository.countByFollowingId(2L)).thenReturn(4L);
+    when(followRepository.countByFollowerId(2L)).thenReturn(4L);
+
+    assertThat(service.followers(9L, "bob", 1, 2).hasNext()).isFalse();
+    assertThat(service.following(9L, "bob", 1, 2).hasNext()).isFalse();
+  }
+
+  @Test
   void emptyPageReturnsNoRows() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findFollowerIds(2L, 1, 20)).thenReturn(List.of());
@@ -244,6 +256,20 @@ class FollowListQueryServiceTest {
     assertThat(view.items()).containsExactly(new FollowListItem.Remote(remote(71L, "dave", false)));
     assertThat(view.hasNext()).isFalse();
     verify(userRepository, never()).findAllByIdIn(anyCollection());
+  }
+
+  @Test
+  void aMixedPageFilledExactlyToItsSizeHasNoNext() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followLists.page(2L, Side.FOLLOWERS, null, 0, 3))
+        .thenReturn(List.of(new Entry(true, 70L), new Entry(true, 71L)));
+    when(followLists.remoteAccounts(List.of(70L, 71L), null))
+        .thenReturn(Map.of(70L, remote(70L, "carol", false), 71L, remote(71L, "dave", false)));
+
+    MixedFollowListView view = service.followersWithRemote(null, "bob", 0, 2);
+
+    assertThat(view.items()).hasSize(2);
+    assertThat(view.hasNext()).isFalse();
   }
 
   @Test

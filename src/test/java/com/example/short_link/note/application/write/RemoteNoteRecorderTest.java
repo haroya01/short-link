@@ -117,11 +117,11 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
     assertThat(row.getValue().visibility()).isEqualTo(NoteVisibility.PUBLIC);
-    assertThat(row.getValue().language()).isEqualTo("en");
+    assertThat(row.getValue().content().language()).isEqualTo("en");
     assertThat(row.getValue().createdAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00.123456Z"));
-    assertThat(row.getValue().inReplyToId()).isNull();
-    assertThat(row.getValue().reply()).isFalse();
-    assertThat(row.getValue().sensitive()).isFalse();
+    assertThat(row.getValue().conversation().inReplyToId()).isNull();
+    assertThat(row.getValue().conversation().reply()).isFalse();
+    assertThat(row.getValue().content().sensitive()).isFalse();
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<NoteMediaEntity>> images = ArgumentCaptor.forClass(List.class);
     verify(media).saveAll(images.capture());
@@ -150,11 +150,11 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
-    assertThat(row.getValue().reply()).isTrue();
+    assertThat(row.getValue().conversation().inReplyToId()).isEqualTo(5L);
+    assertThat(row.getValue().conversation().reply()).isTrue();
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
-    assertThat(row.getValue().contentWarning()).isEqualTo("cw");
-    assertThat(row.getValue().sensitive()).isTrue();
+    assertThat(row.getValue().content().contentWarning()).isEqualTo("cw");
+    assertThat(row.getValue().content().sensitive()).isTrue();
     verify(notes).addRecipients(901L, List.of(7L, 8L));
     verify(events)
         .publishEvent(
@@ -204,7 +204,7 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().inReplyToId()).isEqualTo(6L);
+    assertThat(row.getValue().conversation().inReplyToId()).isEqualTo(6L);
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
     verify(events)
         .publishEvent(new LiveChange(LiveTopic.note(6L), LiveChange.Kind.REPLY, 902L, null));
@@ -388,7 +388,7 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().emojis()).isEqualTo(emojis);
+    assertThat(row.getValue().content().emojis()).isEqualTo(emojis);
   }
 
   @Test
@@ -594,9 +594,9 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().inReplyToId()).isNull();
-    assertThat(row.getValue().conversationId()).isNull();
-    assertThat(row.getValue().reply()).isTrue();
+    assertThat(row.getValue().conversation().inReplyToId()).isNull();
+    assertThat(row.getValue().conversation().conversationId()).isNull();
+    assertThat(row.getValue().conversation().reply()).isTrue();
     verify(notes).tag(903L, List.of("Cats", "dogs"));
   }
 
@@ -620,7 +620,8 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store, times(2)).insertRemote(rows.capture());
     assertThat(rows.getAllValues())
-        .extracting(RemoteNoteRow::inReplyToId, RemoteNoteRow::replyPolicy)
+        .extracting(
+            row -> row.conversation().inReplyToId(), row -> row.conversation().replyPolicy())
         .containsExactly(
             tuple(null, NoteReplyPolicy.EVERYONE), tuple(5L, NoteReplyPolicy.MENTIONED));
     verify(events, times(1))
@@ -647,7 +648,7 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
+    assertThat(row.getValue().conversation().inReplyToId()).isEqualTo(5L);
   }
 
   private static RemoteNotes.Received shaped(
@@ -705,8 +706,8 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store, times(2)).insertRemote(rows.capture());
     RemoteNoteRow open = rows.getAllValues().get(0);
-    assertThat(open.kind()).isEqualTo("QUESTION");
-    assertThat(open.poll())
+    assertThat(open.form().kind()).isEqualTo("QUESTION");
+    assertThat(open.form().poll())
         .isEqualTo(
             new RemoteNoteRow.Poll(
                 List.of("a", "b"),
@@ -716,8 +717,8 @@ class RemoteNoteRecorderTest {
                 List.of(5L, 4L),
                 9));
     RemoteNoteRow closed = rows.getAllValues().get(1);
-    assertThat(closed.poll().expiresAt()).isEqualTo(NOW);
-    assertThat(closed.poll().multiple()).isTrue();
+    assertThat(closed.form().poll().expiresAt()).isEqualTo(NOW);
+    assertThat(closed.form().poll().multiple()).isTrue();
   }
 
   @Test
@@ -734,10 +735,10 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().kind()).isEqualTo("PAGE");
-    assertThat(row.getValue().title()).isEqualTo("t".repeat(254) + "…");
-    assertThat(row.getValue().community()).isEqualTo("gardening@lemmy.example");
-    assertThat(row.getValue().poll()).isNull();
+    assertThat(row.getValue().form().kind()).isEqualTo("PAGE");
+    assertThat(row.getValue().form().title()).isEqualTo("t".repeat(254) + "…");
+    assertThat(row.getValue().form().community()).isEqualTo("gardening@lemmy.example");
+    assertThat(row.getValue().form().poll()).isNull();
   }
 
   @Test
@@ -751,7 +752,7 @@ class RemoteNoteRecorderTest {
 
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(store).insertRemote(row.capture());
-    assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
+    assertThat(row.getValue().conversation().inReplyToId()).isEqualTo(5L);
     verify(notes).tag(923L, List.of());
     verifyNoInteractions(events);
   }

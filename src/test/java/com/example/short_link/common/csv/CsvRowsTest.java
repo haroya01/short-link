@@ -32,4 +32,17 @@ class CsvRowsTest {
         .containsExactly(List.of("spam.example"), List.of("other.example"));
     assertThat(CsvRows.parse("")).isEmpty();
   }
+
+  @Test
+  void aQuotedCellAtTheVeryEndIsClosed() {
+    assertThat(CsvRows.parse("x,\"y\"")).containsExactly(List.of("x", "y"));
+    assertThat(CsvRows.parse("\"a\"\"\"")).containsExactly(List.of("a\""));
+  }
+
+  @Test
+  void aLoneCarriageReturnEndsALineEvenAsTheLastCharacter() {
+    assertThat(CsvRows.parse("a\rb\r")).containsExactly(List.of("a"), List.of("b"));
+    assertThat(CsvRows.parse("a,b\r\nc,d\r\n"))
+        .containsExactly(List.of("a", "b"), List.of("c", "d"));
+  }
 }

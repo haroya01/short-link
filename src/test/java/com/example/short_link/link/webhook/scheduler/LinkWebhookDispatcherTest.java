@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.QueryTimeoutException;
 
 @ExtendWith(MockitoExtension.class)
 class LinkWebhookDispatcherTest {
@@ -133,6 +135,30 @@ class LinkWebhookDispatcherTest {
   }
 
   @Test
+  void theClickThatReachesTheDailyQuotaIsStillDelivered() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, null, null, 100, null, null);
+    when(counter.increment(anyString(), eq(Duration.ofDays(1)))).thenReturn(100L);
+
+    assertThat(deliveryGate.shouldDeliver(h, event(false, "x", null))).isTrue();
+  }
+
+  @Test
+  void aOnePercentSampleSkipsAlmostEveryClick() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, 1, null, null, null, null);
+
+    long delivered =
+        IntStream.range(0, 400)
+            .filter(i -> deliveryGate.shouldDeliver(h, event(false, "x", null)))
+            .count();
+
+    assertThat(delivered).isLessThan(40);
+    assertThat(meterRegistry.counter("webhook.delivery", "result", "skipped_sample").count())
+        .isEqualTo(400.0 - delivered);
+  }
+
+  @Test
   void enqueueBatchDropsWhenOverflow() {
     for (int i = 0; i < 500; i++) batchBuffer.enqueue(99L, Map.of("i", i));
     batchBuffer.enqueue(99L, Map.of("type", "click"));
@@ -182,6 +208,24 @@ class LinkWebhookDispatcherTest {
 
     assertThat(batchBuffer.size(99L)).isEqualTo(1);
     verify(deliveryClient, never()).deliver(any(), any());
+  }
+
+  @Test
+  void aQuotaCheckThatRedisCannotAnswerSkipsOnlyThatHook() {
+    LinkWebhookEntity quoted = hook(WebhookFormat.GENERIC);
+    quoted.updateConfig(null, null, null, 100, null, null);
+    LinkWebhookEntity plain =
+        new LinkWebhookEntity(
+            new LinkId(1L), "https://example.org/hook", "s", "t", WebhookFormat.GENERIC);
+    TestEntities.withId(plain, 100L);
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(quoted, plain));
+    when(counter.increment(anyString(), eq(Duration.ofDays(1))))
+        .thenThrow(new QueryTimeoutException("Redis command timed out"));
+
+    dispatcher.onClickRecorded(event(false, "google.com", "google"));
+
+    verify(deliveryClient, never()).deliver(eq(quoted), any());
+    verify(deliveryClient).deliver(eq(plain), any());
   }
 
   @Test

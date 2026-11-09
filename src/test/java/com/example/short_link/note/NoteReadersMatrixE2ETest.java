@@ -10,6 +10,7 @@ import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.note.application.write.NoteComposer;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteDrafts;
 import com.example.short_link.note.application.write.NoteThreadControls;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
@@ -786,19 +787,15 @@ class NoteReadersMatrixE2ETest {
         composer
             .create(
                 author,
-                new NoteDraft(
-                    body,
-                    null,
-                    quotedPost,
-                    inReplyTo,
-                    quotedNote,
-                    null,
-                    false,
-                    vis.api(),
-                    poll ? new NoteDraft.Poll(List.of("yes", "no"), 3600L, false) : null,
-                    null,
-                    null,
-                    vis == Vis.ROOM && inReplyTo == null ? room : null))
+                NoteDrafts.draft(body)
+                    .images(null)
+                    .quotingPost(quotedPost)
+                    .replyingTo(inReplyTo)
+                    .quotingNote(quotedNote)
+                    .visibility(vis.api())
+                    .poll(poll ? new NoteDraft.Poll(List.of("yes", "no"), 3600L, false) : null)
+                    .inRoom(vis == Vis.ROOM && inReplyTo == null ? room : null)
+                    .build())
             .id();
     em.flush();
     return remember(new Note(kind, vis, Writer.MEMBER, id, marker));

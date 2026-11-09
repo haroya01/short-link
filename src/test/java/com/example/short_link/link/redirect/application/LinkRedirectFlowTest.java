@@ -32,6 +32,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpServletRequest;
 
@@ -420,5 +422,47 @@ class LinkRedirectFlowTest {
     assertThat(flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), fresh, "198.51.100.1"))
         .isEmpty();
     verifyNoInteractions(incrementViewCount);
+  }
+
+  @ParameterizedTest(name = "{0} -> {1}")
+  @CsvSource(
+      nullValues = "none",
+      value = {
+        "Android 14, https://android",
+        "iOS 17.2, https://ios",
+        "Mac OS X, https://macos",
+        "Windows 11, https://windows",
+        "Linux, https://linux",
+        "Chrome OS, https://generic",
+        "none, https://generic",
+      })
+  void theVisitorsOperatingSystemPicksItsOwnDestination(String osName, String expected) {
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
+    when(uaClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("desktop", osName, "Browser", false, null));
+    CachedLink link =
+        CachedLinkFixture.link(new LinkId(7L), "https://generic")
+            .variants(
+                List.of(
+                    new CachedLink.Variant(11L, "https://android", 10, true, null, null, "android"),
+                    new CachedLink.Variant(12L, "https://ios", 10, true, null, null, "ios"),
+                    new CachedLink.Variant(13L, "https://macos", 10, true, null, null, "macos"),
+                    new CachedLink.Variant(14L, "https://windows", 10, true, null, null, "windows"),
+                    new CachedLink.Variant(15L, "https://linux", 10, true, null, null, "linux")))
+            .build();
+
+    RedirectOutcome outcome =
+        flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+
+    assertThat(((RedirectOutcome.Redirect) outcome).picked().url()).isEqualTo(expected);
+  }
+
+  @Test
+  void aCrawlerTurnedAwayByCountryIsCountedLikeAPerson() {
+    when(geoIpResolver.resolve("203.0.113.1")).thenReturn(new GeoLocation("JP", null, null));
+
+    flow.refuseCrawler(linkWithBlockList("JP"), null, "203.0.113.1");
+
+    assertThat(meterRegistry.counter("redirect.blocked", "country", "JP").count()).isEqualTo(1.0);
   }
 }
