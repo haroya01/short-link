@@ -32,53 +32,40 @@ public final class TextBlockBody {
   private record PayloadOut(String body, String layout, String accent, String icon) {}
 
   public static String normalize(String raw) {
-    if (raw == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
-    }
-    String trimmed = raw.trim();
+    String trimmed = raw == null ? "" : raw.trim();
     if (trimmed.isEmpty()) {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
     }
-
-    String body;
-    String layout = "inline";
-    String accent = null;
-    String icon = null;
-
-    // Try JSON after a leading brace; invalid JSON or missing body uses legacy markdown.
-    if (trimmed.startsWith("{")) {
-      try {
-        Payload parsed = MAPPER.readValue(trimmed, Payload.class);
-        if (parsed != null && parsed.body() != null) {
-          body = parsed.body();
-          layout = normalizeLayout(parsed.layout());
-          accent = normalizeAccent(parsed.accent());
-          icon = trimIcon(parsed.icon());
-        } else {
-          // Object with no body field — treat the whole raw string as legacy markdown.
-          body = trimmed;
-        }
-      } catch (JsonProcessingException ex) {
-        // Looked like JSON but didn't parse — treat as legacy markdown verbatim.
-        body = trimmed;
-      }
-    } else {
-      body = trimmed;
-    }
-
-    body = body.trim();
+    PayloadOut read = read(trimmed);
+    String body = read.body().trim();
     if (body.isEmpty()) {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
     }
     if (body.length() > BODY_MAX) {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block too long");
     }
+    return BlockConfig.write(
+        new PayloadOut(body, read.layout(), read.accent(), read.icon()), "text block");
+  }
 
+  // Try JSON after a leading brace; invalid JSON or missing body uses legacy markdown.
+  private static PayloadOut read(String trimmed) {
+    Payload parsed = trimmed.startsWith("{") ? payload(trimmed) : null;
+    if (parsed == null || parsed.body() == null) {
+      return new PayloadOut(trimmed, "inline", null, null);
+    }
+    return new PayloadOut(
+        parsed.body(),
+        normalizeLayout(parsed.layout()),
+        normalizeAccent(parsed.accent()),
+        trimIcon(parsed.icon()));
+  }
+
+  private static Payload payload(String json) {
     try {
-      return MAPPER.writeValueAsString(new PayloadOut(body, layout, accent, icon));
+      return MAPPER.readValue(json, Payload.class);
     } catch (JsonProcessingException ex) {
-      throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "text block: serialization failed");
+      return null;
     }
   }
 

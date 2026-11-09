@@ -162,4 +162,18 @@ class PlaceTest {
     out = Place.normalize("{\"name\":\"x\",\"address\":\"a\",\"lat\":-90,\"lng\":-180}");
     assertThat(out).contains("\"lat\":-90");
   }
+
+  @Test
+  void aCoverOutsideHttpAndABlankConfigAreRefusedByName() {
+    assertThatThrownBy(
+            () ->
+                Place.normalize(
+                    "{\"name\":\"가게\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"
+                        + "\"coverUrl\":\"ftp://img.example/a.jpg\"}"))
+        .isInstanceOf(ProfileException.class)
+        .hasMessageContaining("place: cover url must be http(s)");
+    assertThatThrownBy(() -> Place.normalize("   "))
+        .isInstanceOf(ProfileException.class)
+        .hasMessageContaining("place: config required");
+  }
 }

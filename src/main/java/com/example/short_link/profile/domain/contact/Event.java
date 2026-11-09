@@ -1,11 +1,10 @@
 package com.example.short_link.profile.domain.contact;
 
+import static com.example.short_link.profile.domain.contact.BlockConfig.trimTo;
+
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 
@@ -18,55 +17,43 @@ public record Event(
   private static final int DESCRIPTION_MAX = 500;
   private static final int URL_MAX = 512;
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   public static String normalize(String raw) {
-    if (raw == null || raw.isBlank()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: config required");
-    }
-    Event parsed;
-    try {
-      parsed = MAPPER.readValue(raw.trim(), Event.class);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: malformed json");
-    }
+    Event parsed = BlockConfig.read(raw, Event.class, "event");
     String title = trimTo(parsed.title, TITLE_MAX);
     if (title == null) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: title required");
+      throw BlockConfig.invalid("event: title required");
     }
     String startsAtRaw = parsed.startsAt == null ? "" : parsed.startsAt.trim();
     if (startsAtRaw.isEmpty()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: startsAt required");
+      throw BlockConfig.invalid("event: startsAt required");
     }
     OffsetDateTime start = parseIso(startsAtRaw, "startsAt");
-
-    String endsAtRaw = parsed.endsAt == null ? "" : parsed.endsAt.trim();
-    String endsAtOut = null;
-    if (!endsAtRaw.isEmpty()) {
-      OffsetDateTime end = parseIso(endsAtRaw, "endsAt");
-      if (!end.isAfter(start)) {
-        throw new ProfileException(
-            ProfileErrorCode.INVALID_USERNAME, "event: endsAt must be after startsAt");
-      }
-      endsAtOut = end.toString();
-    }
-
+    String endsAt = endsAt(parsed.endsAt, start);
     String url = trimTo(parsed.url, URL_MAX);
-    if (url != null) validateHttpUrl(url);
-
+    if (url != null) {
+      BlockConfig.requireHttpUrl(url, "event: url");
+    }
     Event out =
         new Event(
             title,
             start.toString(),
-            endsAtOut,
+            endsAt,
             trimTo(parsed.location, LOCATION_MAX),
             trimTo(parsed.description, DESCRIPTION_MAX),
             url);
-    try {
-      return MAPPER.writeValueAsString(out);
-    } catch (JsonProcessingException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: serialization failed");
+    return BlockConfig.write(out, "event");
+  }
+
+  private static String endsAt(String raw, OffsetDateTime start) {
+    String endsAtRaw = raw == null ? "" : raw.trim();
+    if (endsAtRaw.isEmpty()) {
+      return null;
     }
+    OffsetDateTime end = parseIso(endsAtRaw, "endsAt");
+    if (!end.isAfter(start)) {
+      throw BlockConfig.invalid("event: endsAt must be after startsAt");
+    }
+    return end.toString();
   }
 
   private static OffsetDateTime parseIso(String value, String field) {
@@ -76,29 +63,6 @@ public record Event(
       throw new ProfileException(
           ProfileErrorCode.INVALID_USERNAME,
           "event: " + field + " must be ISO 8601 with offset (e.g. 2026-06-15T14:00:00+09:00)");
-    }
-  }
-
-  private static String trimTo(String s, int max) {
-    if (s == null) return null;
-    String t = s.trim();
-    if (t.isEmpty()) return null;
-    return t.length() <= max ? t : t.substring(0, max);
-  }
-
-  private static void validateHttpUrl(String url) {
-    URI uri;
-    try {
-      uri = URI.create(url);
-    } catch (IllegalArgumentException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: url malformed");
-    }
-    String scheme = uri.getScheme();
-    if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: url must be http(s)");
-    }
-    if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event: url missing host");
     }
   }
 }

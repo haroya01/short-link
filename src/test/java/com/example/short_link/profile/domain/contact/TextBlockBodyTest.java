@@ -84,4 +84,12 @@ class TextBlockBodyTest {
     String out = TextBlockBody.normalize("{\"body\":\"x\",\"icon\":\"   \"}");
     assertThat(out).contains("\"icon\":null");
   }
+
+  @Test
+  void anObjectWithoutABodyIsKeptWholeAsLegacyText() {
+    String out = TextBlockBody.normalize("{\"layout\":\"card\"}");
+
+    assertThat(out).contains("\"body\":\"{\\\"layout\\\":\\\"card\\\"}\"");
+    assertThat(out).contains("\"layout\":\"inline\"");
+  }
 }

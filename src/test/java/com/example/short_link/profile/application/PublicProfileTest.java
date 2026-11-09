@@ -122,4 +122,38 @@ class PublicProfileTest {
     assertThat(p.publishedPostCount()).isEqualTo(3L);
     assertThat(p.hideFollowerCount()).isTrue();
   }
+
+  @Test
+  void everyBlockEntryCarriesItsKindIdAndContentAndOnlyCardsAndEventsAHighlight() {
+    assertThat(
+            List.of(
+                ProfileEntry.text(1L, "t"),
+                ProfileEntry.divider(2L),
+                ProfileEntry.image(3L, "i"),
+                ProfileEntry.embed(4L, "e"),
+                ProfileEntry.emailForm(5L, "f"),
+                ProfileEntry.contactCard(6L, "c"),
+                ProfileEntry.gallery(7L, "g"),
+                ProfileEntry.productCard(8L, "p", true),
+                ProfileEntry.booking(9L, "b"),
+                ProfileEntry.event(10L, "v", false),
+                ProfileEntry.place(11L, "l")))
+        .containsExactly(
+            block("TEXT", 1L, null, "t"),
+            block("DIVIDER", 2L, null, null),
+            block("IMAGE", 3L, null, "i"),
+            block("EMBED", 4L, null, "e"),
+            block("EMAIL_FORM", 5L, null, "f"),
+            block("CONTACT_CARD", 6L, null, "c"),
+            block("GALLERY", 7L, null, "g"),
+            block("PRODUCT_CARD", 8L, true, "p"),
+            block("BOOKING", 9L, null, "b"),
+            block("EVENT", 10L, false, "v"),
+            block("PLACE", 11L, null, "l"));
+  }
+
+  private static ProfileEntry block(String kind, Long id, Boolean highlighted, String content) {
+    return new ProfileEntry(
+        kind, id, null, null, null, null, null, null, highlighted, content, null);
+  }
 }
