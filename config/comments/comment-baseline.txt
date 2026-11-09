@@ -479,8 +479,9 @@ src/main/java/com/example/short_link/post/application/write/CreatePostUseCase.ja
 src/main/java/com/example/short_link/post/application/write/DeletePostUseCase.java=3
 src/main/java/com/example/short_link/post/application/write/DeleteSeriesUseCase.java=1
 src/main/java/com/example/short_link/post/application/write/IssuePreviewTokenUseCase.java=1
-src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java=13
+src/main/java/com/example/short_link/post/application/write/MarkdownBlockParser.java=9
 src/main/java/com/example/short_link/post/application/write/MarkdownBlocksConverter.java=4
+src/main/java/com/example/short_link/post/application/write/MarkdownLines.java=4
 src/main/java/com/example/short_link/post/application/write/MentionParser.java=3
 src/main/java/com/example/short_link/post/application/write/PostEditGuard.java=1
 src/main/java/com/example/short_link/post/application/write/PostInteractionAccess.java=1

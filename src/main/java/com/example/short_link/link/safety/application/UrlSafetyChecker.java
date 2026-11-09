@@ -1,6 +1,7 @@
 package com.example.short_link.link.safety.application;
 
 import com.example.short_link.common.config.SafeBrowsingProperties;
+import com.example.short_link.common.net.BrowserHost;
 import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class UrlSafetyChecker {
     if (!properties.enabled() || properties.apiKey() == null || properties.apiKey().isBlank()) {
       return true;
     }
-    String cacheKey = ReferrerNormalizer.normalize(url);
+    String cacheKey = cacheKeyOf(url);
     if (cacheKey == null) {
       return true;
     }
@@ -46,6 +47,12 @@ public class UrlSafetyChecker {
       recordFailure(failure);
       return true;
     }
+  }
+
+  private static String cacheKeyOf(String url) {
+    String normalized = ReferrerNormalizer.normalize(url);
+    if (normalized != null) return normalized;
+    return BrowserHost.of(url) == null ? null : url.strip();
   }
 
   private void recordFailure(Exception failure) {

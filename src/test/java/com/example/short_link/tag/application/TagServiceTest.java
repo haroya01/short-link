@@ -84,4 +84,32 @@ class TagServiceTest {
     assertThat(linkTagQuery.tagNamesFor(user.getId(), new ShortCode("tagged01")))
         .containsExactly("alpha");
   }
+
+  @Test
+  void aTagWrittenInAnotherCaseIsTheSameTag() {
+    UserEntity user = userRepository.save(new UserEntity("tag4@example.com", "google", "g-tag4"));
+    linkRepository.save(new LinkEntity("https://example.com/1", "tagcase1", user.getId(), null));
+    linkRepository.save(new LinkEntity("https://example.com/2", "tagcase2", user.getId(), null));
+    replaceLinkTags.execute(user.getId(), new ShortCode("tagcase1"), List.of("Work"));
+
+    List<String> applied =
+        replaceLinkTags.execute(user.getId(), new ShortCode("tagcase2"), List.of("work", "WORK"));
+
+    assertThat(applied).containsExactly("Work");
+    assertThat(tagQuery.list(user.getId()))
+        .singleElement()
+        .satisfies(
+            tag -> {
+              assertThat(tag.name()).isEqualTo("Work");
+              assertThat(tag.linkCount()).isEqualTo(2L);
+            });
+  }
+
+  @Test
+  void aTagCanChangeOnlyItsCapitalization() {
+    UserEntity user = userRepository.save(new UserEntity("tag5@example.com", "google", "g-tag5"));
+    TagSummary work = createTag.execute(user.getId(), "work", null);
+
+    assertThat(updateTag.execute(user.getId(), work.id(), "Work", null).name()).isEqualTo("Work");
+  }
 }

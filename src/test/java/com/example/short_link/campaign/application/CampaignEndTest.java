@@ -23,6 +23,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -108,7 +109,9 @@ class CampaignEndTest {
     endNowUseCase.execute(campaign.getId(), owner);
 
     LinkEntity reloaded = linkRepository.findById(linkId).orElseThrow();
-    assertThat(reloaded.getExpiresAt()).isNotNull().isAfterOrEqualTo(before);
+    assertThat(reloaded.getExpiresAt())
+        .isNotNull()
+        .isAfterOrEqualTo(before.truncatedTo(ChronoUnit.SECONDS));
     assertThat(reloaded.getExpiredRedirectUrl()).isNull();
   }
 

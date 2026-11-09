@@ -12,6 +12,7 @@ import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.time.Instant;
@@ -180,6 +181,22 @@ class AuthServiceTest {
 
     assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isTrue();
     assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isTrue();
+  }
+
+  @Test
+  void aLoggedOutSessionIsNotRevivedByTheTokenItRotatedFrom() {
+    IssuedTokens login =
+        ((AuthService.TokenLoginResult.Tokens)
+                authService.loginWithOAuth("out@example.com", "google", "g-out"))
+            .issued();
+    IssuedTokens rotated = authService.refresh(login.refreshToken(), SessionChannel.WEB);
+
+    authService.logout(rotated.refreshToken());
+
+    assertThatThrownBy(() -> authService.refresh(login.refreshToken(), SessionChannel.WEB))
+        .isInstanceOfSatisfying(
+            UserException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(UserErrorCode.INVALID_REFRESH_TOKEN));
   }
 
   @Test

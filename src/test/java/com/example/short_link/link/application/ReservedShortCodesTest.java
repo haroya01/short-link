@@ -38,6 +38,15 @@ class ReservedShortCodesTest {
   }
 
   @Test
+  void blocksCodesTheEdgeRouterSendsToTheFrontendAsIconAssets() {
+    assertThat(ReservedShortCodes.isReserved("iconic")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("icons2026")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("favicon1")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("Iconic")).isFalse();
+    assertThat(ReservedShortCodes.isReserved("myicon")).isFalse();
+  }
+
+  @Test
   void blocksTheAbuseReportRoute() {
     assertThat(ReservedShortCodes.isReserved("report")).isTrue();
     assertThat(ReservedShortCodes.isReserved("abuse")).isTrue();

@@ -53,7 +53,8 @@ public class PasswordUnlockController {
               shortCode,
               password,
               captchaToken,
-              LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, null, req));
+              LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, null, req),
+              req.getHeader("Host"));
       if (unlocked instanceof PasswordUnlockResult.Rejected rejected) {
         outcome =
             switch (rejected.reason()) {

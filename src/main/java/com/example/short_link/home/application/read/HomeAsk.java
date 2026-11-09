@@ -18,6 +18,14 @@ public record HomeAsk(
     return Math.clamp(limit, 1, MAX_LIMIT);
   }
 
+  boolean asksNewer() {
+    return since != null && cursor == null;
+  }
+
+  SeenViewer latestReader() {
+    return tab == HomeFeedQueryService.Tab.LATEST ? viewer : null;
+  }
+
   HomeAsk fresh(SeenViewer hideFor) {
     return new HomeAsk(viewerId, hideFor, languages, tab, null, null, limit, hideFor != null);
   }

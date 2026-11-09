@@ -16,4 +16,8 @@ public interface RefreshTokenStore {
   void deleteAllForUser(Long userId);
 
   boolean wasRecentlyRotated(Long userId, String jti);
+
+  void endSession(Long userId, String sessionId, Duration ttl);
+
+  boolean sessionEnded(Long userId, String sessionId);
 }

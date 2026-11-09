@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -74,9 +75,15 @@ class ClickFlusherTest {
     flusher.flush();
 
     assertThat(buffer.isEmpty()).isTrue();
-    ArgumentCaptor<ClickRecordedEvent> captor = ArgumentCaptor.forClass(ClickRecordedEvent.class);
-    verify(events, org.mockito.Mockito.times(2)).publishEvent(captor.capture());
-    assertThat(captor.getAllValues().get(0).linkId()).isEqualTo(new LinkId(1L));
+    ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+    verify(events, org.mockito.Mockito.times(4)).publishEvent(captor.capture());
+    assertThat(captor.getAllValues())
+        .hasExactlyElementsOfTypes(
+            ClickRecordedEvent.class, SavedClick.class, ClickRecordedEvent.class, SavedClick.class);
+    assertThat(((ClickRecordedEvent) captor.getAllValues().get(0)).linkId())
+        .isEqualTo(new LinkId(1L));
+    assertThat(((SavedClick) captor.getAllValues().get(1)).click())
+        .isSameAs(captor.getAllValues().get(0));
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(2.0);
     // 발행은 트랜잭션 템플릿 안에서 돌아야 한다(getTransaction 2회 = persist 1 + publish 1). 밖에서 발행하면
     // @TransactionalEventListener(AFTER_COMMIT) 소비자가 조용히 건너뛴다.

@@ -144,6 +144,18 @@ public class HomeForYou {
   }
 
   private List<HomeFeedQueryService.Item> show(Long viewerId, List<Ref> refs) {
+    Shown shown = load(viewerId, refs);
+    List<HomeFeedQueryService.Item> items = new ArrayList<>(refs.size());
+    for (Ref ref : refs) {
+      HomeFeedQueryService.Item item = shown.item(ref);
+      if (item != null) {
+        items.add(item);
+      }
+    }
+    return items;
+  }
+
+  private Shown load(Long viewerId, List<Ref> refs) {
     List<Long> noteIds = new ArrayList<>();
     List<Long> postIds = new ArrayList<>();
     List<Object> held = new ArrayList<>();
@@ -164,38 +176,47 @@ public class HomeForYou {
     posts.cards(viewerId, postIds).forEach(card -> shownPosts.put(card.item().id(), card));
     Iterator<Object> shownHeld =
         held.isEmpty() ? List.of().iterator() : remote.showHeld(viewerId, held).iterator();
-    List<HomeFeedQueryService.Item> items = new ArrayList<>(refs.size());
-    for (Ref ref : refs) {
-      switch (ref.source()) {
+    return new Shown(shownNotes, shownPosts, shownHeld);
+  }
+
+  private static final class Shown {
+
+    private final Map<Long, NoteViewReader.Listed> notes;
+    private final Map<Long, PostCard> posts;
+    private final Iterator<Object> held;
+
+    private Shown(
+        Map<Long, NoteViewReader.Listed> notes, Map<Long, PostCard> posts, Iterator<Object> held) {
+      this.notes = notes;
+      this.posts = posts;
+      this.held = held;
+    }
+
+    HomeFeedQueryService.Item item(Ref ref) {
+      return switch (ref.source()) {
         case NOTE -> {
-          NoteViewReader.Listed row = shownNotes.get((Long) ref.ref());
-          if (row != null) {
-            items.add(new HomeFeedQueryService.Item("note", (NoteView) row.view(), null, null));
-          }
+          NoteViewReader.Listed row = notes.get((Long) ref.ref());
+          yield row == null
+              ? null
+              : new HomeFeedQueryService.Item("note", (NoteView) row.view(), null, null);
         }
         case POST -> {
-          PostCard card = shownPosts.get((Long) ref.ref());
-          if (card != null) {
-            items.add(new HomeFeedQueryService.Item("post", null, card, null));
-          }
+          PostCard card = posts.get((Long) ref.ref());
+          yield card == null ? null : new HomeFeedQueryService.Item("post", null, card, null);
         }
-        case REMOTE -> {
-          if (ref.ref() instanceof Long id) {
-            NoteViewReader.Listed row = shownNotes.get(id);
-            if (row != null) {
-              items.add(
-                  new HomeFeedQueryService.Item(
-                      "remote",
-                      null,
-                      null,
-                      new RemoteTrendingFeed.KeptNote(row.view(), row.uri())));
-            }
-          } else {
-            items.add(new HomeFeedQueryService.Item("remote", null, null, shownHeld.next()));
-          }
-        }
-      }
+        case REMOTE -> remote(ref);
+      };
     }
-    return items;
+
+    private HomeFeedQueryService.Item remote(Ref ref) {
+      if (!(ref.ref() instanceof Long id)) {
+        return new HomeFeedQueryService.Item("remote", null, null, held.next());
+      }
+      NoteViewReader.Listed row = notes.get(id);
+      return row == null
+          ? null
+          : new HomeFeedQueryService.Item(
+              "remote", null, null, new RemoteTrendingFeed.KeptNote(row.view(), row.uri()));
+    }
   }
 }

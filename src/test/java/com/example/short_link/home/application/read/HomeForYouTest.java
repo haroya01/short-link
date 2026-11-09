@@ -167,4 +167,34 @@ class HomeForYouTest {
     assertThat(forYou.page(ask(7L, READER, "for-you", null, null, 20, true)).items()).isEmpty();
     verify(remote, never()).homePool(any(), any());
   }
+
+  @Test
+  void aPostHeldFromAnotherServerIsShownInItsPlaceAsWhatTheServerHolds() {
+    Object held = new Object();
+    Object shown = new Object();
+    when(remote.homePool(any(), any()))
+        .thenReturn(
+            List.of(
+                HomeCandidate.remote(
+                    new ForYouCandidate(
+                        held,
+                        "https://h.example/s/1",
+                        "https://h.example/u/a",
+                        "h.example",
+                        "ko",
+                        Set.of(),
+                        NOW.minus(Duration.ofHours(1)),
+                        0,
+                        0,
+                        0,
+                        1L),
+                    null,
+                    null)));
+    when(remote.showHeld(7L, List.of(held))).thenReturn(List.of(shown));
+
+    HomeFeedQueryService.Page page = forYou.page(ask(7L, READER, "for-you", null, null, 20, false));
+
+    assertThat(page.items()).extracting(HomeFeedQueryService.Item::kind).containsExactly("remote");
+    assertThat(page.items().getFirst().remote()).isSameAs(shown);
+  }
 }
