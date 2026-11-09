@@ -14,7 +14,6 @@ CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/applicatio
 CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=20
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|payloadJson(PushMessage)#1=21
 CognitiveComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|post(String, String, boolean, String, PushMessage)#1=15
-CognitiveComplexity|src/main/java/com/example/short_link/notification/presentation/response/NotificationResponse.java|from(NotificationView)#1=20
 CyclomaticComplexity|src/main/java/com/example/short_link/abuse/application/write/ResolveAbuseReportUseCase.java|enforce(ResolveAbuseReportCommand, AbuseReportEntity)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminFunnelService.java|parse(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/admin/application/read/AdminHealthService.java|redirect()#1=13
@@ -69,8 +68,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/notification/applicati
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/domain/NotificationType.java|filterable()#1=26
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|payloadJson(PushMessage)#1=14
 CyclomaticComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|post(String, String, boolean, String, PushMessage)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/notification/infrastructure/BlogPushUrl.java|of(String, PushRoute)#1=13
-CyclomaticComplexity|src/main/java/com/example/short_link/notification/presentation/response/NotificationResponse.java|from(NotificationView)#1=21
 CyclomaticComplexity|src/main/java/com/example/short_link/portability/application/AccountImportService.java|start(Long, String, String)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostListItem.java|of(PostEntity, PostAccess, OwnerAudience)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostQueryService.java|findPreviewPost(String, PostViewer)#1=11
@@ -126,6 +123,5 @@ NPathComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/p
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/domain/WebhookFilter.java|update(Boolean, Integer, Boolean, Integer, String, String)#1=216
 NPathComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=309
 NPathComplexity|src/main/java/com/example/short_link/notification/infrastructure/ApnsPushSender.java|payloadJson(PushMessage)#1=4112
-NPathComplexity|src/main/java/com/example/short_link/notification/presentation/response/NotificationResponse.java|from(NotificationView)#1=1048576
 NPathComplexity|src/main/java/com/example/short_link/post/application/read/PublicPostListItem.java|of(PostEntity, PostAccess, OwnerAudience)#1=1024
 NPathComplexity|src/main/java/com/example/short_link/post/infrastructure/image/HttpPostImageReader.java|sniffImageType(byte[])#1=1841
