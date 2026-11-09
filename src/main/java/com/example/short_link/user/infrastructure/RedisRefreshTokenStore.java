@@ -63,6 +63,16 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   }
 
   @Override
+  public void endSession(Long userId, String sessionId, Duration ttl) {
+    redis.opsForValue().set(endedKey(userId, sessionId), "1", ttl);
+  }
+
+  @Override
+  public boolean sessionEnded(Long userId, String sessionId) {
+    return Boolean.TRUE.equals(redis.hasKey(endedKey(userId, sessionId)));
+  }
+
+  @Override
   public void deleteAllForUser(Long userId) {
     Set<String> toDelete = new HashSet<>();
     ScanOptions opts =
@@ -88,5 +98,9 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   // Grace markers use a separate prefix, survive deleteAllForUser, and expire on their own TTL.
   private String rotatedKey(Long userId, String jti) {
     return "refresh-rotated:" + userId + ":" + jti;
+  }
+
+  private String endedKey(Long userId, String sessionId) {
+    return "refresh-ended:" + userId + ":" + sessionId;
   }
 }
