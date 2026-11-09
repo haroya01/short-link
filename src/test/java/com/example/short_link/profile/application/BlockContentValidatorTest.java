@@ -254,4 +254,13 @@ class BlockContentValidatorTest {
             ProfileBlockType.EVENT, "{\"title\":\"행사\",\"startsAt\":\"2026-01-01T00:00:00Z\"}");
     assertThat(result).contains("\"title\":\"행사\"");
   }
+
+  @Test
+  void aGalleryOverItsLengthIsRefusedBeforeItIsRead() {
+    String tooLong = "x".repeat(2049);
+
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.GALLERY, tooLong))
+        .isInstanceOf(ProfileException.class)
+        .hasMessageContaining("gallery too long");
+  }
 }

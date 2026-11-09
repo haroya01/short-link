@@ -92,17 +92,22 @@ public class ProfileStatsService {
     List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, totals.firstVisitOr(now), until);
     VisitStatsAssembler.Rows rows =
         new VisitStatsAssembler.Rows(
-            overPeriods(recent, p -> visits.findDailyVisits(uid, p.from(), p.until(), p.offset())),
-            overPeriods(
-                lifetime, p -> visits.findHourlyVisits(uid, p.from(), p.until(), p.offset())),
-            overPeriods(lifetime, p -> visits.findHeatmap(uid, p.from(), p.until(), p.offset())),
-            visits.topCountries(uid, TOP_SIZE),
-            visits.findDeviceVisits(uid),
-            visits.topBrowsers(uid, TOP_SIZE),
-            visits.topReferrerHosts(uid, TOP_SIZE),
-            visits.topSourceChannels(uid, TOP_SIZE),
-            visits.topUtmCampaigns(uid, TOP_SIZE),
-            visits.topUtmSources(uid, TOP_SIZE));
+            new VisitStatsAssembler.Timing(
+                overPeriods(
+                    recent, p -> visits.findDailyVisits(uid, p.from(), p.until(), p.offset())),
+                overPeriods(
+                    lifetime, p -> visits.findHourlyVisits(uid, p.from(), p.until(), p.offset())),
+                overPeriods(
+                    lifetime, p -> visits.findHeatmap(uid, p.from(), p.until(), p.offset()))),
+            new VisitStatsAssembler.Audience(
+                visits.topCountries(uid, TOP_SIZE),
+                visits.findDeviceVisits(uid),
+                visits.topBrowsers(uid, TOP_SIZE)),
+            new VisitStatsAssembler.Sources(
+                visits.topReferrerHosts(uid, TOP_SIZE),
+                visits.topSourceChannels(uid, TOP_SIZE),
+                visits.topUtmCampaigns(uid, TOP_SIZE),
+                visits.topUtmSources(uid, TOP_SIZE)));
     return VisitStatsAssembler.assemble(zone, totals, rows);
   }
 }

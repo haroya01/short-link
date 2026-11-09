@@ -78,16 +78,20 @@ public class PostReadStatsService {
     List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, totals.firstVisitOr(now), until);
     VisitStatsAssembler.Rows rows =
         new VisitStatsAssembler.Rows(
-            overPeriods(recent, p -> reader.daily(postIds, p.from(), p.until(), p.offset())),
-            overPeriods(lifetime, p -> reader.hourly(postIds, p.from(), p.until(), p.offset())),
-            overPeriods(lifetime, p -> reader.heatmap(postIds, p.from(), p.until(), p.offset())),
-            reader.topCountries(postIds, TOP_SIZE),
-            reader.topDevices(postIds, TOP_SIZE),
-            reader.topBrowsers(postIds, TOP_SIZE),
-            reader.topReferrerHosts(postIds, TOP_SIZE),
-            reader.topSourceChannels(postIds, TOP_SIZE),
-            reader.topUtmCampaigns(postIds, TOP_SIZE),
-            reader.topUtmSources(postIds, TOP_SIZE));
+            new VisitStatsAssembler.Timing(
+                overPeriods(recent, p -> reader.daily(postIds, p.from(), p.until(), p.offset())),
+                overPeriods(lifetime, p -> reader.hourly(postIds, p.from(), p.until(), p.offset())),
+                overPeriods(
+                    lifetime, p -> reader.heatmap(postIds, p.from(), p.until(), p.offset()))),
+            new VisitStatsAssembler.Audience(
+                reader.topCountries(postIds, TOP_SIZE),
+                reader.topDevices(postIds, TOP_SIZE),
+                reader.topBrowsers(postIds, TOP_SIZE)),
+            new VisitStatsAssembler.Sources(
+                reader.topReferrerHosts(postIds, TOP_SIZE),
+                reader.topSourceChannels(postIds, TOP_SIZE),
+                reader.topUtmCampaigns(postIds, TOP_SIZE),
+                reader.topUtmSources(postIds, TOP_SIZE)));
     return VisitStatsAssembler.assemble(zone, totals, rows);
   }
 }

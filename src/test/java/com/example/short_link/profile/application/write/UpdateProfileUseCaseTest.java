@@ -295,4 +295,19 @@ class UpdateProfileUseCaseTest {
     assertThat(u.isLocked()).isFalse();
     org.mockito.Mockito.verifyNoInteractions(events);
   }
+
+  @Test
+  void aBioOfExactlyTheLimitIsKeptAndOneMoreIsRefused() {
+    UserEntity u = userWithId(7L);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+
+    useCase.execute(new UpdateProfileCommand(7L, null, "x".repeat(280), null, null, null));
+    assertThat(u.getBio()).hasSize(280);
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    new UpdateProfileCommand(7L, null, "x".repeat(281), null, null, null)))
+        .isInstanceOf(ProfileException.class)
+        .hasMessageContaining("bio too long");
+  }
 }

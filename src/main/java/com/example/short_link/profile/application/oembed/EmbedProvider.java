@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application.oembed;
 
+import com.example.short_link.profile.domain.contact.BlockConfig;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
@@ -44,20 +45,9 @@ public enum EmbedProvider {
   }
 
   public static Optional<EmbedProvider> resolve(String url) {
-    if (url == null || url.isBlank()) return Optional.empty();
-    URI uri;
-    try {
-      uri = URI.create(url.trim());
-    } catch (IllegalArgumentException ex) {
-      return Optional.empty();
-    }
-    String scheme = uri.getScheme();
-    if (scheme == null) return Optional.empty();
-    String s = scheme.toLowerCase(Locale.ROOT);
-    if (!s.equals("http") && !s.equals("https")) return Optional.empty();
-    String host = uri.getHost();
-    if (host == null || host.isBlank()) return Optional.empty();
-    String h = host.toLowerCase(Locale.ROOT);
+    Optional<URI> uri = BlockConfig.httpUri(url);
+    if (uri.isEmpty()) return Optional.empty();
+    String h = uri.get().getHost().toLowerCase(Locale.ROOT);
     for (EmbedProvider p : ALL) {
       if (p.hosts.contains(h)) return Optional.of(p);
     }

@@ -116,18 +116,10 @@ public class UpdateProfileUseCase {
   private void updateAppearance(UpdateProfileCommand cmd) {
     Long userId = cmd.userId();
     if (cmd.bio() != null) {
-      String trimmed = cmd.bio().trim();
-      if (trimmed.length() > 280) {
-        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bio too long");
-      }
-      editor.updateBio(userId, trimmed.isEmpty() ? null : trimmed);
+      editor.updateBio(userId, bio(cmd.bio()));
     }
     if (cmd.displayName() != null) {
-      String name = cmd.displayName().strip().replaceAll("\\s+", " ");
-      if (name.codePointCount(0, name.length()) > 30) {
-        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "display name too long");
-      }
-      editor.updateDisplayName(userId, name.isEmpty() ? null : name);
+      editor.updateDisplayName(userId, displayName(cmd.displayName()));
     }
     if (cmd.theme() != null) {
       editor.updateProfileTheme(userId, cmd.theme());
@@ -138,6 +130,22 @@ public class UpdateProfileUseCase {
     if (cmd.hideFollowerCount() != null) {
       editor.updateHideFollowerCount(userId, cmd.hideFollowerCount());
     }
+  }
+
+  private static String bio(String raw) {
+    String trimmed = raw.trim();
+    if (trimmed.length() > 280) {
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bio too long");
+    }
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private static String displayName(String raw) {
+    String name = raw.strip().replaceAll("\\s+", " ");
+    if (name.codePointCount(0, name.length()) > 30) {
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "display name too long");
+    }
+    return name.isEmpty() ? null : name;
   }
 
   private void updateLocked(UserProfile user, Boolean locked) {

@@ -24,30 +24,38 @@ final class BlogPushUrl {
     if (route.collectionId() != null) {
       return base + "/collections/" + route.collectionId();
     }
-    if (route.noteId() != null && filled(route.ownerUsername())) {
-      return base + "/@" + segment(route.ownerUsername()) + "/notes/" + route.noteId();
-    }
-    if (filled(route.postSlug()) && filled(route.ownerUsername())) {
-      String post = base + "/@" + segment(route.ownerUsername()) + "/" + segment(route.postSlug());
-      if (route.commentId() != null) {
-        return post + "#comment-" + route.commentId();
-      }
-      if (route.highlightId() != null) {
-        return post + "?highlightId=" + route.highlightId() + "&thread=1";
-      }
-      return post;
-    }
-    if (filled(route.seriesSlug()) && filled(route.ownerUsername())) {
-      return base
-          + "/@"
-          + segment(route.ownerUsername())
-          + "/series/"
-          + segment(route.seriesSlug());
+    String owned = filled(route.ownerUsername()) ? owned(base, route) : null;
+    if (owned != null) {
+      return owned;
     }
     if (filled(route.actorUsername())) {
       return base + "/@" + segment(route.actorUsername());
     }
     return FALLBACK;
+  }
+
+  private static String owned(String base, PushRoute route) {
+    String owner = base + "/@" + segment(route.ownerUsername());
+    if (route.noteId() != null) {
+      return owner + "/notes/" + route.noteId();
+    }
+    if (filled(route.postSlug())) {
+      return post(owner + "/" + segment(route.postSlug()), route);
+    }
+    if (filled(route.seriesSlug())) {
+      return owner + "/series/" + segment(route.seriesSlug());
+    }
+    return null;
+  }
+
+  private static String post(String post, PushRoute route) {
+    if (route.commentId() != null) {
+      return post + "#comment-" + route.commentId();
+    }
+    if (route.highlightId() != null) {
+      return post + "?highlightId=" + route.highlightId() + "&thread=1";
+    }
+    return post;
   }
 
   private static boolean filled(String value) {

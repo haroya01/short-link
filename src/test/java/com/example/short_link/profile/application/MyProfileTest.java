@@ -20,7 +20,9 @@ class MyProfileTest {
             "avatar.png",
             "banner.png",
             socials,
-            true);
+            true,
+            null,
+            false);
     assertThat(p.username()).isEqualTo("alice");
     assertThat(p.bio()).isEqualTo("bio");
     assertThat(p.theme()).isEqualTo("dark");
@@ -33,7 +35,7 @@ class MyProfileTest {
 
   @Test
   void nullableFieldsAllowed() {
-    MyProfile p = new MyProfile(null, null, null, null, null, null, List.of(), false);
+    MyProfile p = new MyProfile(null, null, null, null, null, null, List.of(), false, null, false);
     assertThat(p.username()).isNull();
     assertThat(p.socials()).isEmpty();
   }

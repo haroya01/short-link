@@ -3,6 +3,7 @@ package com.example.short_link.profile.application;
 import com.example.short_link.profile.application.email.EmailFormConfig;
 import com.example.short_link.profile.application.oembed.EmbedProvider;
 import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.domain.contact.BlockConfig;
 import com.example.short_link.profile.domain.contact.Booking;
 import com.example.short_link.profile.domain.contact.ContactCard;
 import com.example.short_link.profile.domain.contact.Event;
@@ -12,7 +13,6 @@ import com.example.short_link.profile.domain.contact.ProductCardCarousel;
 import com.example.short_link.profile.domain.contact.TextBlockBody;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import java.net.URI;
 
 public final class BlockContentValidator {
 
@@ -25,43 +25,23 @@ public final class BlockContentValidator {
       case TEXT -> TextBlockBody.normalize(raw);
       case IMAGE -> validateImageUrl(trimmed);
       case EMBED -> validateEmbedUrl(trimmed);
-      case EMAIL_FORM -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(
-              ProfileErrorCode.INVALID_USERNAME, "email form config too long");
-        yield EmailFormConfig.normalize(trimmed);
-      }
-      case CONTACT_CARD -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "contact card too long");
-        yield ContactCard.normalize(trimmed);
-      }
-      case GALLERY -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery too long");
-        yield Gallery.normalize(trimmed);
-      }
-      case PRODUCT_CARD -> {
-        if (trimmed.length() > 16384)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "product card too long");
-        yield ProductCardCarousel.normalize(trimmed);
-      }
-      case BOOKING -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking too long");
-        yield Booking.normalize(trimmed);
-      }
-      case EVENT -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "event too long");
-        yield Event.normalize(trimmed);
-      }
-      case PLACE -> {
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place too long");
-        yield Place.normalize(trimmed);
-      }
+      case EMAIL_FORM ->
+          EmailFormConfig.normalize(within(trimmed, 2048, "email form config too long"));
+      case CONTACT_CARD -> ContactCard.normalize(within(trimmed, 2048, "contact card too long"));
+      case GALLERY -> Gallery.normalize(within(trimmed, 2048, "gallery too long"));
+      case PRODUCT_CARD ->
+          ProductCardCarousel.normalize(within(trimmed, 16384, "product card too long"));
+      case BOOKING -> Booking.normalize(within(trimmed, 2048, "booking too long"));
+      case EVENT -> Event.normalize(within(trimmed, 2048, "event too long"));
+      case PLACE -> Place.normalize(within(trimmed, 2048, "place too long"));
     };
+  }
+
+  private static String within(String trimmed, int max, String tooLong) {
+    if (trimmed.length() > max) {
+      throw BlockConfig.invalid(tooLong);
+    }
+    return trimmed;
   }
 
   private static String validateImageUrl(String trimmed) {
@@ -69,19 +49,7 @@ public final class BlockContentValidator {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url required");
     if (trimmed.length() > 2048)
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url too long");
-    try {
-      URI uri = URI.create(trimmed);
-      String scheme = uri.getScheme();
-      if (scheme == null
-          || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url must be http(s)");
-      }
-      if (uri.getHost() == null || uri.getHost().isBlank()) {
-        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url missing host");
-      }
-    } catch (IllegalArgumentException ex) {
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url malformed");
-    }
+    BlockConfig.requireHttpUrl(trimmed, "image url");
     return trimmed;
   }
 

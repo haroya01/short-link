@@ -47,4 +47,22 @@ class BlogPushUrlTest {
                 new PushRoute("yuki", "me", null, null, null, null, null, 5L)))
         .isEqualTo("https://blog.kurl.me/@me/notes/5");
   }
+
+  @Test
+  void eachTargetOpensInTheAppsRouteOrder() {
+    String base = "https://blog.kurl.me";
+
+    assertThat(BlogPushUrl.of(base, new PushRoute("yuki", "me", "p", "s", null, null, null, 5L)))
+        .isEqualTo(base + "/@me/notes/5");
+    assertThat(BlogPushUrl.of(base, new PushRoute("yuki", "me", "p", "s", null, 3L, 4L, null)))
+        .isEqualTo(base + "/@me/p#comment-3");
+    assertThat(BlogPushUrl.of(base, new PushRoute("yuki", "me", "p", "s", null, null, 4L, null)))
+        .isEqualTo(base + "/@me/p?highlightId=4&thread=1");
+    assertThat(
+            BlogPushUrl.of(
+                base, new PushRoute("yuki", "me", null, "walks", null, null, null, null)))
+        .isEqualTo(base + "/@me/series/walks");
+    assertThat(BlogPushUrl.of(base, new PushRoute("yuki", "me", "p", "s", 9L, 3L, 4L, 5L)))
+        .isEqualTo(base + "/collections/9");
+  }
 }
