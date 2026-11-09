@@ -63,6 +63,14 @@ class UrlSafetyCheckerTest {
   }
 
   @Test
+  void asksAboutAWebAddressJavaCannotParseButABrowserOpens() {
+    UrlSafetyChecker c = checker(true, "key");
+    when(client.isSafeForKey("https:///bad.example/", "https:///bad.example/")).thenReturn(false);
+
+    assertThat(c.isSafe("https:///bad.example/")).isFalse();
+  }
+
+  @Test
   void delegatesSafeResultAndCountsMetric() {
     UrlSafetyChecker c = checker(true, "key");
     when(client.isSafeForKey(any(), any())).thenReturn(true);

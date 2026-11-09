@@ -8,10 +8,16 @@ import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.og.application.OgPageFetcher.Landing;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -22,6 +28,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class OgScraper {
+
+  private static final Pattern CHARSET = Pattern.compile("(?i)charset\\s*=\\s*[\"']?([^\\s;\"']+)");
 
   private final OgPageFetcher pages;
   private final MeterRegistry meterRegistry;
@@ -70,8 +78,26 @@ public class OgScraper {
       return Scraped.empty("non_html");
     }
     String baseUrl = landing.uri().toString();
-    Document doc = Jsoup.parse(new String(response.body(), StandardCharsets.UTF_8), baseUrl);
+    Document doc = parseBody(response.body(), charsetOf(contentType), baseUrl);
     return new Scraped(parseDocument(doc, baseUrl), "ok");
+  }
+
+  private static Document parseBody(byte[] body, String charset, String baseUrl) {
+    try {
+      return Jsoup.parse(new ByteArrayInputStream(body), charset, baseUrl);
+    } catch (IOException unreachable) {
+      throw new UncheckedIOException(unreachable);
+    }
+  }
+
+  private static String charsetOf(String contentType) {
+    Matcher declared = CHARSET.matcher(contentType);
+    if (!declared.find()) return null;
+    try {
+      return Charset.isSupported(declared.group(1)) ? declared.group(1) : null;
+    } catch (IllegalCharsetNameException unknown) {
+      return null;
+    }
   }
 
   private record Scraped(OgMetadata og, String result) {

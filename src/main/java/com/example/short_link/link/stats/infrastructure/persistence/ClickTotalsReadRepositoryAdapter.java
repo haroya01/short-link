@@ -25,6 +25,11 @@ class ClickTotalsReadRepositoryAdapter implements ClickTotalsReader {
   }
 
   @Override
+  public long countHumanByLinkIdThrough(Long linkId, Long clickId) {
+    return jpa.countHumanByLinkIdThrough(linkId, clickId);
+  }
+
+  @Override
   public long countBotByLinkId(Long linkId) {
     return jpa.countBotByLinkId(linkId);
   }

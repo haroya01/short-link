@@ -13,7 +13,7 @@ CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/H
 CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/HomeFeedQueryService.java|page(HomeAsk)#1=16
 CognitiveComplexity|src/main/java/com/example/short_link/home/application/read/HomeForYou.java|show(Long, List<Ref>)#1=24
 CognitiveComplexity|src/main/java/com/example/short_link/link/export/application/LinkExportService.java|exportEventsCsv(Long, ShortCode)#1=16
-CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=27
+CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=21
 CognitiveComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, Long, Scope)#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/application/write/ReDetectWebhookFormatsUseCase.java|execute()#1=15
 CognitiveComplexity|src/main/java/com/example/short_link/link/webhook/scheduler/WebhookDeliveryGate.java|shouldDeliver(LinkWebhookEntity, ClickRecordedEvent)#1=20
@@ -75,7 +75,7 @@ CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write
 CyclomaticComplexity|src/main/java/com/example/short_link/link/classifier/application/UserAgentClassifier.java|mapDevice(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/link/export/application/LinkExportService.java|exportStatsCsv(Long, ShortCode, String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/application/LinkRedirectFlow.java|execute(CachedLink, LinkEntity, RedirectVisit)#1=12
-CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=20
+CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/RedirectController.java|handleRedirect(ShortCode, String, Long, String, String, String, Locale, HttpServletRequest)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/link/redirect/presentation/helper/LinkPreviewRenderer.java|render(LinkEntity, String, Long, Scope)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/safety/application/UrlSafetyChecker.java|isSafe(String)#1=12
 CyclomaticComplexity|src/main/java/com/example/short_link/link/stats/infrastructure/persistence/ClickRollupRepositoryAdapter.java|insert(String)#1=10
