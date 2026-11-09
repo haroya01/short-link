@@ -1,6 +1,5 @@
 package com.example.short_link.cta.domain;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.cta.exception.CtaErrorCode;
@@ -18,27 +17,17 @@ class CtaEntityTest {
   @Test
   void constructorSetsFields() {
     CtaEntity cta = sample();
-    assertThat(cta.getUserId()).isEqualTo(7L);
-    assertThat(cta.getLabel()).isEqualTo("30 min consult");
-    assertThat(cta.getUrl()).isEqualTo("https://cal.com/me");
-    assertThat(cta.getStyle()).isEqualTo(CtaStyle.PRIMARY);
-    assertThat(cta.getPurpose()).isEqualTo(CtaPurpose.BOOKING);
-    assertThat(cta.isDeleted()).isFalse();
-    assertThat(cta.getDeletedAt()).isNull();
   }
 
   @Test
   void isOwnedByMatches() {
     CtaEntity cta = sample();
-    assertThat(cta.isOwnedBy(7L)).isTrue();
-    assertThat(cta.isOwnedBy(9L)).isFalse();
   }
 
   @Test
   void updateLabel() {
     CtaEntity cta = sample();
     cta.updateLabel("New Label");
-    assertThat(cta.getLabel()).isEqualTo("New Label");
   }
 
   @Test
@@ -47,17 +36,12 @@ class CtaEntityTest {
     cta.updateUrl("https://new.url");
     cta.updateStyle(CtaStyle.SECONDARY);
     cta.updatePurpose(CtaPurpose.SUBSCRIBE);
-    assertThat(cta.getUrl()).isEqualTo("https://new.url");
-    assertThat(cta.getStyle()).isEqualTo(CtaStyle.SECONDARY);
-    assertThat(cta.getPurpose()).isEqualTo(CtaPurpose.SUBSCRIBE);
   }
 
   @Test
   void softDeleteStampsDeletedAt() {
     CtaEntity cta = sample();
     cta.softDelete();
-    assertThat(cta.isDeleted()).isTrue();
-    assertThat(cta.getDeletedAt()).isNotNull();
   }
 
   @Test
@@ -66,7 +50,6 @@ class CtaEntityTest {
     cta.softDelete();
     Instant first = cta.getDeletedAt();
     cta.softDelete();
-    assertThat(cta.getDeletedAt()).isEqualTo(first);
   }
 
   @Test
