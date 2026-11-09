@@ -76,65 +76,65 @@ public class HomeFeedQueryService {
     if (chosen == Tab.FOLLOWING && viewerId == null) {
       return new Page(List.of(), null);
     }
-    int size = ask.size();
     if (chosen == Tab.FOR_YOU) {
       return forYou.page(ask);
     }
     if (chosen == Tab.BLOG) {
-      return blog(viewerId, ask.cursor(), ask.since(), size);
+      return blog(viewerId, ask.cursor(), ask.since(), ask.size());
     }
-    SeenViewer viewer = ask.viewer();
-    boolean hiding = chosen == Tab.LATEST && viewer != null;
-    if (ask.since() != null && ask.cursor() == null) {
-      return newer(ask, hiding && ask.hideSeen() ? viewer : null);
+    SeenViewer hiding = ask.latestReader();
+    if (ask.asksNewer()) {
+      return newer(ask, hiding != null && ask.hideSeen() ? hiding : null);
     }
+    return below(ask, hiding);
+  }
+
+  private Page below(HomeAsk ask, SeenViewer hiding) {
+    Tab chosen = ask.tab();
+    int size = ask.size();
     HomeCursor.Positions at =
-        HomeCursor.Positions.read(ask.cursor(), hiding && ask.hideSeen(), now());
-    Unseen unseen = hiding && at.asOf() != null ? seen.unseen(viewer, at.asOf()) : null;
-    NoteSlice noteSlice = notes(chosen, viewerId, at.notes(), size + 1, unseen);
-    PostSlice postSlice = posts(chosen, viewerId, at.posts(), size + 1, unseen);
+        HomeCursor.Positions.read(ask.cursor(), hiding != null && ask.hideSeen(), now());
+    Unseen unseen = hiding != null && at.asOf() != null ? seen.unseen(hiding, at.asOf()) : null;
+    NoteSlice noteSlice = notes(chosen, ask.viewerId(), at.notes(), size + 1, unseen);
+    PostSlice postSlice = posts(chosen, ask.viewerId(), at.posts(), size + 1, unseen);
     Merged merged = merge(chosen, noteSlice.items(), postSlice.items(), size);
-    int nextNote =
-        next(
-            at.notes(),
-            noteSlice.items().stream().map(NoteSlice.At::position).toList(),
-            merged.notesTaken(),
-            size,
-            noteSlice.exhausted());
-    int nextPost =
-        next(
-            at.posts(),
-            postSlice.items().stream().map(PostSlice.At::position).toList(),
-            merged.postsTaken(),
-            size,
-            postSlice.exhausted());
-    boolean more =
-        merged.notesTaken() < noteSlice.items().size()
-            || merged.postsTaken() < postSlice.items().size()
-            || !noteSlice.exhausted()
-            || !postSlice.exhausted();
     return new Page(
         merged.items(),
-        more ? at.next(nextNote, nextPost).toString() : null,
+        nextCursor(at, merged, noteSlice, postSlice, size),
         ask.cursor() == null ? top(noteSlice, postSlice, SinceMarker.NONE) : null,
         null);
   }
 
-  // Since brings what was published above the marker, at most SINCE_LIMIT; more than that is a gap
-  // and a fresh first page.
+  static String nextCursor(
+      HomeCursor.Positions at, Merged merged, NoteSlice notes, PostSlice posts, int size) {
+    boolean more =
+        merged.notesTaken() < notes.items().size()
+            || merged.postsTaken() < posts.items().size()
+            || !notes.exhausted()
+            || !posts.exhausted();
+    if (!more) {
+      return null;
+    }
+    int nextNote =
+        next(
+            at.notes(),
+            notes.items().stream().map(NoteSlice.At::position).toList(),
+            merged.notesTaken(),
+            size,
+            notes.exhausted());
+    int nextPost =
+        next(
+            at.posts(),
+            posts.items().stream().map(PostSlice.At::position).toList(),
+            merged.postsTaken(),
+            size,
+            posts.exhausted());
+    return at.next(nextNote, nextPost).toString();
+  }
+
   private Page blog(Long viewerId, String cursor, String since, int size) {
     if (since != null && cursor == null) {
-      HomeCursor.Blog marker = HomeCursor.Blog.parse(since);
-      BlogSlice above =
-          marker == null
-              ? null
-              : posts.blogAbove(viewerId, marker.publishedAt(), marker.id(), SINCE_LIMIT);
-      if (above != null && !above.more()) {
-        HomeCursor.Blog top = HomeCursor.Blog.of(above.firstAt(), above.firstId());
-        return new Page(cards(above), null, top == null ? since : top.toString(), false);
-      }
-      Page first = blog(viewerId, null, null, size);
-      return new Page(first.items(), first.next(), first.newest(), true);
+      return blogSince(viewerId, since, size);
     }
     HomeCursor.Blog from = HomeCursor.Blog.parse(cursor);
     BlogSlice below =
@@ -150,6 +150,22 @@ public class HomeFeedQueryService {
         below.more() ? last.toString() : null,
         from == null && top != null ? top.toString() : null,
         null);
+  }
+
+  // Since brings what was published above the marker, at most SINCE_LIMIT; more than that is a gap
+  // and a fresh first page.
+  private Page blogSince(Long viewerId, String since, int size) {
+    HomeCursor.Blog marker = HomeCursor.Blog.parse(since);
+    BlogSlice above =
+        marker == null
+            ? null
+            : posts.blogAbove(viewerId, marker.publishedAt(), marker.id(), SINCE_LIMIT);
+    if (above != null && !above.more()) {
+      HomeCursor.Blog top = HomeCursor.Blog.of(above.firstAt(), above.firstId());
+      return new Page(cards(above), null, top == null ? since : top.toString(), false);
+    }
+    Page first = blog(viewerId, null, null, size);
+    return new Page(first.items(), first.next(), first.newest(), true);
   }
 
   private static List<Item> cards(BlogSlice slice) {
@@ -177,39 +193,54 @@ public class HomeFeedQueryService {
         above(noteSlice.items().stream().map(at -> at.note().id()).toList(), marker.note());
     int newPosts =
         above(postSlice.items().stream().map(at -> at.post().item().id()).toList(), marker.post());
-    if ((newNotes < 0 && !(marker.note() == 0 && noteSlice.exhausted()))
-        || (newPosts < 0 && !(marker.post() == 0 && postSlice.exhausted()))) {
+    if (lost(newNotes, marker.note(), noteSlice.exhausted())
+        || lost(newPosts, marker.post(), postSlice.exhausted())) {
       return fresh(ask, hideFor);
     }
-    List<NoteSlice.At> notesAbove =
-        noteSlice.items().subList(0, newNotes < 0 ? noteSlice.items().size() : newNotes);
-    List<PostSlice.At> postsAbove =
-        postSlice.items().subList(0, newPosts < 0 ? postSlice.items().size() : newPosts);
-    if (notesAbove.size() + postsAbove.size() > SINCE_LIMIT) {
+    Above above = new Above(upTo(noteSlice.items(), newNotes), upTo(postSlice.items(), newPosts));
+    if (above.size() > SINCE_LIMIT) {
       return fresh(ask, hideFor);
     }
-    if (hideFor != null && notesAbove.size() + postsAbove.size() > 0) {
-      List<SeenItem> asked = new ArrayList<>();
-      notesAbove.forEach(at -> asked.add(new SeenItem(SeenItem.NOTE, at.note().id())));
-      postsAbove.forEach(at -> asked.add(new SeenItem(SeenItem.POST, at.post().item().id())));
-      Set<SeenItem> hidden = seen.seenBefore(hideFor, asked, now());
-      notesAbove =
-          notesAbove.stream()
-              .filter(
-                  at ->
-                      Objects.equals(at.note().author().id(), viewerId)
-                          || !hidden.contains(new SeenItem(SeenItem.NOTE, at.note().id())))
-              .toList();
-      postsAbove =
-          postsAbove.stream()
-              .filter(
-                  at ->
-                      Objects.equals(at.post().item().author().id(), viewerId)
-                          || !hidden.contains(new SeenItem(SeenItem.POST, at.post().item().id())))
-              .toList();
+    if (hideFor != null && above.size() > 0) {
+      above = unseen(above, hideFor, viewerId);
     }
-    Merged merged = merge(chosen, notesAbove, postsAbove, SINCE_LIMIT);
+    Merged merged = merge(chosen, above.notes(), above.posts(), SINCE_LIMIT);
     return new Page(merged.items(), null, top(noteSlice, postSlice, marker), false);
+  }
+
+  private record Above(List<NoteSlice.At> notes, List<PostSlice.At> posts) {
+
+    int size() {
+      return notes.size() + posts.size();
+    }
+  }
+
+  private static boolean lost(int above, long marker, boolean exhausted) {
+    return above < 0 && !(marker == 0 && exhausted);
+  }
+
+  private static <T> List<T> upTo(List<T> items, int above) {
+    return items.subList(0, above < 0 ? items.size() : above);
+  }
+
+  private Above unseen(Above above, SeenViewer hideFor, Long viewerId) {
+    List<SeenItem> asked = new ArrayList<>();
+    above.notes().forEach(at -> asked.add(new SeenItem(SeenItem.NOTE, at.note().id())));
+    above.posts().forEach(at -> asked.add(new SeenItem(SeenItem.POST, at.post().item().id())));
+    Set<SeenItem> hidden = seen.seenBefore(hideFor, asked, now());
+    return new Above(
+        above.notes().stream()
+            .filter(
+                at ->
+                    Objects.equals(at.note().author().id(), viewerId)
+                        || !hidden.contains(new SeenItem(SeenItem.NOTE, at.note().id())))
+            .toList(),
+        above.posts().stream()
+            .filter(
+                at ->
+                    Objects.equals(at.post().item().author().id(), viewerId)
+                        || !hidden.contains(new SeenItem(SeenItem.POST, at.post().item().id())))
+            .toList());
   }
 
   private Page fresh(HomeAsk ask, SeenViewer hideFor) {

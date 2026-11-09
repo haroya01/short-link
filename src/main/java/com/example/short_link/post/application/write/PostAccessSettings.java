@@ -28,12 +28,7 @@ public class PostAccessSettings {
     if (placing) {
       requireRoom(post, audience, change.roomId());
     }
-    if (change.password() != null && !PostPasswords.acceptableLength(change.password())) {
-      throw new PostException(PostErrorCode.POST_PASSWORD_LENGTH);
-    }
-    if (audience.needsPassword() && change.password() == null && !post.hasPassword()) {
-      throw new PostException(PostErrorCode.POST_PASSWORD_REQUIRED);
-    }
+    requirePassword(post, audience, change.password());
     List<String> blocked =
         change.blockedCountries() == null ? null : countries(change.blockedCountries());
     if (change.password() != null) {
@@ -44,6 +39,15 @@ public class PostAccessSettings {
     }
     if (placing) {
       post.changeAudience(audience, change.roomId(), UnlistedKeys.next());
+    }
+  }
+
+  private static void requirePassword(PostEntity post, PostAudience audience, String password) {
+    if (password != null && !PostPasswords.acceptableLength(password)) {
+      throw new PostException(PostErrorCode.POST_PASSWORD_LENGTH);
+    }
+    if (audience.needsPassword() && password == null && !post.hasPassword()) {
+      throw new PostException(PostErrorCode.POST_PASSWORD_REQUIRED);
     }
   }
 

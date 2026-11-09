@@ -477,4 +477,21 @@ class MarkdownBlocksConverterTest {
     assertThat(blocks).containsExactly(new BlockInput(PostBlockType.QUOTE, "[!TIP]\n使えます"));
     assertThat(roundTrip(blocks)).isEqualTo("> [!TIP]\n> 使えます");
   }
+
+  @Test
+  void aTildeFenceEndsTheParagraphAboveIt() {
+    List<BlockInput> blocks = toBlocks("text\n~~~\ncode\n~~~");
+
+    assertThat(blocks)
+        .extracting(BlockInput::type)
+        .containsExactly(PostBlockType.PARAGRAPH, PostBlockType.CODE);
+    assertThat(blocks.get(0).content()).isEqualTo("text");
+  }
+
+  @Test
+  void aFenceLineNamingALanguageLeavesTheCodeOpenSoACalloutInsideStaysCode() {
+    String markdown = "```\n```js\n:::note\nhi\n:::\n```";
+
+    assertThat(MarkdownBlocksConverter.convertCalloutContainers(markdown)).isEqualTo(markdown);
+  }
 }

@@ -49,9 +49,28 @@ public class UpdatePostMetadataUseCase {
     }
 
     applySlug(post, cmd);
-    String titleBefore = post.getTitle();
-    String excerptBefore = post.getExcerpt();
-    List<String> tagsBefore = cmd.tags() == null ? null : List.copyOf(post.getTags());
+    SearchFields before = SearchFields.of(post, cmd.tags() != null);
+    applyFields(post, cmd);
+    post.markEdited();
+    refreshSearchAndRevision(post, before.changedIn(post));
+    return writeViews.fromSaved(postRepository.save(post));
+  }
+
+  private record SearchFields(String title, String excerpt, List<String> tags) {
+
+    static SearchFields of(PostEntity post, boolean tagsAsked) {
+      return new SearchFields(
+          post.getTitle(), post.getExcerpt(), tagsAsked ? List.copyOf(post.getTags()) : null);
+    }
+
+    boolean changedIn(PostEntity post) {
+      return !Objects.equals(title, post.getTitle())
+          || !Objects.equals(excerpt, post.getExcerpt())
+          || (tags != null && !tags.equals(post.getTags()));
+    }
+  }
+
+  private void applyFields(PostEntity post, UpdatePostMetadataCommand cmd) {
     if (cmd.title() != null) {
       post.updateTitle(cmd.title());
     }
@@ -65,14 +84,6 @@ public class UpdatePostMetadataUseCase {
     if (cmd.tags() != null) {
       post.updateTags(cmd.tags());
     }
-
-    post.markEdited();
-    boolean searchFieldChanged =
-        !Objects.equals(titleBefore, post.getTitle())
-            || !Objects.equals(excerptBefore, post.getExcerpt())
-            || (tagsBefore != null && !tagsBefore.equals(post.getTags()));
-    refreshSearchAndRevision(post, searchFieldChanged);
-    return writeViews.fromSaved(postRepository.save(post));
   }
 
   private void applySlug(PostEntity post, UpdatePostMetadataCommand cmd) {

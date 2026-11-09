@@ -33,32 +33,45 @@ public class MarkdownBlocksConverter {
     for (int i = 0; i < lines.length; i++) {
       Matcher f = FENCE_LINE.matcher(lines[i]);
       if (f.matches()) {
-        if (fence == null) fence = f.group(1);
-        else if (f.group(1).startsWith(fence) && f.group(2).isBlank()) fence = null;
+        fence = fenceAfter(fence, f);
         out.add(lines[i]);
         continue;
       }
       String kind = fence == null ? calloutContainerKind(lines[i]) : null;
-      int close = -1;
-      if (kind != null) {
-        for (int j = i + 1; j < lines.length; j++) {
-          if (lines[j].trim().equals(":::")) {
-            close = j;
-            break;
-          }
-        }
-      }
+      int close = kind == null ? -1 : closingLine(lines, i + 1);
       if (close < 0) {
         out.add(lines[i]);
         continue;
       }
-      out.add("> [!" + kind + "]");
-      for (int j = i + 1; j < close; j++) {
-        out.add(lines[j].isBlank() ? ">" : "> " + lines[j]);
-      }
+      out.addAll(callout(kind, lines, i + 1, close));
       i = close;
     }
     return String.join("\n", out);
+  }
+
+  private static String fenceAfter(String open, Matcher line) {
+    if (open == null) {
+      return line.group(1);
+    }
+    return line.group(1).startsWith(open) && line.group(2).isBlank() ? null : open;
+  }
+
+  private static List<String> callout(String kind, String[] lines, int from, int close) {
+    List<String> quoted = new ArrayList<>();
+    quoted.add("> [!" + kind + "]");
+    for (int j = from; j < close; j++) {
+      quoted.add(lines[j].isBlank() ? ">" : "> " + lines[j]);
+    }
+    return quoted;
+  }
+
+  private static int closingLine(String[] lines, int from) {
+    for (int j = from; j < lines.length; j++) {
+      if (lines[j].trim().equals(":::")) {
+        return j;
+      }
+    }
+    return -1;
   }
 
   private static String calloutContainerKind(String line) {
