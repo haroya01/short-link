@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = ShortLinkApplication.class)
 @ActiveProfiles("test")
+@Tag("integration")
 class ClickRegionCodeBackfillIntegrationTest {
 
   @Autowired private DataSource dataSource;

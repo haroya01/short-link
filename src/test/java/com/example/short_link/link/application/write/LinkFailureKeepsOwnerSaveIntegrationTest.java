@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 // Not @Transactional: the owner's transaction has to commit for the test to see what it kept.
 @SpringBootTest(properties = "short-link.link-quota.authenticated=0")
 @ActiveProfiles("test")
+@Tag("integration")
 class LinkFailureKeepsOwnerSaveIntegrationTest {
 
   @MockitoBean private UrlSafetyChecker safety;

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 // 링크 캐시는 커밋 뒤에 지워지므로, 캐시 무효화를 보는 테스트는 테스트 트랜잭션 없이 요청마다 커밋한다.
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class LinkLifecycleE2ETest {
 
   @Autowired private MockMvc mvc;

@@ -25,6 +25,7 @@ import com.example.short_link.link.webhook.exception.WebhookException;
 import com.example.short_link.link.webhook.infrastructure.persistence.JpaLinkWebhookRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class LinkWebhookIntegrationTest {
 
   @Autowired private LinkWebhookQueryService query;
