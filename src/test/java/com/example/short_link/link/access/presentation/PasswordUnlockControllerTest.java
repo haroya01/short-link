@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.TurnstileVerifier;
@@ -49,7 +50,12 @@ class PasswordUnlockControllerTest {
   private final PasswordUnlockController controller =
       new PasswordUnlockController(
           new PasswordUnlockUseCase(
-              lookup, protectionService, attemptLimiter, flow, turnstileVerifier),
+              lookup,
+              protectionService,
+              attemptLimiter,
+              flow,
+              turnstileVerifier,
+              mock(CustomDomainQueryService.class, invocation -> null)),
           turnstile,
           HTML,
           new VisitHandoff(new ClientAppClassifier(), HTML));

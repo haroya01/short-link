@@ -3,6 +3,8 @@ package com.example.short_link.link.classifier.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ReferrerChannelClassifierTest {
 
@@ -51,5 +53,17 @@ class ReferrerChannelClassifierTest {
   @Test
   void invalidUrlIsOther() {
     assertThat(classifier.classify("not a url at all")).isEqualTo("other");
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "m.mail.naver.com, email",
+    "m.mail.daum.net, email",
+    "u.mail.google.com, email",
+    "m.search.naver.com, search",
+    "m.facebook.com, social"
+  })
+  void aSubdomainTakesTheChannelOfItsClosestListedDomain(String host, String channel) {
+    assertThat(classifier.classifyHost(host)).isEqualTo(channel);
   }
 }

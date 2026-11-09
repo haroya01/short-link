@@ -1,8 +1,10 @@
 package com.example.short_link;
 
 import static com.example.short_link.support.TestCacheCleaner.clear;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.admin.domain.BlockedDomainEntity;
@@ -29,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 class OutboundUrlSafetyE2ETest {
+
+  private static final String SAFARI =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+          + " Version/17.0 Safari/605.1.15";
 
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
@@ -149,6 +155,60 @@ class OutboundUrlSafetyE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"" + field + "\":\"https://phish.test/room\"}"))
         .andExpect(status().isBadRequest());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "https:///phish.test/login",
+        "https:////phish.test/login",
+        "https://phish.test./login",
+        "https://a_b.phish.test/login",
+        "https://phish%2Etest/login",
+        "https://%70hish.test/login",
+        "https://\uff50hish.test/login",
+        "https://phish\u3002test/login"
+      })
+  void aBlockedDomainWrittenAnotherWayABrowserStillOpensIsRefused(String url) throws Exception {
+    mvc.perform(
+            post("/api/v1/links")
+                .header("Authorization", bearer(newUser()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"" + url + "\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("MALICIOUS_URL"));
+  }
+
+  @org.junit.jupiter.api.Test
+  void aLinkWrittenAnotherWayStopsRedirectingOnceItsDomainIsBlocked() throws Exception {
+    String created =
+        mvc.perform(
+                post("/api/v1/links")
+                    .header("Authorization", bearer(newUser()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"url\":\"https:///later.test/login\"}"))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String code = JsonPath.read(created, "$.shortCode");
+
+    blockedDomains.saveAndFlush(new BlockedDomainEntity("later.test", "direct", 1L));
+    clear(cacheManager, "blocked-domains");
+    clear(cacheManager, "link");
+
+    mvc.perform(get("/" + code).header("User-Agent", SAFARI)).andExpect(status().isForbidden());
+  }
+
+  @org.junit.jupiter.api.Test
+  void aLinkBackToThisServiceWrittenAnotherWayIsStillASelfReference() throws Exception {
+    mvc.perform(
+            post("/api/v1/links")
+                .header("Authorization", bearer(newUser()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"https:///localhost/abc1234\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("SELF_REFERENCING_URL"));
   }
 
   private UserEntity newUser() {

@@ -74,6 +74,6 @@
 @junit | turnstile-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | turnstile-link-create | 6 | 5 | 2 | 0 | 13
 @junit | turnstile-link-protect | 3 | 0 | 2 | 0 | 5
-@junit | turnstile-unlock-json-success | 3 | 0 | 1 | 0 | 4
+@junit | turnstile-unlock-json-success | 4 | 0 | 1 | 0 | 5
 @junit | turnstile-unlock-nested-success-rejected | 0 | 0 | 0 | 0 | 0
 @junit | turnstile-unlock-string-success-rejected | 0 | 0 | 0 | 0 | 0

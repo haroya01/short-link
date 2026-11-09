@@ -28,6 +28,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -170,6 +172,22 @@ class LinkCreationServiceTest {
         service.execute(CreateLinkCommand.of("https://example.com/same", user.getId(), null, null));
 
     assertThat(second.shortCode()).isEqualTo(first.shortCode());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "https://youtu.be/AbCdE, https://youtu.be/abcde",
+    "https://example.com/café, https://example.com/cafe"
+  })
+  void aUrlThatOnlyLooksTheSameToTheDatabaseGetsItsOwnLink(String existing, String requested) {
+    UserEntity user = userRepository.save(new UserEntity("test@example.com", "google", "g-d5"));
+    LinkCreated first = service.execute(CreateLinkCommand.of(existing, user.getId(), null, null));
+
+    LinkCreated second = service.execute(CreateLinkCommand.of(requested, user.getId(), null, null));
+
+    assertThat(second.shortCode()).isNotEqualTo(first.shortCode());
+    assertThat(linkRepository.findByShortCode(second.shortCode()).orElseThrow().getOriginalUrl())
+        .isEqualTo(requested);
   }
 
   @Test

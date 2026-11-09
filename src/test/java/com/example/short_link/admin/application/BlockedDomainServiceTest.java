@@ -179,6 +179,23 @@ class BlockedDomainServiceTest {
     assertThat(BlockedDomainNormalizer.normalize(null)).isNull();
   }
 
+  @Test
+  void normalizeKeepsOnlyTheHostABrowserWouldOpen() {
+    assertThat(BlockedDomainNormalizer.normalize("https://evil.test:8443/x"))
+        .isEqualTo("evil.test");
+    assertThat(BlockedDomainNormalizer.normalize("user@evil.test")).isEqualTo("evil.test");
+    assertThat(BlockedDomainNormalizer.normalize("evil.test.")).isEqualTo("evil.test");
+  }
+
+  @Test
+  void aBlockedDomainWrittenAnotherWayIsStillBlocked() {
+    blockDomain.execute("blocked.test", "spam", 1L);
+    assertThat(queryService.isBlocked("https:///blocked.test/foo")).isTrue();
+    assertThat(queryService.isBlocked("https://blocked.test./foo")).isTrue();
+    assertThat(queryService.isBlocked("https://%62locked.test/foo")).isTrue();
+    assertThat(queryService.isBlocked("https://a_b.blocked.test/foo")).isTrue();
+  }
+
   private void clearBlockedDomainCache() {
     assertThat(BLOCKED_DOMAINS_CACHE).isEqualTo(BlockedDomainCache.CACHE_NAME);
     blockedDomainCache.evictNow();

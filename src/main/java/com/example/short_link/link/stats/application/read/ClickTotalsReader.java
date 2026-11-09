@@ -10,6 +10,8 @@ public interface ClickTotalsReader {
 
   long countHumanByLinkId(Long linkId);
 
+  long countHumanByLinkIdThrough(Long linkId, Long clickId);
+
   long countBotByLinkId(Long linkId);
 
   ClickFlags countFlagsByLinkId(Long linkId);

@@ -1,10 +1,10 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.domain.PostBlockType;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import tools.jackson.databind.json.JsonMapper;
@@ -14,6 +14,18 @@ final class MarkdownBlockParser {
   private final JsonMapper json;
   private final String[] lines;
   private final List<ReplacePostBlocksCommand.BlockInput> blocks = new ArrayList<>();
+  // 문법 우선순위: 코드/표를 먼저 소비하고, 이미지 URL은 일반 임베드보다 먼저 해석한다.
+  private final List<BooleanSupplier> readers =
+      List.of(
+          this::readFence,
+          this::readTable,
+          this::readDivider,
+          this::readHeading,
+          this::readQuote,
+          this::readImages,
+          this::readImageUrl,
+          this::readEmbed,
+          this::readList);
   private int i;
 
   MarkdownBlockParser(JsonMapper json, String markdown) {
@@ -27,20 +39,14 @@ final class MarkdownBlockParser {
   // Image titles allow escaped quotes so editor captions round-trip through markdown.
   private static final Pattern IMAGE =
       Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"((?:[^\"\\\\]|\\\\.)*)\")?\\)");
-  // Mirrors the web editor's unescapeTitle for escaped quotes and backslashes.
-  private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
-  private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
   // An unescaped trailing backslash is a hard line break: the next line, a URL included, stays in
   // the paragraph. Closing a paragraph it breaks nothing and CommonMark prints it, so it is dropped
   // there; an escaped "\\" stays.
   private static final Pattern TRAILING_HARD_BREAK =
       Pattern.compile("(^|[^\\\\])((?:\\\\\\\\)*)\\\\\\z");
-  private static final Pattern IMAGE_EXT =
-      Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LIST_START = Pattern.compile("^(?:[-*]|\\d+\\.)\\s+.*");
   private static final Pattern LIST_CONT = Pattern.compile("^\\s*(?:[-*]|\\d+\\.)\\s+.*");
   private static final Pattern INDENTED = Pattern.compile("^\\s+\\S.*");
-  private static final Pattern TABLE_SEP = Pattern.compile("^[\\s|:-]+$");
   private static final Pattern PARA_BREAK =
       Pattern.compile("^(#{1,3}\\s|>\\s|!\\[|[-*]\\s|\\d+\\.\\s).*");
 
@@ -51,21 +57,20 @@ final class MarkdownBlockParser {
     while (i < lines.length) {
       if (lines[i].trim().isEmpty()) {
         i++;
-        continue;
+      } else if (!readBlock()) {
+        readParagraph();
       }
-      // 문법 우선순위: 코드/표를 먼저 소비하고, 이미지 URL은 일반 임베드보다 먼저 해석한다.
-      if (readFence()
-          || readTable()
-          || readDivider()
-          || readHeading()
-          || readQuote()
-          || readImages()
-          || readImageUrl()
-          || readEmbed()
-          || readList()) continue;
-      readParagraph();
     }
     return blocks;
+  }
+
+  private boolean readBlock() {
+    for (BooleanSupplier reader : readers) {
+      if (reader.getAsBoolean()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean readFence() {
@@ -102,7 +107,7 @@ final class MarkdownBlockParser {
 
   private boolean readTable() {
     String line = lines[i];
-    if (isTableStart(line, i + 1 < lines.length ? lines[i + 1] : null)) {
+    if (MarkdownLines.isTableStart(line, i + 1 < lines.length ? lines[i + 1] : null)) {
       List<String> rows = new ArrayList<>();
       while (i < lines.length && lines[i].stripLeading().startsWith("|")) {
         rows.add(lines[i]);
@@ -196,7 +201,7 @@ final class MarkdownBlockParser {
     if (width != null) {
       node.put("width", width);
     }
-    String caption = im.caption() == null ? "" : unescapeTitle(im.caption()).trim();
+    String caption = im.caption() == null ? "" : MarkdownLines.unescapeTitle(im.caption()).trim();
     if (!caption.isEmpty()) {
       node.put("caption", caption);
     }
@@ -205,7 +210,7 @@ final class MarkdownBlockParser {
 
   private boolean readImageUrl() {
     String line = lines[i];
-    String imageUrl = standaloneImageUrl(line);
+    String imageUrl = MarkdownLines.standaloneImageUrl(line);
     if (imageUrl != null) {
       ObjectNode node = json.createObjectNode();
       node.put("url", imageUrl);
@@ -219,7 +224,7 @@ final class MarkdownBlockParser {
 
   private boolean readEmbed() {
     String line = lines[i];
-    String embedUrl = standaloneUrl(line);
+    String embedUrl = MarkdownLines.standaloneUrl(line);
     if (embedUrl != null) {
       blocks.add(block(PostBlockType.EMBED, embedUrl));
       i++;
@@ -238,11 +243,7 @@ final class MarkdownBlockParser {
     List<String> listLines = new ArrayList<>();
     while (i < lines.length) {
       if (lines[i].trim().isEmpty()) {
-        int next = i;
-        while (next < lines.length && lines[next].trim().isEmpty()) next++;
-        if (!continuesList(next, listLines)) break;
-        listLines.addAll(Arrays.asList(lines).subList(i, next));
-        i = next;
+        if (!takeBlankLines(listLines)) break;
         continue;
       }
       if (!LIST_CONT.matcher(lines[i]).matches() && !INDENTED.matcher(lines[i]).matches()) break;
@@ -256,6 +257,17 @@ final class MarkdownBlockParser {
     return true;
   }
 
+  private boolean takeBlankLines(List<String> listLines) {
+    int next = i;
+    while (next < lines.length && lines[next].trim().isEmpty()) next++;
+    if (!continuesList(next, listLines)) {
+      return false;
+    }
+    listLines.addAll(Arrays.asList(lines).subList(i, next));
+    i = next;
+    return true;
+  }
+
   private boolean continuesList(int next, List<String> listLines) {
     return next < lines.length && INDENTED.matcher(lines[next]).matches() && !listLines.isEmpty();
   }
@@ -265,15 +277,7 @@ final class MarkdownBlockParser {
     List<String> paraLines = new ArrayList<>();
     paraLines.add(lines[i]);
     i++;
-    while (i < lines.length
-        && !lines[i].trim().isEmpty()
-        && !lines[i].trim().equals("---")
-        && !lines[i].startsWith("```")
-        && !lines[i].startsWith("~~~")
-        && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
-        && !PARA_BREAK.matcher(lines[i]).matches()
-        && (TRAILING_HARD_BREAK.matcher(lines[i - 1].stripTrailing()).find()
-            || standaloneUrl(lines[i]) == null)) {
+    while (i < lines.length && continuesParagraph()) {
       paraLines.add(lines[i]);
       i++;
     }
@@ -282,37 +286,16 @@ final class MarkdownBlockParser {
         block(PostBlockType.PARAGRAPH, TRAILING_HARD_BREAK.matcher(content).replaceFirst("$1$2")));
   }
 
-  private static boolean isTableStart(String line, String next) {
-    if (!line.stripLeading().startsWith("|") || next == null) return false;
-    String t = next.trim();
-    return TABLE_SEP.matcher(t).matches() && t.contains("-") && t.contains("|");
-  }
-
-  // Mirrors the web editor's markdown-to-blocks: only a bare HTTP(S) URL alone on its line
-  // stands as its own block. `<url>` and `[text](url)` are links, and a line ending in a
-  // backslash breaks inside its paragraph, so both stay in the paragraph.
-  private static String standaloneUrl(String line) {
-    String t = line.trim();
-    if (t.endsWith("\\")) return null;
-    Matcher m = BARE_URL.matcher(t);
-    if (!m.matches()) return null;
-    String url = m.group(1);
-    try {
-      return new URI(url).getHost() == null ? null : url;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  private static String standaloneImageUrl(String line) {
-    String url = standaloneUrl(line);
-    if (url == null) return null;
-    String path = URI.create(url).getPath();
-    return path != null && IMAGE_EXT.matcher(path).find() ? url : null;
-  }
-
-  private static String unescapeTitle(String s) {
-    return TITLE_ESCAPE.matcher(s).replaceAll("$1");
+  private boolean continuesParagraph() {
+    String line = lines[i];
+    return !line.trim().isEmpty()
+        && !line.trim().equals("---")
+        && !line.startsWith("```")
+        && !line.startsWith("~~~")
+        && !MarkdownLines.isTableStart(line, i + 1 < lines.length ? lines[i + 1] : null)
+        && !PARA_BREAK.matcher(line).matches()
+        && (TRAILING_HARD_BREAK.matcher(lines[i - 1].stripTrailing()).find()
+            || MarkdownLines.standaloneUrl(line) == null);
   }
 
   private static ReplacePostBlocksCommand.BlockInput block(PostBlockType type, String content) {
