@@ -1,19 +1,18 @@
 package com.example.short_link.link.notice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
+import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.application.ClickBuffer;
-import com.example.short_link.link.stats.application.ClickContext;
-import com.example.short_link.link.stats.application.ClickFlusher;
-import com.example.short_link.link.stats.application.PendingClick;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,33 +21,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.AopTestUtils;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@TestPropertySource(properties = "spring.datasource.hikari.maximum-pool-size=8")
 class ClickNoticePositionIntegrationTest {
 
-  private static final String DESKTOP_SAFARI =
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"
-          + " Version/17.0 Safari/605.1.15";
-
-  @Autowired private ClickBuffer buffer;
-  @Autowired private ClickFlusher flusher;
+  @Autowired private LinkClickNoticeListener listener;
+  @Autowired private ClickEventRepository clicks;
   @Autowired private UserRepository users;
   @Autowired private LinkRepository links;
   @Autowired private JdbcTemplate jdbc;
 
   private Long userId;
   private Long linkId;
-  private int visitor;
+  private String code;
 
   @BeforeEach
   void aNewLink() {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     userId =
         users.save(new UserEntity("first-" + suffix + "@x.com", "google", "g-n" + suffix)).getId();
-    String code = "n" + suffix.substring(0, 7);
+    code = "n" + suffix.substring(0, 7);
     linkId = links.save(new LinkEntity("https://example.com/" + code, code, userId, null)).getId();
   }
 
@@ -61,45 +55,47 @@ class ClickNoticePositionIntegrationTest {
   }
 
   @Test
-  void twoPeopleOpeningANewLinkInTheSameSecondStillMakeOneFirstClickNotice() {
-    buffer.offer(person());
-    buffer.offer(person());
-    flusher.flush();
+  void twoPeopleSavedInOneBatchStillMakeOneFirstClickNotice() {
+    List<SavedClick> batch = List.of(person(), person());
 
-    await()
-        .during(Duration.ofSeconds(1))
-        .atMost(Duration.ofSeconds(6))
-        .untilAsserted(() -> assertThat(notices("FIRST_CLICK")).isEqualTo(1));
+    batch.forEach(this::afterCommit);
+
+    assertThat(notices("FIRST_CLICK")).isEqualTo(1);
   }
 
   @Test
   void aBatchThatReachesTheTenthClickMakesOneMilestoneNotice() {
     for (int i = 0; i < 8; i++) {
-      buffer.offer(person());
-      flusher.flush();
+      afterCommit(person());
     }
-    buffer.offer(person());
-    buffer.offer(person());
-    flusher.flush();
+    List<SavedClick> batch = List.of(person(), person());
 
-    await()
-        .during(Duration.ofSeconds(1))
-        .atMost(Duration.ofSeconds(6))
-        .untilAsserted(() -> assertThat(notices("MILESTONE")).isEqualTo(1));
+    batch.forEach(this::afterCommit);
+
+    assertThat(notices("FIRST_CLICK")).isEqualTo(1);
+    assertThat(notices("MILESTONE")).isEqualTo(1);
   }
 
-  private PendingClick person() {
-    visitor++;
-    return new PendingClick(
-        ClickContext.of(
-            new LinkId(linkId),
-            "https://example.com/landing",
-            "https://news.example/",
-            DESKTOP_SAFARI,
-            "198.51.100." + visitor,
-            "ko-KR"),
-        null,
-        Instant.now());
+  private SavedClick person() {
+    Instant now = Instant.now();
+    ClickEventEntity saved =
+        clicks.save(
+            ClickEventEntity.builder()
+                .linkId(new LinkId(linkId))
+                .clickedAt(now)
+                .referrerHost("news.example")
+                .deviceClass("desktop")
+                .bot(false)
+                .build());
+    ClickRecordedEvent click =
+        new ClickRecordedEvent(
+            new LinkId(linkId), code, userId, now, null, "desktop", "news.example", false, null);
+    return new SavedClick(click, saved.getId());
+  }
+
+  private void afterCommit(SavedClick saved) {
+    LinkClickNoticeListener target = AopTestUtils.getTargetObject(listener);
+    target.onClickRecorded(saved);
   }
 
   private long notices(String type) {
