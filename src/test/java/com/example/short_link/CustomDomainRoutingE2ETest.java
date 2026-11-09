@@ -107,6 +107,56 @@ class CustomDomainRoutingE2ETest {
   }
 
   @Test
+  void customDomainHost_doesNotShowAnotherUsersExpiredMessage() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("cd-msg@x.com", "google", "g-cd-msg"));
+    UserEntity other = userRepository.save(new UserEntity("cd-msg2@x.com", "google", "g-cd-msg2"));
+    LinkEntity ended =
+        linkRepository.save(new LinkEntity("https://other.com", "cd0msged", other.getId(), null));
+    ended.applyCampaignExpiration(Instant.now().minusSeconds(60), null, "see you at our new shop");
+    linkRepository.save(ended);
+    verifiedDomain(owner, "go.brand-msg.example.com");
+
+    mvc.perform(get("/cd0msged").header("Host", "go.brand-msg.example.com"))
+        .andExpect(status().isNotFound());
+    mvc.perform(get("/cd0msged").header("Host", "kurl.me")).andExpect(status().isGone());
+  }
+
+  @Test
+  void customDomainHost_doesNotUnlockAnotherUsersLink() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("cd-pw@x.com", "google", "g-cd-pw"));
+    UserEntity other = userRepository.save(new UserEntity("cd-pw2@x.com", "google", "g-cd-pw2"));
+    mvc.perform(
+            post("/api/v1/links")
+                .header("Authorization", "Bearer " + jwt.createAccessToken(other.getId(), "USER"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"url\":\"https://other.com\",\"customCode\":\"cd0lockd\",\"password\":\"open-sesame\"}"))
+        .andExpect(status().isCreated());
+    verifiedDomain(owner, "go.brand-pw.example.com");
+
+    mvc.perform(
+            post("/cd0lockd")
+                .header("Host", "go.brand-pw.example.com")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("password=open-sesame"))
+        .andExpect(status().isNotFound());
+    mvc.perform(
+            post("/cd0lockd")
+                .header("Host", "kurl.me")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("password=open-sesame"))
+        .andExpect(status().isOk());
+  }
+
+  private void verifiedDomain(UserEntity owner, String domain) {
+    CustomDomainEntity verified =
+        new CustomDomainEntity(owner.getId(), domain, "kurl-verify=ignored");
+    TestEntities.setField(verified, "createdAt", Instant.now());
+    verified.markVerified();
+    customDomainRepository.saveAndFlush(verified);
+  }
+
+  @Test
   void unverifiedCustomDomain_doesNotGateRouting() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("cd-pend@x.com", "google", "g-cd-pend"));
     UserEntity other = userRepository.save(new UserEntity("cd-pend2@x.com", "google", "g-cd-pen2"));

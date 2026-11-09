@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,6 +61,32 @@ class OgScraperFetchTest {
     assertThat(m.title()).isEqualTo("Hello");
     assertThat(m.description()).isEqualTo("World");
     assertThat(m.image()).isEqualTo("https://example.com/cover.png");
+  }
+
+  @Test
+  void readsAPageInTheCharsetItsHeaderNames() {
+    String html = "<html><head><meta property=\"og:title\" content=\"日本語のタイトル\"></head></html>";
+    OgMetadata m =
+        runFetch(
+            new HttpFetcher.Response(
+                200,
+                Map.of("Content-Type", List.of("text/html; charset=Shift_JIS")),
+                html.getBytes(Charset.forName("Shift_JIS"))));
+    assertThat(m.title()).isEqualTo("日本語のタイトル");
+  }
+
+  @Test
+  void readsAPageInTheCharsetItsMetaTagNames() {
+    String html =
+        "<html><head><meta charset=\"euc-kr\">"
+            + "<meta property=\"og:title\" content=\"한국어 제목\"></head></html>";
+    OgMetadata m =
+        runFetch(
+            new HttpFetcher.Response(
+                200,
+                Map.of("Content-Type", List.of("text/html")),
+                html.getBytes(Charset.forName("EUC-KR"))));
+    assertThat(m.title()).isEqualTo("한국어 제목");
   }
 
   @Test

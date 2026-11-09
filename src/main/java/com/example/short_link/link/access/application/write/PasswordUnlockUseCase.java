@@ -2,6 +2,7 @@ package com.example.short_link.link.access.application.write;
 
 import static com.example.short_link.link.access.application.PasswordUnlockResult.RejectionReason.*;
 
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.PasswordAttempts;
 import com.example.short_link.link.access.application.PasswordUnlockResult;
@@ -25,9 +26,10 @@ public class PasswordUnlockUseCase {
   private final PasswordAttempts attemptLimiter;
   private final LinkRedirectFlow flow;
   private final TurnstileVerifier turnstileVerifier;
+  private final CustomDomainQueryService customDomains;
 
   public PasswordUnlockResult execute(
-      ShortCode shortCode, String password, String captchaToken, RedirectVisit visit) {
+      ShortCode shortCode, String password, String captchaToken, RedirectVisit visit, String host) {
     if (turnstileVerifier.enabled() && !turnstileVerifier.verify(captchaToken, null)) {
       return new PasswordUnlockResult.Rejected(CAPTCHA_FAILED);
     }
@@ -44,6 +46,10 @@ public class PasswordUnlockUseCase {
       return new PasswordUnlockResult.Rejected(WRONG_PASSWORD);
     }
     attemptLimiter.reset(shortCode.value(), clientIp);
+    Long customDomainOwner = customDomains.resolveOwner(host);
+    if (customDomainOwner != null && !customDomainOwner.equals(link.userId())) {
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
+    }
     return new PasswordUnlockResult.Completed(flow.execute(link, entity, visit));
   }
 }

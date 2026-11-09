@@ -28,7 +28,7 @@ public class LinkOgFetchService {
   public void refresh(ShortCode shortCode, String originalUrl) {
     OgMetadata og = scraper.fetch(originalUrl);
     LinkEntity entity = repository.findByShortCode(shortCode).orElse(null);
-    if (entity == null) {
+    if (entity == null || !entity.getOriginalUrl().equals(originalUrl)) {
       return;
     }
     Instant now = Instant.now();

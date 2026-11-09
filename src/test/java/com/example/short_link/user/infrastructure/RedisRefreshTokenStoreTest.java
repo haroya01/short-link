@@ -58,6 +58,19 @@ class RedisRefreshTokenStoreTest {
   }
 
   @Test
+  void anEndedSessionIsMarkedUntilItsTtlRunsOut() {
+    keys.add("refresh-ended:" + USER_ID + ":session-ended");
+
+    store.endSession(USER_ID, "session-ended", GRACE);
+
+    assertThat(store.sessionEnded(USER_ID, "session-ended")).isTrue();
+    assertThat(store.sessionEnded(USER_ID, "session-live")).isFalse();
+    assertThat(
+            redis.getExpire("refresh-ended:" + USER_ID + ":session-ended", TimeUnit.MILLISECONDS))
+        .isBetween(1L, GRACE.toMillis());
+  }
+
+  @Test
   void aTokenIsConsumedOnlyOnce() {
     String jti = savedToken();
 

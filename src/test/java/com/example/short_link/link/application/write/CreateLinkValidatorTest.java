@@ -58,10 +58,11 @@ class CreateLinkValidatorTest {
   }
 
   @Test
-  void skipsSelfCheckForUnparseableUrl() {
-    // URL 형식 자체는 상류(요청 DTO·CSV 행)에서 걸러진다 — 여기서는 조용히 비켜선다.
-    assertThatCode(() -> validator.validateUrl("https://exa mple.com/x"))
-        .doesNotThrowAnyException();
+  void refusesAnAddressABrowserCouldNotBeRedirectedTo() {
+    assertThatThrownBy(() -> validator.validateUrl("https://exa mple.com/x"))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.UNSUPPORTED_URL_SCHEME));
   }
 
   private void assertSelfReferenceRejected(String url) {

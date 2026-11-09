@@ -111,19 +111,15 @@ public class RedirectController {
       link = lookup.findActiveLink(shortCode);
     } catch (LinkException e) {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
-        LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
-        if (expired != null && expired.getExpiredRedirectUrl() != null) {
-          return afterExpiry(expired, req, locale);
-        }
-        if (expired != null && expired.getExpiredMessage() != null) {
-          return html.expiredPageResponse(locale, expired.getExpiredMessage());
+        Optional<ResponseEntity<?>> ended = endedLinkPage(shortCode, req, locale);
+        if (ended.isPresent()) {
+          return ended.get();
         }
       }
       throw e;
     }
     // Match the inbound Host owner before exposing a link on a custom domain.
-    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(link.userId())) {
+    if (servesAnotherOwner(req, link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
     // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
@@ -198,11 +194,28 @@ public class RedirectController {
         locale);
   }
 
-  private ResponseEntity<?> afterExpiry(LinkEntity expired, HttpServletRequest req, Locale locale) {
-    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
-    if (customOwner != null && !customOwner.equals(expired.getUserId())) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, expired.getShortCode());
+  private Optional<ResponseEntity<?>> endedLinkPage(
+      ShortCode shortCode, HttpServletRequest req, Locale locale) {
+    LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
+    if (expired == null
+        || (expired.getExpiredRedirectUrl() == null && expired.getExpiredMessage() == null)) {
+      return Optional.empty();
     }
+    if (servesAnotherOwner(req, expired.getUserId())) {
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
+    }
+    if (expired.getExpiredRedirectUrl() != null) {
+      return Optional.of(afterExpiry(expired, locale));
+    }
+    return Optional.of(html.expiredPageResponse(locale, expired.getExpiredMessage()));
+  }
+
+  private boolean servesAnotherOwner(HttpServletRequest req, Long ownerId) {
+    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
+    return customOwner != null && !customOwner.equals(ownerId);
+  }
+
+  private ResponseEntity<?> afterExpiry(LinkEntity expired, Locale locale) {
     if (blockedDomainChecker.isBlocked(expired.getExpiredRedirectUrl())) {
       meterRegistry.counter("redirect.domain_blocked").increment();
       return html.domainBlockedPageResponse(locale);

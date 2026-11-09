@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.write;
 
+import com.example.short_link.common.net.BrowserHost;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
@@ -8,9 +9,6 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,7 +43,7 @@ public class CreateLinkValidator {
   // allowSelfHost=true 는 우리 자신이 목적지인 1st-party 링크(이벤트 공개 페이지 등)용 — 단축 코드가 아닌 콘텐츠 경로라 리다이렉트 루프가 아니다.
   // 차단 도메인/안전성 검사는 그대로 통과해야 한다.
   void validateUrl(String url, boolean allowSelfHost) {
-    if (!WebAddress.is(url)) {
+    if (!WebAddress.isWellFormed(url)) {
       throw new LinkException(LinkErrorCode.UNSUPPORTED_URL_SCHEME);
     }
     if (!allowSelfHost) {
@@ -84,19 +82,10 @@ public class CreateLinkValidator {
   }
 
   private static String canonicalHost(String url) {
-    if (url == null) {
-      return null;
-    }
-    String host;
-    try {
-      host = new URI(url.trim()).getHost();
-    } catch (URISyntaxException e) {
-      return null;
-    }
+    String host = BrowserHost.of(url);
     if (host == null) {
       return null;
     }
-    host = host.toLowerCase(Locale.ROOT);
     return host.startsWith("www.") ? host.substring("www.".length()) : host;
   }
 }

@@ -9,11 +9,11 @@ import com.example.short_link.tag.domain.LinkTagEntity;
 import com.example.short_link.tag.domain.TagEntity;
 import com.example.short_link.tag.domain.repository.LinkTagRepository;
 import com.example.short_link.tag.domain.repository.TagRepository;
+import java.text.Collator;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -42,19 +42,29 @@ public class ReplaceLinkTagsUseCase {
     linkCacheEviction.evictAfterCommit(shortCode);
     if (normalized.isEmpty()) return List.of();
 
-    Map<String, TagEntity> existing = new HashMap<>();
-    for (TagEntity t : tagRepository.findAllByUserIdAndNameIn(userId, normalized)) {
-      existing.put(t.getName(), t);
-    }
+    Collator sameName = sameNameCollator();
+    List<TagEntity> tags =
+        new ArrayList<>(tagRepository.findAllByUserIdAndNameIn(userId, normalized));
+    List<String> applied = new ArrayList<>();
     for (String name : normalized) {
-      TagEntity tag = existing.get(name);
+      TagEntity tag =
+          tags.stream().filter(t -> sameName.equals(t.getName(), name)).findFirst().orElse(null);
       if (tag == null) {
         tag = tagRepository.save(new TagEntity(userId, name, null));
-        existing.put(name, tag);
+        tags.add(tag);
+      } else if (applied.contains(tag.getName())) {
+        continue;
       }
       linkTagRepository.save(new LinkTagEntity(linkId, tag.getId()));
+      applied.add(tag.getName());
     }
-    return normalized;
+    return applied;
+  }
+
+  private static Collator sameNameCollator() {
+    Collator collator = Collator.getInstance(Locale.ROOT);
+    collator.setStrength(Collator.PRIMARY);
+    return collator;
   }
 
   private static List<String> normalize(List<String> raw) {

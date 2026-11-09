@@ -392,4 +392,32 @@ class HomeFeedQueryServiceTest {
     assertThat(page.next())
         .isEqualTo("h" + NOW.truncatedTo(ChronoUnit.MILLIS).toEpochMilli() + ".1.0");
   }
+
+  @Test
+  void aSinceBesideACursorIsLeftAsideAndThePageGoesOnBelowTheCursor() {
+    NoteSlice.At below = note(1, "2026-10-20T08:00:00Z");
+    when(notes.everyoneAt(null, 1, 3, null)).thenReturn(new NoteSlice(List.of(below), true));
+    when(posts.recentAt(null, 1, 3, null)).thenReturn(new PostSlice(List.of(), true));
+
+    HomeFeedQueryService.Page page = home.page(ask(null, null, "latest", "1.1", "20.7", 2, false));
+
+    assertThat(page.items())
+        .extracting(HomeFeedQueryService.Item::note)
+        .containsExactly(below.note());
+    assertThat(page.gap()).isNull();
+    assertThat(page.newest()).isNull();
+  }
+
+  @Test
+  void postsLeftBelowKeepTheCursorGoingAfterTheNotesRunOut() {
+    NoteSlice.At onlyNote = note(0, "2026-10-20T10:00:00Z");
+    PostSlice.At firstPost = post(0, "2026-10-20T09:00:00Z");
+    when(notes.everyoneAt(null, 0, 3, null)).thenReturn(new NoteSlice(List.of(onlyNote), true));
+    when(posts.recentAt(null, 0, 3, null)).thenReturn(new PostSlice(List.of(firstPost), false));
+
+    HomeFeedQueryService.Page page = home.page(ask(null, null, "latest", null, null, 2, false));
+
+    assertThat(kinds(page)).containsExactly("note", "post");
+    assertThat(page.next()).isEqualTo("1.1");
+  }
 }

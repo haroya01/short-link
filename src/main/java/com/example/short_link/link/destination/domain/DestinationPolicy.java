@@ -1,6 +1,6 @@
 package com.example.short_link.link.destination.domain;
 
-import java.util.Locale;
+import com.example.short_link.link.domain.WebAddress;
 
 public final class DestinationPolicy {
   public static final int MIN_WEIGHT = 1;
@@ -9,11 +9,7 @@ public final class DestinationPolicy {
   private DestinationPolicy() {}
 
   public static boolean isValidUrl(String url) {
-    if (url == null) return false;
-    String trimmed = url.trim();
-    if (trimmed.isEmpty()) return false;
-    String lower = trimmed.toLowerCase(Locale.ROOT);
-    return lower.startsWith("http://") || lower.startsWith("https://");
+    return url != null && WebAddress.isWellFormed(url.trim());
   }
 
   public static int clampWeight(Integer weight) {

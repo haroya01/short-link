@@ -12,6 +12,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +59,7 @@ class LinkManagementUseCasesTest {
             user.getId(), new ShortCode("lmu0002"), null, future, "personal note", "Sale ended"));
 
     LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("lmu0002")).orElseThrow();
-    assertThat(reloaded.getExpiresAt()).isEqualTo(future);
+    assertThat(reloaded.getExpiresAt()).isEqualTo(future.truncatedTo(ChronoUnit.SECONDS));
     assertThat(reloaded.getExpiredMessage()).isEqualTo("Sale ended");
   }
 

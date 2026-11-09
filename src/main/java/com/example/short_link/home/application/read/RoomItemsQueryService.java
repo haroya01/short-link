@@ -60,9 +60,15 @@ public class RoomItemsQueryService {
       Long viewerId, HomeCursor.Positions at, int size, NoteSlice noteSlice, PostSlice postSlice) {
     Merged merged =
         HomeFeedQueryService.merge(Tab.LATEST, noteSlice.items(), postSlice.items(), size);
+    return new Page(
+        withReplies(viewerId, merged.items()),
+        HomeFeedQueryService.nextCursor(at, merged, noteSlice, postSlice, size));
+  }
+
+  private List<RoomItem> withReplies(Long viewerId, List<Item> merged) {
     List<Long> noteIds = new ArrayList<>();
     List<Long> postIds = new ArrayList<>();
-    for (Item item : merged.items()) {
+    for (Item item : merged) {
       if (item.note() != null) {
         noteIds.add(item.note().id());
       } else if (item.post() != null) {
@@ -73,8 +79,8 @@ public class RoomItemsQueryService {
         noteIds.isEmpty() ? Map.of() : notes.latestReplies(noteIds, viewerId, REPLIES);
     Map<Long, List<ReplyPreview>> postReplies =
         postIds.isEmpty() ? Map.of() : comments.latest(postIds, viewerId, REPLIES);
-    List<RoomItem> items = new ArrayList<>(merged.items().size());
-    for (Item item : merged.items()) {
+    List<RoomItem> items = new ArrayList<>(merged.size());
+    for (Item item : merged) {
       NoteView note = item.note();
       PostCard post = item.post();
       if (note != null) {
@@ -90,26 +96,7 @@ public class RoomItemsQueryService {
                 replies(postReplies.getOrDefault(post.item().id(), List.of()))));
       }
     }
-    int nextNote =
-        HomeFeedQueryService.next(
-            at.notes(),
-            noteSlice.items().stream().map(NoteSlice.At::position).toList(),
-            merged.notesTaken(),
-            size,
-            noteSlice.exhausted());
-    int nextPost =
-        HomeFeedQueryService.next(
-            at.posts(),
-            postSlice.items().stream().map(PostSlice.At::position).toList(),
-            merged.postsTaken(),
-            size,
-            postSlice.exhausted());
-    boolean more =
-        merged.notesTaken() < noteSlice.items().size()
-            || merged.postsTaken() < postSlice.items().size()
-            || !noteSlice.exhausted()
-            || !postSlice.exhausted();
-    return new Page(items, more ? at.next(nextNote, nextPost).toString() : null);
+    return items;
   }
 
   private static List<Reply> replies(List<ReplyPreview> previews) {

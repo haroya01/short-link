@@ -195,6 +195,7 @@ public class CreateLinkUseCase {
 
   private Optional<LinkEntity> reusableLink(Long userId, String url) {
     return repository.findUnrestrictedByUserIdAndOriginalUrl(userId, url).stream()
+        .filter(link -> link.getOriginalUrl().equals(url))
         .filter(link -> !dedicatedLinks.isDedicated(link.linkId()))
         .findFirst();
   }

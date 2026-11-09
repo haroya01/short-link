@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LinkEntity extends BaseCreatedEntity {
+
+  private static final Instant EARLIEST_STORABLE_EXPIRY = Instant.parse("1970-01-02T00:00:00Z");
+  private static final Instant LATEST_STORABLE_EXPIRY = Instant.parse("2038-01-01T00:00:00Z");
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -76,7 +80,7 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(name = "max_views")
   private Integer maxViews;
 
-  @Column(name = "view_count", nullable = false)
+  @Column(name = "view_count", nullable = false, updatable = false)
   private int viewCount = 0;
 
   @Column(name = "og_title_override", length = 300)
@@ -130,7 +134,16 @@ public class LinkEntity extends BaseCreatedEntity {
     this.originalUrl = originalUrl;
     this.shortCode = shortCode;
     this.userId = userId;
-    this.expiresAt = expiresAt;
+    this.expiresAt = storableExpiry(expiresAt);
+  }
+
+  static Instant storableExpiry(Instant expiresAt) {
+    if (expiresAt == null) return null;
+    Instant seconds = expiresAt.truncatedTo(ChronoUnit.SECONDS);
+    if (seconds.isBefore(EARLIEST_STORABLE_EXPIRY) || seconds.isAfter(LATEST_STORABLE_EXPIRY)) {
+      throw new IllegalArgumentException("expiresAt out of range: " + expiresAt);
+    }
+    return seconds;
   }
 
   public boolean isExpired(Instant now) {
@@ -151,7 +164,7 @@ public class LinkEntity extends BaseCreatedEntity {
   }
 
   public void changeExpiresAt(Instant expiresAt) {
-    this.expiresAt = expiresAt;
+    this.expiresAt = storableExpiry(expiresAt);
   }
 
   public void changeExpiredRedirectUrl(String url) {
@@ -162,7 +175,7 @@ public class LinkEntity extends BaseCreatedEntity {
   // existing policy; callers pass expiredMessage only for EXPIRE, since REDIRECT skips the page.
   public void applyCampaignExpiration(
       Instant expiresAt, String expiredRedirectUrl, String expiredMessage) {
-    this.expiresAt = expiresAt;
+    this.expiresAt = storableExpiry(expiresAt);
     this.expiredRedirectUrl =
         (expiredRedirectUrl == null || expiredRedirectUrl.isBlank())
             ? null

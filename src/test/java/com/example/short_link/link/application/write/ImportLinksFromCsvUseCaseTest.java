@@ -175,21 +175,25 @@ class ImportLinksFromCsvUseCaseTest {
     String csv =
         "\uFEFFurl,custom_code\r\n"
             + "\"https://example.com/search?tags=a,b&q=\"\"x\"\"\",quoted1\r\n"
-            + "https://example.com/plain,quoted2\r\n";
+            + "https://example.com/plain,quoted2\r\n"
+            + "\"https://example.com/list?tags=a,b\",quoted3\r\n";
 
     BulkImportResult result =
         useCase.execute(
             new ImportLinksFromCsvCommand(
                 user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
 
-    assertThat(result.ok()).isEqualTo(2);
     assertThat(result.rows())
         .extracting(BulkImportRow::url)
         .containsExactly(
-            "https://example.com/search?tags=a,b&q=\"x\"", "https://example.com/plain");
+            "https://example.com/search?tags=a,b&q=\"x\"",
+            "https://example.com/plain",
+            "https://example.com/list?tags=a,b");
+    assertThat(result.ok()).isEqualTo(2);
+    assertThat(result.rows().get(0).error()).startsWith("UNSUPPORTED_URL_SCHEME");
     assertThat(
-            linkRepository.findByShortCode(new ShortCode("quoted1")).orElseThrow().getOriginalUrl())
-        .isEqualTo("https://example.com/search?tags=a,b&q=\"x\"");
+            linkRepository.findByShortCode(new ShortCode("quoted3")).orElseThrow().getOriginalUrl())
+        .isEqualTo("https://example.com/list?tags=a,b");
   }
 
   @Test

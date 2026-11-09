@@ -29,7 +29,10 @@ public class UpdateTagUseCase {
     if (name != null) {
       String trimmed = TagSanitizer.sanitizeName(name);
       if (!trimmed.equals(tag.getName())
-          && tagRepository.findFirstByUserIdAndName(userId, trimmed).isPresent()) {
+          && tagRepository
+              .findFirstByUserIdAndName(userId, trimmed)
+              .filter(other -> !other.getId().equals(tag.getId()))
+              .isPresent()) {
         throw new TagException(TagErrorCode.DUPLICATE_TAG_NAME, trimmed);
       }
       tag.rename(trimmed);

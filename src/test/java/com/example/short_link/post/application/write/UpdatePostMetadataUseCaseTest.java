@@ -624,4 +624,45 @@ class UpdatePostMetadataUseCaseTest {
     assertThat(post.getTitle()).isEqualTo("Retitled");
     verify(postSearchTextRepository, never()).upsert(any(), any());
   }
+
+  @Test
+  void aPasswordPostKeepsItsPasswordWhenOnlyItsCountriesChange() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    useCase.execute(access("PASSWORD", "다섯글자다", null));
+    String hash = post.getPasswordHash();
+
+    PostView view = useCase.execute(access("PASSWORD", null, List.of("JP")));
+
+    assertThat(view.blockedCountries()).containsExactly("JP");
+    assertThat(post.getPasswordHash()).isEqualTo(hash);
+  }
+
+  @Test
+  void anExcerptChangeOnAPublishedPostReachesTheSearchText() {
+    PostEntity post = ownedPost();
+    post.updateExcerpt("요약");
+    post.updateTags(List.of("java"));
+    post.publish();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new UpdatePostMetadataCommand(
+            7L,
+            42L,
+            post.getTitle(),
+            null,
+            "새 요약",
+            "",
+            null,
+            false,
+            null,
+            List.of("java"),
+            null,
+            false));
+
+    verify(postSearchTextRepository).upsert(any(), any());
+  }
 }
