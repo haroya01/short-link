@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -129,7 +130,7 @@ public class ClickFlusher {
   private record Assembled(PendingClick click, ClickEventEntity event) {}
 
   private void publishRecorded(ClickEventEntity saved, LinkEntity link) {
-    events.publishEvent(
+    ClickRecordedEvent click =
         new ClickRecordedEvent(
             saved.linkId(),
             link != null ? link.getShortCode().value() : null,
@@ -139,7 +140,8 @@ public class ClickFlusher {
             saved.getDeviceClass(),
             saved.getReferrerHost(),
             saved.isBot(),
-            saved.getUtmSource(),
-            saved.getId()));
+            saved.getUtmSource());
+    events.publishEvent(click);
+    events.publishEvent(new SavedClick(click, saved.getId()));
   }
 }

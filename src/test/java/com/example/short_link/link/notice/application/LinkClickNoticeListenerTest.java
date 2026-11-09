@@ -14,6 +14,7 @@ import com.example.short_link.common.notification.LinkNotice;
 import com.example.short_link.common.notification.LinkNoticeBody;
 import com.example.short_link.common.notification.LinkNoticeKind;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -45,9 +46,11 @@ class LinkClickNoticeListenerTest {
           new LinkNoticeProperties(true, true, 7, 10, 3.0),
           cooldown);
 
-  private static ClickRecordedEvent event(boolean bot) {
-    return new ClickRecordedEvent(
-        LinkId.of(1L), "abc1234", 5L, AT, "KR", "mobile", "direct", bot, null, 77L);
+  private static SavedClick event(boolean bot) {
+    return new SavedClick(
+        new ClickRecordedEvent(
+            LinkId.of(1L), "abc1234", 5L, AT, "KR", "mobile", "direct", bot, null),
+        77L);
   }
 
   private static LinkEntity link(String note) {

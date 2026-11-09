@@ -6,6 +6,7 @@ import com.example.short_link.common.notification.LinkNoticeBody;
 import com.example.short_link.common.notification.LinkNoticeKind;
 import com.example.short_link.common.notification.LinkNoticeSender;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.read.ClickRangeReader;
@@ -42,7 +43,8 @@ public class LinkClickNoticeListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public void onClickRecorded(ClickRecordedEvent event) {
+  public void onClickRecorded(SavedClick saved) {
+    ClickRecordedEvent event = saved.click();
     if (event.bot()) {
       return;
     }
@@ -52,7 +54,7 @@ public class LinkClickNoticeListener {
       if (link == null || link.getUserId() == null) {
         return;
       }
-      long human = totals.countHumanByLinkIdThrough(linkId, event.clickId());
+      long human = totals.countHumanByLinkIdThrough(linkId, saved.clickId());
 
       if (human == 1L) {
         notices.send(notice(link, LinkNoticeKind.FIRST_CLICK, "첫 클릭이 들어왔어요 🎉"));
