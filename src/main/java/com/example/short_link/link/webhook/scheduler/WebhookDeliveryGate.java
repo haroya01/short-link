@@ -1,7 +1,7 @@
 package com.example.short_link.link.webhook.scheduler;
 
 import com.example.short_link.common.counter.RedisWindowCounter;
-import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.RecordedClick;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -19,7 +19,7 @@ class WebhookDeliveryGate {
   private final MeterRegistry meterRegistry;
   private final RedisWindowCounter counter;
 
-  boolean shouldDeliver(LinkWebhookEntity hook, ClickRecordedEvent event) {
+  boolean shouldDeliver(LinkWebhookEntity hook, RecordedClick event) {
     if (!hook.isIncludeBots() && event.bot()) {
       meterRegistry.counter("webhook.delivery", "result", "skipped_bot").increment();
       return false;

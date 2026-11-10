@@ -342,10 +342,9 @@ src/main/java/com/example/short_link/link/webhook/application/helper/WebhookPayl
 src/main/java/com/example/short_link/link/webhook/domain/LinkWebhookEntity.java=2
 src/main/java/com/example/short_link/link/webhook/domain/WebhookDeliveryMode.java=2
 src/main/java/com/example/short_link/link/webhook/domain/WebhookFormat.java=2
+src/main/java/com/example/short_link/link/webhook/infrastructure/persistence/JpaLinkWebhookDeliveryRepository.java=1
 src/main/java/com/example/short_link/link/webhook/scheduler/DailyWebhookSummaryJob.java=2
-src/main/java/com/example/short_link/link/webhook/scheduler/LinkWebhookDispatcher.java=5
 src/main/java/com/example/short_link/link/webhook/scheduler/ThresholdSpikeDetector.java=3
-src/main/java/com/example/short_link/link/webhook/scheduler/WebhookBatchDeliverer.java=2
 src/main/java/com/example/short_link/note/application/access/NoteAccess.java=1
 src/main/java/com/example/short_link/note/application/read/NoteBodyProvider.java=1
 src/main/java/com/example/short_link/note/application/read/NoteHistoryView.java=1

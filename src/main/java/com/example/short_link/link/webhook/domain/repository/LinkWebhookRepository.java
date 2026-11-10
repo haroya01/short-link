@@ -21,6 +21,8 @@ public interface LinkWebhookRepository {
 
   List<LinkWebhookEntity> findAllByLinkIdAndEnabledTrue(Long linkId);
 
+  List<LinkWebhookEntity> findAllByLinkIdInAndEnabledTrue(Collection<Long> linkIds);
+
   long countByLinkId(Long linkId);
 
   List<LinkWebhookEntity> findAllEnabledByDeliveryModes(Collection<WebhookDeliveryMode> modes);
