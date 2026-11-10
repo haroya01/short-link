@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-// Addresses can carry personal tokens in their path or query, so a change keeps only the hosts.
 public final class AddressChange {
 
   public static final String URL_CHANGED = "urlChanged";
