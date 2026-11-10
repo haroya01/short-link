@@ -81,6 +81,8 @@ public interface LinkRepository {
 
   void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry);
 
+  void restartOgFetch(Long linkId);
+
   int deleteByUserId(Long userId);
 
   List<SafetyRescanRow> findSafetyRescanBatch(Long afterId, Instant now, int limit);
@@ -110,12 +112,6 @@ public interface LinkRepository {
     String getOriginalUrl();
 
     Instant getExpiresAt();
-
-    String getOgTitle();
-
-    String getOgDescription();
-
-    String getOgImage();
 
     String getBlockedCountries();
 

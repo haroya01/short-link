@@ -8,6 +8,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -35,6 +36,7 @@ import org.springframework.core.annotation.AliasFor;
             }))
 @AutoConfigureMockMvc
 @Import(WebMvcSecurityTestConfig.class)
+@Tag("integration")
 public @interface KurlWebMvcTest {
 
   @AliasFor(annotation = WebMvcTest.class, attribute = "controllers")

@@ -29,6 +29,7 @@ import java.util.function.BooleanSupplier;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
       "short-link.avatar.public-base-url=https://cdn.example"
     })
 @ActiveProfiles("test")
+@Tag("integration")
 class RemoteMediaCacheIntegrationTest {
 
   private static final int MAX_BYTES = 10 * 1024 * 1024;

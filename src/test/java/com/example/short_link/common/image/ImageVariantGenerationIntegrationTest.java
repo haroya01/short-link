@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
       "short-link.avatar.region=ap-northeast-1"
     })
 @ActiveProfiles("test")
+@Tag("integration")
 class ImageVariantGenerationIntegrationTest {
 
   @MockitoBean private S3Client s3;

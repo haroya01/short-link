@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class RedirectControllerTest {
 
   @Autowired private MockMvc mvc;
@@ -138,9 +140,12 @@ class RedirectControllerTest {
   @Test
   void returnsOgPreviewHtmlForKakaoTalkCrawler() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://example.com/article", "kakopvw"));
-    link.applyOgMetadata(
-        "Article title", "Article description", "https://example.com/img.png", Instant.now());
-    repository.save(link);
+    repository.recordOgFetched(
+        link.getId(),
+        "Article title",
+        "Article description",
+        "https://example.com/img.png",
+        Instant.now());
 
     mvc.perform(get("/kakopvw").header("User-Agent", "kakaotalk-scrap/1.0"))
         .andExpect(status().isOk())

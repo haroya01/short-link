@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -31,6 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class AuthServiceTest {
 
   @Autowired private AuthService authService;

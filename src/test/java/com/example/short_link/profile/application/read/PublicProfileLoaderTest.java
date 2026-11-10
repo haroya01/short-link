@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.post.PublishedPostCountReader;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.read.ProfileLinks;
+import com.example.short_link.link.domain.FetchedOg;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -181,9 +182,9 @@ class PublicProfileLoaderTest {
   void aPasswordLinkKeepsOnlyItsShortUrlAndTheOwnersTitle() {
     alice();
     LinkEntity scraped = profileLink(1L, "pwd0001", 1);
-    scraped.applyOgMetadata("Scraped title", "desc", "https://secret.example.com/og.jpg", NOW);
+    FetchedOg.on(scraped, "Scraped title", "desc", "https://secret.example.com/og.jpg", NOW);
     LinkEntity titled = profileLink(2L, "pwd0002", 2);
-    titled.applyOgMetadata("Scraped title", "desc", "https://secret.example.com/og.jpg", NOW);
+    FetchedOg.on(titled, "Scraped title", "desc", "https://secret.example.com/og.jpg", NOW);
     titled.changeOgOverride("Members only", null, "https://cdn.example.com/own.png");
     when(linkRepository.findPublicProfileLinks(7L))
         .thenReturn(List.of(new Row(scraped, null, true), new Row(titled, null, true)));

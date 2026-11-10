@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class OgRefreshJobTest {
 
   @Autowired private LinkRepository linkRepository;
@@ -26,20 +28,25 @@ class OgRefreshJobTest {
 
     LinkEntity stale =
         linkRepository.save(new LinkEntity("https://example.com/stale", "rfsh001", null, null));
-    stale.applyOgMetadata(
-        "old title", "old desc", "https://img/old.png", now.minus(Duration.ofDays(40)));
-    linkRepository.save(stale);
+    linkRepository.recordOgFetched(
+        stale.getId(),
+        "old title",
+        "old desc",
+        "https://img/old.png",
+        now.minus(Duration.ofDays(40)));
 
     LinkEntity fresh =
         linkRepository.save(new LinkEntity("https://example.com/fresh", "rfsh002", null, null));
-    fresh.applyOgMetadata(
-        "new title", "new desc", "https://img/new.png", now.minus(Duration.ofDays(5)));
-    linkRepository.save(fresh);
+    linkRepository.recordOgFetched(
+        fresh.getId(),
+        "new title",
+        "new desc",
+        "https://img/new.png",
+        now.minus(Duration.ofDays(5)));
 
     LinkEntity retryable =
         linkRepository.save(new LinkEntity("https://example.com/retry", "rfsh003", null, null));
-    retryable.markOgFetchFailed(now.minus(Duration.ofDays(40)), true);
-    linkRepository.save(retryable);
+    linkRepository.recordOgFetchFailed(retryable.getId(), now.minus(Duration.ofDays(40)), true);
 
     Instant cutoff = now.minus(Duration.ofDays(30));
     List<LinkEntity> stale30 = linkRepository.findStaleOgCandidates(cutoff, 10);

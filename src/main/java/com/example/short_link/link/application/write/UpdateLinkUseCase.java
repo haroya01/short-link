@@ -6,6 +6,7 @@ import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.read.MyLinkReader;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class UpdateLinkUseCase {
 
   private final LinkOwnership ownership;
-  private final LinkSidecars sidecars;
+  private final LinkRepository links;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
@@ -47,10 +48,9 @@ public class UpdateLinkUseCase {
     if (command.note() != null) link.updateNote(command.note());
     if (command.expiredMessage() != null) {
       link.updateExpiredMessage(command.expiredMessage());
-      sidecars.mirrorExpiredMessage(link);
     }
     if (urlChanged) {
-      sidecars.resetOgForNewUrl(link);
+      links.restartOgFetch(link.getId());
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
     auditLogService.record(

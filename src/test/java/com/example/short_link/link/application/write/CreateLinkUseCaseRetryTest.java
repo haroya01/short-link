@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,6 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class CreateLinkUseCaseRetryTest {
 
   @Autowired private LinkRepository links;
@@ -34,7 +36,6 @@ class CreateLinkUseCaseRetryTest {
   @Autowired private ApplicationEventPublisher events;
   @Autowired private AuditLogService auditLog;
   @Autowired private CreateLinkValidator validator;
-  @Autowired private LinkDefaultsWriter defaults;
   @Autowired private DedicatedLinks dedicatedLinks;
 
   @Autowired
@@ -68,7 +69,6 @@ class CreateLinkUseCaseRetryTest {
             events,
             auditLog,
             validator,
-            defaults,
             dedicatedLinks,
             passwordEncoder,
             transactionManager,
