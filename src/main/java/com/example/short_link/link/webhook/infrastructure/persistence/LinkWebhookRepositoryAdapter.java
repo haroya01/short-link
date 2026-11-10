@@ -48,6 +48,11 @@ class LinkWebhookRepositoryAdapter implements LinkWebhookRepository {
   }
 
   @Override
+  public List<LinkWebhookEntity> findAllByLinkIdInAndEnabledTrue(Collection<Long> linkIds) {
+    return jpa.findAllByLinkIdInAndEnabledTrue(linkIds);
+  }
+
+  @Override
   public long countByLinkId(Long linkId) {
     return jpa.countByLinkId(linkId);
   }

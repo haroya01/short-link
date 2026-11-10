@@ -3,6 +3,7 @@ package com.example.short_link.link.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.repository.*;
+import com.example.short_link.support.TestEntities;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -183,9 +184,7 @@ class LinkEntityTest {
     assertThat(link.isViewLimitReached()).isFalse();
     link.setMaxViews(3);
     assertThat(link.isViewLimitReached()).isFalse();
-    link.incrementViewCount();
-    link.incrementViewCount();
-    link.incrementViewCount();
+    TestEntities.setField(link, "viewCount", 3);
     assertThat(link.isViewLimitReached()).isTrue();
   }
 

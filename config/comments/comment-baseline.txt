@@ -282,8 +282,8 @@ src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.ja
 src/main/java/com/example/short_link/link/application/write/CreateLinkValidator.java=7
 src/main/java/com/example/short_link/link/application/write/DedicatedLinks.java=2
 src/main/java/com/example/short_link/link/application/write/ImportLinksFromCsvUseCase.java=2
-src/main/java/com/example/short_link/link/application/write/IncrementViewCountUseCase.java=2
 src/main/java/com/example/short_link/link/application/write/LinkFavoritesService.java=1
+src/main/java/com/example/short_link/link/application/write/SpendViewUseCase.java=1
 src/main/java/com/example/short_link/link/application/write/UpdateLinkUseCase.java=1
 src/main/java/com/example/short_link/link/classifier/application/AsnResolver.java=22
 src/main/java/com/example/short_link/link/classifier/application/BotClassifier.java=1
@@ -342,10 +342,9 @@ src/main/java/com/example/short_link/link/webhook/application/helper/WebhookPayl
 src/main/java/com/example/short_link/link/webhook/domain/LinkWebhookEntity.java=2
 src/main/java/com/example/short_link/link/webhook/domain/WebhookDeliveryMode.java=2
 src/main/java/com/example/short_link/link/webhook/domain/WebhookFormat.java=2
+src/main/java/com/example/short_link/link/webhook/infrastructure/persistence/JpaLinkWebhookDeliveryRepository.java=1
 src/main/java/com/example/short_link/link/webhook/scheduler/DailyWebhookSummaryJob.java=2
-src/main/java/com/example/short_link/link/webhook/scheduler/LinkWebhookDispatcher.java=5
 src/main/java/com/example/short_link/link/webhook/scheduler/ThresholdSpikeDetector.java=3
-src/main/java/com/example/short_link/link/webhook/scheduler/WebhookBatchDeliverer.java=2
 src/main/java/com/example/short_link/note/application/access/NoteAccess.java=1
 src/main/java/com/example/short_link/note/application/read/NoteBodyProvider.java=1
 src/main/java/com/example/short_link/note/application/read/NoteHistoryView.java=1

@@ -3,8 +3,7 @@ package com.example.short_link.link.redirect.application;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.UserAgentInfo;
-import com.example.short_link.link.application.write.IncrementViewCountCommand;
-import com.example.short_link.link.application.write.IncrementViewCountUseCase;
+import com.example.short_link.link.application.write.SpendViewUseCase;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkEntity;
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LinkRedirectFlow {
 
-  private final IncrementViewCountUseCase incrementViewCount;
+  private final SpendViewUseCase views;
   private final ClickRecorder clickRecorder;
   private final GeoIpResolver geoIpResolver;
   private final UserAgentClassifier userAgentClassifier;
@@ -46,7 +45,7 @@ public class LinkRedirectFlow {
       return new RedirectOutcome.PrefetchDeclined();
     }
     try {
-      enforceViewLimit(link, entity);
+      spendView(link, entity);
     } catch (LinkException e) {
       String expiredMessage = entity == null ? link.expiredMessage() : entity.getExpiredMessage();
       if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED && expiredMessage != null) {
@@ -124,11 +123,10 @@ public class LinkRedirectFlow {
     return null;
   }
 
-  private void enforceViewLimit(CachedLink link, LinkEntity entity) {
+  private void spendView(CachedLink link, LinkEntity entity) {
     Integer maxViews = maxViews(link, entity);
     if (maxViews == null) return;
-    int updated = incrementViewCount.execute(new IncrementViewCountCommand(link.linkId()));
-    if (updated == 0) {
+    if (!views.spend(link.linkId())) {
       Object code =
           entity != null
               ? entity.getShortCode()

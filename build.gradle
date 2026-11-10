@@ -203,10 +203,9 @@ def coverageClassExcludes = [
 				'**/common/lock/**',
 				'**/common/pow/**',
 				'**/common/jpa/**',
-				// Webhook delivery infra (HTTP client / batch buffer / gate) requires
+				// Webhook delivery infra (HTTP client / gate) requires
 				// real Redis + HTTP server to exercise branches end-to-end.
 				'**/webhook/scheduler/WebhookHttpDeliveryClient*.class',
-				'**/webhook/scheduler/WebhookBatchBuffer*.class',
 				'**/webhook/scheduler/WebhookDeliveryGate*.class',
 				// SSE stream registry — branches require live connections.
 				'**/stats/presentation/sse/**',

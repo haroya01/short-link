@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.RecordedClick;
 import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -28,6 +29,7 @@ public class ClickFlusher {
   private final ClickEventRepository repository;
   private final LinkRepository linkRepository;
   private final ApplicationEventPublisher events;
+  private final ClickWebhookOutbox webhooks;
   private final MeterRegistry meterRegistry;
   private final TransactionTemplate transaction;
   private final int maxBatchPerFlush;
@@ -38,6 +40,7 @@ public class ClickFlusher {
       ClickEventRepository repository,
       LinkRepository linkRepository,
       ApplicationEventPublisher events,
+      ClickWebhookOutbox webhooks,
       MeterRegistry meterRegistry,
       PlatformTransactionManager transactionManager,
       ClickRecorderProperties properties) {
@@ -46,6 +49,7 @@ public class ClickFlusher {
     this.repository = repository;
     this.linkRepository = linkRepository;
     this.events = events;
+    this.webhooks = webhooks;
     this.meterRegistry = meterRegistry;
     // REQUIRED는 기존 트랜잭션에 참여해 인라인 flush도 호출자의 롤백에 포함한다.
     this.transaction = new TransactionTemplate(transactionManager);
@@ -106,7 +110,7 @@ public class ClickFlusher {
     }
     try {
       return transaction.execute(
-          status -> repository.saveAll(batch.stream().map(Assembled::event).toList()));
+          status -> queued(repository.saveAll(batch.stream().map(Assembled::event).toList())));
     } catch (RuntimeException e) {
       log.warn("click batch insert failed, retrying {} rows individually", batch.size(), e);
       return persistIndividually(batch);
@@ -118,13 +122,33 @@ public class ClickFlusher {
     for (Assembled assembled : batch) {
       try {
         saved.add(
-            transaction.execute(status -> repository.save(assembler.assemble(assembled.click()))));
+            transaction.execute(
+                status ->
+                    queued(List.of(repository.save(assembler.assemble(assembled.click()))))
+                        .getFirst()));
       } catch (RuntimeException e) {
         meterRegistry.counter("click_recorder", "result", "flush_error").increment();
         log.warn("dropped click for linkId={}: {}", assembled.event().getLinkId(), e.toString());
       }
     }
     return saved;
+  }
+
+  private List<ClickEventEntity> queued(List<ClickEventEntity> saved) {
+    webhooks.enqueue(saved.stream().map(ClickFlusher::recorded).toList());
+    return saved;
+  }
+
+  private static RecordedClick recorded(ClickEventEntity saved) {
+    return new RecordedClick(
+        saved.getId(),
+        saved.linkId(),
+        saved.getClickedAt(),
+        saved.getCountryCode(),
+        saved.getDeviceClass(),
+        saved.getReferrerHost(),
+        saved.isBot(),
+        saved.getUtmSource());
   }
 
   private record Assembled(PendingClick click, ClickEventEntity event) {}
