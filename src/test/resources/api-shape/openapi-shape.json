@@ -755,6 +755,15 @@
         "200" : "#AdminLinkClicksPage"
       }
     },
+    "GET /api/v1/admin/links/{code}/preview-image" : {
+      "parameters" : {
+        "clear" : "query boolean",
+        "code" : "path string required"
+      },
+      "responses" : {
+        "200" : "string(byte)"
+      }
+    },
     "GET /api/v1/admin/metrics/outcomes" : {
       "parameters" : {
         "shortCode" : "query string required",
@@ -4132,8 +4141,16 @@
       "nextCursor" : "string"
     },
     "AdminLinkDetail" : {
+      "evidence" : "#AdminLinkEvidence",
       "meta" : "#AdminLinkRow",
       "stats" : "#LinkStats"
+    },
+    "AdminLinkEvidence" : {
+      "creator" : "#EvidenceCreator",
+      "destinations" : "[#EvidenceDestination]",
+      "history" : "#EvidenceHistory",
+      "page" : "#EvidencePage",
+      "reports" : "#EvidenceReports"
     },
     "AdminLinkMetric" : {
       "errorRate" : "number(double)",
@@ -4959,6 +4976,52 @@
       "status" : "string",
       "timezone" : "string",
       "title" : "string"
+    },
+    "EvidenceChange" : {
+      "action" : "string",
+      "at" : "string(date-time)",
+      "fromHost" : "string",
+      "toHost" : "string"
+    },
+    "EvidenceCreator" : {
+      "anonymous" : "boolean",
+      "disabledLinks" : "integer(int64)",
+      "joinedAt" : "string(date-time)",
+      "links" : "integer(int64)",
+      "status" : "string",
+      "suspendedUntil" : "string(date-time)",
+      "userId" : "integer(int64)"
+    },
+    "EvidenceDestination" : {
+      "countryCode" : "string",
+      "deviceClass" : "string",
+      "host" : "string",
+      "kind" : "string",
+      "os" : "string",
+      "weight" : "integer(int32)"
+    },
+    "EvidenceHistory" : {
+      "destinationChanges" : "integer(int64)",
+      "latest" : "#EvidenceChange",
+      "retentionDays" : "integer(int64)",
+      "urlChanges" : "integer(int64)"
+    },
+    "EvidencePage" : {
+      "description" : "string",
+      "fetchStatus" : "string",
+      "fetchedAt" : "string(date-time)",
+      "hasImage" : "boolean",
+      "imageWithheld" : "boolean",
+      "title" : "string"
+    },
+    "EvidenceReason" : {
+      "count" : "integer(int64)",
+      "reason" : "string"
+    },
+    "EvidenceReports" : {
+      "open" : "integer(int64)",
+      "reasons" : "[#EvidenceReason]",
+      "total" : "integer(int64)"
     },
     "ExportedClick" : {
       "bot" : "boolean",

@@ -47,4 +47,9 @@ class AbuseReportRepositoryAdapter implements AbuseReportRepository {
     return jpa.existsByReporterUserIdAndSubjectTypeAndSubjectIdAndStatusIn(
         reporterUserId, subjectType, subjectId, OPEN_STATUSES);
   }
+
+  @Override
+  public List<ReasonTally> tallyBySubject(AbuseSubjectType subjectType, Long subjectId) {
+    return jpa.tallyBySubject(subjectType, subjectId);
+  }
 }
