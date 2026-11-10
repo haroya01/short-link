@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.write;
 
+import com.example.short_link.common.audit.AddressChange;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.LinkCacheEviction;
@@ -37,6 +38,7 @@ public class UpdateLinkUseCase {
 
   private MyLink apply(UpdateLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
+    String previousUrl = link.getOriginalUrl();
     boolean urlChanged = false;
     if (command.originalUrl() != null && !command.originalUrl().equals(link.getOriginalUrl())) {
       link.changeOriginalUrl(command.originalUrl());
@@ -53,16 +55,10 @@ public class UpdateLinkUseCase {
       links.restartOgFetch(link.getId());
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
+    Map<String, Object> metadata = AddressChange.between(previousUrl, link.getOriginalUrl());
+    metadata.put("expiresAtChanged", command.expiresAt() != null || command.clearExpiresAt());
     auditLogService.record(
-        AuditAction.LINK_UPDATED,
-        "link",
-        link.getShortCode().value(),
-        command.userId(),
-        Map.of(
-            "urlChanged",
-            urlChanged,
-            "expiresAtChanged",
-            command.expiresAt() != null || command.clearExpiresAt()));
+        AuditAction.LINK_UPDATED, "link", link.getShortCode().value(), command.userId(), metadata);
     linkCacheEviction.evictAfterCommit(link);
     return linkReader.read(link);
   }

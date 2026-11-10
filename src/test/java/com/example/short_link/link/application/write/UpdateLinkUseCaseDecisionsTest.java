@@ -86,7 +86,15 @@ class UpdateLinkUseCaseDecisionsTest {
             "link",
             "abc1234",
             7L,
-            Map.of("urlChanged", true, "expiresAtChanged", false));
+            Map.of(
+                "urlChanged",
+                true,
+                "fromHost",
+                "before",
+                "toHost",
+                "after",
+                "expiresAtChanged",
+                false));
     verify(cache).evictAfterCommit(link);
   }
 
