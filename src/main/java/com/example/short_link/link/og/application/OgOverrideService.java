@@ -3,7 +3,6 @@ package com.example.short_link.link.og.application;
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.LinkOwnership;
-import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.dto.OgOverrideResult;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class OgOverrideService {
 
   private final LinkOwnership ownership;
-  private final LinkSidecars sidecars;
   private final ProfileCacheInvalidator cacheEviction;
   private final LinkCacheEviction linkCacheEviction;
 
@@ -25,7 +23,6 @@ public class OgOverrideService {
       Long userId, ShortCode shortCode, String title, String description, String image) {
     LinkEntity link = ownership.requireOwned(userId, shortCode);
     link.changeOgOverride(title, description, image);
-    sidecars.mirrorOgOverride(link);
     cacheEviction.evictByUserId(userId);
     linkCacheEviction.evictAfterCommit(shortCode);
     return new OgOverrideResult(

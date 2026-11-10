@@ -16,11 +16,9 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import com.example.short_link.support.FakeTransactions;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import jakarta.persistence.EntityManager;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +49,6 @@ class CreateLinkUseCaseCheckedDestinationTest {
                 new SimpleMeterRegistry(),
                 "https://kurl.me",
                 "https://kurl.me"),
-            new LinkSidecarPersister(mock(EntityManager.class)),
             linkId -> false,
             new BCryptPasswordEncoder(4),
             LinkCreationServiceCollisionTest.noopTransactionManager(),

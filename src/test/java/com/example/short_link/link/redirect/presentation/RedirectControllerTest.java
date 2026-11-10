@@ -138,9 +138,12 @@ class RedirectControllerTest {
   @Test
   void returnsOgPreviewHtmlForKakaoTalkCrawler() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://example.com/article", "kakopvw"));
-    link.applyOgMetadata(
-        "Article title", "Article description", "https://example.com/img.png", Instant.now());
-    repository.save(link);
+    repository.recordOgFetched(
+        link.getId(),
+        "Article title",
+        "Article description",
+        "https://example.com/img.png",
+        Instant.now());
 
     mvc.perform(get("/kakopvw").header("User-Agent", "kakaotalk-scrap/1.0"))
         .andExpect(status().isOk())

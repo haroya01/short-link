@@ -15,16 +15,13 @@ import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +34,6 @@ class CreateLinkUseCaseOutcomesTest {
   private final AuditLogService audit = mock(AuditLogService.class);
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
   private final List<Object> events = new ArrayList<>();
-  private final Map<LinkId, String> defaults = new HashMap<>();
   private final List<LinkEntity> saved = new ArrayList<>();
   private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
   private CreateLinkUseCase links;
@@ -67,7 +63,6 @@ class CreateLinkUseCaseOutcomesTest {
                 new SimpleMeterRegistry(),
                 "https://kurl.me",
                 "https://kurl.me"),
-            defaults::put,
             linkId -> false,
             encoder,
             LinkCreationServiceCollisionTest.noopTransactionManager(),
@@ -92,7 +87,7 @@ class CreateLinkUseCaseOutcomesTest {
   }
 
   @Test
-  void aSignedInOwnersPasswordIsStoredHashedAndHandedToTheLinksDefaults() {
+  void aSignedInOwnersPasswordIsStoredHashedOnTheLink() {
     when(generator.generate()).thenReturn("pass001");
 
     LinkCreated created =
@@ -101,7 +96,6 @@ class CreateLinkUseCaseOutcomesTest {
     LinkEntity link = saved.get(0);
     assertThat(created.passwordProtected()).isTrue();
     assertThat(encoder.matches("s3cret", link.getPasswordHash())).isTrue();
-    assertThat(defaults).containsEntry(link.linkId(), link.getPasswordHash());
   }
 
   @Test
@@ -116,8 +110,6 @@ class CreateLinkUseCaseOutcomesTest {
     assertThat(blank.passwordProtected()).isFalse();
     assertThat(anonymous.passwordProtected()).isFalse();
     assertThat(saved).allSatisfy(link -> assertThat(link.getPasswordHash()).isNull());
-    assertThat(defaults).hasSize(2);
-    assertThat(defaults.values()).containsOnlyNulls();
   }
 
   @Test

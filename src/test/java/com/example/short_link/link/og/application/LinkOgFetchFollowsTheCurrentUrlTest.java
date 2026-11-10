@@ -61,11 +61,5 @@ class LinkOgFetchFollowsTheCurrentUrlTest {
     assertThat(link.getOriginalUrl()).isEqualTo(NEW_URL);
     assertThat(link.getOgTitle()).isNull();
     assertThat(link.getOgImage()).isNull();
-    assertThat(
-            jdbc.queryForList(
-                "SELECT og_title FROM link_og_metadata WHERE link_id = ?",
-                String.class,
-                link.getId()))
-        .doesNotContain("Old title");
   }
 }

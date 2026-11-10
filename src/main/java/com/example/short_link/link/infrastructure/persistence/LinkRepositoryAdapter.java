@@ -190,6 +190,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public void restartOgFetch(Long linkId) {
+    jpa.restartOgFetch(linkId, LinkEntity.ogFetchPendingStatus());
+  }
+
+  @Override
   public int deleteByUserId(Long userId) {
     return jpa.deleteByUserId(userId);
   }
