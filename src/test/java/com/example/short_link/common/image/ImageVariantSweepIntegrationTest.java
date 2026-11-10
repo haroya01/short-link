@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest(properties = "short-link.image-variants.backfill-enabled=true")
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class ImageVariantSweepIntegrationTest {
 
   @MockitoBean private ImageVariantQueue queue;

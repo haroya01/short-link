@@ -8,6 +8,7 @@ import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class BlockEndsFollowsIntegrationTest {
 
   @Autowired private BlockUseCase blocks;
