@@ -155,7 +155,7 @@ public interface JpaLinkRepository
   @Query(
       "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
           + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
-  int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
+  int spendViewWithinLimit(@Param("linkId") Long linkId);
 
   @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)

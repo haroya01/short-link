@@ -251,10 +251,6 @@ public class LinkEntity extends BaseCreatedEntity {
     this.maxViews = max;
   }
 
-  public void incrementViewCount() {
-    this.viewCount++;
-  }
-
   public boolean isViewLimitReached() {
     return maxViews != null && viewCount >= maxViews;
   }
