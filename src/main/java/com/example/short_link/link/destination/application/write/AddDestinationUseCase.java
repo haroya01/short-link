@@ -49,8 +49,15 @@ public class AddDestinationUseCase {
     }
     // Safe Browsing HTTP calls stay outside the transaction to avoid holding a JDBC connection.
     urlValidator.validateUrl(url.trim());
-    return transaction.execute(
-        status -> add(userId, shortCode, url.trim(), weight, label, countryCode, deviceClass, os));
+    DestinationSummary added =
+        transaction.execute(
+            status ->
+                add(userId, shortCode, url.trim(), weight, label, countryCode, deviceClass, os));
+    Map<String, Object> metadata = AddressChange.between(null, added.url());
+    metadata.put("destinationId", added.id());
+    auditLogService.record(
+        AuditAction.LINK_DESTINATION_ADDED, "link", shortCode.value(), userId, metadata);
+    return added;
   }
 
   private DestinationSummary add(
@@ -78,10 +85,6 @@ public class AddDestinationUseCase {
                 deviceClass,
                 os));
     meterRegistry.counter("link.destination.added").increment();
-    Map<String, Object> metadata = AddressChange.between(null, url);
-    metadata.put("destinationId", saved.getId());
-    auditLogService.record(
-        AuditAction.LINK_DESTINATION_ADDED, "link", shortCode.value(), userId, metadata);
     linkCacheEviction.evictAfterCommit(shortCode);
     return DestinationSummary.from(saved);
   }
