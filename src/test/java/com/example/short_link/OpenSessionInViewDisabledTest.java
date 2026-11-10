@@ -2,6 +2,7 @@ package com.example.short_link;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 // 누가 open-in-view를 되살리면 이 테스트가 깨진다.
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class OpenSessionInViewDisabledTest {
 
   @Autowired private ApplicationContext ctx;

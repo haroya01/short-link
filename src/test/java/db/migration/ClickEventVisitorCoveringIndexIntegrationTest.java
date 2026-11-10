@@ -10,6 +10,7 @@ import java.util.List;
 import javax.sql.DataSource;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = ShortLinkApplication.class)
 @ActiveProfiles("test")
+@Tag("integration")
 class ClickEventVisitorCoveringIndexIntegrationTest {
 
   private static final String NEW_INDEX = "idx_click_event_link_bot_visitor";

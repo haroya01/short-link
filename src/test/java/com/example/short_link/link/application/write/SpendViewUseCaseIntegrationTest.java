@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -25,6 +26,7 @@ import org.springframework.test.context.ActiveProfiles;
 // 의도적으로 @Transactional 을 붙이지 않는다 — redirect 경로는 트랜잭션 없이 이 use case 를 호출하고, @Modifying UPDATE 는 그
 // 상태에서 TransactionRequiredException 으로 죽었던 이력이 있다. 테스트 트랜잭션을 두르면 바로 그 회귀가 가려진다.
 @SpringBootTest
+@Tag("integration")
 @ActiveProfiles("test")
 class SpendViewUseCaseIntegrationTest {
 

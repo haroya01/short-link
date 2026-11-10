@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -40,6 +41,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(ScheduledPublicationTransactionIntegrationTest.EventConfiguration.class)
+@Tag("integration")
 class ScheduledPublicationTransactionIntegrationTest {
   @Autowired private PublishScheduledPostsUseCase publishScheduledPosts;
   @Autowired private PublishPostUseCase publishPost;

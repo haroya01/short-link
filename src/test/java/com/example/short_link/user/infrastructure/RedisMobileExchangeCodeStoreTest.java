@@ -3,6 +3,7 @@ package com.example.short_link.user.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.user.application.write.MobileExchangeCodeStore;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class RedisMobileExchangeCodeStoreTest {
 
   @Autowired private MobileExchangeCodeStore store;

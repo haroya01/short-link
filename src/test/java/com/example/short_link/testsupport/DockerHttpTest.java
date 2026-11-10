@@ -2,6 +2,7 @@ package com.example.short_link.testsupport;
 
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -27,6 +28,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @Execution(ExecutionMode.SAME_THREAD)
 @Isolated("Each HTTP test class owns its database, Redis state, and query captures")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Tag("integration")
 public abstract class DockerHttpTest {
 
   @Autowired
