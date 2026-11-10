@@ -10,12 +10,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 // The image build trains its CDS archive with the Dockerfile's flags and no database or Redis to
 // reach; a bean that connects while the context refreshes would fail the deploy build, which CI
 // never runs. This runs the same refresh on the main class path (the test one adds JSqlParser,
 // which changes how native queries are read) against ports where nothing listens.
+@Tag("integration")
 class CdsTrainingTest {
 
   private static final Pattern TRAINING =

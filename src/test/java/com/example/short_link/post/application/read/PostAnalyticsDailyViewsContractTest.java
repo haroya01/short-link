@@ -23,6 +23,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class PostAnalyticsDailyViewsContractTest {
   private static final Instant NOW = Instant.parse("2026-11-10T16:30:00Z");
   private static final Instant POST_CREATED = Instant.parse("2026-10-01T00:00:00Z");

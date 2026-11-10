@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,6 +28,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,12 +41,12 @@ class AddDestinationUseCaseTest {
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final CreateLinkValidator urlValidator = mock(CreateLinkValidator.class);
   private final AuditLogService audit = mock(AuditLogService.class);
+  private final PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
   private final AddDestinationUseCase useCase =
       new AddDestinationUseCase(
           ownership, repository, registry, linkCacheEviction, urlValidator, transaction(), audit);
 
-  private static TransactionTemplate transaction() {
-    PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
+  private TransactionTemplate transaction() {
     when(manager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
     return new TransactionTemplate(manager);
   }
@@ -154,7 +156,10 @@ class AddDestinationUseCaseTest {
 
     assertThat(result.id()).isEqualTo(99L);
     verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc1234"));
-    verify(audit)
+    InOrder afterCommit = inOrder(manager, audit);
+    afterCommit.verify(manager).commit(any());
+    afterCommit
+        .verify(audit)
         .record(
             AuditAction.LINK_DESTINATION_ADDED,
             "link",

@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(properties = "short-link.federation.relay.enabled=true")
 @ActiveProfiles("test")
+@Tag("integration")
 class RelayStoreIntegrationTest {
 
   private static final ActorKeys.Pem KEYS = new ActorKeys().generate();

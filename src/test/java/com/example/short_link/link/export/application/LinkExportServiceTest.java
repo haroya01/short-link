@@ -11,6 +11,7 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @TestPropertySource(
     properties = {"short-link.export.event-batch=2", "short-link.export.event-cap=3"})
 @Transactional
+@Tag("integration")
 class LinkExportServiceTest {
 
   @Autowired private LinkExportService service;

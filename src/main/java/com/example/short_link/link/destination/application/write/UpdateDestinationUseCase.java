@@ -44,22 +44,29 @@ public class UpdateDestinationUseCase {
     if (url != null) {
       urlValidator.validateUrl(url.trim());
     }
-    return transaction.execute(
-        status ->
-            update(
-                userId,
-                shortCode,
-                destinationId,
-                url,
-                weight,
-                label,
-                enabled,
-                countryCode,
-                deviceClass,
-                os));
+    Updated updated =
+        transaction.execute(
+            status ->
+                update(
+                    userId,
+                    shortCode,
+                    destinationId,
+                    url,
+                    weight,
+                    label,
+                    enabled,
+                    countryCode,
+                    deviceClass,
+                    os));
+    Map<String, Object> metadata =
+        AddressChange.between(updated.previousUrl(), updated.destination().url());
+    metadata.put("destinationId", updated.destination().id());
+    auditLogService.record(
+        AuditAction.LINK_DESTINATION_UPDATED, "link", shortCode.value(), userId, metadata);
+    return updated.destination();
   }
 
-  private DestinationSummary update(
+  private Updated update(
       Long userId,
       ShortCode shortCode,
       Long destinationId,
@@ -81,11 +88,9 @@ public class UpdateDestinationUseCase {
         countryCode,
         deviceClass,
         os);
-    Map<String, Object> metadata = AddressChange.between(previousUrl, dest.getUrl());
-    metadata.put("destinationId", dest.getId());
-    auditLogService.record(
-        AuditAction.LINK_DESTINATION_UPDATED, "link", shortCode.value(), userId, metadata);
     linkCacheEviction.evictAfterCommit(shortCode);
-    return DestinationSummary.from(dest);
+    return new Updated(DestinationSummary.from(dest), previousUrl);
   }
+
+  private record Updated(DestinationSummary destination, String previousUrl) {}
 }
