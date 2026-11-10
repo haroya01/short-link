@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.LinkOwnership;
-import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.support.TestEntities;
@@ -24,7 +23,7 @@ class LinkProtectionOutcomesTest {
   private final LinkCacheEviction cache = mock(LinkCacheEviction.class);
   private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
   private final LinkProtectionService service =
-      new LinkProtectionService(ownership, mock(LinkSidecars.class), encoder, cache);
+      new LinkProtectionService(ownership, encoder, cache);
   private final LinkEntity link =
       TestEntities.withId(new LinkEntity("https://target", "abc1234", 7L, null), 3L);
 

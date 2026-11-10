@@ -12,9 +12,6 @@ public final class CachedLinkFixture {
   private ShortCode shortCode;
   private Long userId;
   private Instant expiresAt;
-  private String ogTitle;
-  private String ogDescription;
-  private String ogImage;
   private String blockedCountries;
   private boolean passwordRequired;
   private Integer maxViews;
@@ -50,13 +47,6 @@ public final class CachedLinkFixture {
 
   public CachedLinkFixture expiresAt(Instant expiresAt) {
     this.expiresAt = expiresAt;
-    return this;
-  }
-
-  public CachedLinkFixture og(String title, String description, String image) {
-    this.ogTitle = title;
-    this.ogDescription = description;
-    this.ogImage = image;
     return this;
   }
 
@@ -107,9 +97,6 @@ public final class CachedLinkFixture {
         userId,
         originalUrl,
         expiresAt,
-        ogTitle,
-        ogDescription,
-        ogImage,
         blockedCountries,
         passwordRequired,
         maxViews,

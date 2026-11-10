@@ -42,7 +42,6 @@ public class CreateLinkUseCase {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
-  private final LinkDefaultsWriter defaultsWriter;
   private final DedicatedLinks dedicatedLinks;
   private final PasswordEncoder passwordEncoder;
   private final TransactionTemplate tx;
@@ -55,7 +54,6 @@ public class CreateLinkUseCase {
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
       CreateLinkValidator validator,
-      LinkDefaultsWriter defaultsWriter,
       DedicatedLinks dedicatedLinks,
       @Qualifier("linkPasswordEncoder") PasswordEncoder passwordEncoder,
       PlatformTransactionManager transactionManager,
@@ -66,7 +64,6 @@ public class CreateLinkUseCase {
     this.events = events;
     this.auditLogService = auditLogService;
     this.validator = validator;
-    this.defaultsWriter = defaultsWriter;
     this.dedicatedLinks = dedicatedLinks;
     this.passwordEncoder = passwordEncoder;
     this.tx = new TransactionTemplate(transactionManager);
@@ -211,7 +208,6 @@ public class CreateLinkUseCase {
     attachClaimTokenIfAnonymous(entity, authenticated);
     entity.setPasswordHash(passwordHash);
     LinkEntity saved = repository.save(entity);
-    defaultsWriter.initialize(saved.linkId(), passwordHash);
     return saved;
   }
 

@@ -15,11 +15,9 @@ import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -53,7 +51,6 @@ class LinkCreationServiceCollisionTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080",
                 "http://localhost:3001"),
-            new LinkSidecarPersister(mock(EntityManager.class)),
             linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTransactionManager(),
@@ -92,7 +89,6 @@ class LinkCreationServiceCollisionTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080",
                 "http://localhost:3001"),
-            new LinkSidecarPersister(mock(EntityManager.class)),
             linkId -> false,
             new BCryptPasswordEncoder(4),
             transactions,
