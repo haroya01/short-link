@@ -73,6 +73,17 @@
 @junit | account-web-logged-out-refresh-rejected | 0 | 0 | 0 | 0 | 0
 @junit | account-web-logout | 0 | 0 | 0 | 1 | 1
 @junit | account-web-refresh | 1 | 0 | 1 | 0 | 2
+# An admin's evidence card for a link: the 41 reads of the plain detail plus the latest address
+# change's audit row. Its preview reads the link row and the link's report tally, then fetches the
+# image outside any transaction; the clear one adds its audit row. A sexual-content report stops at
+# the tally, before anything is fetched.
+@junit | admin-evidence-denies-member | 0 | 0 | 0 | 0 | 0
+@junit | admin-evidence-detail | 42 | 0 | 0 | 0 | 42
+@junit | admin-evidence-withheld | 42 | 0 | 0 | 0 | 42
+@junit | admin-preview-blurred | 2 | 0 | 0 | 0 | 2
+@junit | admin-preview-clear | 2 | 1 | 0 | 0 | 3
+@junit | admin-preview-denies-member | 0 | 0 | 0 | 0 | 0
+@junit | admin-preview-withheld | 2 | 0 | 0 | 0 | 2
 # Overview: posts, the author's timezone row, one daily count per offset period (one in Seoul),
 # link clicks and follows for life and for the window, top referrers.
 @junit | author-analytics-overview | 8 | 0 | 0 | 0 | 8
@@ -501,7 +512,9 @@
 @junit | ops-health-metrics | 0 | 0 | 0 | 0 | 0
 @junit | ops-lifecycle | 1 | 0 | 0 | 0 | 1
 @junit | ops-link-activity | 3 | 0 | 0 | 0 | 3
-@junit | ops-link-detail | 37 | 0 | 0 | 0 | 37
+# The link detail also reads the evidence: the link row with its owner's link counts, its
+# destinations, its report tally and its address-change tally (the owner row is already loaded).
+@junit | ops-link-detail | 41 | 0 | 0 | 0 | 41
 @junit | ops-link-metrics | 2 | 0 | 0 | 0 | 2
 @junit | ops-list-blocked-domains | 1 | 0 | 0 | 0 | 1
 @junit | ops-metric-redirect | 4 | 0 | 0 | 0 | 4
