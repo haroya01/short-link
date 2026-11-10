@@ -4,6 +4,7 @@ import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.exception.UserException;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
   private final TwoFactorChallengeCookieWriter challengeCookieWriter;
+  private final OperatorMarkerCookie operatorMarkerCookie;
   private final String frontendBaseUrl;
   private final String mobileRedirectUri;
 
@@ -33,11 +35,13 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       AuthService authService,
       RefreshCookieWriter refreshCookieWriter,
       TwoFactorChallengeCookieWriter challengeCookieWriter,
+      OperatorMarkerCookie operatorMarkerCookie,
       @Value("${short-link.frontend-base-url}") String frontendBaseUrl,
       @Value("${short-link.mobile.redirect-uri}") String mobileRedirectUri) {
     this.authService = authService;
     this.refreshCookieWriter = refreshCookieWriter;
     this.challengeCookieWriter = challengeCookieWriter;
+    this.operatorMarkerCookie = operatorMarkerCookie;
     this.frontendBaseUrl = frontendBaseUrl;
     this.mobileRedirectUri = mobileRedirectUri;
   }
@@ -57,7 +61,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       if (mobile) {
         handleMobile(res, authService.loginWithOAuthMobile(email, provider, oauthId));
       } else {
-        handleWeb(res, authService.loginWithOAuth(email, provider, oauthId));
+        handleWeb(req, res, authService.loginWithOAuth(email, provider, oauthId));
       }
     } catch (RuntimeException refused) {
       log.warn("oauth login refused after the provider accepted it: {}", refused.toString());
@@ -70,7 +74,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
   // Browser URLs end up in history, sync, and screenshots, so the web flow sends no token in
   // them: the callback page trades the refresh cookie for an access token, and the 2FA page
   // verifies against the challenge cookie.
-  private void handleWeb(HttpServletResponse res, TokenLoginResult result) throws IOException {
+  private void handleWeb(HttpServletRequest req, HttpServletResponse res, TokenLoginResult result)
+      throws IOException {
     switch (result) {
       case TokenLoginResult.TwoFactorRequired challenge -> {
         challengeCookieWriter.set(res, challenge.challengeToken());
@@ -78,6 +83,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       }
       case TokenLoginResult.Tokens tokens -> {
         refreshCookieWriter.set(res, tokens.issued().refreshToken());
+        operatorMarkerCookie.onLogin(req, res, tokens.issued().admin());
         res.sendRedirect(frontendBaseUrl + "/auth/callback");
       }
     }

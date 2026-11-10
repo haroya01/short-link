@@ -73,9 +73,9 @@ public class LinkRedirectFlow {
             .withPostId(visit.postId())
             .withGpc(visit.gpc())
             .withFetchSite(visit.fetchSite());
-    // 브라우저 프리페치는 미리보기로 집계해 사람 클릭에서 제외한다.
-    if (visit.prefetch()) {
-      clickRecorder.recordPreview(ctx, "prefetch");
+    String preview = previewLabel(visit, link, entity);
+    if (preview != null) {
+      clickRecorder.recordPreview(ctx, preview);
     } else {
       clickRecorder.record(ctx);
     }
@@ -106,6 +106,17 @@ public class LinkRedirectFlow {
     meterRegistry
         .counter("redirect.blocked", "country", clientCountry == null ? "unknown" : clientCountry)
         .increment();
+  }
+
+  private static String previewLabel(RedirectVisit visit, CachedLink link, LinkEntity entity) {
+    if (visit.prefetch()) {
+      return "prefetch";
+    }
+    // 조회수 상한이 있는 링크는 운영자 표시를 무시한다. 차감을 건너뛰면 훔친 표시로 상한을 쓰지 않고 열 수 있다.
+    if (visit.operator() && maxViews(link, entity) == null) {
+      return "operator";
+    }
+    return null;
   }
 
   private static Integer maxViews(CachedLink link, LinkEntity entity) {

@@ -2,10 +2,12 @@ package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.DevLoginRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;
 import com.example.short_link.user.presentation.response.TwoFactorChallengeResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +31,13 @@ public class DevAuthController {
 
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
+  private final OperatorMarkerCookie operatorMarkerCookie;
 
   @PostMapping("/dev-login")
   public ResponseEntity<?> devLogin(
-      @Valid @RequestBody DevLoginRequest request, HttpServletResponse res) {
+      @Valid @RequestBody DevLoginRequest request,
+      HttpServletRequest req,
+      HttpServletResponse res) {
     log.warn(
         "dev-login endpoint invoked for email={} — never enable in production", request.email());
     TokenLoginResult result =
@@ -43,6 +48,7 @@ public class DevAuthController {
               .body(new TwoFactorChallengeResponse(c.challengeToken()));
       case TokenLoginResult.Tokens t -> {
         refreshCookieWriter.set(res, t.issued().refreshToken());
+        operatorMarkerCookie.onLogin(req, res, t.issued().admin());
         yield ResponseEntity.ok(TokenResponse.from(t.issued()));
       }
     };

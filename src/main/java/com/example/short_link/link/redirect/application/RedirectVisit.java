@@ -9,4 +9,19 @@ public record RedirectVisit(
     Long postId,
     boolean gpc,
     String fetchSite,
-    boolean prefetch) {}
+    Visitor visitor) {
+
+  public enum Visitor {
+    PERSON,
+    PREFETCH,
+    OPERATOR
+  }
+
+  public boolean prefetch() {
+    return visitor == Visitor.PREFETCH;
+  }
+
+  public boolean operator() {
+    return visitor == Visitor.OPERATOR;
+  }
+}

@@ -40,7 +40,16 @@ class PasswordUnlockUseCaseTest {
           mock(CustomDomainQueryService.class, invocation -> null));
   private final ShortCode code = new ShortCode("abc123");
   private final RedirectVisit visit =
-      new RedirectVisit("referrer", "agent", "192.0.2.1", "ko", "yt", null, false, null, false);
+      new RedirectVisit(
+          "referrer",
+          "agent",
+          "192.0.2.1",
+          "ko",
+          "yt",
+          null,
+          false,
+          null,
+          RedirectVisit.Visitor.PERSON);
 
   @Test
   void captchaFailureDoesNotReadLinkOrChangePasswordAttempts() {

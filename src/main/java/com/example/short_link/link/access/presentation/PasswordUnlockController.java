@@ -1,6 +1,7 @@
 package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.common.user.OpenToSuspended;
 import com.example.short_link.link.access.application.PasswordUnlockResult;
 import com.example.short_link.link.access.application.TurnstileProperties;
@@ -31,6 +32,7 @@ public class PasswordUnlockController {
   private final TurnstileProperties turnstile;
   private final LinkHtmlRenderer html;
   private final VisitHandoff handoff;
+  private final OperatorMarkerStore operatorMarkers;
 
   @OpenToSuspended
   @PostMapping(
@@ -53,7 +55,8 @@ public class PasswordUnlockController {
               shortCode,
               password,
               captchaToken,
-              LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, null, req),
+              LinkRedirectSupport.visit(
+                  referrer, userAgent, acceptLanguage, src, null, req, operatorMarkers),
               req.getHeader("Host"));
       if (unlocked instanceof PasswordUnlockResult.Rejected rejected) {
         outcome =
