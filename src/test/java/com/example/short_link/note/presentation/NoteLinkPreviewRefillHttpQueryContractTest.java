@@ -43,10 +43,6 @@ class NoteLinkPreviewRefillHttpQueryContractTest extends OperationalHttpJourneyS
     long retrying = shorten("note-refill-shorten", author, "https://retrying.example/");
     jdbc.update(
         "UPDATE link SET og_fetch_status = 'ERROR', og_fetch_attempts = 3 WHERE id = ?", gaveUp);
-    jdbc.update(
-        "UPDATE link_og_metadata SET og_fetch_status = 'ERROR', og_fetch_attempts = 3"
-            + " WHERE link_id = ?",
-        gaveUp);
     assertThat(cardTitle(shared)).isNull();
     assertThat(cardTitle(carded)).isEqualTo("Carded");
     awaitAsyncWork();
@@ -54,10 +50,8 @@ class NoteLinkPreviewRefillHttpQueryContractTest extends OperationalHttpJourneyS
 
     deliverBackgroundWork("note-refill-loads", refill::step);
     deliverBackgroundWork("note-refill-starts", refill::step);
-    assertThat(ogFetch(gaveUp, "link")).isEqualTo("RETRYABLE/0");
-    assertThat(ogFetch(gaveUp, "link_og_metadata")).isEqualTo("RETRYABLE/0");
-    assertThat(ogFetch(retrying, "link")).isEqualTo("RETRYABLE/1");
-    assertThat(ogFetch(retrying, "link_og_metadata")).isEqualTo("RETRYABLE/1");
+    assertThat(ogFetch(gaveUp)).isEqualTo("RETRYABLE/0");
+    assertThat(ogFetch(retrying)).isEqualTo("RETRYABLE/1");
 
     when(externalMetadata.fetch(SHARED))
         .thenReturn(
@@ -112,14 +106,9 @@ class NoteLinkPreviewRefillHttpQueryContractTest extends OperationalHttpJourneyS
         .orElse(null);
   }
 
-  private String ogFetch(long linkId, String table) {
-    String key = table.equals("link") ? "id" : "link_id";
+  private String ogFetch(long linkId) {
     return jdbc.queryForObject(
-        "SELECT CONCAT(og_fetch_status, '/', og_fetch_attempts) FROM "
-            + table
-            + " WHERE "
-            + key
-            + " = ?",
+        "SELECT CONCAT(og_fetch_status, '/', og_fetch_attempts) FROM link WHERE id = ?",
         String.class,
         linkId);
   }

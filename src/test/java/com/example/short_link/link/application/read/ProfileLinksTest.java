@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.domain.FetchedOg;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -35,7 +36,7 @@ class ProfileLinksTest {
   void aCardCarriesWhatTheProfileShowsAndOnlyAPublicLinksClicks() {
     LinkEntity open =
         TestEntities.withId(new LinkEntity("https://open.example", "open001", 7L, null), 1L);
-    open.applyOgMetadata("Fetched", null, "https://img", OPENS);
+    FetchedOg.on(open, "Fetched", null, "https://img", OPENS);
     open.changeOgOverride("Mine", null, null);
     open.setProfileOrder(2);
     open.featureOnProfile();

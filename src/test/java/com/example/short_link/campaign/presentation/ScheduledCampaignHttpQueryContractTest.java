@@ -103,8 +103,6 @@ class ScheduledCampaignHttpQueryContractTest extends LinkJourneyHttpSupport {
         .isEqualTo(1);
     assertThat(text("SELECT expired_message FROM link WHERE id = ?", linkId))
         .isEqualTo("This launch has ended");
-    assertThat(text("SELECT expired_message FROM link_expiration_policy WHERE link_id = ?", linkId))
-        .isEqualTo("This launch has ended");
     awaitStoredExpiration(id, linkId);
     var expired =
         raw("campaign-scheduled-expired-visitor", null, "GET", "/" + code, null, null, 410);

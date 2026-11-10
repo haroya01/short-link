@@ -36,7 +36,6 @@ class CreateLinkUseCaseRetryTest {
   @Autowired private ApplicationEventPublisher events;
   @Autowired private AuditLogService auditLog;
   @Autowired private CreateLinkValidator validator;
-  @Autowired private LinkDefaultsWriter defaults;
   @Autowired private DedicatedLinks dedicatedLinks;
 
   @Autowired
@@ -70,7 +69,6 @@ class CreateLinkUseCaseRetryTest {
             events,
             auditLog,
             validator,
-            defaults,
             dedicatedLinks,
             passwordEncoder,
             transactionManager,
