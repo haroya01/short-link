@@ -11,7 +11,6 @@ import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
-import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -44,7 +43,6 @@ class LinkOgFetchServiceTest {
         new LinkOgFetchService(
             scraper,
             repository,
-            mock(LinkSidecars.class),
             new SimpleMeterRegistry(),
             new LinkCacheEviction(cacheManager, mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
@@ -75,7 +73,6 @@ class LinkOgFetchServiceTest {
         new LinkOgFetchService(
             scraper,
             repository,
-            mock(LinkSidecars.class),
             new SimpleMeterRegistry(),
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(1, 30, true));
@@ -99,7 +96,6 @@ class LinkOgFetchServiceTest {
         new LinkOgFetchService(
             scraper,
             repository,
-            mock(LinkSidecars.class),
             new SimpleMeterRegistry(),
             new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));

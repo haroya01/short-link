@@ -18,6 +18,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,28 +105,23 @@ class LinkOpensAtE2ETest {
   @Test
   void beforeItOpensAProtectedOrLimitedLinkGivesBotsOnlyTheKurlCard() throws Exception {
     UserEntity owner = newUser();
-    LinkEntity locked = new LinkEntity("https://x.example.com/", "opn0006", owner.getId(), null);
-    locked.applyOgMetadata(
-        "Scraped launch title",
-        "Scraped launch summary",
-        "https://cdn.example.com/launch.png",
-        Instant.now());
-    linkRepository.save(locked);
+    LinkEntity locked =
+        linkRepository.save(
+            new LinkEntity("https://x.example.com/", "opn0006", owner.getId(), null));
     LinkEntity limited = new LinkEntity("https://y.example.com/", "opn0007", owner.getId(), null);
-    limited.applyOgMetadata(
-        "Scraped launch title",
-        "Scraped launch summary",
-        "https://cdn.example.com/launch.png",
-        Instant.now());
     limited.setMaxViews(10);
     linkRepository.save(limited);
-    LinkEntity plain = new LinkEntity("https://z.example.com/", "opn0008", owner.getId(), null);
-    plain.applyOgMetadata(
-        "Scraped launch title",
-        "Scraped launch summary",
-        "https://cdn.example.com/launch.png",
-        Instant.now());
-    linkRepository.save(plain);
+    LinkEntity plain =
+        linkRepository.save(
+            new LinkEntity("https://z.example.com/", "opn0008", owner.getId(), null));
+    for (LinkEntity scraped : List.of(locked, limited, plain)) {
+      linkRepository.recordOgFetched(
+          scraped.getId(),
+          "Scraped launch title",
+          "Scraped launch summary",
+          "https://cdn.example.com/launch.png",
+          Instant.now());
+    }
     mvc.perform(
             patch("/api/v1/links/opn0006/protection")
                 .header("Authorization", bearer(owner))

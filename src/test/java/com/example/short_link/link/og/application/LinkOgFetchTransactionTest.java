@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.properties.OgFetchProperties;
-import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -28,7 +27,6 @@ class LinkOgFetchTransactionTest {
         new LinkOgFetchService(
             scraper,
             links,
-            mock(LinkSidecars.class),
             new SimpleMeterRegistry(),
             mock(LinkCacheEviction.class),
             mock(OgFetchProperties.class));

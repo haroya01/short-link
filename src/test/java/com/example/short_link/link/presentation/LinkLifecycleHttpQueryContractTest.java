@@ -318,7 +318,7 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
                 "SELECT COUNT(*) FROM audit_log WHERE action = 'LINK_UPDATED' AND target_id = ?",
                 code))
         .isEqualTo(1);
-    assertThat(text("SELECT og_title FROM link_og_metadata WHERE link_id = ?", linkId))
+    assertThat(text("SELECT og_title FROM link WHERE id = ?", linkId))
         .isEqualTo("Fixture destination");
     assertThat(
             request("link-stats-private", owner, "GET", path + "/stats", null, 200)

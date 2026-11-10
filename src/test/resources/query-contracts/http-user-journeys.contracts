@@ -151,8 +151,8 @@
 @junit | author-unpublished-body-edit | 2 | 0 | 2 | 2 | 6
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
 @junit | campaign-archive | 2 | 0 | 1 | 0 | 3
-@junit | campaign-batch-bulk | 12 | 12 | 4 | 0 | 28
-@junit | campaign-batch-create | 8 | 6 | 2 | 0 | 16
+@junit | campaign-batch-bulk | 8 | 6 | 2 | 0 | 16
+@junit | campaign-batch-create | 6 | 3 | 1 | 0 | 10
 @junit | campaign-batch-delete | 3 | 0 | 0 | 2 | 5
 # The deleted batch's link left the redirect cache, so its code misses the cached-row read.
 @junit | campaign-batch-deleted-visit | 1 | 0 | 0 | 0 | 1
@@ -168,14 +168,14 @@
 # as no value: a batch without its own URL stops at the campaign check, the batch link redirects,
 # stats skip the blank groups, the CSV leaves the cells empty, and ending writes no follow-up URL
 # or message onto the link, whose visit is then the expired page.
-@junit | campaign-clear-batch-create | 8 | 6 | 2 | 0 | 16
+@junit | campaign-clear-batch-create | 6 | 3 | 1 | 0 | 10
 @junit | campaign-clear-batch-fields | 4 | 0 | 1 | 0 | 5
 @junit | campaign-clear-create | 1 | 1 | 0 | 0 | 2
 @junit | campaign-clear-fields | 3 | 0 | 1 | 0 | 4
 @junit | campaign-clear-legacy-batch-needs-url | 2 | 0 | 0 | 0 | 2
 @junit | campaign-clear-legacy-csv | 3 | 0 | 0 | 0 | 3
 @junit | campaign-clear-legacy-detail | 2 | 0 | 0 | 0 | 2
-@junit | campaign-clear-legacy-end | 6 | 0 | 2 | 0 | 8
+@junit | campaign-clear-legacy-end | 5 | 0 | 2 | 0 | 7
 @junit | campaign-clear-legacy-ended-visit | 3 | 0 | 0 | 0 | 3
 @junit | campaign-clear-legacy-stats | 9 | 0 | 0 | 0 | 9
 @junit | campaign-clear-legacy-visit | 3 | 0 | 0 | 0 | 3
@@ -185,7 +185,7 @@
 @junit | campaign-create-comparison | 1 | 1 | 0 | 0 | 2
 @junit | campaign-detail | 2 | 0 | 0 | 0 | 2
 @junit | campaign-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
-@junit | campaign-end | 10 | 0 | 7 | 0 | 17
+@junit | campaign-end | 7 | 0 | 4 | 0 | 11
 @junit | campaign-ended-policy-update | 3 | 0 | 1 | 0 | 4
 # An ended link: the cached row and destinations, the link row for its follow-up page, and the
 # custom-domain owner check before forwarding there.
@@ -193,15 +193,15 @@
 @junit | campaign-ended-visit-trailing-slash | 4 | 0 | 0 | 0 | 4
 @junit | campaign-list | 2 | 0 | 0 | 0 | 2
 @junit | campaign-list-with-batches | 3 | 0 | 0 | 0 | 3
-@junit | campaign-policy-reapply | 10 | 0 | 6 | 0 | 16
+@junit | campaign-policy-reapply | 7 | 0 | 3 | 0 | 10
 @junit | campaign-policy-update | 3 | 0 | 1 | 0 | 4
 @junit | campaign-reapplied-visit | 4 | 0 | 0 | 0 | 4
 @junit | campaign-recommendations | 11 | 0 | 0 | 0 | 11
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
-@junit | campaign-scheduled-batch-create | 8 | 6 | 2 | 0 | 16
+@junit | campaign-scheduled-batch-create | 6 | 3 | 1 | 0 | 10
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
 @junit | campaign-scheduled-create | 1 | 1 | 0 | 0 | 2
-@junit | campaign-scheduled-end-tick | 5 | 0 | 3 | 0 | 8
+@junit | campaign-scheduled-end-tick | 4 | 0 | 2 | 0 | 6
 # An expired link with its own message reads the custom-domain owner of the Host before showing it.
 @junit | campaign-scheduled-expired-visitor | 4 | 0 | 0 | 0 | 4
 @junit | campaign-scheduled-read-active | 2 | 0 | 0 | 0 | 2
@@ -215,7 +215,7 @@
 @junit | creator-blog-hook-list | 1 | 0 | 0 | 0 | 1
 @junit | creator-blog-hook-update | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-active-list-after-delete | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-create | 7 | 6 | 2 | 0 | 15
+@junit | creator-cta-create | 5 | 3 | 1 | 0 | 9
 @junit | creator-cta-delete | 2 | 0 | 1 | 0 | 3
 @junit | creator-cta-deleted-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-denies-other | 2 | 0 | 0 | 0 | 2
@@ -289,7 +289,7 @@
 @junit | discovery-tag-trending-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-feed | 5 | 0 | 0 | 0 | 5
 @junit | discovery-trending-tag-sections | 7 | 0 | 0 | 0 | 7
-@junit | event-alias-link | 7 | 6 | 2 | 0 | 15
+@junit | event-alias-link | 5 | 3 | 1 | 0 | 9
 @junit | event-analytics | 4 | 0 | 0 | 0 | 4
 @junit | event-attendees | 3 | 0 | 0 | 0 | 3
 @junit | event-attendees-csv | 4 | 0 | 0 | 0 | 4
@@ -303,8 +303,8 @@
 @junit | event-cover-read | 4 | 0 | 0 | 0 | 4
 # An event or room-invite link points at our own page, so it skips the blocked-domain and Safe Browsing
 # checks and no longer reads the blocked-domain list.
-@junit | event-create | 10 | 8 | 3 | 0 | 21
-@junit | event-create-cover | 10 | 8 | 3 | 0 | 21
+@junit | event-create | 8 | 5 | 2 | 0 | 15
+@junit | event-create-cover | 8 | 5 | 2 | 0 | 15
 @junit | event-detail | 4 | 0 | 0 | 0 | 4
 @junit | event-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | event-list | 1 | 0 | 0 | 0 | 1
@@ -370,18 +370,18 @@
 @junit | link-account-stream | 0 | 0 | 0 | 0 | 0
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
 @junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
-@junit | link-bulk-import | 10 | 10 | 4 | 0 | 24
+@junit | link-bulk-import | 6 | 4 | 2 | 0 | 12
 # Claiming counts the account's links once something matched, so a claim stops at the link quota.
 @junit | link-claim-anonymous | 3 | 0 | 1 | 0 | 4
 @junit | link-claim-replay | 2 | 0 | 0 | 0 | 2
 @junit | link-click-worker-persist | 6 | 2 | 0 | 0 | 8
-@junit | link-countries-block | 3 | 0 | 2 | 0 | 5
+@junit | link-countries-block | 2 | 0 | 1 | 0 | 3
 @junit | link-countries-read | 1 | 0 | 0 | 0 | 1
-@junit | link-create-anonymous | 4 | 5 | 2 | 0 | 11
-@junit | link-create-bulk-companion | 5 | 5 | 2 | 0 | 12
-@junit | link-create-owned | 6 | 5 | 2 | 0 | 13
-@junit | link-create-protected | 6 | 5 | 2 | 0 | 13
-@junit | link-create-webhook | 6 | 5 | 2 | 0 | 13
+@junit | link-create-anonymous | 2 | 2 | 1 | 0 | 5
+@junit | link-create-bulk-companion | 3 | 2 | 1 | 0 | 6
+@junit | link-create-owned | 4 | 2 | 1 | 0 | 7
+@junit | link-create-protected | 4 | 2 | 1 | 0 | 7
+@junit | link-create-webhook | 4 | 2 | 1 | 0 | 7
 @junit | link-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | link-delete-owned | 1 | 1 | 0 | 1 | 3
 # Adding, editing or removing a destination writes one audit row naming the hosts it moved between.
@@ -396,10 +396,10 @@
 @junit | link-list-owned | 6 | 0 | 0 | 0 | 6
 # The kurl card counts human clicks only for a link whose stats are public; this one's are not.
 @junit | link-og-card | 0 | 0 | 0 | 0 | 0
-@junit | link-og-override | 4 | 0 | 2 | 0 | 6
+@junit | link-og-override | 3 | 0 | 1 | 0 | 4
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
 @junit | link-pow-challenge | 0 | 0 | 0 | 0 | 0
-@junit | link-protect | 3 | 0 | 2 | 0 | 5
+@junit | link-protect | 2 | 0 | 1 | 0 | 3
 @junit | link-public-preview | 0 | 0 | 0 | 0 | 0
 @junit | link-public-service-stats | 2 | 0 | 0 | 0 | 2
 @junit | link-redirect | 3 | 0 | 0 | 0 | 3
@@ -427,7 +427,7 @@
 @junit | link-unlock-wrong | 1 | 0 | 0 | 0 | 1
 @junit | link-update-foreign-denied | 2 | 0 | 0 | 0 | 2
 # Read total/human counts, owner timezone, tags, and local-day buckets for the PATCH response.
-@junit | link-update-owned | 8 | 1 | 2 | 0 | 11
+@junit | link-update-owned | 7 | 1 | 1 | 0 | 9
 @junit | link-webhook-configure | 3 | 0 | 1 | 0 | 4
 @junit | link-webhook-delete | 2 | 0 | 0 | 1 | 3
 @junit | link-webhook-disable | 3 | 0 | 1 | 0 | 4
@@ -565,10 +565,10 @@
 @junit | profile-link-cross-user-highlight-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-link-hide | 2 | 0 | 1 | 0 | 3
 @junit | profile-link-highlight | 4 | 0 | 1 | 0 | 5
-@junit | profile-link-limit-once | 5 | 1 | 1 | 0 | 7
-@junit | profile-link-limit-twice | 5 | 1 | 1 | 0 | 7
+@junit | profile-link-limit-once | 3 | 0 | 1 | 0 | 4
+@junit | profile-link-limit-twice | 3 | 0 | 1 | 0 | 4
 # Protecting a link shown on the profile also reads the owner's username to drop the cached profile.
-@junit | profile-link-protect | 5 | 1 | 1 | 0 | 7
+@junit | profile-link-protect | 3 | 0 | 1 | 0 | 4
 @junit | profile-link-show | 4 | 0 | 1 | 0 | 5
 @junit | profile-oembed-cached | 0 | 0 | 0 | 0 | 0
 @junit | profile-oembed-fetch | 0 | 0 | 0 | 0 | 0
@@ -753,19 +753,19 @@
 # when the link's stats are public, which these are not) but no event preview, spends no view, and
 # is refused like a person once the limit is spent or its country is blocked. A prefetch of a
 # counted link stops at the custom-domain check.
-@junit | restricted-create-once | 6 | 5 | 2 | 0 | 13
-@junit | restricted-limit-views | 3 | 0 | 2 | 0 | 5
+@junit | restricted-create-once | 4 | 2 | 1 | 0 | 7
+@junit | restricted-limit-views | 2 | 0 | 1 | 0 | 3
 @junit | restricted-crawler-preview | 4 | 0 | 0 | 0 | 4
 @junit | restricted-crawler-again | 2 | 0 | 0 | 0 | 2
 @junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
 @junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
 @junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
-@junit | restricted-create-blocked | 6 | 5 | 2 | 0 | 13
-@junit | restricted-block-japan | 3 | 0 | 2 | 0 | 5
-@junit | restricted-limit-blocked | 3 | 0 | 2 | 0 | 5
+@junit | restricted-create-blocked | 4 | 2 | 1 | 0 | 7
+@junit | restricted-block-japan | 2 | 0 | 1 | 0 | 3
+@junit | restricted-limit-blocked | 2 | 0 | 1 | 0 | 3
 @junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
 @junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
-@junit | restricted-create-open | 6 | 5 | 2 | 0 | 13
+@junit | restricted-create-open | 4 | 2 | 1 | 0 | 7
 @junit | open-crawler-preview | 5 | 0 | 0 | 0 | 5
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
@@ -795,8 +795,8 @@
 @junit | tag-rename | 3 | 0 | 1 | 0 | 4
 
 # Owner workspace: all counts are batched; adding a link does not add per-link SELECTs.
-@junit | workspace-create-first | 6 | 5 | 2 | 0 | 13
-@junit | workspace-create-second | 5 | 5 | 2 | 0 | 12
+@junit | workspace-create-first | 4 | 2 | 1 | 0 | 7
+@junit | workspace-create-second | 3 | 2 | 1 | 0 | 6
 @junit | workspace-favorite-add-first | 3 | 0 | 1 | 0 | 4
 @junit | workspace-favorite-add-second | 3 | 0 | 1 | 0 | 4
 @junit | workspace-favorite-list | 6 | 0 | 0 | 0 | 6

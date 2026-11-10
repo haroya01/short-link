@@ -32,16 +32,10 @@ public interface JpaLinkRepository
         l.userId AS userId,
         l.originalUrl AS originalUrl,
         l.expiresAt AS expiresAt,
-        COALESCE(og.ogTitle, l.ogTitle) AS ogTitle,
-        COALESCE(og.ogDescription, l.ogDescription) AS ogDescription,
-        COALESCE(og.ogImage, l.ogImage) AS ogImage,
-        COALESCE(policy.blockedCountries, l.blockedCountries) AS blockedCountries,
-        CASE
-          WHEN COALESCE(acl.passwordHash, l.passwordHash) IS NULL THEN false
-          ELSE true
-        END AS passwordRequired,
-        COALESCE(acl.maxViews, l.maxViews) AS maxViews,
-        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage,
+        l.blockedCountries AS blockedCountries,
+        CASE WHEN l.passwordHash IS NULL THEN false ELSE true END AS passwordRequired,
+        l.maxViews AS maxViews,
+        l.expiredMessage AS expiredMessage,
         visit.openInBrowser AS openInBrowser,
         visit.splashEnabled AS splashEnabled,
         visit.splashMessage AS splashMessage,
@@ -51,9 +45,6 @@ public interface JpaLinkRepository
         CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled,
         l.statsPublic AS statsPublic
       FROM LinkEntity l
-      LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
-      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
-      LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
       WHERE l.shortCode = :shortCode
@@ -113,12 +104,8 @@ public interface JpaLinkRepository
       SELECT
         l AS link,
         visit.opensAt AS opensAt,
-        CASE
-          WHEN COALESCE(acl.passwordHash, l.passwordHash) IS NULL THEN false
-          ELSE true
-        END AS passwordRequired
+        CASE WHEN l.passwordHash IS NULL THEN false ELSE true END AS passwordRequired
       FROM LinkEntity l
-      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       WHERE l.userId = :userId
         AND l.profileOrder IS NOT NULL
@@ -145,15 +132,13 @@ public interface JpaLinkRepository
   @Query(
       """
       SELECT l FROM LinkEntity l
-      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
-      LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       WHERE l.userId = :userId
         AND l.originalUrl = :originalUrl
         AND l.expiresAt IS NULL
-        AND COALESCE(acl.passwordHash, l.passwordHash) IS NULL
-        AND COALESCE(acl.maxViews, l.maxViews) IS NULL
-        AND COALESCE(policy.blockedCountries, l.blockedCountries) IS NULL
+        AND l.passwordHash IS NULL
+        AND l.maxViews IS NULL
+        AND l.blockedCountries IS NULL
         AND visit.opensAt IS NULL
         AND NOT EXISTS (
           SELECT 1 FROM LinkModerationEntity moderation WHERE moderation.linkId = l.id)
@@ -185,6 +170,12 @@ public interface JpaLinkRepository
       @Param("image") String image,
       @Param("fetchedAt") Instant fetchedAt,
       @Param("status") String status);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogTitle = NULL, l.ogDescription = NULL, l.ogImage = NULL, "
+          + "l.ogFetchedAt = NULL, l.ogFetchStatus = :pending WHERE l.id = :linkId")
+  int restartOgFetch(@Param("linkId") Long linkId, @Param("pending") String pending);
 
   @Transactional
   @Modifying(clearAutomatically = true, flushAutomatically = true)

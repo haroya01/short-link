@@ -3,6 +3,7 @@ package com.example.short_link.link.redirect.presentation.helper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.eventlink.EventLinkPreview;
+import com.example.short_link.link.domain.FetchedOg;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.redirect.application.read.LinkPreviewQueryService;
 import java.lang.reflect.Field;
@@ -27,7 +28,7 @@ class LinkPreviewRendererTest {
     Field id = LinkEntity.class.getDeclaredField("id");
     id.setAccessible(true);
     id.set(link, 7L);
-    link.applyOgMetadata("스크랩된 제목", "스크랩된 설명", null, Instant.now());
+    FetchedOg.on(link, "스크랩된 제목", "스크랩된 설명", null, Instant.now());
 
     String html = eventRenderer.render(link, "https://kurl.me/qe1", 3L);
 
@@ -40,7 +41,7 @@ class LinkPreviewRendererTest {
   @Test
   void rendersOgTagsWhenAvailable() {
     LinkEntity link = link("https://example.com/article");
-    link.applyOgMetadata("Title", "Some description", "https://example.com/img.png", Instant.now());
+    FetchedOg.on(link, "Title", "Some description", "https://example.com/img.png", Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
@@ -56,7 +57,7 @@ class LinkPreviewRendererTest {
   void aCardForALinkThatIsNotOpenYetKeepsTheDestinationOut() {
     LinkEntity untitled = link("https://secret.example.com/launch");
     LinkEntity titled = link("https://secret.example.com/launch");
-    titled.applyOgMetadata("Spring drop", "Coming soon", null, Instant.now());
+    FetchedOg.on(titled, "Spring drop", "Coming soon", null, Instant.now());
 
     String bare =
         renderer.render(
@@ -81,11 +82,19 @@ class LinkPreviewRendererTest {
   @Test
   void aRestrictedLinksCardCarriesNothingFromTheDestination() {
     LinkEntity scraped = link("https://secret.example.com/once");
-    scraped.applyOgMetadata(
-        "Secret page", "Secret description", "https://secret.example.com/og.jpg", Instant.now());
+    FetchedOg.on(
+        scraped,
+        "Secret page",
+        "Secret description",
+        "https://secret.example.com/og.jpg",
+        Instant.now());
     LinkEntity named = link("https://secret.example.com/once");
-    named.applyOgMetadata(
-        "Secret page", "Secret description", "https://secret.example.com/og.jpg", Instant.now());
+    FetchedOg.on(
+        named,
+        "Secret page",
+        "Secret description",
+        "https://secret.example.com/og.jpg",
+        Instant.now());
     named.changeOgOverride("Owner's title", null, null);
 
     String bare =
@@ -130,7 +139,7 @@ class LinkPreviewRendererTest {
   @Test
   void usesDestinationImageWhenPresent() {
     LinkEntity link = link("https://example.com/article");
-    link.applyOgMetadata(null, null, "https://example.com/hero.jpg", Instant.now());
+    FetchedOg.on(link, null, null, "https://example.com/hero.jpg", Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/abcdefg", 42L);
 
@@ -141,7 +150,7 @@ class LinkPreviewRendererTest {
   @Test
   void escapesHtmlSpecialCharacters() {
     LinkEntity link = link("https://example.com/?a=1&b=2");
-    link.applyOgMetadata("<script>alert(1)</script>", null, null, Instant.now());
+    FetchedOg.on(link, "<script>alert(1)</script>", null, null, Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
@@ -161,7 +170,7 @@ class LinkPreviewRendererTest {
   @Test
   void blankOgTitleFallsBackToOriginalUrlInTitleTag() {
     LinkEntity link = link("https://example.com/route");
-    link.applyOgMetadata("   ", null, null, Instant.now());
+    FetchedOg.on(link, "   ", null, null, Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
@@ -171,7 +180,7 @@ class LinkPreviewRendererTest {
   @Test
   void escapesQuoteAndApostrophe() {
     LinkEntity link = link("https://example.com");
-    link.applyOgMetadata("She said \"hi\" — it's me", null, null, Instant.now());
+    FetchedOg.on(link, "She said \"hi\" — it's me", null, null, Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
@@ -191,7 +200,7 @@ class LinkPreviewRendererTest {
   @Test
   void blankDestinationImageFallsBackToGeneratedCard() {
     LinkEntity link = link("https://example.com/x");
-    link.applyOgMetadata("T", "D", "   ", Instant.now());
+    FetchedOg.on(link, "T", "D", "   ", Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/xyz", 12L);
 
@@ -201,7 +210,7 @@ class LinkPreviewRendererTest {
   @Test
   void blankDescriptionFallsBackToDefault() {
     LinkEntity link = link("https://example.com/x");
-    link.applyOgMetadata("T", "  ", "https://img", Instant.now());
+    FetchedOg.on(link, "T", "  ", "https://img", Instant.now());
 
     String html = renderer.render(link, "https://kurl.me/xyz", 0L);
 

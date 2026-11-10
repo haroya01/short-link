@@ -294,10 +294,10 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
   @Test
   void listItemsCarryTheFetchedAndOverriddenOgTitlesLikeTheDetail() throws Exception {
     List<LinkEntity> made = makeLinks(3);
-    made.get(0).applyOgMetadata("Fetched title", null, null, NOW);
-    made.get(1).applyOgMetadata("Fetched title", null, null, NOW);
     made.get(1).changeOgOverride("Owner title", null, null);
     em.flush();
+    links.recordOgFetched(made.get(0).getId(), "Fetched title", null, null, NOW);
+    links.recordOgFetched(made.get(1).getId(), "Fetched title", null, null, NOW);
     em.clear();
 
     String body =

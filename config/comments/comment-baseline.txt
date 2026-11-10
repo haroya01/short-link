@@ -300,7 +300,6 @@ src/main/java/com/example/short_link/link/domain/LinkId.java=2
 src/main/java/com/example/short_link/link/domain/ShortCode.java=2
 src/main/java/com/example/short_link/link/domain/repository/LinkRepository.java=5
 src/main/java/com/example/short_link/link/exception/LinkErrorCode.java=1
-src/main/java/com/example/short_link/link/infrastructure/persistence/LinkSidecarPersister.java=2
 src/main/java/com/example/short_link/link/infrastructure/persistence/MyLinksJpaSpecifications.java=1
 src/main/java/com/example/short_link/link/moderation/domain/LinkModerationEntity.java=1
 src/main/java/com/example/short_link/link/moderation/infrastructure/persistence/LinkModerationRepositoryAdapter.java=1

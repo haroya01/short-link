@@ -30,7 +30,8 @@ class OgOverrideServiceTest {
     UserEntity user = userRepository.save(new UserEntity("og@example.com", "google", "g-og"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "ogtest1", user.getId(), null));
-    link.applyOgMetadata("Scraped", "Scraped desc", "https://example.com/img.png", Instant.now());
+    linkRepository.recordOgFetched(
+        link.getId(), "Scraped", "Scraped desc", "https://example.com/img.png", Instant.now());
 
     service.update(user.getId(), new ShortCode("ogtest1"), "Override title", null, null);
 
@@ -45,8 +46,8 @@ class OgOverrideServiceTest {
     UserEntity user = userRepository.save(new UserEntity("og2@example.com", "google", "g-og2"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "ogtest2", user.getId(), null));
-    link.applyOgMetadata("S", "Sd", "Si", Instant.now());
-    link.changeOgOverride("manual", null, null);
+    linkRepository.recordOgFetched(link.getId(), "S", "Sd", "Si", Instant.now());
+    service.update(user.getId(), new ShortCode("ogtest2"), "manual", null, null);
 
     service.update(user.getId(), new ShortCode("ogtest2"), "  ", null, null);
 

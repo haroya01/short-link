@@ -343,15 +343,15 @@
 @junit | note-refill-post-link | 4 | 1 | 0 | 1 | 6
 @junit | note-refill-post-carded | 4 | 2 | 0 | 0 | 6
 @junit | note-refill-post-plain | 4 | 1 | 0 | 0 | 5
-# A short link to reopen, the same work as link-create-owned: the link, its three sidecars and the
-# audit row, then after commit the failed Open Graph attempt recorded on the metadata and the link.
+# A short link to reopen, the same work as link-create-owned: the link and the audit row, then after
+# commit the failed Open Graph attempt recorded on the link.
 # The first one also loads the blocked domains into their cache.
-@junit | note-refill-shorten-first | 7 | 5 | 2 | 0 | 14
-@junit | note-refill-shorten | 6 | 5 | 2 | 0 | 13
+@junit | note-refill-shorten-first | 5 | 2 | 1 | 0 | 8
+@junit | note-refill-shorten | 4 | 2 | 1 | 0 | 7
 # The first tick reads the pending row. The next counts the candidates and, in one transaction,
-# reopens given-up short links on the metadata mirror and on the link row, then claims the row.
+# reopens given-up short links on the link row, then claims the row.
 @junit | note-refill-loads | 1 | 0 | 0 | 0 | 1
-@junit | note-refill-starts | 1 | 0 | 3 | 0 | 4
+@junit | note-refill-starts | 1 | 0 | 2 | 0 | 3
 # One note per tick: the newest candidate below the cursor, its card stored or cleared, then the
 # cursor and counts. A tick within a second of the last page fetch touches nothing.
 @junit | note-refill-newest-gets-its-card | 1 | 1 | 1 | 0 | 3
