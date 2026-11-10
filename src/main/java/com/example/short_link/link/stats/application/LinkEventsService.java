@@ -1,6 +1,8 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
+import com.example.short_link.link.application.dto.AdminLinkClickView;
+import com.example.short_link.link.application.dto.AdminLinkClicksResult;
 import com.example.short_link.link.application.dto.LinkEventView;
 import com.example.short_link.link.application.dto.LinkEventsResult;
 import com.example.short_link.link.classifier.application.ReferrerChannelClassifier;
@@ -11,7 +13,9 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickRollupRepository;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -23,33 +27,55 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkEventsService {
 
   private static final int DEFAULT_LIMIT = 50;
-  private static final int MAX_LIMIT = 200;
+  public static final int MAX_LIMIT = 200;
 
   private final LinkRepository linkRepository;
   private final LinkClickEventReader clickEvents;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkAccessGuard accessGuard;
+  private final ClickRollupRepository rollups;
 
   @Transactional(readOnly = true)
   public LinkEventsResult events(Long userId, ShortCode shortCode, String cursor, Integer limit) {
-    LinkEntity link =
-        linkRepository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+    LinkEntity link = find(shortCode);
     accessGuard.requireView(userId, link);
     int pageSize = clampLimit(limit);
-
-    List<ClickEventEntity> rows;
-    if (cursor == null || cursor.isBlank()) {
-      rows = clickEvents.latest(link.linkId().value(), pageSize);
-    } else {
-      long cursorId = Cursor.decode(cursor);
-      rows = clickEvents.before(link.linkId().value(), cursorId, pageSize);
-    }
-
+    List<ClickEventEntity> rows = page(link, cursor, pageSize);
     List<LinkEventView> items = rows.stream().map(this::toResponse).toList();
     String next = rows.size() < pageSize ? null : Cursor.encode(rows.get(rows.size() - 1).getId());
     return new LinkEventsResult(items, next);
+  }
+
+  @Transactional(readOnly = true)
+  public AdminLinkClicksResult clicksForAdmin(ShortCode shortCode, String cursor, Integer limit) {
+    LinkEntity link = find(shortCode);
+    int pageSize = clampLimit(limit);
+    List<ClickEventEntity> rows = page(link, cursor, pageSize);
+    Instant rolledUntil = rollups.rolledUntil();
+    List<AdminLinkClickView> items =
+        rows.stream()
+            .filter(click -> !click.getClickedAt().isBefore(rolledUntil))
+            .map(
+                click ->
+                    new AdminLinkClickView(
+                        click.getId(), ClickExclusionService.isExcluded(click), toResponse(click)))
+            .toList();
+    boolean ended = rows.size() < pageSize || items.size() < rows.size();
+    String next = ended ? null : Cursor.encode(rows.get(rows.size() - 1).getId());
+    return new AdminLinkClicksResult(items, next);
+  }
+
+  private LinkEntity find(ShortCode shortCode) {
+    return linkRepository
+        .findByShortCode(shortCode)
+        .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+  }
+
+  private List<ClickEventEntity> page(LinkEntity link, String cursor, int pageSize) {
+    if (cursor == null || cursor.isBlank()) {
+      return clickEvents.latest(link.linkId().value(), pageSize);
+    }
+    return clickEvents.before(link.linkId().value(), Cursor.decode(cursor), pageSize);
   }
 
   private LinkEventView toResponse(ClickEventEntity c) {

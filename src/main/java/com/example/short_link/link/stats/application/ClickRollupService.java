@@ -56,12 +56,12 @@ public class ClickRollupService {
               .orElse(null);
       if (dayStart == null) {
         Instant until = target;
-        dayTransaction.executeWithoutResult(status -> rollups.advanceTo(until));
+        inDayTransaction(() -> rollups.advanceTo(until));
         break;
       }
       Instant dayEnd = dayStart.plus(Duration.ofDays(1));
-      dayTransaction.executeWithoutResult(
-          status -> {
+      inDayTransaction(
+          () -> {
             rollups.rollUpDay(dayStart, dayEnd);
             visitorSketches(rollups.humanVisitors(dayStart, dayEnd))
                 .forEach((linkId, sketch) -> rollups.saveVisitorSketch(linkId, dayStart, sketch));
@@ -83,16 +83,24 @@ public class ClickRollupService {
     while (next.isPresent() && next.get().isBefore(closed)) {
       Instant dayStart = next.get().truncatedTo(ChronoUnit.DAYS);
       Instant dayEnd = dayStart.plus(Duration.ofDays(1));
-      dayTransaction.executeWithoutResult(
-          status -> {
+      inDayTransaction(
+          () -> {
             rollups.aggregateDay(dayStart, dayEnd);
             rollups.advanceAggregatedTo(dayEnd);
           });
       days++;
       next = rollups.firstClickAtOrAfter(dayEnd);
     }
-    dayTransaction.executeWithoutResult(status -> rollups.advanceAggregatedTo(closed));
+    inDayTransaction(() -> rollups.advanceAggregatedTo(closed));
     return days;
+  }
+
+  private void inDayTransaction(Runnable work) {
+    dayTransaction.executeWithoutResult(
+        status -> {
+          rollups.lockState();
+          work.run();
+        });
   }
 
   public long deleteRolledUp() {

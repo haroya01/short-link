@@ -120,6 +120,18 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
   private static final List<String> RECENT_DIMENSIONS =
       DIMENSIONS.stream().map(d -> d.insert("click_recent_dim")).toList();
 
+  private static final String ONE_DAY =
+      "WHERE c.clicked_at >= FROM_UNIXTIME(:dayStart) AND c.clicked_at < FROM_UNIXTIME(:dayEnd)";
+
+  private static final String LINK_RECENT_QUARTERS = ofOneLink(RECENT_QUARTERS);
+
+  private static final List<String> LINK_RECENT_DIMENSIONS =
+      RECENT_DIMENSIONS.stream().map(ClickRollupRepositoryAdapter::ofOneLink).toList();
+
+  private static String ofOneLink(String sql) {
+    return sql.replace(ONE_DAY, ONE_DAY + " AND c.link_id = :linkId");
+  }
+
   @PersistenceContext private EntityManager em;
 
   @Override
@@ -128,6 +140,18 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
         em.createNativeQuery(
                 "SELECT UNIX_TIMESTAMP(rolled_until) FROM click_rollup_state WHERE id = 1")
             .getSingleResult());
+  }
+
+  @Override
+  public State lockState() {
+    Object[] row =
+        (Object[])
+            em.createNativeQuery(
+                    "SELECT UNIX_TIMESTAMP(rolled_until), UNIX_TIMESTAMP("
+                        + "GREATEST(rolled_until, COALESCE(aggregated_until, rolled_until))) "
+                        + "FROM click_rollup_state WHERE id = 1 FOR UPDATE")
+                .getSingleResult();
+    return new State(epoch(row[0]), epoch(row[1]));
   }
 
   @Override
@@ -171,6 +195,37 @@ class ClickRollupRepositoryAdapter implements ClickRollupRepository {
         .executeUpdate();
     for (String sql : RECENT_DIMENSIONS) {
       em.createNativeQuery(sql)
+          .setParameter("dayStart", dayStart.getEpochSecond())
+          .setParameter("dayEnd", dayEnd.getEpochSecond())
+          .executeUpdate();
+    }
+  }
+
+  @Override
+  public void aggregateLinkDay(Long linkId, Instant dayStart, Instant dayEnd) {
+    em.createNativeQuery(
+            "DELETE FROM click_recent_quarter WHERE link_id = :linkId "
+                + "AND quarter_start >= FROM_UNIXTIME(:dayStart) "
+                + "AND quarter_start < FROM_UNIXTIME(:dayEnd)")
+        .setParameter("linkId", linkId)
+        .setParameter("dayStart", dayStart.getEpochSecond())
+        .setParameter("dayEnd", dayEnd.getEpochSecond())
+        .executeUpdate();
+    em.createNativeQuery(
+            "DELETE FROM click_recent_dim WHERE link_id = :linkId "
+                + "AND day_start >= FROM_UNIXTIME(:dayStart) AND day_start < FROM_UNIXTIME(:dayEnd)")
+        .setParameter("linkId", linkId)
+        .setParameter("dayStart", dayStart.getEpochSecond())
+        .setParameter("dayEnd", dayEnd.getEpochSecond())
+        .executeUpdate();
+    em.createNativeQuery(LINK_RECENT_QUARTERS)
+        .setParameter("linkId", linkId)
+        .setParameter("dayStart", dayStart.getEpochSecond())
+        .setParameter("dayEnd", dayEnd.getEpochSecond())
+        .executeUpdate();
+    for (String sql : LINK_RECENT_DIMENSIONS) {
+      em.createNativeQuery(sql)
+          .setParameter("linkId", linkId)
           .setParameter("dayStart", dayStart.getEpochSecond())
           .setParameter("dayEnd", dayEnd.getEpochSecond())
           .executeUpdate();
