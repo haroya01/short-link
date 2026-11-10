@@ -20,6 +20,8 @@ import com.example.short_link.link.stats.application.ClickBuffer;
 import com.example.short_link.link.stats.application.ClickFlusher;
 import com.example.short_link.link.stats.application.read.ClickRangeReader;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
+import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
+import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -81,6 +83,7 @@ class OperatorVisitIntegrationTest {
   @Autowired private LinkNoticeProperties noticeProperties;
   @Autowired private RedisDistributedLock cooldown;
   @Autowired private OperatorMarkerStore markers;
+  @Autowired private LinkWebhookRepository hooks;
   @Autowired private CacheManager cacheManager;
   @Autowired private EntityManager entityManager;
   @Autowired private JdbcTemplate jdbc;
@@ -156,6 +159,32 @@ class OperatorVisitIntegrationTest {
     assertThat(viewsSpent(link)).isEqualTo(1);
   }
 
+  @Test
+  void anOperatorsVisitQueuesAWebhookOnlyForAHookThatAskedForBots() throws Exception {
+    LinkEntity link = aLink(null);
+    LinkWebhookEntity peopleOnly = aHook(link, false);
+    LinkWebhookEntity botsToo = aHook(link, true);
+
+    visit(marker()).andExpect(status().isFound());
+    clickFlusher.flush();
+
+    assertThat(queuedPayloads(peopleOnly)).isEmpty();
+    assertThat(queuedPayloads(botsToo)).singleElement().asString().contains("\"bot\":true");
+  }
+
+  @Test
+  void aPersonsVisitQueuesAWebhookForEveryHook() throws Exception {
+    LinkEntity link = aLink(null);
+    LinkWebhookEntity peopleOnly = aHook(link, false);
+    LinkWebhookEntity botsToo = aHook(link, true);
+
+    visit(null).andExpect(status().isFound());
+    clickFlusher.flush();
+
+    assertThat(queuedPayloads(peopleOnly)).singleElement().asString().contains("\"bot\":false");
+    assertThat(queuedPayloads(botsToo)).singleElement().asString().contains("\"bot\":false");
+  }
+
   @ParameterizedTest
   @EnumSource(NotAnOperator.class)
   void aVisitWithoutAMarkerTheStoreHoldsCountsAsAPersonsClick(NotAnOperator visitor)
@@ -197,6 +226,21 @@ class OperatorVisitIntegrationTest {
     LinkEntity link = new LinkEntity(DESTINATION, code, ownerId, null);
     link.setMaxViews(maxViews);
     return links.save(link);
+  }
+
+  private LinkWebhookEntity aHook(LinkEntity link, boolean includeBots) {
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(link.linkId(), "https://1.1.1.1/hook", "secret", "hook");
+    hook.updateConfig(includeBots, null, null, null, null, null);
+    return hooks.save(hook);
+  }
+
+  private List<String> queuedPayloads(LinkWebhookEntity hook) {
+    entityManager.flush();
+    return jdbc.queryForList(
+        "SELECT payload FROM link_webhook_delivery WHERE hook_id = ? AND status = 'PENDING'",
+        String.class,
+        hook.getId());
   }
 
   private String marker() {
