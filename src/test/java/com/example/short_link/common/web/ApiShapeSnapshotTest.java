@@ -13,6 +13,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class ApiShapeSnapshotTest {
 
   private static final Path SNAPSHOT = Path.of("src/test/resources/api-shape/openapi-shape.json");

@@ -15,6 +15,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class AdminBlogMetricsTest {
 
   @Autowired private MockMvc mvc;

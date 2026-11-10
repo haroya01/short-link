@@ -31,6 +31,7 @@ import java.util.Random;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,6 +47,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class LinkStatsReportGoldenIntegrationTest {
 
   private static final Instant NOW = Instant.parse("2026-10-20T06:30:00Z");

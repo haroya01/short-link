@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(CustomDomainVerificationE2ETest.StubTxtResolverConfig.class)
+@Tag("integration")
 class CustomDomainVerificationE2ETest {
 
   @Autowired private MockMvc mvc;

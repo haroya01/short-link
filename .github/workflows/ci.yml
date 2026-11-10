@@ -106,3 +106,24 @@ jobs:
       - name: Stop backing services
         if: always()
         run: docker compose -f resources/docker-compose.yml down -v
+
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: ./gradlew pitest -PmutationScope=core
+
+      - name: Upload mutation report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-core
+          path: build/reports/pitest-core/

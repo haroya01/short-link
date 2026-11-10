@@ -21,6 +21,7 @@ import com.example.short_link.link.og.application.OgCardImageRenderer;
 import com.example.short_link.link.stats.application.read.ClickTotalsReader;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class OgCardControllerTest {
 
   @Autowired private MockMvc mvc;
