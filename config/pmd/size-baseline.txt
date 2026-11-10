@@ -98,7 +98,7 @@ ExcessiveParameterList|src/main/java/com/example/short_link/federation/applicati
 ExcessiveParameterList|src/main/java/com/example/short_link/federation/application/trends/TrendingPosts.java|TrendingPosts#1=11
 ExcessiveParameterList|src/main/java/com/example/short_link/federation/domain/foryou/HomeCandidate.java|local#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/federation/scheduler/RelayWorker.java|RelayWorker#1=14
-ExcessiveParameterList|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|CreateLinkUseCase#1=11
+ExcessiveParameterList|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|CreateLinkUseCase#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/link/destination/application/write/UpdateDestinationUseCase.java|execute#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/link/destination/application/write/UpdateDestinationUseCase.java|update#1=10
 ExcessiveParameterList|src/main/java/com/example/short_link/link/presentation/MyLinksController.java|myLinks#1=11
