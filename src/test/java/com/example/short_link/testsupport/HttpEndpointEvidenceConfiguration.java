@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -105,8 +106,12 @@ public class HttpEndpointEvidenceConfiguration implements WebMvcConfigurer {
   private static void write(Path destination, Object value) {
     try {
       Files.createDirectories(destination.getParent());
-      Files.writeString(
-          destination, JSON.writerWithDefaultPrettyPrinter().writeValueAsString(value));
+      Path staged =
+          destination.resolveSibling(
+              destination.getFileName() + "." + ProcessHandle.current().pid() + ".tmp");
+      Files.writeString(staged, JSON.writerWithDefaultPrettyPrinter().writeValueAsString(value));
+      Files.move(
+          staged, destination, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     } catch (IOException failure) {
       throw new IllegalStateException(
           "Could not write HTTP endpoint evidence: " + destination, failure);
