@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -30,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 // 테스트 바깥 트랜잭션 없이 실제 유스케이스 커밋 후 응답과 저장값을 비교한다.
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class PostWriteViewCommitIntegrationTest {
   private static final Instant OLD_UPDATED_AT = Instant.parse("2000-01-01T00:00:00Z");
 

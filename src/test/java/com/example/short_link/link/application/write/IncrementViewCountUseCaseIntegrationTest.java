@@ -8,6 +8,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.infrastructure.persistence.JpaLinkRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 // 상태에서 TransactionRequiredException 으로 죽었던 이력이 있다. 테스트 트랜잭션을 두르면 바로 그 회귀가 가려진다.
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class IncrementViewCountUseCaseIntegrationTest {
 
   @Autowired private IncrementViewCountUseCase useCase;
