@@ -500,6 +500,17 @@
 @junit | ops-active-users | 1 | 0 | 0 | 0 | 1
 @junit | ops-block-domain | 2 | 1 | 0 | 0 | 3
 @junit | ops-blog-metrics | 5 | 0 | 0 | 0 | 5
+# An admin's click list is the owner's list (link, one page of clicks) plus rolled_until, where the
+# list ends. Excluding or restoring reads the account (SuspendedWriteGate) and the link, locks
+# click_rollup_state, rewrites the picked clicks in one UPDATE, looks up which of their days are
+# already summed, and writes one audit row. Each summed day adds two DELETEs and 22 INSERTs: that
+# link's click_recent_quarter and click_recent_dim rows for the day, built again from click_event.
+@junit | ops-click-denies-member | 0 | 0 | 0 | 0 | 0
+@junit | ops-click-exclude | 4 | 1 | 1 | 0 | 6
+@junit | ops-click-exclude-summed-day | 4 | 23 | 1 | 2 | 30
+@junit | ops-click-list | 3 | 0 | 0 | 0 | 3
+@junit | ops-click-list-excluded | 3 | 0 | 0 | 0 | 3
+@junit | ops-click-restore | 4 | 23 | 1 | 2 | 30
 @junit | ops-cohort | 2 | 0 | 0 | 0 | 2
 @junit | ops-delete-post | 3 | 0 | 0 | 11 | 14
 @junit | ops-denies-author-moderation | 0 | 0 | 0 | 0 | 0

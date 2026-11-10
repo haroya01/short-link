@@ -3,10 +3,12 @@ package com.example.short_link.user.presentation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
@@ -30,6 +32,7 @@ class OAuth2LoginSuccessHandler2FATest {
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
   @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
+  @Mock private OperatorMarkerCookie operatorMarkerCookie;
   @Mock private HttpServletRequest req;
   @Mock private HttpServletResponse res;
 
@@ -42,6 +45,7 @@ class OAuth2LoginSuccessHandler2FATest {
             authService,
             refreshCookieWriter,
             challengeCookieWriter,
+            operatorMarkerCookie,
             "http://localhost:3001",
             "kurl://auth");
   }
@@ -60,6 +64,7 @@ class OAuth2LoginSuccessHandler2FATest {
     verify(refreshCookieWriter, never()).set(ArgumentMatchers.any(), ArgumentMatchers.any());
 
     verify(challengeCookieWriter).set(res, "challenge-token-value");
+    verifyNoInteractions(operatorMarkerCookie);
     ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
     verify(res).sendRedirect(redirectCaptor.capture());
     assertThat(redirectCaptor.getValue()).isEqualTo("http://localhost:3001/auth/2fa");

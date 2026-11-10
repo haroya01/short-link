@@ -125,6 +125,7 @@ class PasswordUnlockAttemptLimitTest {
   }
 
   private static RedirectVisit visit(String clientIp) {
-    return new RedirectVisit(null, "Mozilla/5.0", clientIp, "en", null, null, false, null, false);
+    return new RedirectVisit(
+        null, "Mozilla/5.0", clientIp, "en", null, null, false, null, RedirectVisit.Visitor.PERSON);
   }
 }

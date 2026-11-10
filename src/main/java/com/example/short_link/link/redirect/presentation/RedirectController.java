@@ -2,6 +2,7 @@ package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.common.security.BlockedDomainChecker;
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -57,6 +58,7 @@ public class RedirectController {
   private final BlockedDomainChecker blockedDomainChecker;
   private final LinkHtmlRenderer html;
   private final VisitHandoff handoff;
+  private final OperatorMarkerStore operatorMarkers;
   private final Clock clock;
 
   @GetMapping({"/{shortCode:[0-9A-Za-z]{3,16}}", "/{shortCode:[0-9A-Za-z]{3,16}}/"})
@@ -189,7 +191,8 @@ public class RedirectController {
         flow.execute(
             link,
             null,
-            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
+            LinkRedirectSupport.visit(
+                referrer, userAgent, acceptLanguage, src, post, req, operatorMarkers)),
         userAgent,
         locale);
   }

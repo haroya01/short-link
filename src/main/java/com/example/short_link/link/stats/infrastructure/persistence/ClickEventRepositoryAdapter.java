@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.infrastructure.persistence;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRollupRepository;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -50,5 +51,27 @@ class ClickEventRepositoryAdapter implements ClickEventRepository {
   @Override
   public List<ClickEventEntity> findEventsByLinkIdLatest(Long linkId, int limit) {
     return jpa.findEventsByLinkIdLatest(linkId, PageRequest.ofSize(limit));
+  }
+
+  @Override
+  public int markHumansAs(
+      Long linkId, Collection<Long> clickIds, String botName, Instant rolledUntil) {
+    return jpa.markHumansAs(linkId, clickIds, botName, rolledUntil.getEpochSecond());
+  }
+
+  @Override
+  public int markAsHumans(
+      Long linkId, Collection<Long> clickIds, String botName, Instant rolledUntil) {
+    return jpa.markAsHumans(linkId, clickIds, botName, rolledUntil.getEpochSecond());
+  }
+
+  @Override
+  public List<Instant> findDayStartsOf(
+      Long linkId, Collection<Long> clickIds, Instant from, Instant before) {
+    return jpa
+        .findDayStartsOf(linkId, clickIds, from.getEpochSecond(), before.getEpochSecond())
+        .stream()
+        .map(day -> Instant.ofEpochSecond(day.longValue()))
+        .toList();
   }
 }

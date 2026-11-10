@@ -19,6 +19,14 @@ class PostPasswordsTest {
   }
 
   @Test
+  void aHashStoredBeforeTheDigestMovedToCommonStillMatches() {
+    String stored = "$2a$04$PhS0yJ0UKAsZc0acBQGGbeb3ATC.4B9kTC57Tzz9TY8DeXTbtdUzC";
+
+    assertThat(passwords.matches("비밀번호는 길어도 된다 " + "가".repeat(80), stored)).isTrue();
+    assertThat(passwords.matches("비밀번호는 길어도 된다 " + "가".repeat(79), stored)).isFalse();
+  }
+
+  @Test
   void nothingMatchesAMissingPasswordOrHash() {
     assertThat(passwords.matches(null, passwords.hash("four"))).isFalse();
     assertThat(passwords.matches("four", null)).isFalse();

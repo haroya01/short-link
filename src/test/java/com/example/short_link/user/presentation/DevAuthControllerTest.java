@@ -14,6 +14,7 @@ import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
@@ -31,11 +32,13 @@ class DevAuthControllerTest {
 
   @MockitoBean private AuthService authService;
   @MockitoBean private RefreshCookieWriter refreshCookieWriter;
+  @MockitoBean private OperatorMarkerCookie operatorMarkerCookie;
 
   @Test
   void issuesTokensAndRefreshCookie() throws Exception {
     when(authService.loginWithOAuth("dev@local.test", "dev", "dev:dev@local.test"))
-        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+        .thenReturn(
+            new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token", false)));
     doAnswer(
             invocation -> {
               HttpServletResponse response = invocation.getArgument(0);
@@ -54,12 +57,29 @@ class DevAuthControllerTest {
         .andExpect(cookie().exists("refresh_token"));
 
     verify(refreshCookieWriter).set(any(HttpServletResponse.class), eq("refresh-token"));
+    verify(operatorMarkerCookie).onLogin(any(), any(HttpServletResponse.class), eq(false));
+  }
+
+  @Test
+  void anAdminsDevLoginHandsTheOperatorMarkerCookieTheAdminFlag() throws Exception {
+    when(authService.loginWithOAuth("admin@local.test", "dev", "dev:admin@local.test"))
+        .thenReturn(
+            new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token", true)));
+
+    mvc.perform(
+            post("/api/v1/auth/dev-login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"admin@local.test\"}"))
+        .andExpect(status().isOk());
+
+    verify(operatorMarkerCookie).onLogin(any(), any(HttpServletResponse.class), eq(true));
   }
 
   @Test
   void delegatesToDevOauthIdentity() throws Exception {
     when(authService.loginWithOAuth("dev2@local.test", "dev", "dev:dev2@local.test"))
-        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+        .thenReturn(
+            new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token", false)));
 
     mvc.perform(
             post("/api/v1/auth/dev-login")
