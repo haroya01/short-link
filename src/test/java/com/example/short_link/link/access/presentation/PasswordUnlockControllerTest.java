@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.TurnstileProperties;
@@ -27,11 +29,14 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
+import com.example.short_link.link.redirect.application.RedirectVisit;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
+import jakarta.servlet.http.Cookie;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
@@ -47,6 +52,7 @@ class PasswordUnlockControllerTest {
   private final TurnstileProperties turnstile = new TurnstileProperties("", "");
   private final TurnstileVerifier turnstileVerifier = new CloudflareTurnstileVerifier(turnstile);
   private final LinkPasswordAttemptLimiter attemptLimiter = mock(LinkPasswordAttemptLimiter.class);
+  private final OperatorMarkerStore operatorMarkers = mock(OperatorMarkerStore.class);
   private final PasswordUnlockController controller =
       new PasswordUnlockController(
           new PasswordUnlockUseCase(
@@ -58,7 +64,8 @@ class PasswordUnlockControllerTest {
               mock(CustomDomainQueryService.class, invocation -> null)),
           turnstile,
           HTML,
-          new VisitHandoff(new ClientAppClassifier(), HTML));
+          new VisitHandoff(new ClientAppClassifier(), HTML),
+          operatorMarkers);
 
   private static final LinkHtmlRenderer HTML = new LinkHtmlRenderer(messageSource());
 
@@ -120,6 +127,29 @@ class PasswordUnlockControllerTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(new String((byte[]) response.getBody())).contains("https://dst");
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("redirect");
+  }
+
+  @Test
+  void anUnlockFromAnOperatorsBrowserReachesTheFlowAsAnOperatorsVisit() {
+    LinkEntity entity = mock(LinkEntity.class);
+    when(entity.hasPassword()).thenReturn(true);
+    when(lookup.findActiveLink(CODE)).thenReturn(cachedLink());
+    when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
+    when(protectionService.checkPassword(entity, "good")).thenReturn(true);
+    when(flow.execute(any(), any(), any()))
+        .thenReturn(new RedirectOutcome.Redirect(new CachedLink.Picked("https://dst", null)));
+    when(operatorMarkers.isValid("marker-in-the-cookie")).thenReturn(true);
+    MockHttpServletRequest fromAnOperator = request();
+    fromAnOperator.setCookies(new Cookie("kurl_op", "marker-in-the-cookie"));
+
+    controller.unlock(CODE, "good", null, null, null, null, null, fromAnOperator);
+    controller.unlock(CODE, "good", null, null, null, null, null, request());
+
+    ArgumentCaptor<RedirectVisit> visits = ArgumentCaptor.forClass(RedirectVisit.class);
+    verify(flow, times(2)).execute(any(), any(), visits.capture());
+    assertThat(visits.getAllValues())
+        .extracting(RedirectVisit::operator)
+        .containsExactly(true, false);
   }
 
   @Test

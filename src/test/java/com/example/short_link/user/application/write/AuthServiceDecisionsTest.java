@@ -203,7 +203,7 @@ class AuthServiceDecisionsTest {
 
     if (accepted) {
       assertThat(auth.completeTwoFactor("challenge", "123456", recovery, SessionChannel.MOBILE))
-          .isEqualTo(new IssuedTokens("access", "refresh"));
+          .isEqualTo(new IssuedTokens("access", "refresh", false));
       verify(jwt).createRefreshToken(eq(12L), anyString(), eq(SessionChannel.MOBILE));
     } else {
       assertThatThrownBy(
@@ -276,7 +276,8 @@ class AuthServiceDecisionsTest {
     when(users.findById(16L)).thenReturn(Optional.of(member(16L, "google")));
 
     if (accepted) {
-      assertThat(auth.refresh("token", channel)).isEqualTo(new IssuedTokens("access", "refresh"));
+      assertThat(auth.refresh("token", channel))
+          .isEqualTo(new IssuedTokens("access", "refresh", false));
     } else {
       assertThatThrownBy(() -> auth.refresh("token", channel))
           .isInstanceOfSatisfying(
@@ -309,8 +310,26 @@ class AuthServiceDecisionsTest {
         .thenReturn(Optional.of(member(18L, "google")));
 
     assertThat(auth.loginWithOAuth(EMAIL, "google", "g-18"))
-        .isEqualTo(new AuthService.TokenLoginResult.Tokens(new IssuedTokens("access", "refresh")));
+        .isEqualTo(
+            new AuthService.TokenLoginResult.Tokens(new IssuedTokens("access", "refresh", false)));
     verify(refreshStore).save(18L, "jti", Duration.ofDays(14));
+  }
+
+  @Test
+  void anAdminsSessionSaysItIsAnAdminsOnSignInAndOnRefresh() {
+    UserEntity admin = member(31L, "google");
+    admin.promoteToAdmin();
+    when(users.findByOauthProviderAndOauthId("google", "g-31")).thenReturn(Optional.of(admin));
+    when(users.findById(31L)).thenReturn(Optional.of(admin));
+    when(jwt.parseRefreshToken("admin-token"))
+        .thenReturn(new ParsedRefresh(31L, "jti-31", "session-31", false));
+    when(refreshStore.consume(eq(31L), eq("jti-31"), any())).thenReturn(true);
+
+    assertThat(auth.loginWithOAuth(EMAIL, "google", "g-31"))
+        .isEqualTo(
+            new AuthService.TokenLoginResult.Tokens(new IssuedTokens("access", "refresh", true)));
+    assertThat(auth.refresh("admin-token", SessionChannel.WEB))
+        .isEqualTo(new IssuedTokens("access", "refresh", true));
   }
 
   @Test
@@ -334,7 +353,7 @@ class AuthServiceDecisionsTest {
     when(users.findById(21L)).thenReturn(Optional.of(member(21L, "google")));
 
     assertThat(auth.refresh("raced", SessionChannel.WEB))
-        .isEqualTo(new IssuedTokens("access", "refresh"));
+        .isEqualTo(new IssuedTokens("access", "refresh", false));
     assertThatThrownBy(() -> auth.refresh("stale", SessionChannel.WEB))
         .isInstanceOfSatisfying(
             UserException.class,
@@ -371,7 +390,8 @@ class AuthServiceDecisionsTest {
     when(exchangeCodes.consume("used")).thenReturn(Optional.empty());
     when(users.findById(23L)).thenReturn(Optional.of(member(23L, "google")));
 
-    assertThat(auth.exchangeMobileCode("code-23")).isEqualTo(new IssuedTokens("access", "refresh"));
+    assertThat(auth.exchangeMobileCode("code-23"))
+        .isEqualTo(new IssuedTokens("access", "refresh", false));
     verify(refreshStore).save(23L, "jti", Duration.ofDays(365));
     assertThatThrownBy(() -> auth.exchangeMobileCode("used"))
         .isInstanceOfSatisfying(

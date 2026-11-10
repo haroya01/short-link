@@ -1,11 +1,14 @@
 package com.example.short_link.link.redirect.presentation.helper;
 
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.link.redirect.application.RedirectVisit;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.WebUtils;
 
 public final class LinkRedirectSupport {
 
@@ -17,7 +20,8 @@ public final class LinkRedirectSupport {
       String acceptLanguage,
       String src,
       Long postId,
-      HttpServletRequest request) {
+      HttpServletRequest request,
+      OperatorMarkerStore operatorMarkers) {
     return new RedirectVisit(
         referrer,
         userAgent,
@@ -27,7 +31,19 @@ public final class LinkRedirectSupport {
         postId,
         "1".equals(request.getHeader("Sec-GPC")),
         fetchSite(request),
-        isPrefetch(request));
+        visitor(request, operatorMarkers));
+  }
+
+  private static RedirectVisit.Visitor visitor(
+      HttpServletRequest request, OperatorMarkerStore operatorMarkers) {
+    if (isPrefetch(request)) {
+      return RedirectVisit.Visitor.PREFETCH;
+    }
+    Cookie marker = WebUtils.getCookie(request, OperatorMarkerStore.COOKIE_NAME);
+    if (marker != null && operatorMarkers.isValid(marker.getValue())) {
+      return RedirectVisit.Visitor.OPERATOR;
+    }
+    return RedirectVisit.Visitor.PERSON;
   }
 
   private static boolean isPrefetch(HttpServletRequest request) {
