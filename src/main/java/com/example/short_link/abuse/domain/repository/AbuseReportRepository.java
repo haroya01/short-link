@@ -1,5 +1,6 @@
 package com.example.short_link.abuse.domain.repository;
 
+import com.example.short_link.abuse.domain.AbuseReason;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseReportStatus;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
@@ -17,4 +18,14 @@ public interface AbuseReportRepository {
   List<AbuseReportEntity> findAllByOrderByCreatedAtDesc();
 
   boolean existsOpenReport(Long reporterUserId, AbuseSubjectType subjectType, Long subjectId);
+
+  List<ReasonTally> tallyBySubject(AbuseSubjectType subjectType, Long subjectId);
+
+  interface ReasonTally {
+    AbuseReason getReason();
+
+    AbuseReportStatus getStatus();
+
+    Long getReports();
+  }
 }

@@ -1,5 +1,8 @@
 package com.example.short_link.link.destination.application.write;
 
+import com.example.short_link.common.audit.AddressChange;
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.CreateLinkValidator;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
@@ -8,6 +11,7 @@ import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.ShortCode;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -20,6 +24,7 @@ public class UpdateDestinationUseCase {
   private final LinkCacheEviction linkCacheEviction;
   private final CreateLinkValidator urlValidator;
   private final TransactionTemplate transaction;
+  private final AuditLogService auditLogService;
 
   public DestinationSummary execute(
       Long userId,
@@ -39,22 +44,29 @@ public class UpdateDestinationUseCase {
     if (url != null) {
       urlValidator.validateUrl(url.trim());
     }
-    return transaction.execute(
-        status ->
-            update(
-                userId,
-                shortCode,
-                destinationId,
-                url,
-                weight,
-                label,
-                enabled,
-                countryCode,
-                deviceClass,
-                os));
+    Updated updated =
+        transaction.execute(
+            status ->
+                update(
+                    userId,
+                    shortCode,
+                    destinationId,
+                    url,
+                    weight,
+                    label,
+                    enabled,
+                    countryCode,
+                    deviceClass,
+                    os));
+    Map<String, Object> metadata =
+        AddressChange.between(updated.previousUrl(), updated.destination().url());
+    metadata.put("destinationId", updated.destination().id());
+    auditLogService.record(
+        AuditAction.LINK_DESTINATION_UPDATED, "link", shortCode.value(), userId, metadata);
+    return updated.destination();
   }
 
-  private DestinationSummary update(
+  private Updated update(
       Long userId,
       ShortCode shortCode,
       Long destinationId,
@@ -66,6 +78,7 @@ public class UpdateDestinationUseCase {
       String deviceClass,
       String os) {
     LinkDestinationEntity dest = ownership.ownedDestination(userId, shortCode, destinationId);
+    String previousUrl = dest.getUrl();
     Integer clampedWeight = weight == null ? null : DestinationPolicy.clampWeight(weight);
     dest.update(
         url == null ? null : url.trim(),
@@ -76,6 +89,8 @@ public class UpdateDestinationUseCase {
         deviceClass,
         os);
     linkCacheEviction.evictAfterCommit(shortCode);
-    return DestinationSummary.from(dest);
+    return new Updated(DestinationSummary.from(dest), previousUrl);
   }
+
+  private record Updated(DestinationSummary destination, String previousUrl) {}
 }
