@@ -9,6 +9,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.CreateLinkValidator;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -17,6 +19,8 @@ import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -27,8 +31,10 @@ class UpdateDestinationUseCaseTest {
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
   private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final CreateLinkValidator urlValidator = mock(CreateLinkValidator.class);
+  private final AuditLogService audit = mock(AuditLogService.class);
   private final UpdateDestinationUseCase useCase =
-      new UpdateDestinationUseCase(ownership, linkCacheEviction, urlValidator, transaction());
+      new UpdateDestinationUseCase(
+          ownership, linkCacheEviction, urlValidator, transaction(), audit);
 
   private static TransactionTemplate transaction() {
     PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
@@ -62,6 +68,12 @@ class UpdateDestinationUseCaseTest {
 
     assertThat(d.getUrl()).isEqualTo("https://new.example.com");
     verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc"));
+    Map<String, Object> hosts = new HashMap<>();
+    hosts.put("urlChanged", true);
+    hosts.put("fromHost", "old.example.com");
+    hosts.put("toHost", "new.example.com");
+    hosts.put("destinationId", null);
+    verify(audit).record(AuditAction.LINK_DESTINATION_UPDATED, "link", "abc", 7L, hosts);
   }
 
   @Test
@@ -100,6 +112,10 @@ class UpdateDestinationUseCaseTest {
     useCase.execute(7L, new ShortCode("abc"), 99L, null, null, null, false, null, null, null);
 
     assertThat(d.isEnabled()).isFalse();
+    Map<String, Object> unchanged = new HashMap<>();
+    unchanged.put("urlChanged", false);
+    unchanged.put("destinationId", null);
+    verify(audit).record(AuditAction.LINK_DESTINATION_UPDATED, "link", "abc", 7L, unchanged);
   }
 
   @Test

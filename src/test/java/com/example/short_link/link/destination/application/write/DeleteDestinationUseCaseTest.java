@@ -4,11 +4,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class DeleteDestinationUseCaseTest {
@@ -16,8 +20,9 @@ class DeleteDestinationUseCaseTest {
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
   private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
+  private final AuditLogService audit = mock(AuditLogService.class);
   private final DeleteDestinationUseCase useCase =
-      new DeleteDestinationUseCase(ownership, repository, linkCacheEviction);
+      new DeleteDestinationUseCase(ownership, repository, linkCacheEviction, audit);
 
   @Test
   void executeDeletesOwnedDestination() {
@@ -28,5 +33,10 @@ class DeleteDestinationUseCaseTest {
     useCase.execute(42L, new ShortCode("abc1234"), 99L);
 
     verify(repository).delete(dest);
+    Map<String, Object> removed = new HashMap<>();
+    removed.put("urlChanged", true);
+    removed.put("fromHost", "dest.com");
+    removed.put("destinationId", null);
+    verify(audit).record(AuditAction.LINK_DESTINATION_DELETED, "link", "abc1234", 42L, removed);
   }
 }

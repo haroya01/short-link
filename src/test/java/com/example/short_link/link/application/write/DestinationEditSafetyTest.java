@@ -61,6 +61,7 @@ class DestinationEditSafetyTest {
   @AfterEach
   void deleteCommittedRows() {
     for (Long userId : createdUsers) {
+      jdbc.update("DELETE FROM audit_log WHERE actor_user_id = ?", userId);
       jdbc.update("DELETE FROM link WHERE user_id = ?", userId);
       jdbc.update("DELETE FROM users WHERE id = ?", userId);
     }
