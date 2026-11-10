@@ -6,7 +6,6 @@ import java.util.Base64;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -49,7 +48,7 @@ public class OperatorMarkerStore {
     }
     try {
       return Boolean.TRUE.equals(redis.hasKey(KEY_PREFIX + id));
-    } catch (DataAccessException e) {
+    } catch (RuntimeException e) {
       log.warn("operator marker lookup failed, counting the visit as a person's: {}", e.toString());
       return false;
     }

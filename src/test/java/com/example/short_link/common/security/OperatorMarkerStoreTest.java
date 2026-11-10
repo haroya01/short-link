@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.connection.PoolException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -93,6 +94,13 @@ class OperatorMarkerStoreTest {
   @Test
   void aRedisThatFailsMakesTheMarkerNotValidInsteadOfFailingTheVisit() {
     when(redis.hasKey(anyString())).thenThrow(new RedisConnectionFailureException("redis is away"));
+
+    assertThat(store.isValid(ID)).isFalse();
+  }
+
+  @Test
+  void aConnectionPoolThatFailsMakesTheMarkerNotValidInsteadOfFailingTheVisit() {
+    when(redis.hasKey(anyString())).thenThrow(new PoolException("no connection to borrow"));
 
     assertThat(store.isValid(ID)).isFalse();
   }
