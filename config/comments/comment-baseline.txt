@@ -46,6 +46,7 @@ src/main/java/com/example/short_link/common/config/AsyncConfig.java=3
 src/main/java/com/example/short_link/common/config/ProdConfigGuard.java=4
 src/main/java/com/example/short_link/common/config/SafeBrowsingConfig.java=3
 src/main/java/com/example/short_link/common/counter/RedisWindowCounter.java=2
+src/main/java/com/example/short_link/common/crypto/DigestedBcrypt.java=2
 src/main/java/com/example/short_link/common/crypto/SecretCipher.java=4
 src/main/java/com/example/short_link/common/csv/CsvCells.java=2
 src/main/java/com/example/short_link/common/csv/CsvRows.java=2
@@ -451,7 +452,6 @@ src/main/java/com/example/short_link/portability/presentation/request/StartImpor
 src/main/java/com/example/short_link/post/application/access/PostAccessPolicy.java=5
 src/main/java/com/example/short_link/post/application/access/PostGrants.java=2
 src/main/java/com/example/short_link/post/application/access/PostPasswordAttempts.java=1
-src/main/java/com/example/short_link/post/application/access/PostPasswords.java=2
 src/main/java/com/example/short_link/post/application/read/CommentView.java=1
 src/main/java/com/example/short_link/post/application/read/FollowedTopics.java=2
 src/main/java/com/example/short_link/post/application/read/PostCommentQueryService.java=1
