@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,6 +31,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 // Not @Transactional: the test asks whether a transaction is open while storage is called.
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class UserImagesOutsideTransactionIntegrationTest {
 
   @MockitoBean private ObjectStorage storage;

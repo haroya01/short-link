@@ -2,6 +2,7 @@ package com.example.short_link.link.classifier.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(properties = "short-link.bot-heuristic.rate-threshold=3")
+@Tag("integration")
 class BotHeuristicTest {
 
   @Autowired private BotHeuristic heuristic;

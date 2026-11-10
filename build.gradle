@@ -491,6 +491,113 @@ pitest {
 	mutationThreshold = 90
 }
 
+def coreMutationModules = [
+	link        : ['link'],
+	user        : ['user'],
+	campaign    : ['campaign'],
+	cta         : ['cta'],
+	customdomain: ['customdomain'],
+	analytics   : ['analytics'],
+	abuse       : ['abuse'],
+	common      : ['analytics', 'audit', 'cache', 'counter', 'crypto', 'csv', 'geoip', 'image', 'link', 'lock', 'net',
+	               'notification', 'observability', 'page', 'pow', 'security', 'storage', 'time', 'transaction', 'user',
+	               'web', 'webhook'].collect { "common.${it}" },
+].collectEntries { module, packages -> [(module): packages.collect { "com.example.short_link.${it}".toString() }] }
+
+def coreMutationScope = providers.gradleProperty('mutationScope').orNull == 'core'
+def mutationFloors = file('config/mutation/floors.txt')
+
+if (coreMutationScope) {
+	pitest {
+		targetClasses = coreMutationModules.values().flatten().collect { "${it}.*".toString() }
+		targetTests = coreMutationModules.values().flatten().collect { "${it}.*".toString() }
+		excludedClasses = [
+			'*.presentation.request.*',
+			'*.presentation.response.*',
+			'*.application.dto.*',
+			'*.application.write.*Command',
+			'*.application.write.*Command$*',
+			'*.application.read.*View',
+			'*.application.read.*View$*',
+			'*.application.properties.*',
+			'*Properties',
+			'*Properties$*',
+			'*.exception.*',
+			'*Controller',
+			'*Controller$*',
+			'*ExceptionHandler',
+			'*ExceptionHandler$*',
+			'*.infrastructure.*',
+			'*.domain.repository.*',
+			'*.domain.projection.*',
+			'*JpaRepository*',
+			'*JpaReader*',
+			'*Config',
+			'*Config$*',
+			'*Configuration',
+			'*Configuration$*',
+			'*.config.*',
+			'com.example.short_link.common.storage.s3.*',
+			'com.example.short_link.common.geoip.maxmind.*',
+		]
+		excludedTestClasses = []
+		excludedGroups = ['integration']
+		mutationThreshold = 0
+		mainProcessJvmArgs = ['-Xmx3g']
+		reportDir = file('build/reports/pitest-core')
+	}
+	tasks.named('pitest') {
+		finalizedBy 'verifyMutationFloors'
+	}
+}
+
+tasks.register('verifyMutationFloors') {
+	group = 'verification'
+	description = 'Fail when a core module\'s mutation test strength falls below config/mutation/floors.txt. Run ./gradlew pitest -PmutationScope=core.'
+	mustRunAfter 'pitest'
+	onlyIf { tasks.pitest.state.failure == null }
+	inputs.file(mutationFloors)
+	doLast {
+		if (!coreMutationScope || !gradle.taskGraph.hasTask(tasks.pitest)) {
+			throw new GradleException('Run ./gradlew pitest -PmutationScope=core so the floors are checked against the code just mutated.')
+		}
+		def counts = coreMutationModules.collectEntries { module, packages -> [(module): [mutants: 0, detected: 0, uncovered: 0]] }
+		new groovy.xml.XmlSlurper().parse(file('build/reports/pitest-core/mutations.xml')).mutation.each { m ->
+			def mutated = m.mutatedClass.text()
+			def module = coreMutationModules.find { k, packages -> packages.any { mutated.startsWith(it + '.') } }.key
+			counts[module].mutants++
+			if (m.@detected.text() == 'true') counts[module].detected++
+			if (m.@status.text() == 'NO_COVERAGE') counts[module].uncovered++
+		}
+		def floors = [:]
+		mutationFloors.eachLine { line ->
+			if (line.contains('=') && !line.startsWith('#')) {
+				def cut = line.indexOf('=')
+				floors[line.substring(0, cut).trim()] = line.substring(cut + 1).trim() as int
+			}
+		}
+		if (floors.keySet() != counts.keySet()) {
+			throw new GradleException("config/mutation/floors.txt must have one floor for each of: ${counts.keySet().join(', ')}")
+		}
+		def below = []
+		logger.lifecycle('Mutation test strength by core module (detected / covered mutants):')
+		counts.each { module, c ->
+			def covered = c.mutants - c.uncovered
+			def strength = covered ? 100.0 * c.detected / covered : 0.0
+			def score = c.mutants ? 100.0 * c.detected / c.mutants : 0.0
+			def floor = floors[module]
+			def note = strength < floor ? '  BELOW FLOOR' : (Math.floor(strength) > floor ? "  floor may rise to ${(int) Math.floor(strength)}" : '')
+			logger.lifecycle(String.format('  %-13s mutants %5d  detected %5d  survived %4d  no coverage %4d  score %5.1f  strength %5.1f  floor %3d%s',
+					module, c.mutants, c.detected, covered - c.detected, c.uncovered, score, strength, floor, note))
+			if (strength < floor) below << String.format('  %s: strength %.1f < floor %d', module, strength, floor)
+		}
+		if (below) {
+			throw new GradleException('Mutation test strength fell below the floor:\n' + below.join('\n')
+					+ '\nKill the surviving mutants (build/reports/pitest-core/index.html). If a survivor cannot be killed because the mutant behaves exactly like the original, lower that floor in config/mutation/floors.txt and add a line to config/ratchet/raises.txt: YYYY-MM-DD | mutation:<module> | <old> -> <new> | <why>')
+		}
+	}
+}
+
 tasks.register('downloadGeoLite2Asn') {
 	description = 'Download MaxMind GeoLite2-ASN mmdb into src/main/resources/geoip'
 	group = 'build setup'

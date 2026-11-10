@@ -12,6 +12,7 @@ import com.example.short_link.customdomain.domain.repository.CustomDomainReposit
 import com.example.short_link.customdomain.exception.CustomDomainException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Tag("integration")
 class CustomDomainServiceExtendedTest {
 
   @Autowired private RegisterCustomDomainUseCase register;

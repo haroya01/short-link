@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class DestinationEditSafetyTest {
   private static final String PHISH = "https://phish.example.com/login";
 
