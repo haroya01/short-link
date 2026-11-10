@@ -1,6 +1,7 @@
 package com.example.short_link.link.infrastructure.persistence;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.MyLinksSearchCriteria;
@@ -174,8 +175,8 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
-  public int incrementViewCountIfBelowLimit(Long linkId) {
-    return jpa.incrementViewCountIfBelowLimit(linkId);
+  public boolean spendView(LinkId linkId) {
+    return jpa.spendViewWithinLimit(linkId.value()) == 1;
   }
 
   @Override

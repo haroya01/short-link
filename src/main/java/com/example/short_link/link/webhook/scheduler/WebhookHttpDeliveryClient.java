@@ -27,7 +27,7 @@ class WebhookHttpDeliveryClient {
   private final LinkWebhookRepository repository;
   private final TransactionTemplate transaction;
 
-  void deliver(LinkWebhookEntity hook, WebhookNotification notification) {
+  WebhookSender.Result deliver(LinkWebhookEntity hook, WebhookNotification notification) {
     String body =
         jsonMapper.writeValueAsString(WebhookPayloadAdapter.build(hook.getFormat(), notification));
     String eventType = notification.eventType();
@@ -72,6 +72,7 @@ class WebhookHttpDeliveryClient {
     }
     transaction.executeWithoutResult(
         status -> repository.findById(hook.getId()).ifPresent(current -> record(current, result)));
+    return result;
   }
 
   private static void record(LinkWebhookEntity hook, WebhookSender.Result result) {

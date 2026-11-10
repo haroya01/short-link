@@ -16,6 +16,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.health.domain.repository.LinkDestinationHealthRepository;
 import com.example.short_link.link.moderation.domain.repository.LinkModerationRepository;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
+import com.example.short_link.support.TestEntities;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class LinkDetailServiceTest {
   void detailReturnsResponseForViewer() {
     LinkEntity link = new LinkEntity("https://example.com", "abc", 7L, null);
     link.setMaxViews(10);
-    link.incrementViewCount();
+    TestEntities.setField(link, "viewCount", 1);
     link.changeStatsVisibility(true);
     link.updateNote("note");
     link.updateExpiredMessage("expired");
