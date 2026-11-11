@@ -8,6 +8,7 @@ public record AdminLinkRow(
     Long ownerId,
     String ownerEmail,
     long clickCount,
+    long humanClickCount,
     boolean passwordProtected,
     Integer maxViews,
     int viewCount,
