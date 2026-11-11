@@ -49,6 +49,8 @@ public interface AdminBrowseRepository {
 
     Long getClickCount();
 
+    Long getHumanClickCount();
+
     Instant getCreatedAt();
 
     Instant getExpiresAt();

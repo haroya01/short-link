@@ -4172,6 +4172,7 @@
       "disabledAt" : "string(date-time)",
       "disabledReason" : "string",
       "expiresAt" : "string(date-time)",
+      "humanClickCount" : "integer(int64)",
       "maxViews" : "integer(int32)",
       "originalUrl" : "string",
       "ownerEmail" : "string",

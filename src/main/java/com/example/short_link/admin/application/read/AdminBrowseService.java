@@ -85,6 +85,7 @@ public class AdminBrowseService {
         r.getOwnerId(),
         r.getOwnerEmail(),
         r.getClickCount(),
+        r.getHumanClickCount(),
         r.getPasswordProtected() != null && r.getPasswordProtected() > 0,
         r.getMaxViews(),
         r.getViewCount(),
