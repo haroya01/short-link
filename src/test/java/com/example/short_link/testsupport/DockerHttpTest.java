@@ -29,6 +29,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @Isolated("Each HTTP test class owns its database, Redis state, and query captures")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Tag("integration")
+@Tag("docker-http")
 public abstract class DockerHttpTest {
 
   @Autowired
