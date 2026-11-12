@@ -25,7 +25,9 @@ public class MdcFilter extends OncePerRequestFilter {
 
   // A client may pass its own correlation id, but only a safe token — else a crafted value forges
   // log lines (embedded newlines/control chars) or poisons the reflected response header.
-  private static final Pattern SAFE_REQUEST_ID = Pattern.compile("[0-9A-Za-z-]{1,64}");
+  static final int MAX_REQUEST_ID_LENGTH = 40;
+  private static final Pattern SAFE_REQUEST_ID =
+      Pattern.compile("[0-9A-Za-z-]{1," + MAX_REQUEST_ID_LENGTH + "}");
 
   @Override
   protected void doFilterInternal(

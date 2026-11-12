@@ -47,7 +47,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/federation/infrastruct
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/scheduler/RelayWorker.java|outcome(Announced)#1=22
 CyclomaticComplexity|src/main/java/com/example/short_link/link/access/presentation/PasswordUnlockController.java|unlock(ShortCode, String, String, String, String, String, String, HttpServletRequest)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/dto/MyLinksCursor.java|decode(String)#1=14
-CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|execute(CreateLinkCommand, CheckedDestination)#1=13
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/CreateLinkUseCase.java|persist(String, Long, String, boolean, Instant, boolean, boolean, String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/link/application/write/ImportLinksFromCsvUseCase.java|execute(ImportLinksFromCsvCommand)#1=11
 CyclomaticComplexity|src/main/java/com/example/short_link/link/classifier/application/UserAgentClassifier.java|mapDevice(String)#1=12

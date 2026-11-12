@@ -1,10 +1,13 @@
 package com.example.short_link.common.audit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.support.FakeTransactions;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -52,6 +55,24 @@ class AuditLogServiceFailureTest {
                 e ->
                     e == null
                         || (e != null && e.getMetadata() != null && !e.getMetadata().isEmpty())));
+  }
+
+  @Test
+  void insideATransactionARepositoryFailureReachesTheCallerInsteadOfBeingSwallowed() {
+    AuditLogJpaRepository repo = Mockito.mock(AuditLogJpaRepository.class);
+    SimpleMeterRegistry meters = new SimpleMeterRegistry();
+    AuditLogService service = new AuditLogService(repo, meters);
+    when(repo.save(any(AuditLogEntity.class))).thenThrow(new IllegalStateException("db down"));
+
+    assertThatThrownBy(
+            () ->
+                FakeTransactions.template()
+                    .executeWithoutResult(
+                        status -> service.record(AuditAction.LINK_DELETED, "LINK", "abc1234", 42L)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("db down");
+    assertThat(meters.counter("audit.failed", "action", AuditAction.LINK_DELETED.name()).count())
+        .isZero();
   }
 
   private static void assertCountAtLeastOne(

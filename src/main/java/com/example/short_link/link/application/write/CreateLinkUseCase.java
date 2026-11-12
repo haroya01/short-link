@@ -113,7 +113,6 @@ public class CreateLinkUseCase {
     if (!destination.isFor(command)) {
       throw new IllegalArgumentException("the destination was checked for another link");
     }
-    String url = command.url();
     boolean authenticated = command.userId() != null;
     String code = authenticated ? command.customCode() : null;
     Instant expiresAt = authenticated ? command.expiresAt() : Instant.now().plus(ANONYMOUS_TTL);
@@ -122,7 +121,21 @@ public class CreateLinkUseCase {
     // bcrypt 는 수십 ms 가 걸려서 커넥션을 잡기 전에 끝낸다.
     String passwordHash = passwordHashFor(command, authenticated);
 
-    // 실패한 INSERT 는 트랜잭션을 rollback-only 로 만들어서 코드마다 트랜잭션을 따로 연다.
+    Persisted persisted = persistUnderAFreeCode(command, code, expiresAt, passwordHash);
+    if (persisted.isNew()) {
+      auditLogService.record(
+          AuditAction.LINK_CREATED,
+          "link",
+          persisted.link().shortCode().value(),
+          command.userId(),
+          Map.of("custom", code != null));
+    }
+    return persisted.link();
+  }
+
+  // 실패한 INSERT 는 트랜잭션을 rollback-only 로 만들어서 코드마다 트랜잭션을 따로 연다.
+  private Persisted persistUnderAFreeCode(
+      CreateLinkCommand command, String code, Instant expiresAt, String passwordHash) {
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
       String candidate = code != null ? code : generator.generate();
       if (code == null && ReservedShortCodes.isReserved(candidate)) {
@@ -132,13 +145,13 @@ public class CreateLinkUseCase {
         return tx.execute(
             status ->
                 persist(
-                    url,
+                    command.url(),
                     command.userId(),
                     candidate,
                     code != null,
                     expiresAt,
                     command.deduplicate(),
-                    authenticated,
+                    command.userId() != null,
                     passwordHash));
       } catch (DataIntegrityViolationException collision) {
         if (code != null) {
@@ -149,6 +162,8 @@ public class CreateLinkUseCase {
     throw new LinkException(LinkErrorCode.SHORT_CODE_EXHAUSTED);
   }
 
+  private record Persisted(LinkCreated link, boolean isNew) {}
+
   private String passwordHashFor(CreateLinkCommand command, boolean authenticated) {
     String password = command.password();
     if (!authenticated || password == null || password.isBlank()) {
@@ -157,7 +172,7 @@ public class CreateLinkUseCase {
     return passwordEncoder.encode(password);
   }
 
-  private LinkCreated persist(
+  private Persisted persist(
       String url,
       Long userId,
       String code,
@@ -172,7 +187,7 @@ public class CreateLinkUseCase {
       if (existing.isPresent()) {
         LinkEntity link = existing.get();
         recordCreated(true, false, "deduplicated");
-        return new LinkCreated(link.getShortCode(), null, link.hasPassword());
+        return new Persisted(new LinkCreated(link.getShortCode(), null, link.hasPassword()), false);
       }
     }
 
@@ -186,8 +201,9 @@ public class CreateLinkUseCase {
 
     LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated, passwordHash);
     recordCreated(authenticated, custom, "ok");
-    publishCreated(saved, userId, custom);
-    return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
+    events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), saved.getOriginalUrl()));
+    return new Persisted(
+        new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword()), true);
   }
 
   private Optional<LinkEntity> reusableLink(Long userId, String url) {
@@ -209,16 +225,6 @@ public class CreateLinkUseCase {
     entity.setPasswordHash(passwordHash);
     LinkEntity saved = repository.save(entity);
     return saved;
-  }
-
-  private void publishCreated(LinkEntity saved, Long userId, boolean custom) {
-    events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), saved.getOriginalUrl()));
-    auditLogService.record(
-        AuditAction.LINK_CREATED,
-        "link",
-        saved.getShortCode().value(),
-        userId,
-        Map.of("custom", custom));
   }
 
   private static void attachClaimTokenIfAnonymous(LinkEntity entity, boolean authenticated) {
