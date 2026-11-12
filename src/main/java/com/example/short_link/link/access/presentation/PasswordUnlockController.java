@@ -1,6 +1,5 @@
 package com.example.short_link.link.access.presentation;
 
-import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.common.user.OpenToSuspended;
@@ -19,7 +18,6 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -104,12 +102,6 @@ public class PasswordUnlockController {
     } finally {
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
-  }
-
-  @ExceptionHandler(GuardUnavailableException.class)
-  public ResponseEntity<byte[]> unavailable(HttpServletRequest req) {
-    req.setAttribute(OutcomeResolver.ATTRIBUTE, "unavailable");
-    return html.unavailablePageResponse(VisitorLocale.resolve(req.getHeader("Accept-Language")));
   }
 
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {
