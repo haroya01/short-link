@@ -7,8 +7,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 // Queues metrics without a database write on the request thread. Overflow is dropped and counted to
 // bound memory during bursts or outages; each flush drains at most MAX_BATCH_PER_FLUSH rows.
@@ -38,7 +36,6 @@ public class RequestMetricsRecorder {
   }
 
   @Scheduled(fixedDelay = 1000)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void flush() {
     List<RequestMetricEntity> batch = new ArrayList<>(MAX_BATCH_PER_FLUSH);
     RequestMetric next;

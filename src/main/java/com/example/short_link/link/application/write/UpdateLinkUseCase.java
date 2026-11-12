@@ -33,10 +33,17 @@ public class UpdateLinkUseCase {
     if (command.originalUrl() != null) {
       validator.validateUrl(command.originalUrl());
     }
-    return transaction.execute(status -> apply(command));
+    Updated updated = transaction.execute(status -> apply(command));
+    auditLogService.record(
+        AuditAction.LINK_UPDATED,
+        "link",
+        command.shortCode().value(),
+        command.userId(),
+        updated.audit());
+    return updated.link();
   }
 
-  private MyLink apply(UpdateLinkCommand command) {
+  private Updated apply(UpdateLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     String previousUrl = link.getOriginalUrl();
     boolean urlChanged = false;
@@ -57,9 +64,9 @@ public class UpdateLinkUseCase {
     }
     Map<String, Object> metadata = AddressChange.between(previousUrl, link.getOriginalUrl());
     metadata.put("expiresAtChanged", command.expiresAt() != null || command.clearExpiresAt());
-    auditLogService.record(
-        AuditAction.LINK_UPDATED, "link", link.getShortCode().value(), command.userId(), metadata);
     linkCacheEviction.evictAfterCommit(link);
-    return linkReader.read(link);
+    return new Updated(linkReader.read(link), metadata);
   }
+
+  private record Updated(MyLink link, Map<String, Object> audit) {}
 }
