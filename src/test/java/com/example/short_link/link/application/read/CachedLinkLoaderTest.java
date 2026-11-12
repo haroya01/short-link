@@ -39,9 +39,6 @@ class CachedLinkLoaderTest {
                     42L,
                     "https://control.example",
                     expiresAt,
-                    "title",
-                    "desc",
-                    "https://img.example/og.png",
                     "KR,JP",
                     true,
                     10,
@@ -61,7 +58,6 @@ class CachedLinkLoaderTest {
     assertThat(cached.userId()).isEqualTo(42L);
     assertThat(cached.originalUrl()).isEqualTo("https://control.example");
     assertThat(cached.expiresAt()).isEqualTo(expiresAt);
-    assertThat(cached.ogTitle()).isEqualTo("title");
     assertThat(cached.blockedCountries()).isEqualTo("KR,JP");
     assertThat(cached.passwordRequired()).isTrue();
     assertThat(cached.maxViews()).isEqualTo(10);
@@ -82,9 +78,6 @@ class CachedLinkLoaderTest {
       Long userId,
       String originalUrl,
       Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
       String blockedCountries,
       Boolean passwordRequired,
       Integer maxViews,
@@ -115,21 +108,6 @@ class CachedLinkLoaderTest {
       @Override
       public Instant getExpiresAt() {
         return expiresAt;
-      }
-
-      @Override
-      public String getOgTitle() {
-        return ogTitle;
-      }
-
-      @Override
-      public String getOgDescription() {
-        return ogDescription;
-      }
-
-      @Override
-      public String getOgImage() {
-        return ogImage;
       }
 
       @Override

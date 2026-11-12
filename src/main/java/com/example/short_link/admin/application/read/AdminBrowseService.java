@@ -30,6 +30,7 @@ public class AdminBrowseService {
 
   private final AdminBrowseRepository repo;
   private final LinkStatsQueryService linkStatsQueryService;
+  private final AdminLinkEvidenceService evidenceService;
 
   @Transactional(readOnly = true)
   public UsersPage users(String q, String role, int page, int size) {
@@ -62,7 +63,8 @@ public class AdminBrowseService {
             .orElseThrow(
                 () -> new AdminException(AdminErrorCode.LINK_NOT_FOUND, shortCode.value()));
     LinkStats stats = linkStatsQueryService.adminStats(shortCode);
-    return new AdminLinkDetail(toLinkRow(row, Instant.now()), stats);
+    return new AdminLinkDetail(
+        toLinkRow(row, Instant.now()), stats, evidenceService.evidence(shortCode).orElse(null));
   }
 
   private static AdminUserRow toUserRow(UserRow r) {
@@ -83,6 +85,7 @@ public class AdminBrowseService {
         r.getOwnerId(),
         r.getOwnerEmail(),
         r.getClickCount(),
+        r.getHumanClickCount(),
         r.getPasswordProtected() != null && r.getPasswordProtected() > 0,
         r.getMaxViews(),
         r.getViewCount(),

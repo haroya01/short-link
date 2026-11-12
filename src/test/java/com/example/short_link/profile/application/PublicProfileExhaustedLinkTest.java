@@ -2,8 +2,7 @@ package com.example.short_link.profile.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.application.write.IncrementViewCountCommand;
-import com.example.short_link.link.application.write.IncrementViewCountUseCase;
+import com.example.short_link.link.application.write.SpendViewUseCase;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.read.ProfileQueryService;
@@ -13,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,9 +22,10 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class PublicProfileExhaustedLinkTest {
   @Autowired private ProfileQueryService profiles;
-  @Autowired private IncrementViewCountUseCase incrementViewCount;
+  @Autowired private SpendViewUseCase views;
   @Autowired private CacheManager cacheManager;
   @Autowired private UserRepository users;
   @Autowired private LinkRepository links;
@@ -49,8 +50,8 @@ class PublicProfileExhaustedLinkTest {
     assertThat(shownCodes(owner)).containsExactly(code(once), code(twice), code(open));
     awaitCached(owner);
 
-    incrementViewCount.execute(new IncrementViewCountCommand(once.linkId()));
-    incrementViewCount.execute(new IncrementViewCountCommand(twice.linkId()));
+    views.spend(once.linkId());
+    views.spend(twice.linkId());
 
     assertThat(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME).get(owner.getUsername()))
         .isNotNull();

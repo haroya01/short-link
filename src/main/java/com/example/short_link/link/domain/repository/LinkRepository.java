@@ -1,6 +1,7 @@
 package com.example.short_link.link.domain.repository;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.Collection;
@@ -74,12 +75,14 @@ public interface LinkRepository {
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 
-  int incrementViewCountIfBelowLimit(Long linkId);
+  boolean spendView(LinkId linkId);
 
   void recordOgFetched(
       Long linkId, String title, String description, String image, Instant fetchedAt);
 
   void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry);
+
+  void restartOgFetch(Long linkId);
 
   int deleteByUserId(Long userId);
 
@@ -110,12 +113,6 @@ public interface LinkRepository {
     String getOriginalUrl();
 
     Instant getExpiresAt();
-
-    String getOgTitle();
-
-    String getOgDescription();
-
-    String getOgImage();
 
     String getBlockedCountries();
 

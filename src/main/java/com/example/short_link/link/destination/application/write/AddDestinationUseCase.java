@@ -1,5 +1,8 @@
 package com.example.short_link.link.destination.application.write;
 
+import com.example.short_link.common.audit.AddressChange;
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.CreateLinkValidator;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
@@ -11,6 +14,7 @@ import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,6 +33,7 @@ public class AddDestinationUseCase {
   private final LinkCacheEviction linkCacheEviction;
   private final CreateLinkValidator urlValidator;
   private final TransactionTemplate transaction;
+  private final AuditLogService auditLogService;
 
   public DestinationSummary execute(
       Long userId,
@@ -44,8 +49,15 @@ public class AddDestinationUseCase {
     }
     // Safe Browsing HTTP calls stay outside the transaction to avoid holding a JDBC connection.
     urlValidator.validateUrl(url.trim());
-    return transaction.execute(
-        status -> add(userId, shortCode, url.trim(), weight, label, countryCode, deviceClass, os));
+    DestinationSummary added =
+        transaction.execute(
+            status ->
+                add(userId, shortCode, url.trim(), weight, label, countryCode, deviceClass, os));
+    Map<String, Object> metadata = AddressChange.between(null, added.url());
+    metadata.put("destinationId", added.id());
+    auditLogService.record(
+        AuditAction.LINK_DESTINATION_ADDED, "link", shortCode.value(), userId, metadata);
+    return added;
   }
 
   private DestinationSummary add(

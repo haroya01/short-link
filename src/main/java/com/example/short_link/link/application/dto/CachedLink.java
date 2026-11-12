@@ -3,21 +3,20 @@ package com.example.short_link.link.application.dto;
 import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record CachedLink(
     LinkId linkId,
     ShortCode shortCode,
     Long userId,
     String originalUrl,
     Instant expiresAt,
-    String ogTitle,
-    String ogDescription,
-    String ogImage,
     String blockedCountries,
     boolean passwordRequired,
     Integer maxViews,

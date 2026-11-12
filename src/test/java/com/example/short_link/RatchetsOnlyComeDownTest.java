@@ -21,10 +21,14 @@ import org.junit.jupiter.api.Test;
 // ceilings, PMD size findings summed per rule, and // comment lines. A total that rises between the
 // base revision and this tree needs a line added to config/ratchet/raises.txt in the same change,
 // "YYYY-MM-DD | <metric> | <old> -> <new> | <reason>", and the ledger only grows. A metric the base
-// does not have is a newly introduced ratchet and needs no line.
+// does not have is a newly introduced ratchet and needs no line. Mutation strength floors per core
+// module (config/mutation/floors.txt) go the other way: a floor that falls or is removed needs the
+// same line.
 class RatchetsOnlyComeDownTest {
 
   static final String LEDGER = "config/ratchet/raises.txt";
+
+  private static final String FLOORS = "config/mutation/floors.txt";
 
   private static final String STORE = "src/test/resources/archunit_store";
   private static final String TESTS = "src/test/java/com/example/short_link/";
@@ -63,9 +67,10 @@ class RatchetsOnlyComeDownTest {
 
     List<String> baseLedger = ledgerLines(before.apply(LEDGER));
     List<String> headLedger = ledgerLines(after.apply(LEDGER));
+    List<String> added = added(baseLedger, headLedger);
     List<String> problems = new ArrayList<>(ledgerEdits(baseLedger, headLedger));
-    problems.addAll(
-        unexplainedRaises(totals(before), totals(after), added(baseLedger, headLedger)));
+    problems.addAll(unexplainedRaises(totals(before), totals(after), added));
+    problems.addAll(unexplainedFalls(floors(before), floors(after), added));
 
     assertThat(problems).as("Ratchets compared with %s", base.get()).isEmpty();
   }
@@ -103,6 +108,47 @@ class RatchetsOnlyComeDownTest {
             "comments", 1500L, "archunit:moduleBoundaries", 6L, "pmd:AvoidDeeplyNestedIfStmts", 9L);
 
     assertThat(unexplainedRaises(base, head, List.of())).isEmpty();
+  }
+
+  @Test
+  void aFloorThatFallsOrIsRemovedNeedsALedgerLineWithItsExactNumbers() {
+    Map<String, Long> base = Map.of("mutation:link", 89L, "mutation:cta", 100L);
+    Map<String, Long> lowered = Map.of("mutation:link", 88L, "mutation:cta", 100L);
+    String reason = "남은 생존 변이는 경계 비교가 같은 값을 돌려주는 등가 변이다";
+
+    assertThat(unexplainedFalls(base, lowered, List.of())).hasSize(1);
+    assertThat(
+            unexplainedFalls(
+                base, lowered, List.of("2026-11-09 | mutation:link | 89 -> 88 | " + reason)))
+        .isEmpty();
+    assertThat(
+            unexplainedFalls(
+                base, lowered, List.of("2026-11-09 | mutation:link | 90 -> 88 | " + reason)))
+        .hasSize(1);
+    assertThat(unexplainedFalls(base, Map.of("mutation:link", 89L), List.of())).hasSize(1);
+    assertThat(
+            unexplainedFalls(
+                base,
+                Map.of("mutation:link", 89L),
+                List.of("2026-11-09 | mutation:cta | 100 -> 0 | " + reason)))
+        .isEmpty();
+  }
+
+  @Test
+  void aFloorThatRisesStaysOrIsNewNeedsNoLine() {
+    Map<String, Long> base = Map.of("mutation:link", 89L);
+    Map<String, Long> head = Map.of("mutation:link", 91L, "mutation:cta", 100L);
+
+    assertThat(unexplainedFalls(base, head, List.of())).isEmpty();
+    assertThat(unexplainedFalls(base, base, List.of())).isEmpty();
+  }
+
+  @Test
+  void floorsReadEveryModuleLine() {
+    Map<String, String> files = Map.of(FLOORS, "# 하한\nlink=89\ncta = 100\n");
+
+    assertThat(floors(path -> Optional.ofNullable(files.get(path))))
+        .containsExactlyInAnyOrderEntriesOf(Map.of("mutation:link", 89L, "mutation:cta", 100L));
   }
 
   @Test
@@ -187,6 +233,21 @@ class RatchetsOnlyComeDownTest {
     return totals;
   }
 
+  static Map<String, Long> floors(Function<String, Optional<String>> read) {
+    Map<String, Long> floors = new LinkedHashMap<>();
+    read.apply(FLOORS)
+        .ifPresent(
+            text ->
+                text.lines()
+                    .filter(line -> line.contains("=") && !line.startsWith("#"))
+                    .forEach(
+                        line ->
+                            floors.put(
+                                "mutation:" + line.substring(0, line.indexOf('=')).strip(),
+                                Long.parseLong(line.substring(line.indexOf('=') + 1).strip()))));
+    return floors;
+  }
+
   static List<String> unexplainedRaises(
       Map<String, Long> base, Map<String, Long> head, List<String> addedLedgerLines) {
     List<String> problems = new ArrayList<>();
@@ -196,17 +257,7 @@ class RatchetsOnlyComeDownTest {
           if (before == null || now <= before) {
             return;
           }
-          boolean recorded =
-              addedLedgerLines.stream()
-                  .map(LEDGER_LINE::matcher)
-                  .filter(Matcher::matches)
-                  .anyMatch(
-                      m ->
-                          m.group(1).equals(metric)
-                              && Long.parseLong(m.group(2)) == before
-                              && Long.parseLong(m.group(3)) == now
-                              && m.group(4).length() >= SHORTEST_REASON);
-          if (!recorded) {
+          if (!recorded(addedLedgerLines, metric, before, now)) {
             problems.add(
                 String.format(
                     "%s rose %d -> %d. If it must, add to %s: YYYY-MM-DD | %s | %d -> %d | <why>",
@@ -214,6 +265,38 @@ class RatchetsOnlyComeDownTest {
           }
         });
     return problems;
+  }
+
+  static List<String> unexplainedFalls(
+      Map<String, Long> base, Map<String, Long> head, List<String> addedLedgerLines) {
+    List<String> problems = new ArrayList<>();
+    base.forEach(
+        (metric, before) -> {
+          long now = head.getOrDefault(metric, 0L);
+          if (now >= before) {
+            return;
+          }
+          if (!recorded(addedLedgerLines, metric, before, now)) {
+            problems.add(
+                String.format(
+                    "%s fell %d -> %d. If it must, add to %s: YYYY-MM-DD | %s | %d -> %d | <why>",
+                    metric, before, now, LEDGER, metric, before, now));
+          }
+        });
+    return problems;
+  }
+
+  private static boolean recorded(
+      List<String> addedLedgerLines, String metric, long before, long now) {
+    return addedLedgerLines.stream()
+        .map(LEDGER_LINE::matcher)
+        .filter(Matcher::matches)
+        .anyMatch(
+            m ->
+                m.group(1).equals(metric)
+                    && Long.parseLong(m.group(2)) == before
+                    && Long.parseLong(m.group(3)) == now
+                    && m.group(4).length() >= SHORTEST_REASON);
   }
 
   static List<String> ledgerEdits(List<String> base, List<String> head) {

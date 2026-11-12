@@ -12,6 +12,7 @@ import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
@@ -37,6 +38,7 @@ class OAuth2LoginSuccessHandlerTest {
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
   @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
+  @Mock private OperatorMarkerCookie operatorMarkerCookie;
   @Mock private HttpServletRequest req;
   @Mock private HttpServletResponse res;
 
@@ -49,6 +51,7 @@ class OAuth2LoginSuccessHandlerTest {
             authService,
             refreshCookieWriter,
             challengeCookieWriter,
+            operatorMarkerCookie,
             "http://localhost:3001",
             "kurl://auth");
   }
@@ -60,7 +63,8 @@ class OAuth2LoginSuccessHandlerTest {
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth("u@x.com", "google", "g-1"))
         .thenReturn(
-            new TokenLoginResult.Tokens(new IssuedTokens("access-jwt-value", "refresh-jwt-value")));
+            new TokenLoginResult.Tokens(
+                new IssuedTokens("access-jwt-value", "refresh-jwt-value", false)));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
@@ -76,12 +80,42 @@ class OAuth2LoginSuccessHandlerTest {
         new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-2"), "sub");
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth(any(), any(), any()))
-        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access", "refresh")));
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access", "refresh", false)));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
     verify(res, Mockito.never()).getWriter();
     verify(res, Mockito.never()).setContentType("application/json");
+  }
+
+  @Test
+  void anAdminsWebLoginHandsTheOperatorMarkerCookieTheAdminFlag() throws Exception {
+    when(authService.loginWithOAuth("u@x.com", "google", "g-admin"))
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access", "refresh", true)));
+
+    handler.onAuthenticationSuccess(req, res, googleLogin("g-admin"));
+
+    verify(operatorMarkerCookie).onLogin(req, res, true);
+  }
+
+  @Test
+  void anOrdinaryWebLoginTellsTheOperatorMarkerCookieItIsNotAnAdmin() throws Exception {
+    when(authService.loginWithOAuth("u@x.com", "google", "g-user"))
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access", "refresh", false)));
+
+    handler.onAuthenticationSuccess(req, res, googleLogin("g-user"));
+
+    verify(operatorMarkerCookie).onLogin(req, res, false);
+  }
+
+  @Test
+  void aRefusedLoginLeavesTheOperatorMarkerAlone() throws Exception {
+    when(authService.loginWithOAuth("u@x.com", "google", "g-banned"))
+        .thenThrow(new UserException(UserErrorCode.ACCOUNT_BANNED));
+
+    handler.onAuthenticationSuccess(req, res, googleLogin("g-banned"));
+
+    Mockito.verifyNoInteractions(operatorMarkerCookie);
   }
 
   @Test

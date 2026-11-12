@@ -14,12 +14,14 @@ import java.io.UncheckedIOException;
 import java.sql.Connection;
 import java.sql.SQLTransientConnectionException;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 // 빈 풀에서 30초 기다리지 않고 바로 실패하는지, 커넥션을 오래 쥔 호출의 스택이 로그에 남는지 확인한다.
 // 풀을 비운 원인 쿼리를 재현하는 테스트는 아니다.
+@Tag("integration")
 class DataSourcePoolHardeningTest {
 
   @Test

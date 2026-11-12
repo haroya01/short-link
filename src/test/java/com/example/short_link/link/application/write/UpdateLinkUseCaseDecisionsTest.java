@@ -16,6 +16,7 @@ import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.read.MyLinkReader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.support.TestEntities;
 import java.time.Instant;
@@ -42,7 +43,7 @@ class UpdateLinkUseCaseDecisionsTest {
   private final UpdateLinkUseCase useCase =
       new UpdateLinkUseCase(
           ownership,
-          mock(LinkSidecars.class),
+          mock(LinkRepository.class),
           events::add,
           audit,
           validator,
@@ -85,7 +86,15 @@ class UpdateLinkUseCaseDecisionsTest {
             "link",
             "abc1234",
             7L,
-            Map.of("urlChanged", true, "expiresAtChanged", false));
+            Map.of(
+                "urlChanged",
+                true,
+                "fromHost",
+                "before",
+                "toHost",
+                "after",
+                "expiresAtChanged",
+                false));
     verify(cache).evictAfterCommit(link);
   }
 

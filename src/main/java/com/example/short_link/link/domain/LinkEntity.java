@@ -50,22 +50,27 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(nullable = false)
   private Long version;
 
-  @Column(name = "og_title", length = 300)
+  @Column(name = "og_title", length = 300, insertable = false, updatable = false)
   private String ogTitle;
 
-  @Column(name = "og_description", length = 800)
+  @Column(name = "og_description", length = 800, insertable = false, updatable = false)
   private String ogDescription;
 
-  @Column(name = "og_image", length = 1024)
+  @Column(name = "og_image", length = 1024, insertable = false, updatable = false)
   private String ogImage;
 
-  @Column(name = "og_fetched_at")
+  @Column(name = "og_fetched_at", insertable = false, updatable = false)
   private Instant ogFetchedAt;
 
-  @Column(name = "og_fetch_status", nullable = false, length = 20)
+  @Column(
+      name = "og_fetch_status",
+      nullable = false,
+      length = 20,
+      insertable = false,
+      updatable = false)
   private String ogFetchStatus = OgFetchStatus.PENDING.value();
 
-  @Column(name = "og_fetch_attempts", nullable = false)
+  @Column(name = "og_fetch_attempts", nullable = false, insertable = false, updatable = false)
   private int ogFetchAttempts = 0;
 
   @Column(name = "stats_public", nullable = false)
@@ -167,10 +172,6 @@ public class LinkEntity extends BaseCreatedEntity {
     this.expiresAt = storableExpiry(expiresAt);
   }
 
-  public void changeExpiredRedirectUrl(String url) {
-    this.expiredRedirectUrl = (url == null || url.isBlank()) ? null : url.trim();
-  }
-
   // Campaign end policy is stored here so redirects do not need campaign lookups. Null values clear
   // existing policy; callers pass expiredMessage only for EXPIRE, since REDIRECT skips the page.
   public void applyCampaignExpiration(
@@ -183,19 +184,8 @@ public class LinkEntity extends BaseCreatedEntity {
     this.expiredMessage = LinkText.normalize(expiredMessage, LinkText.EXPIRED_MESSAGE_MAX_LENGTH);
   }
 
-  public void applyOgMetadata(String title, String description, String image, Instant fetchedAt) {
-    this.ogTitle = title;
-    this.ogDescription = description;
-    this.ogImage = image;
-    this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = OgFetchStatus.OK.value();
-    this.ogFetchAttempts++;
-  }
-
-  public void markOgFetchFailed(Instant fetchedAt, boolean willRetry) {
-    this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = ogFetchFailedStatus(willRetry);
-    this.ogFetchAttempts++;
+  public static String ogFetchPendingStatus() {
+    return OgFetchStatus.PENDING.value();
   }
 
   public static String ogFetchedStatus() {
@@ -238,10 +228,6 @@ public class LinkEntity extends BaseCreatedEntity {
     this.blockedCountries = CountryBlocklist.normalize(csv);
   }
 
-  public boolean isCountryBlocked(String countryCode) {
-    return CountryBlocklist.fromCsv(blockedCountries).contains(countryCode);
-  }
-
   public void setClaimToken(String token) {
     this.claimToken = token;
   }
@@ -263,10 +249,6 @@ public class LinkEntity extends BaseCreatedEntity {
 
   public void setMaxViews(Integer max) {
     this.maxViews = max;
-  }
-
-  public void incrementViewCount() {
-    this.viewCount++;
   }
 
   public boolean isViewLimitReached() {

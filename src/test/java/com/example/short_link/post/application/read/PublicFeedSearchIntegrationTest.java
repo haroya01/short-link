@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
 // truncates the tables afterward.
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class PublicFeedSearchIntegrationTest {
 
   @Autowired private PublicFeedQueryService service;

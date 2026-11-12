@@ -11,11 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.common.security.BlockedDomainChecker;
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.CachedLinkFixture;
 import com.example.short_link.link.application.dto.UserAgentInfo;
-import com.example.short_link.link.application.write.IncrementViewCountCommand;
-import com.example.short_link.link.application.write.IncrementViewCountUseCase;
+import com.example.short_link.link.application.write.SpendViewUseCase;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkEntity;
@@ -25,7 +25,9 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import com.example.short_link.link.stats.application.ClickRecorder;
+import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,18 +41,19 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 class LinkRedirectFlowTest {
 
-  private final IncrementViewCountUseCase incrementViewCount =
-      mock(IncrementViewCountUseCase.class);
+  private final SpendViewUseCase views = mock(SpendViewUseCase.class);
   private final ClickRecorder clickRecorder = mock(ClickRecorder.class);
   private final GeoIpResolver geoIpResolver = mock(GeoIpResolver.class);
   private final UserAgentClassifier uaClassifier = mock(UserAgentClassifier.class);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final BlockedDomainChecker blockedDomainChecker = mock(BlockedDomainChecker.class);
+  private final OperatorMarkerStore operatorMarkers = mock(OperatorMarkerStore.class);
   private static final Instant NOW = Instant.parse("2026-10-01T00:00:00Z");
+  private static final String MARKER = "operator-marker-from-the-cookie";
 
   private final LinkRedirectFlow flow =
       new LinkRedirectFlow(
-          incrementViewCount,
+          views,
           clickRecorder,
           geoIpResolver,
           uaClassifier,
@@ -80,6 +83,17 @@ class LinkRedirectFlowTest {
     return new MockHttpServletRequest("GET", "/abc");
   }
 
+  private RedirectVisit visit(String userAgent, HttpServletRequest request) {
+    return LinkRedirectSupport.visit(null, userAgent, null, null, null, request, operatorMarkers);
+  }
+
+  private HttpServletRequest reqFromAnOperatorsBrowser() {
+    when(operatorMarkers.isValid(MARKER)).thenReturn(true);
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/abc");
+    request.setCookies(new Cookie(OperatorMarkerStore.COOKIE_NAME, MARKER));
+    return request;
+  }
+
   private void stubBasics() {
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
     when(uaClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
@@ -90,14 +104,13 @@ class LinkRedirectFlowTest {
     stubBasics();
     CachedLink link = basicLink("https://example.com/dst");
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
     var redirect = (RedirectOutcome.Redirect) outcome;
     assertThat(redirect.picked().url()).isEqualTo("https://example.com/dst");
     verify(clickRecorder).record(any());
-    verify(incrementViewCount, never()).execute(any());
+    verify(views, never()).spend(any());
   }
 
   @Test
@@ -106,8 +119,7 @@ class LinkRedirectFlowTest {
     when(uaClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     CachedLink link = linkWithBlockList("KR,JP");
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
     verify(clickRecorder, never()).record(any());
@@ -126,8 +138,7 @@ class LinkRedirectFlowTest {
     CachedLink link = linkWithBlockList("KR");
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("kr", null, null));
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
   }
@@ -138,8 +149,7 @@ class LinkRedirectFlowTest {
     when(blockedDomainChecker.isBlocked("https://spam.example/promo")).thenReturn(true);
     CachedLink link = basicLink("https://spam.example/promo");
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.DomainBlocked.class);
     verify(clickRecorder, never()).record(any());
@@ -160,8 +170,7 @@ class LinkRedirectFlowTest {
                         11L, "https://spam.example/app", 10, true, null, null, "android")))
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit("ua", req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.DomainBlocked.class);
     verify(clickRecorder, never()).record(any());
@@ -171,10 +180,9 @@ class LinkRedirectFlowTest {
   void viewLimitHitWithExpiredMessageOnLinkReturnsExpiredWithMessage() {
     stubBasics();
     CachedLink link = linkWithMaxViewsAndExpired(3, "Campaign closed");
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+    when(views.spend(any())).thenReturn(false);
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.ExpiredWithMessage.class);
     assertThat(((RedirectOutcome.ExpiredWithMessage) outcome).message())
@@ -186,12 +194,9 @@ class LinkRedirectFlowTest {
   void viewLimitHitWithoutExpiredMessageThrowsLinkException() {
     stubBasics();
     CachedLink link = linkWithMaxViewsAndExpired(3, null);
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+    when(views.spend(any())).thenReturn(false);
 
-    assertThatThrownBy(
-            () ->
-                flow.execute(
-                    link, null, LinkRedirectSupport.visit(null, null, null, null, null, req())))
+    assertThatThrownBy(() -> flow.execute(link, null, visit(null, req())))
         .isInstanceOf(LinkException.class)
         .extracting(e -> ((LinkException) e).errorCode())
         .isEqualTo(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED);
@@ -201,10 +206,9 @@ class LinkRedirectFlowTest {
   void viewLimitNotExceededProceedsToRedirect() {
     stubBasics();
     CachedLink link = linkWithMaxViewsAndExpired(3, null);
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(1);
+    when(views.spend(any())).thenReturn(true);
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
     verify(clickRecorder).record(any());
@@ -217,10 +221,9 @@ class LinkRedirectFlowTest {
     LinkEntity entity = Mockito.mock(LinkEntity.class);
     when(entity.getMaxViews()).thenReturn(3);
     when(entity.getExpiredMessage()).thenReturn("Sold out");
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+    when(views.spend(any())).thenReturn(false);
 
-    RedirectOutcome outcome =
-        flow.execute(link, entity, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, entity, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.ExpiredWithMessage.class);
     assertThat(((RedirectOutcome.ExpiredWithMessage) outcome).message()).isEqualTo("Sold out");
@@ -234,12 +237,9 @@ class LinkRedirectFlowTest {
     when(entity.getMaxViews()).thenReturn(3);
     when(entity.getExpiredMessage()).thenReturn(null);
     when(entity.getShortCode()).thenReturn(new ShortCode("abc1"));
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+    when(views.spend(any())).thenReturn(false);
 
-    assertThatThrownBy(
-            () ->
-                flow.execute(
-                    link, entity, LinkRedirectSupport.visit(null, null, null, null, null, req())))
+    assertThatThrownBy(() -> flow.execute(link, entity, visit(null, req())))
         .isInstanceOf(LinkException.class);
   }
 
@@ -249,10 +249,9 @@ class LinkRedirectFlowTest {
     CachedLink link = basicLink("https://example.com/dst");
     LinkEntity entity = Mockito.mock(LinkEntity.class);
     when(entity.getMaxViews()).thenReturn(3);
-    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(1);
+    when(views.spend(any())).thenReturn(true);
 
-    RedirectOutcome outcome =
-        flow.execute(link, entity, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, entity, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
     verify(clickRecorder).record(any());
@@ -271,10 +270,7 @@ class LinkRedirectFlowTest {
         org.mockito.ArgumentCaptor.forClass(
             com.example.short_link.link.stats.application.ClickContext.class);
 
-    flow.execute(
-        basicLink("https://example.com/dst"),
-        null,
-        LinkRedirectSupport.visit(null, null, null, null, null, reqWith("Sec-GPC", "1")));
+    flow.execute(basicLink("https://example.com/dst"), null, visit(null, reqWith("Sec-GPC", "1")));
 
     verify(clickRecorder).record(captor.capture());
     assertThat(captor.getValue().gpc()).isTrue();
@@ -286,8 +282,63 @@ class LinkRedirectFlowTest {
     flow.execute(
         basicLink("https://example.com/dst"),
         null,
-        LinkRedirectSupport.visit(
-            null, null, null, null, null, reqWith("Sec-Purpose", "prefetch;prerender")));
+        visit(null, reqWith("Sec-Purpose", "prefetch;prerender")));
+    verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
+    verify(clickRecorder, never()).record(any());
+  }
+
+  @Test
+  void anOperatorsVisitToALinkWithoutAViewLimitIsRecordedAsAPreviewNotAPersonsClick() {
+    stubBasics();
+
+    RedirectOutcome outcome =
+        flow.execute(
+            basicLink("https://example.com/dst"), null, visit(null, reqFromAnOperatorsBrowser()));
+
+    assertThat(((RedirectOutcome.Redirect) outcome).picked().url())
+        .isEqualTo("https://example.com/dst");
+    verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("operator"));
+    verify(clickRecorder, never()).record(any());
+    verify(views, never()).spend(any());
+  }
+
+  @Test
+  void anOperatorsVisitToAViewLimitedLinkSpendsAViewAndCountsAsAPersonsClick() {
+    stubBasics();
+    when(views.spend(new LinkId(7L))).thenReturn(true);
+
+    RedirectOutcome outcome =
+        flow.execute(
+            linkWithMaxViewsAndExpired(3, null), null, visit(null, reqFromAnOperatorsBrowser()));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
+    verify(views).spend(new LinkId(7L));
+    verify(clickRecorder).record(any());
+    verify(clickRecorder, never()).recordPreview(any(), any());
+  }
+
+  @Test
+  void anOperatorsVisitToAViewLimitedEntitySpendsAViewAndCountsAsAPersonsClick() {
+    stubBasics();
+    LinkEntity entity = Mockito.mock(LinkEntity.class);
+    when(entity.getMaxViews()).thenReturn(3);
+    when(views.spend(new LinkId(7L))).thenReturn(true);
+
+    flow.execute(basicLink("https://control"), entity, visit(null, reqFromAnOperatorsBrowser()));
+
+    verify(views).spend(new LinkId(7L));
+    verify(clickRecorder).record(any());
+    verify(clickRecorder, never()).recordPreview(any(), any());
+  }
+
+  @Test
+  void anOperatorsBrowserPrefetchStaysAPrefetch() {
+    stubBasics();
+    HttpServletRequest request = reqFromAnOperatorsBrowser();
+    ((MockHttpServletRequest) request).addHeader("Sec-Purpose", "prefetch");
+
+    flow.execute(basicLink("https://example.com/dst"), null, visit(null, request));
+
     verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
     verify(clickRecorder, never()).record(any());
   }
@@ -296,9 +347,7 @@ class LinkRedirectFlowTest {
   void prefetchViaLegacyPurposeHeader() {
     stubBasics();
     flow.execute(
-        basicLink("https://example.com/dst"),
-        null,
-        LinkRedirectSupport.visit(null, null, null, null, null, reqWith("Purpose", "prefetch")));
+        basicLink("https://example.com/dst"), null, visit(null, reqWith("Purpose", "prefetch")));
     verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
   }
 
@@ -306,9 +355,7 @@ class LinkRedirectFlowTest {
   void prefetchViaFirefoxXMozHeader() {
     stubBasics();
     flow.execute(
-        basicLink("https://example.com/dst"),
-        null,
-        LinkRedirectSupport.visit(null, null, null, null, null, reqWith("X-moz", "prefetch")));
+        basicLink("https://example.com/dst"), null, visit(null, reqWith("X-moz", "prefetch")));
     verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
   }
 
@@ -325,8 +372,7 @@ class LinkRedirectFlowTest {
                         11L, "https://android", 10, true, null, null, "android")))
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit("ua", req()));
 
     assertThat(((RedirectOutcome.Redirect) outcome).picked().url()).isEqualTo("https://android");
   }
@@ -339,12 +385,10 @@ class LinkRedirectFlowTest {
             .visitOptions(new CachedLink.VisitOptions(false, null, NOW.plusSeconds(60)))
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(
-            scheduled, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(scheduled, null, visit("ua", req()));
 
     assertThat(outcome).isEqualTo(new RedirectOutcome.NotYetOpen(NOW.plusSeconds(60)));
-    verifyNoInteractions(incrementViewCount, clickRecorder);
+    verifyNoInteractions(views, clickRecorder);
   }
 
   @Test
@@ -357,8 +401,7 @@ class LinkRedirectFlowTest {
             .visitOptions(new CachedLink.VisitOptions(false, null, NOW))
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(opening, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(opening, null, visit("ua", req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
   }
@@ -373,11 +416,10 @@ class LinkRedirectFlowTest {
             .maxViews(1)
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit(null, req()));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.CountryBlocked.class);
-    verifyNoInteractions(incrementViewCount, clickRecorder);
+    verifyNoInteractions(views, clickRecorder);
   }
 
   @Test
@@ -388,11 +430,10 @@ class LinkRedirectFlowTest {
         flow.execute(
             linkWithMaxViewsAndExpired(1, null),
             null,
-            LinkRedirectSupport.visit(
-                null, null, null, null, null, reqWith("Sec-Purpose", "prefetch")));
+            visit(null, reqWith("Sec-Purpose", "prefetch")));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.PrefetchDeclined.class);
-    verifyNoInteractions(incrementViewCount, clickRecorder);
+    verifyNoInteractions(views, clickRecorder);
   }
 
   @Test
@@ -407,7 +448,7 @@ class LinkRedirectFlowTest {
 
     LinkEntity spent = new LinkEntity("https://control", "spent01", 7L, null);
     spent.setMaxViews(1);
-    spent.incrementViewCount();
+    TestEntities.setField(spent, "viewCount", 1);
     assertThatThrownBy(
             () -> flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), spent, "198.51.100.1"))
         .isInstanceOfSatisfying(
@@ -421,7 +462,7 @@ class LinkRedirectFlowTest {
     fresh.setMaxViews(1);
     assertThat(flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), fresh, "198.51.100.1"))
         .isEmpty();
-    verifyNoInteractions(incrementViewCount);
+    verifyNoInteractions(views);
   }
 
   @ParameterizedTest(name = "{0} -> {1}")
@@ -451,8 +492,7 @@ class LinkRedirectFlowTest {
                     new CachedLink.Variant(15L, "https://linux", 10, true, null, null, "linux")))
             .build();
 
-    RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+    RedirectOutcome outcome = flow.execute(link, null, visit("ua", req()));
 
     assertThat(((RedirectOutcome.Redirect) outcome).picked().url()).isEqualTo(expected);
   }

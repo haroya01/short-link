@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.RecordedClick;
 import com.example.short_link.link.application.dto.SavedClick;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -17,6 +18,7 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ class ClickFlusherTest {
   private final PlatformTransactionManager txManager = mock(PlatformTransactionManager.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final ClickBuffer buffer = new ClickBuffer(new ClickRecorderProperties(100, 2));
+  private final List<RecordedClick> queued = new ArrayList<>();
   private final ClickFlusher flusher =
       new ClickFlusher(
           buffer,
@@ -43,6 +46,7 @@ class ClickFlusherTest {
           repository,
           linkRepository,
           events,
+          queued::addAll,
           registry,
           txManager,
           new ClickRecorderProperties(100, 2));
@@ -85,6 +89,9 @@ class ClickFlusherTest {
     assertThat(((SavedClick) captor.getAllValues().get(1)).click())
         .isSameAs(captor.getAllValues().get(0));
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(2.0);
+    assertThat(queued)
+        .extracting(RecordedClick::linkId)
+        .containsExactly(new LinkId(1L), new LinkId(2L));
     // 발행은 트랜잭션 템플릿 안에서 돌아야 한다(getTransaction 2회 = persist 1 + publish 1). 밖에서 발행하면
     // @TransactionalEventListener(AFTER_COMMIT) 소비자가 조용히 건너뛴다.
     verify(txManager, org.mockito.Mockito.times(2)).getTransaction(any());
@@ -146,6 +153,7 @@ class ClickFlusherTest {
     verify(events).publishEvent(any(ClickRecordedEvent.class));
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(1.0);
     assertThat(registry.counter("click_recorder", "result", "flush_error").count()).isEqualTo(1.0);
+    assertThat(queued).extracting(RecordedClick::linkId).containsExactly(new LinkId(2L));
   }
 
   @Test

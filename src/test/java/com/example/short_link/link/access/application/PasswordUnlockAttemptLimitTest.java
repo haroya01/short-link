@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class PasswordUnlockAttemptLimitTest {
   private static final int LIMIT = 10;
 
@@ -123,6 +125,7 @@ class PasswordUnlockAttemptLimitTest {
   }
 
   private static RedirectVisit visit(String clientIp) {
-    return new RedirectVisit(null, "Mozilla/5.0", clientIp, "en", null, null, false, null, false);
+    return new RedirectVisit(
+        null, "Mozilla/5.0", clientIp, "en", null, null, false, null, RedirectVisit.Visitor.PERSON);
   }
 }

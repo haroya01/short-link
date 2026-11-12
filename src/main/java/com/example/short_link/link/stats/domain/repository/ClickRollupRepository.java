@@ -7,6 +7,8 @@ import java.util.Optional;
 
 public interface ClickRollupRepository {
 
+  State lockState();
+
   Instant rolledUntil();
 
   Instant aggregatedUntil();
@@ -16,6 +18,8 @@ public interface ClickRollupRepository {
   void rollUpDay(Instant dayStart, Instant dayEnd);
 
   void aggregateDay(Instant dayStart, Instant dayEnd);
+
+  void aggregateLinkDay(Long linkId, Instant dayStart, Instant dayEnd);
 
   void advanceAggregatedTo(Instant aggregatedUntil);
 
@@ -30,4 +34,6 @@ public interface ClickRollupRepository {
   int deleteByLinkIds(Collection<Long> linkIds);
 
   record LinkVisitor(Long linkId, String visitorHash) {}
+
+  record State(Instant rolledUntil, Instant aggregatedUntil) {}
 }

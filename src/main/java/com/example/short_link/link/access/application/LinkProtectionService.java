@@ -3,7 +3,6 @@ package com.example.short_link.link.access.application;
 import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.write.LinkOwnership;
-import com.example.short_link.link.application.write.LinkSidecars;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,17 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkProtectionService {
 
   private final LinkOwnership ownership;
-  private final LinkSidecars sidecars;
   private final PasswordEncoder encoder;
   private final LinkCacheEviction linkCacheEviction;
 
   public LinkProtectionService(
       LinkOwnership ownership,
-      LinkSidecars sidecars,
       @Qualifier("linkPasswordEncoder") PasswordEncoder encoder,
       LinkCacheEviction linkCacheEviction) {
     this.ownership = ownership;
-    this.sidecars = sidecars;
     this.encoder = encoder;
     this.linkCacheEviction = linkCacheEviction;
   }
@@ -37,9 +33,6 @@ public class LinkProtectionService {
     link.setMaxViews(maxViews);
     if (password != null) {
       link.setPasswordHash(password.isBlank() ? null : encoder.encode(password));
-      sidecars.mirrorPasswordAndMaxViews(link);
-    } else {
-      sidecars.mirrorMaxViews(link);
     }
     linkCacheEviction.evictAfterCommit(link);
     return new LinkProtectionResult(

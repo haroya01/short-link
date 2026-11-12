@@ -5,14 +5,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.ClickBuffer;
 import com.example.short_link.link.stats.application.ClickFlusher;
 import io.queryaudit.junit5.ExpectQueries;
 import io.queryaudit.junit5.QueryAudit;
+import jakarta.servlet.http.Cookie;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @QueryAudit
+@Tag("integration")
 class RedirectClickQueryProfileTest {
 
   private static final String CODE = "qprof77";
@@ -36,6 +41,7 @@ class RedirectClickQueryProfileTest {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private ClickBuffer clickBuffer;
   @Autowired private ClickFlusher clickFlusher;
+  @Autowired private OperatorMarkerStore operatorMarkers;
 
   private LinkEntity link;
 
@@ -71,6 +77,21 @@ class RedirectClickQueryProfileTest {
   void repeatClickOnWarmCache() throws Exception {
     mvc.perform(get("/" + CODE)).andExpect(status().isFound());
     mvc.perform(get("/" + CODE)).andExpect(status().isFound());
+
+    assertThat(clickRows()).isZero();
+  }
+
+  @Test
+  @ExpectQueries(total = 7)
+  void anOperatorsRepeatVisitOnWarmCacheRunsNoMoreSqlThanAPersons() throws Exception {
+    String marker = operatorMarkers.issue(Duration.ofMinutes(1));
+    try {
+      Cookie fromAnOperator = new Cookie(OperatorMarkerStore.COOKIE_NAME, marker);
+      mvc.perform(get("/" + CODE).cookie(fromAnOperator)).andExpect(status().isFound());
+      mvc.perform(get("/" + CODE).cookie(fromAnOperator)).andExpect(status().isFound());
+    } finally {
+      operatorMarkers.revoke(marker);
+    }
 
     assertThat(clickRows()).isZero();
   }

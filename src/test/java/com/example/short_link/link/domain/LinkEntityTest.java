@@ -3,6 +3,7 @@ package com.example.short_link.link.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.repository.*;
+import com.example.short_link.support.TestEntities;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +56,7 @@ class LinkEntityTest {
   @Test
   void changeOriginalUrlResetsOgFields() {
     LinkEntity link = new LinkEntity("https://x", "abc");
-    link.applyOgMetadata("t", "d", "i", Instant.now());
+    FetchedOg.on(link, "t", "d", "i", Instant.now());
     link.changeOriginalUrl("https://y");
     assertThat(link.getOriginalUrl()).isEqualTo("https://y");
     assertThat(link.getOgTitle()).isNull();
@@ -74,24 +75,11 @@ class LinkEntityTest {
   }
 
   @Test
-  void applyOgMetadataIncrementsAttempts() {
-    LinkEntity link = new LinkEntity("https://x", "abc");
-    link.applyOgMetadata("t", "d", "i", Instant.now());
-    assertThat(link.getOgFetchStatus()).isEqualTo("OK");
-    assertThat(link.getOgFetchAttempts()).isEqualTo(1);
-    link.applyOgMetadata("t2", "d2", "i2", Instant.now());
-    assertThat(link.getOgFetchAttempts()).isEqualTo(2);
-  }
-
-  @Test
-  void markOgFetchFailedUsesRetryStatus() {
-    LinkEntity link = new LinkEntity("https://x", "abc");
-    link.markOgFetchFailed(Instant.now(), true);
-    assertThat(link.getOgFetchStatus()).isEqualTo("RETRYABLE");
-    assertThat(link.getOgFetchAttempts()).isEqualTo(1);
-    link.markOgFetchFailed(Instant.now(), false);
-    assertThat(link.getOgFetchStatus()).isEqualTo("ERROR");
-    assertThat(link.getOgFetchAttempts()).isEqualTo(2);
+  void ogFetchStatusesNameEachOutcome() {
+    assertThat(LinkEntity.ogFetchPendingStatus()).isEqualTo("PENDING");
+    assertThat(LinkEntity.ogFetchedStatus()).isEqualTo("OK");
+    assertThat(LinkEntity.ogFetchFailedStatus(true)).isEqualTo("RETRYABLE");
+    assertThat(LinkEntity.ogFetchFailedStatus(false)).isEqualTo("ERROR");
   }
 
   @Test
@@ -168,21 +156,6 @@ class LinkEntityTest {
   }
 
   @Test
-  void isCountryBlockedCaseInsensitive() {
-    LinkEntity link = new LinkEntity("https://x", new ShortCode("abc"));
-    link.setBlockedCountries("KR,JP");
-    assertThat(link.isCountryBlocked("kr")).isTrue();
-    assertThat(link.isCountryBlocked("US")).isFalse();
-    assertThat(link.isCountryBlocked(null)).isFalse();
-  }
-
-  @Test
-  void isCountryBlockedFalseWhenBlocklistEmpty() {
-    LinkEntity link = new LinkEntity("https://x", "abc");
-    assertThat(link.isCountryBlocked("KR")).isFalse();
-  }
-
-  @Test
   void claimMovesOwnershipAndClearsExpiry() {
     LinkEntity link = new LinkEntity("https://x", "abc", null, Instant.now().plusSeconds(60));
     link.setClaimToken("tok");
@@ -211,9 +184,7 @@ class LinkEntityTest {
     assertThat(link.isViewLimitReached()).isFalse();
     link.setMaxViews(3);
     assertThat(link.isViewLimitReached()).isFalse();
-    link.incrementViewCount();
-    link.incrementViewCount();
-    link.incrementViewCount();
+    TestEntities.setField(link, "viewCount", 3);
     assertThat(link.isViewLimitReached()).isTrue();
   }
 
@@ -233,7 +204,7 @@ class LinkEntityTest {
   @Test
   void effectiveOgPrefersOverrideOverScraped() {
     LinkEntity link = new LinkEntity("https://x", "abc");
-    link.applyOgMetadata("scrapedT", "scrapedD", "scrapedI", Instant.now());
+    FetchedOg.on(link, "scrapedT", "scrapedD", "scrapedI", Instant.now());
     assertThat(link.getEffectiveOgTitle()).isEqualTo("scrapedT");
     assertThat(link.getEffectiveOgDescription()).isEqualTo("scrapedD");
     assertThat(link.getEffectiveOgImage()).isEqualTo("scrapedI");

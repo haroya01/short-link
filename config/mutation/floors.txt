@@ -1,0 +1,10 @@
+# 핵심 모듈별 변이 테스트 강도(검출한 변이 / 단위 테스트가 실행한 변이, %) 하한. ./gradlew pitest -PmutationScope=core 가 확인한다.
+# 하한은 올리기만 한다. 내릴 때는 같은 변경에서 config/ratchet/raises.txt 에 "YYYY-MM-DD | mutation:<모듈> | <옛값> -> <새값> | <이유>" 한 줄을 더한다.
+link=89
+user=94
+campaign=82
+cta=100
+customdomain=93
+analytics=100
+abuse=97
+common=88

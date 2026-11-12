@@ -249,6 +249,6 @@ public class AuthService {
     String access = jwt.createAccessToken(user.getId(), user.getRole().name(), sessionId);
     RefreshToken refresh = jwt.createRefreshToken(user.getId(), sessionId, channel);
     refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl(channel));
-    return new IssuedTokens(access, refresh.token());
+    return new IssuedTokens(access, refresh.token(), user.isAdmin());
   }
 }

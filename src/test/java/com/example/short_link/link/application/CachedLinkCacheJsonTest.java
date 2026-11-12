@@ -92,4 +92,18 @@ class CachedLinkCacheJsonTest {
     assertThat(restored.visitOptions()).isEqualTo(CachedLink.VisitOptions.NONE);
     assertThat(restored.originalUrl()).isEqualTo("https://dest.example.com");
   }
+
+  @Test
+  void entriesCachedWithTheFetchedPreviewStillLoad() {
+    String cachedByThePreviousImage =
+        "{\"@class\":\"com.example.short_link.link.application.dto.CachedLink\",\"linkId\":[\"com.example.short_link.link.domain.LinkId\",7],\"shortCode\":[\"com.example.short_link.link.domain.ShortCode\",\"abc1234\"],\"userId\":[\"java.lang.Long\",1],\"originalUrl\":\"https://dest.example.com\",\"expiresAt\":[\"java.time.Instant\",1796083200.000000000],\"ogTitle\":\"t\",\"ogDescription\":\"d\",\"ogImage\":\"https://img\",\"blockedCountries\":\"KR,JP\",\"passwordRequired\":false,\"maxViews\":null,\"expiredMessage\":null,\"variants\":[\"java.util.ImmutableCollections$ListN\",[]],\"visitOptions\":{\"@class\":\"com.example.short_link.link.application.dto.CachedLink$VisitOptions\",\"openInBrowser\":true,\"splash\":null,\"opensAt\":null},\"disabled\":false,\"statsPublic\":false}";
+
+    CachedLink restored =
+        (CachedLink)
+            serializer.deserialize(cachedByThePreviousImage.getBytes(StandardCharsets.UTF_8));
+
+    assertThat(restored.shortCode()).isEqualTo(new ShortCode("abc1234"));
+    assertThat(restored.blockedCountries()).isEqualTo("KR,JP");
+    assertThat(restored.visitOptions().openInBrowser()).isTrue();
+  }
 }

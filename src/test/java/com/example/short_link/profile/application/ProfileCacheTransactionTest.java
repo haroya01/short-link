@@ -3,6 +3,7 @@ package com.example.short_link.profile.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class ProfileCacheTransactionTest {
   @Autowired private ProfileCacheEviction eviction;
   @Autowired private CacheManager cacheManager;

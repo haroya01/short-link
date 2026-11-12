@@ -1,6 +1,7 @@
 package com.example.short_link.link.infrastructure.persistence;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.MyLinksSearchCriteria;
@@ -174,8 +175,8 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
-  public int incrementViewCountIfBelowLimit(Long linkId) {
-    return jpa.incrementViewCountIfBelowLimit(linkId);
+  public boolean spendView(LinkId linkId) {
+    return jpa.spendViewWithinLimit(linkId.value()) == 1;
   }
 
   @Override
@@ -187,6 +188,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   @Override
   public void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry) {
     jpa.recordOgFetchFailed(linkId, fetchedAt, LinkEntity.ogFetchFailedStatus(willRetry));
+  }
+
+  @Override
+  public void restartOgFetch(Long linkId) {
+    jpa.restartOgFetch(linkId, LinkEntity.ogFetchPendingStatus());
   }
 
   @Override

@@ -12,6 +12,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,11 +22,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class LinkViewCountSurvivesOwnerEditTest {
 
   @Autowired private UserRepository users;
   @Autowired private LinkRepository links;
-  @Autowired private IncrementViewCountUseCase incrementViewCount;
+  @Autowired private SpendViewUseCase views;
   @Autowired private LinkProtectionService protection;
   @Autowired private TransactionTemplate transaction;
   @Autowired private JdbcTemplate jdbc;
@@ -45,14 +47,12 @@ class LinkViewCountSurvivesOwnerEditTest {
     transaction.executeWithoutResult(
         status -> {
           LinkEntity loaded = links.findByShortCode(code).orElseThrow();
-          CompletableFuture.runAsync(
-                  () -> incrementViewCount.execute(new IncrementViewCountCommand(loaded.linkId())))
-              .join();
+          CompletableFuture.runAsync(() -> views.spend(loaded.linkId())).join();
           loaded.updateNote("edited while a visitor opened it");
         });
 
     assertThat(viewCount(code)).isEqualTo(1);
-    assertThat(incrementViewCount.execute(new IncrementViewCountCommand(linkId(code)))).isZero();
+    assertThat(views.spend(linkId(code))).isFalse();
   }
 
   private ShortCode linkLimitedToOneVisit() {

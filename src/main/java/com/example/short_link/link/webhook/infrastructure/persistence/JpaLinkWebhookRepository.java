@@ -20,6 +20,8 @@ public interface JpaLinkWebhookRepository extends JpaRepository<LinkWebhookEntit
 
   List<LinkWebhookEntity> findAllByLinkIdAndEnabledTrue(Long linkId);
 
+  List<LinkWebhookEntity> findAllByLinkIdInAndEnabledTrue(Collection<Long> linkIds);
+
   long countByLinkId(Long linkId);
 
   @Query(

@@ -34,4 +34,41 @@ public interface JpaClickEventRepository extends JpaRepository<ClickEventEntity,
 
   @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
   List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value =
+          "UPDATE click_event SET is_bot = 1, bot_name = :label WHERE id IN (:ids) "
+              + "AND link_id = :linkId AND is_bot = 0 AND clicked_at >= FROM_UNIXTIME(:rolledUntil)",
+      nativeQuery = true)
+  int markHumansAs(
+      @Param("linkId") Long linkId,
+      @Param("ids") Collection<Long> ids,
+      @Param("label") String label,
+      @Param("rolledUntil") long rolledUntil);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value =
+          "UPDATE click_event SET is_bot = 0, bot_name = NULL WHERE id IN (:ids) "
+              + "AND link_id = :linkId AND bot_name = :label "
+              + "AND clicked_at >= FROM_UNIXTIME(:rolledUntil)",
+      nativeQuery = true)
+  int markAsHumans(
+      @Param("linkId") Long linkId,
+      @Param("ids") Collection<Long> ids,
+      @Param("label") String label,
+      @Param("rolledUntil") long rolledUntil);
+
+  @Query(
+      value =
+          "SELECT DISTINCT FLOOR(UNIX_TIMESTAMP(clicked_at) / 86400) * 86400 FROM click_event "
+              + "WHERE id IN (:ids) AND link_id = :linkId "
+              + "AND clicked_at >= FROM_UNIXTIME(:from) AND clicked_at < FROM_UNIXTIME(:before)",
+      nativeQuery = true)
+  List<Number> findDayStartsOf(
+      @Param("linkId") Long linkId,
+      @Param("ids") Collection<Long> ids,
+      @Param("from") long from,
+      @Param("before") long before);
 }

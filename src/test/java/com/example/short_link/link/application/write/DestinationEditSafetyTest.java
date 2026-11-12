@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Tag("integration")
 class DestinationEditSafetyTest {
   private static final String PHISH = "https://phish.example.com/login";
 
@@ -61,6 +63,7 @@ class DestinationEditSafetyTest {
   @AfterEach
   void deleteCommittedRows() {
     for (Long userId : createdUsers) {
+      jdbc.update("DELETE FROM audit_log WHERE actor_user_id = ?", userId);
       jdbc.update("DELETE FROM link WHERE user_id = ?", userId);
       jdbc.update("DELETE FROM users WHERE id = ?", userId);
     }

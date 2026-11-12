@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.MobileLoginFlag;
@@ -28,6 +29,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
   @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
+  @Mock private OperatorMarkerCookie operatorMarkerCookie;
 
   private OAuth2LoginSuccessHandler handler;
   private MockHttpServletRequest req;
@@ -41,6 +43,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
             authService,
             refreshCookieWriter,
             challengeCookieWriter,
+            operatorMarkerCookie,
             "http://localhost:3001",
             "kurl://auth");
     req = new MockHttpServletRequest();
@@ -60,7 +63,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
 
     assertThat(res.getRedirectedUrl()).isEqualTo("kurl://auth?code=code-123");
     // No browser session on mobile — the pair only ever leaves through /exchange.
-    verifyNoInteractions(refreshCookieWriter);
+    verifyNoInteractions(refreshCookieWriter, operatorMarkerCookie);
   }
 
   @Test
@@ -71,7 +74,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
     handler.onAuthenticationSuccess(req, res, auth);
 
     assertThat(res.getRedirectedUrl()).isEqualTo("kurl://auth?challenge=challenge-jwt");
-    verifyNoInteractions(refreshCookieWriter, challengeCookieWriter);
+    verifyNoInteractions(refreshCookieWriter, challengeCookieWriter, operatorMarkerCookie);
   }
 
   @Test

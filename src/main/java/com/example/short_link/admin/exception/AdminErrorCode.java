@@ -8,7 +8,11 @@ public enum AdminErrorCode {
   INVALID_ROLE(HttpStatus.BAD_REQUEST, "Invalid role filter: %s"),
   SELF_DOMAIN_BLOCK(HttpStatus.BAD_REQUEST, "cannot block own service domain: %s"),
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No user with id %s"),
-  LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "No link with code %s");
+  LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "No link with code %s"),
+  LINK_PREVIEW_UNAVAILABLE(HttpStatus.NOT_FOUND, "No preview image for link %s: %s"),
+  LINK_PREVIEW_WITHHELD(
+      HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+      "The image of link %s is not fetched while it has a sexual content report");
 
   private final HttpStatus status;
   private final String template;

@@ -8,12 +8,14 @@ import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import com.example.short_link.user.presentation.helper.OperatorMarkerCookie;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.request.AppleLoginRequest;
 import com.example.short_link.user.presentation.request.WebTwoFactorVerifyRequest;
 import com.example.short_link.user.presentation.response.AppleWebLoginResponse;
 import com.example.short_link.user.presentation.response.TokenResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,38 +36,47 @@ public class AuthController {
   private final AppleIdentityVerifier appleVerifier;
   private final RefreshCookieWriter refreshCookieWriter;
   private final TwoFactorChallengeCookieWriter challengeCookieWriter;
+  private final OperatorMarkerCookie operatorMarkerCookie;
 
   @PostMapping("/refresh")
   public TokenResponse refresh(
       @CookieValue(name = "refresh_token", required = false) String refreshToken,
+      HttpServletRequest req,
       HttpServletResponse res) {
     if (refreshToken == null) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    return issueAndSetCookie(authService.refresh(refreshToken, SessionChannel.WEB), res);
+    IssuedTokens tokens = authService.refresh(refreshToken, SessionChannel.WEB);
+    refreshCookieWriter.set(res, tokens.refreshToken());
+    operatorMarkerCookie.onRefresh(req, res, tokens.admin());
+    return TokenResponse.from(tokens);
   }
 
   @PostMapping("/logout")
   public void logout(
       @AuthenticationPrincipal Long userId,
       @CookieValue(name = "refresh_token", required = false) String refreshToken,
+      HttpServletRequest req,
       HttpServletResponse res) {
     if (userId != null && refreshToken != null) {
       authService.logout(userId, refreshToken);
     }
     refreshCookieWriter.clear(res);
+    operatorMarkerCookie.onLogout(req, res);
   }
 
   // The web identity token's Services ID audience must be included in short-link.apple.client-ids.
   // Success sets a refresh cookie; 2FA users receive only a challenge.
   @PostMapping("/apple")
   public AppleWebLoginResponse apple(
-      @Valid @RequestBody AppleLoginRequest request, HttpServletResponse res) {
+      @Valid @RequestBody AppleLoginRequest request,
+      HttpServletRequest req,
+      HttpServletResponse res) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
     return switch (authService.loginWithApple(
         identity.subject(), identity.email(), SessionChannel.WEB)) {
       case TokenLoginResult.Tokens tokens -> {
-        refreshCookieWriter.set(res, tokens.issued().refreshToken());
+        setLoginCookies(tokens.issued(), req, res);
         yield AppleWebLoginResponse.tokens(tokens.issued().accessToken());
       }
       case TokenLoginResult.TwoFactorRequired challenge ->
@@ -79,25 +90,26 @@ public class AuthController {
       @Valid @RequestBody WebTwoFactorVerifyRequest request,
       @CookieValue(name = TwoFactorChallengeCookieWriter.COOKIE_NAME, required = false)
           String challengeCookie,
+      HttpServletRequest req,
       HttpServletResponse res) {
     String challenge =
         StringUtils.hasText(request.challenge()) ? request.challenge() : challengeCookie;
     if (!StringUtils.hasText(challenge)) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    TokenResponse response =
-        issueAndSetCookie(
-            authService.completeTwoFactor(
-                challenge, request.code(), request.recovery(), SessionChannel.WEB),
-            res);
+    IssuedTokens tokens =
+        authService.completeTwoFactor(
+            challenge, request.code(), request.recovery(), SessionChannel.WEB);
+    setLoginCookies(tokens, req, res);
     if (challengeCookie != null) {
       challengeCookieWriter.clear(res);
     }
-    return response;
+    return TokenResponse.from(tokens);
   }
 
-  private TokenResponse issueAndSetCookie(IssuedTokens tokens, HttpServletResponse res) {
+  private void setLoginCookies(
+      IssuedTokens tokens, HttpServletRequest req, HttpServletResponse res) {
     refreshCookieWriter.set(res, tokens.refreshToken());
-    return TokenResponse.from(tokens);
+    operatorMarkerCookie.onLogin(req, res, tokens.admin());
   }
 }
