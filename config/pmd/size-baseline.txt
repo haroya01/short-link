@@ -3,7 +3,6 @@ CognitiveComplexity|src/main/java/com/example/short_link/admin/application/read/
 CognitiveComplexity|src/main/java/com/example/short_link/analytics/application/write/RecordBehaviorEventsUseCase.java|toRow(BehaviorEventCommand, String, Classification, BehaviorContext)#1=24
 CognitiveComplexity|src/main/java/com/example/short_link/common/csv/CsvRows.java|parse(String)#1=22
 CognitiveComplexity|src/main/java/com/example/short_link/common/image/ExifOrientation.java|read(byte[])#1=17
-CognitiveComplexity|src/main/java/com/example/short_link/common/web/RateLimitFilter.java|doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/federation/domain/foryou/HomeRanking.java|pool(Collection<HomeCandidate>, Instant, Weights)#1=20
 CognitiveComplexity|src/main/java/com/example/short_link/federation/infrastructure/http/SignedFederationHttp.java|send(URI, byte[], Signer, String, boolean, Duration)#1=18
 CognitiveComplexity|src/main/java/com/example/short_link/federation/scheduler/RelayWorker.java|outcome(Announced)#1=20
@@ -30,7 +29,6 @@ CyclomaticComplexity|src/main/java/com/example/short_link/common/net/PublicHttpU
 CyclomaticComplexity|src/main/java/com/example/short_link/common/note/NoteVisibility.java|readBy(Reader)#1=31
 CyclomaticComplexity|src/main/java/com/example/short_link/common/observability/OutcomeResolver.java|fromStatus(int)#1=16
 CyclomaticComplexity|src/main/java/com/example/short_link/common/post/PostAudience.java|readBy(Reader)#1=31
-CyclomaticComplexity|src/main/java/com/example/short_link/common/web/RateLimitFilter.java|doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)#1=15
 CyclomaticComplexity|src/main/java/com/example/short_link/customdomain/domain/CustomDomainEntity.java|validateDomain(String)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/event/application/write/RegisterForEventUseCase.java|register(RegisterForEventCommand)#1=10
 CyclomaticComplexity|src/main/java/com/example/short_link/federation/application/ActivityStreams.java|isDocumentType(String)#1=11
