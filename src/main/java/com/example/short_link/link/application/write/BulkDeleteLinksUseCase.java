@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -19,25 +19,30 @@ public class BulkDeleteLinksUseCase {
   private final LinkRepository repository;
   private final AuditLogService auditLogService;
   private final LinkCacheEviction linkCacheEviction;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public int execute(BulkDeleteLinksCommand command) {
     if (command.shortCodes().isEmpty()) return 0;
+    List<ShortCode> deleted = transaction.execute(status -> delete(command));
+    for (ShortCode shortCode : deleted) {
+      auditLogService.record(
+          AuditAction.LINK_DELETED,
+          "link",
+          shortCode.value(),
+          command.userId(),
+          Map.of("bulk", true));
+    }
+    return deleted.size();
+  }
+
+  private List<ShortCode> delete(BulkDeleteLinksCommand command) {
     List<LinkEntity> owned =
         repository.findAllByShortCodeInAndUserId(
             command.shortCodes().stream().distinct().map(ShortCode::new).toList(),
             command.userId());
-    if (owned.isEmpty()) return 0;
+    if (owned.isEmpty()) return List.of();
     repository.deleteAll(owned);
     linkCacheEviction.evictLinksAfterCommit(owned);
-    for (LinkEntity link : owned) {
-      auditLogService.record(
-          AuditAction.LINK_DELETED,
-          "link",
-          link.getShortCode().value(),
-          command.userId(),
-          Map.of("bulk", true));
-    }
-    return owned.size();
+    return owned.stream().map(LinkEntity::getShortCode).toList();
   }
 }

@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.presentation.helper;
 
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.WebAddress;
@@ -163,6 +164,15 @@ public class LinkHtmlRenderer {
 
   public ResponseEntity<byte[]> viewLimitPageResponse(Locale locale) {
     return htmlResponse(HttpStatus.GONE, notice(locale, "visitor.viewLimit"));
+  }
+
+  public ResponseEntity<byte[]> unavailablePageResponse(Locale locale) {
+    byte[] bytes = notice(locale, "visitor.unavailable").getBytes(StandardCharsets.UTF_8);
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .headers(htmlHeaders(bytes.length))
+        .header(
+            HttpHeaders.RETRY_AFTER, String.valueOf(GuardUnavailableException.RETRY_AFTER_SECONDS))
+        .body(bytes);
   }
 
   public ResponseEntity<byte[]> passwordPromptResponse(

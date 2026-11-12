@@ -1,10 +1,12 @@
 package com.example.short_link.link.access.infrastructure;
 
 import com.example.short_link.common.counter.RedisWindowCounter;
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.web.ClientNetwork;
 import com.example.short_link.link.access.application.PasswordAttempts;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 // Limits guesses per link and client network because the global per-IP limit is too loose for
@@ -19,7 +21,11 @@ public class LinkPasswordAttemptLimiter implements PasswordAttempts {
   private final RedisWindowCounter counter;
 
   public boolean tryAttempt(String shortCode, String clientIp) {
-    return counter.increment(key(shortCode, clientIp), WINDOW) <= MAX_ATTEMPTS;
+    try {
+      return counter.increment(key(shortCode, clientIp), WINDOW) <= MAX_ATTEMPTS;
+    } catch (DataAccessException e) {
+      throw new GuardUnavailableException(e);
+    }
   }
 
   public void reset(String shortCode, String clientIp) {

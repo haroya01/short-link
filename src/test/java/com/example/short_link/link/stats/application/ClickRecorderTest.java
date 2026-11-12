@@ -50,4 +50,16 @@ class ClickRecorderTest {
     assertThat(registry.counter("click_recorder", "result", "dropped_overflow").count())
         .isEqualTo(1.0);
   }
+
+  @Test
+  void theBufferHandsOverHowManyClicksItRefusedAndStartsCountingAgain() {
+    ClickBuffer buffer = new ClickBuffer(new ClickRecorderProperties(1, 500));
+    ClickRecorder recorder = new ClickRecorder(buffer, registry);
+    recorder.record(ctx());
+    recorder.record(ctx());
+    recorder.record(ctx());
+
+    assertThat(buffer.takeRefused()).isEqualTo(2);
+    assertThat(buffer.takeRefused()).isZero();
+  }
 }

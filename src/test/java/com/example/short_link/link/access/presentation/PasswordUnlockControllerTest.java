@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
@@ -39,6 +40,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -106,6 +109,26 @@ class PasswordUnlockControllerTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("password_required");
+    verify(flow, never()).execute(any(), any(), any());
+  }
+
+  @Test
+  void aGuessThatCannotBeCountedIsTurnedAwayWithA503PageAndRetryAfter() {
+    LinkEntity entity = mock(LinkEntity.class);
+    when(entity.hasPassword()).thenReturn(true);
+    when(lookup.findActiveLink(CODE)).thenReturn(cachedLink());
+    when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
+    when(attemptLimiter.tryAttempt(any(), any()))
+        .thenThrow(new GuardUnavailableException(new QueryTimeoutException("Redis timed out")));
+    MockHttpServletRequest req = request();
+
+    ResponseEntity<?> response = controller.unlock(CODE, "good", null, null, null, null, null, req);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("30");
+    assertThat(response.getHeaders().getContentType().toString()).startsWith("text/html");
+    assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("unavailable");
+    verify(protectionService, never()).checkPassword(any(), any());
     verify(flow, never()).execute(any(), any(), any());
   }
 

@@ -1,5 +1,6 @@
 package com.example.short_link.link.access.presentation;
 
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.common.security.OperatorMarkerStore;
 import com.example.short_link.common.user.OpenToSuspended;
@@ -7,6 +8,7 @@ import com.example.short_link.link.access.application.PasswordUnlockResult;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
@@ -59,12 +61,7 @@ public class PasswordUnlockController {
                   referrer, userAgent, acceptLanguage, src, null, req, operatorMarkers),
               req.getHeader("Host"));
       if (unlocked instanceof PasswordUnlockResult.Rejected rejected) {
-        outcome =
-            switch (rejected.reason()) {
-              case CAPTCHA_FAILED -> "captcha_failed";
-              case LOCKED_OUT -> "locked_out";
-              case WRONG_PASSWORD -> "password_required";
-            };
+        outcome = outcomeOf(rejected.reason());
         HttpStatus status =
             rejected.reason() == PasswordUnlockResult.RejectionReason.LOCKED_OUT
                 ? HttpStatus.TOO_MANY_REQUESTS
@@ -74,25 +71,13 @@ public class PasswordUnlockController {
       }
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
       ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
-      outcome =
-          switch (result) {
-            case RedirectOutcome.CountryBlocked b -> "blocked";
-            case RedirectOutcome.DomainBlocked db -> "blocked";
-            case RedirectOutcome.ExpiredWithMessage em -> "expired";
-            case RedirectOutcome.NotYetOpen n -> "not_open";
-            case RedirectOutcome.PrefetchDeclined pd -> "preview";
-            default -> "redirect";
-          };
+      outcome = outcomeOf(result);
       return response;
+    } catch (GuardUnavailableException e) {
+      outcome = "unavailable";
+      return html.unavailablePageResponse(locale);
     } catch (LinkException e) {
-      outcome =
-          switch (e.errorCode()) {
-            case LINK_NOT_FOUND -> "not_found";
-            case LINK_EXPIRED -> "expired";
-            case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
-            case LINK_DISABLED -> "disabled";
-            default -> "error";
-          };
+      outcome = outcomeOf(e.errorCode());
       // 비밀번호를 맞춰도 한도초과·만료면 JSON 대신 브랜드 HTML 페이지로.
       ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
       if (page != null) {
@@ -102,6 +87,35 @@ public class PasswordUnlockController {
     } finally {
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
+  }
+
+  private static String outcomeOf(PasswordUnlockResult.RejectionReason reason) {
+    return switch (reason) {
+      case CAPTCHA_FAILED -> "captcha_failed";
+      case LOCKED_OUT -> "locked_out";
+      case WRONG_PASSWORD -> "password_required";
+    };
+  }
+
+  private static String outcomeOf(RedirectOutcome result) {
+    return switch (result) {
+      case RedirectOutcome.CountryBlocked b -> "blocked";
+      case RedirectOutcome.DomainBlocked db -> "blocked";
+      case RedirectOutcome.ExpiredWithMessage em -> "expired";
+      case RedirectOutcome.NotYetOpen n -> "not_open";
+      case RedirectOutcome.PrefetchDeclined pd -> "preview";
+      default -> "redirect";
+    };
+  }
+
+  private static String outcomeOf(LinkErrorCode code) {
+    return switch (code) {
+      case LINK_NOT_FOUND -> "not_found";
+      case LINK_EXPIRED -> "expired";
+      case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
+      case LINK_DISABLED -> "disabled";
+      default -> "error";
+    };
   }
 
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {

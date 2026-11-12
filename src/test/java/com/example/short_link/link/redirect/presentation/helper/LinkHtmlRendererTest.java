@@ -265,6 +265,16 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void anUnavailablePageAsksTheVisitorToComeBackAfterRetryAfter() {
+    ResponseEntity<byte[]> page = renderer.unavailablePageResponse(KO);
+
+    assertThat(page.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    assertThat(page.getHeaders().getFirst("Retry-After")).isEqualTo("30");
+    assertThat(new String(page.getBody(), StandardCharsets.UTF_8))
+        .contains("<h1>잠시 뒤 다시 열어 주세요</h1>");
+  }
+
+  @Test
   void unlockedPage_keepsTheBrandBoldInEveryLanguage() {
     for (Locale locale :
         List.of(KO, Locale.ENGLISH, Locale.JAPANESE, Locale.of("vi"), Locale.of("hi"))) {
