@@ -90,13 +90,55 @@ tasks.named('compileTestJava') {
 	options.errorprone.enabled = false
 }
 
+// Each DockerHttpTest class owns its MySQL and Redis containers, so those classes can run in
+// separate JVMs at once. -PdockerHttpForks=N moves them out of `test` into `dockerHttpTest` with N
+// forks; without the property `test` runs everything in one JVM as before.
+def dockerHttpForks = providers.gradleProperty('dockerHttpForks').getOrElse('0') as int
+// -PdockerHttpShard=i/n keeps the i-th of n slices of those classes, so each slice can have its own
+// CI runner. -PcollectedEvidence lets the coverage and evidence gates judge what other jobs of the
+// same commit recorded instead of tests run in this invocation.
+def dockerHttpShard = providers.gradleProperty('dockerHttpShard').orNull
+def collectedEvidence = providers.gradleProperty('collectedEvidence').isPresent()
+
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		if (dockerHttpForks > 0) {
+			excludeTags 'docker-http'
+		}
+	}
 	maxHeapSize = '3g'
 	systemProperty 'short-link.main-classpath', sourceSets.main.runtimeClasspath.asPath
 	systemProperty 'api-shape.update', providers.gradleProperty('updateApiShape').isPresent()
 	inputs.files('deploy/docker-compose.yml', 'deploy/.env.example', 'Dockerfile')
 	finalizedBy jacocoTestReport
+	outputs.dir 'build/reports/query-audit/http-contracts'
+	outputs.dir 'build/reports/commit-listeners'
+	doFirst { delete 'build/reports/query-audit/http-contracts', 'build/reports/commit-listeners' }
+}
+
+tasks.register('dockerHttpTest', Test) {
+	group = 'verification'
+	description = 'Run the HTTP tests that own disposable MySQL and Redis containers, several JVMs at a time.'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'docker-http'
+	}
+	if (dockerHttpShard != null) {
+		def (slice, slices) = dockerHttpShard.tokenize('/')*.toInteger()
+		if (slice < 1 || slice > slices) {
+			throw new GradleException("-PdockerHttpShard=${dockerHttpShard} must be i/n with 1 <= i <= n.")
+		}
+		exclude { candidate ->
+			def topLevelClass = candidate.relativePath.pathString.replaceFirst(/(\$.*)?\.class$/, '')
+			!candidate.directory && Math.floorMod(topLevelClass.hashCode(), slices) != slice - 1
+		}
+	}
+	maxParallelForks = Math.max(1, dockerHttpForks)
+	maxHeapSize = '2g'
+	systemProperty 'short-link.main-classpath', sourceSets.main.runtimeClasspath.asPath
+	systemProperty 'api-shape.update', providers.gradleProperty('updateApiShape').isPresent()
+	mustRunAfter 'test'
 	outputs.dir 'build/reports/query-audit/http-contracts'
 	doFirst { delete 'build/reports/query-audit/http-contracts' }
 }
@@ -121,11 +163,18 @@ tasks.register('httpQueryContractTest', Test) {
 tasks.register('verifyHttpEndpointCoverage') {
 	group = 'verification'
 	description = 'Fail when an active application HTTP handler has no successful user-journey request.'
-	mustRunAfter 'test', 'httpQueryContractTest'
-	onlyIf { tasks.test.state.failure == null && tasks.httpQueryContractTest.state.failure == null }
+	mustRunAfter 'test', 'httpQueryContractTest', 'dockerHttpTest'
+	onlyIf {
+		tasks.test.state.failure == null
+				&& tasks.httpQueryContractTest.state.failure == null
+				&& tasks.dockerHttpTest.state.failure == null
+	}
 	doLast {
-		if (!gradle.taskGraph.hasTask(tasks.test) && !gradle.taskGraph.hasTask(tasks.httpQueryContractTest)) {
-			throw new GradleException('Run httpQueryContractTest, or test verifyHttpEndpointCoverage, so the evidence matches the tested code.')
+		def ranHttpTests = dockerHttpForks > 0
+				? gradle.taskGraph.hasTask(tasks.dockerHttpTest)
+				: gradle.taskGraph.hasTask(tasks.test)
+		if (!collectedEvidence && !ranHttpTests && !gradle.taskGraph.hasTask(tasks.httpQueryContractTest)) {
+			throw new GradleException('Run httpQueryContractTest, or test verifyHttpEndpointCoverage (with dockerHttpTest when -PdockerHttpForks is set), so the evidence matches the tested code.')
 		}
 		def evidence = file('build/reports/query-audit/http-contracts')
 		def inventory = new groovy.json.JsonSlurper().parse(new File(evidence, 'endpoint-inventory.json'))
@@ -140,6 +189,42 @@ tasks.register('verifyHttpEndpointCoverage') {
 			throw new GradleException("Missing successful HTTP journeys for ${missing.size()} handlers: " + missing.collect { it.handler }.join(', '))
 		}
 		logger.lifecycle("HTTP endpoint coverage: ${inventory.size()}/${inventory.size()} active application handlers")
+	}
+}
+
+tasks.register('verifyCommitListenerDelivery') {
+	group = 'verification'
+	description = 'Fail when an after-commit listener is never reached through a committed transaction, or application code publishes its event outside one.'
+	mustRunAfter 'test', 'dockerHttpTest'
+	onlyIf { tasks.test.state.failure == null && tasks.dockerHttpTest.state.failure == null }
+	doLast {
+		def ranEveryTest = gradle.taskGraph.hasTask(tasks.test)
+				&& (dockerHttpForks == 0 || gradle.taskGraph.hasTask(tasks.dockerHttpTest))
+		if (!collectedEvidence && !ranEveryTest) {
+			throw new GradleException('Run test verifyCommitListenerDelivery (with dockerHttpTest when -PdockerHttpForks is set), so the evidence matches the tested code.')
+		}
+		def evidence = file('build/reports/commit-listeners')
+		def recorded = { String kind ->
+			fileTree(new File(evidence, kind)).matching { include '*.json' }.files.collect {
+				new groovy.json.JsonSlurper().parse(it)
+			}
+		}
+		def listeners = recorded('inventory').collect { it.listener }.toSet()
+		if (listeners.isEmpty()) {
+			throw new GradleException('No after-commit listener was recorded. The evidence configuration did not run.')
+		}
+		def delivered = recorded('delivered').collect { it.listener }.toSet()
+		def undelivered = (listeners - delivered).sort()
+		def dropped = recorded('dropped').findAll { it.production }.collect { "${it.event} from ${it.publisher}".toString() }.unique().sort()
+		def summary = [listeners: listeners.size(), delivered: listeners.size() - undelivered.size(), undelivered: undelivered, dropped: dropped]
+		new File(evidence, 'delivery.json').text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(summary))
+		if (!undelivered.isEmpty()) {
+			throw new GradleException("No test reaches ${undelivered.size()} after-commit listeners through a committed transaction: " + undelivered.join(', '))
+		}
+		if (!dropped.isEmpty()) {
+			throw new GradleException("Application code published ${dropped.size()} events outside a transaction, so their after-commit listeners never ran: " + dropped.join(', '))
+		}
+		logger.lifecycle("After-commit listener delivery: ${listeners.size()}/${listeners.size()} reached through a committed transaction")
 	}
 }
 
@@ -214,8 +299,16 @@ def coverageClassExcludes = [
 				'**/user/presentation/oauth/**',
 ]
 
+// The gate counts what every test task executed: test.exec, dockerHttpTest.exec after a split run,
+// and one dockerHttpTest-<slice>.exec per CI slice once their artifacts are collected.
+def coverageExecutionData = fileTree(layout.buildDirectory.dir('jacoco')) {
+	include 'test.exec', 'dockerHttpTest*.exec'
+}
+
 jacocoTestReport {
-	dependsOn test
+	dependsOn 'classes', test
+	mustRunAfter 'dockerHttpTest'
+	executionData.setFrom(coverageExecutionData)
 	reports {
 		xml.required = true
 		html.required = true
@@ -236,6 +329,7 @@ jacocoTestReport {
 // Raise these numbers when a track lands new tests — never lower them.
 jacocoTestCoverageVerification {
 	dependsOn jacocoTestReport
+	executionData.setFrom(coverageExecutionData)
 	violationRules {
 		rule {
 			limit {

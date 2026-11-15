@@ -10,6 +10,7 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -76,13 +77,28 @@ class LinkExportServiceTest {
             .bot(false)
             .build());
 
-    for (String dim :
-        new String[] {
-          "daily", "hourly", "country", "city", "device", "os", "browser", "referrer", "channel"
-        }) {
-      String csv = service.exportStatsCsv(owner.getId(), new ShortCode("csvdim1"), dim);
-      assertThat(csv).as("dimension %s", dim).isNotEmpty();
-    }
+    Map<String, String> rowByDimension =
+        Map.of(
+            "country", "KR,1",
+            "city", "Seoul,1",
+            "device", "mobile,1",
+            "os", "iOS,1",
+            "browser", "Safari,1",
+            "referrer", "https://www.youtube.com/watch,1",
+            "channel", "social,1");
+    rowByDimension.forEach(
+        (dim, row) ->
+            assertThat(service.exportStatsCsv(owner.getId(), new ShortCode("csvdim1"), dim))
+                .as("dimension %s", dim)
+                .isEqualTo(dim + ",count\n" + row + "\n"));
+    assertThat(service.exportStatsCsv(owner.getId(), new ShortCode("csvdim1"), "daily").lines())
+        .satisfiesExactly(
+            header -> assertThat(header).isEqualTo("date,count"),
+            day -> assertThat(day).matches("\\d{4}-\\d{2}-\\d{2},1"));
+    assertThat(service.exportStatsCsv(owner.getId(), new ShortCode("csvdim1"), "hourly").lines())
+        .satisfiesExactly(
+            header -> assertThat(header).isEqualTo("hour,count"),
+            hour -> assertThat(hour).matches("\\d{1,2},1"));
   }
 
   @Test

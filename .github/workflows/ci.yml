@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,24 +58,122 @@ jobs:
           docker compose -f resources/docker-compose.yml logs
           exit 1
 
-      - run: ./gradlew spotlessCheck
-
       # CI tests run against the bundled GeoLite2-City-Fallback.mmdb so we don't burn
       # MaxMind's daily download quota on every PR. Production downloads use the key.
-      - run: ./gradlew test verifyHttpEndpointCoverage
+      # The coverage gate waits for the `build` job, which sees every job's execution data.
+      - run: ./gradlew test -PdockerHttpForks=1 -x jacocoTestReport
         env:
           RATCHET_BASE: HEAD^1
-
-      - run: ./gradlew pitest
 
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
+          path: build/reports/tests/
+
+      - name: Upload coverage data and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-test
           path: |
-            build/reports/tests/
-            build/reports/pitest/
+            build/jacoco/test.exec
+            build/reports/commit-listeners/
+          if-no-files-found: error
+
+      - name: Stop backing services
+        if: always()
+        run: docker compose -f resources/docker-compose.yml down -v
+
+  docker-http:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: ./gradlew dockerHttpTest -PdockerHttpForks=1 -PdockerHttpShard=${{ matrix.slice }}/3
+
+      - name: Name this slice's coverage data
+        run: mv build/jacoco/dockerHttpTest.exec build/jacoco/dockerHttpTest-${{ matrix.slice }}.exec
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-docker-http-${{ matrix.slice }}
+          path: build/reports/tests/
+
+      - name: Upload coverage data and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-docker-http-${{ matrix.slice }}
+          path: |
+            build/jacoco/dockerHttpTest-${{ matrix.slice }}.exec
+            build/reports/commit-listeners/
+            build/reports/query-audit/http-contracts/
+          if-no-files-found: error
+
+  mutation-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: ./gradlew pitest
+
+      - name: Upload mutation report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-packages
+          path: build/reports/pitest/
+
+  build:
+    needs: [test, docker-http, mutation-packages]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      # A skipped required check counts as passing, so this job runs even when a needed job
+      # failed and fails here instead.
+      - name: Require the test and mutation jobs
+        if: ${{ needs.test.result != 'success' || needs.docker-http.result != 'success' || needs.mutation-packages.result != 'success' }}
+        run: exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: ./gradlew spotlessCheck
+
+      - name: Collect coverage data and evidence from the test jobs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: evidence-*
+          path: build
+          merge-multiple: true
+
+      - run: ./gradlew jacocoTestReport verifyHttpEndpointCoverage verifyCommitListenerDelivery -x test -PcollectedEvidence
 
       - name: Upload coverage to Codecov
         if: always()
@@ -102,10 +200,6 @@ jobs:
           echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  osv-scanner" | sha256sum -c -
           chmod +x osv-scanner
           ./osv-scanner scan --config=config/osv/osv-scanner.toml --lockfile=build/osv/gradle.lockfile
-
-      - name: Stop backing services
-        if: always()
-        run: docker compose -f resources/docker-compose.yml down -v
 
   mutation:
     runs-on: ubuntu-latest
