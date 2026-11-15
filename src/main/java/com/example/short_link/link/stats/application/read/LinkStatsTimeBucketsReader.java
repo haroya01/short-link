@@ -30,7 +30,8 @@ class LinkStatsTimeBucketsReader {
     Long id = linkId.value();
     Instant until = reportTime.truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
     List<OffsetPeriod> recent = OffsetPeriod.between(zone, reportTime.minus(DAILY_WINDOW), until);
-    List<OffsetPeriod> lifetime = OffsetPeriod.between(zone, linkCreatedAt, until);
+    List<OffsetPeriod> lifetime =
+        OffsetPeriod.between(zone, linkCreatedAt.truncatedTo(ChronoUnit.SECONDS), until);
 
     List<LinkStats.DailyClick> daily =
         OffsetPeriod.sum(

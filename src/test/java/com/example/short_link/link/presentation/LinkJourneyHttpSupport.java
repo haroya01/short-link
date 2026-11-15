@@ -59,7 +59,7 @@ public abstract class LinkJourneyHttpSupport extends DockerHttpTest {
     contracts = new HttpQueryContracts(interceptor, this::awaitAsyncWork);
     captures.clear();
     // Each story starts cold, so exact SQL contracts do not depend on method execution order.
-    caches.getCacheNames().forEach(name -> caches.getCache(name).clear());
+    caches.getCacheNames().forEach(name -> caches.getCache(name).invalidate());
     owner = actor("owner");
     stranger = actor("stranger");
     when(remotePage.fetch(anyString()))
