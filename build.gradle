@@ -98,7 +98,8 @@ tasks.named('test') {
 	inputs.files('deploy/docker-compose.yml', 'deploy/.env.example', 'Dockerfile')
 	finalizedBy jacocoTestReport
 	outputs.dir 'build/reports/query-audit/http-contracts'
-	doFirst { delete 'build/reports/query-audit/http-contracts' }
+	outputs.dir 'build/reports/commit-listeners'
+	doFirst { delete 'build/reports/query-audit/http-contracts', 'build/reports/commit-listeners' }
 }
 
 tasks.register('httpQueryContractTest', Test) {
@@ -140,6 +141,40 @@ tasks.register('verifyHttpEndpointCoverage') {
 			throw new GradleException("Missing successful HTTP journeys for ${missing.size()} handlers: " + missing.collect { it.handler }.join(', '))
 		}
 		logger.lifecycle("HTTP endpoint coverage: ${inventory.size()}/${inventory.size()} active application handlers")
+	}
+}
+
+tasks.register('verifyCommitListenerDelivery') {
+	group = 'verification'
+	description = 'Fail when an after-commit listener is never reached through a committed transaction, or application code publishes its event outside one.'
+	mustRunAfter 'test'
+	onlyIf { tasks.test.state.failure == null }
+	doLast {
+		if (!gradle.taskGraph.hasTask(tasks.test)) {
+			throw new GradleException('Run test verifyCommitListenerDelivery, so the evidence matches the tested code.')
+		}
+		def evidence = file('build/reports/commit-listeners')
+		def recorded = { String kind ->
+			fileTree(new File(evidence, kind)).matching { include '*.json' }.files.collect {
+				new groovy.json.JsonSlurper().parse(it)
+			}
+		}
+		def listeners = recorded('inventory').collect { it.listener }.toSet()
+		if (listeners.isEmpty()) {
+			throw new GradleException('No after-commit listener was recorded. The evidence configuration did not run.')
+		}
+		def delivered = recorded('delivered').collect { it.listener }.toSet()
+		def undelivered = (listeners - delivered).sort()
+		def dropped = recorded('dropped').findAll { it.production }.collect { "${it.event} from ${it.publisher}".toString() }.unique().sort()
+		def summary = [listeners: listeners.size(), delivered: listeners.size() - undelivered.size(), undelivered: undelivered, dropped: dropped]
+		new File(evidence, 'delivery.json').text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(summary))
+		if (!undelivered.isEmpty()) {
+			throw new GradleException("No test reaches ${undelivered.size()} after-commit listeners through a committed transaction: " + undelivered.join(', '))
+		}
+		if (!dropped.isEmpty()) {
+			throw new GradleException("Application code published ${dropped.size()} events outside a transaction, so their after-commit listeners never ran: " + dropped.join(', '))
+		}
+		logger.lifecycle("After-commit listener delivery: ${listeners.size()}/${listeners.size()} reached through a committed transaction")
 	}
 }
 
