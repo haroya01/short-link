@@ -11,7 +11,7 @@ public final class TestCacheCleaner {
     for (String cacheName : cacheNames) {
       Cache cache = cacheManager.getCache(cacheName);
       if (cache != null) {
-        cache.clear();
+        cache.invalidate();
       }
     }
   }

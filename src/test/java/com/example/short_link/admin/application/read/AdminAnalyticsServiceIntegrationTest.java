@@ -38,7 +38,7 @@ class AdminAnalyticsServiceIntegrationTest {
   @BeforeEach
   void clearCache() {
     var cache = cacheManager.getCache("admin-overview");
-    if (cache != null) cache.clear();
+    if (cache != null) cache.invalidate();
   }
 
   @Test
