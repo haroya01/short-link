@@ -125,7 +125,10 @@ class LinkRedirectFlowTest {
             .build();
 
     RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+        flow.execute(
+            link,
+            null,
+            LinkRedirectSupport.visit(null, null, null, null, null, req(), operatorMarkers));
 
     assertThat(outcome)
         .isEqualTo(new RedirectOutcome.DeadDestination("https://pepefc2.onamarudsi"));
@@ -141,7 +144,10 @@ class LinkRedirectFlowTest {
             .build();
 
     RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+        flow.execute(
+            link,
+            null,
+            LinkRedirectSupport.visit(null, null, null, null, null, req(), operatorMarkers));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
   }
@@ -157,7 +163,10 @@ class LinkRedirectFlowTest {
             .build();
 
     RedirectOutcome outcome =
-        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+        flow.execute(
+            link,
+            null,
+            LinkRedirectSupport.visit(null, null, null, null, null, req(), operatorMarkers));
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
     assertThat(((RedirectOutcome.Redirect) outcome).picked().url())
