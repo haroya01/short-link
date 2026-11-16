@@ -167,8 +167,8 @@
 # notice or a 302, and a warm visit reads only the custom-domain owner. A health change drops the
 # cached row, so the next visit after recovery or after the domain goes is cold again. A preview bot
 # keeps its own path.
-@junit | dead-destination-create | 6 | 5 | 2 | 0 | 13
-@junit | dead-destination-create-first | 7 | 5 | 2 | 0 | 14
+@junit | dead-destination-create | 4 | 2 | 1 | 0 | 7
+@junit | dead-destination-create-first | 5 | 2 | 1 | 0 | 8
 @junit | dead-destination-healthy-visit | 3 | 0 | 0 | 0 | 3
 @junit | dead-destination-newly-gone-visit | 3 | 0 | 0 | 0 | 3
 @junit | dead-destination-not-found-visit | 3 | 0 | 0 | 0 | 3
