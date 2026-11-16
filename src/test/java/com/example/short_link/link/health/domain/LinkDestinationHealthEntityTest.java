@@ -56,4 +56,21 @@ class LinkDestinationHealthEntityTest {
     assertThat(health.getFailures()).isZero();
     assertThat(health.getBrokenSince()).isNull();
   }
+
+  @Test
+  void onlyAConfirmedMissingDomainCountsAsGone() {
+    LinkDestinationHealthEntity health = checked(URL);
+    health.markFailed(DestinationFailure.NO_HOST, null, T0, 2);
+    assertThat(health.goneSince()).isNull();
+
+    health.markFailed(DestinationFailure.NO_HOST, null, T0.plusSeconds(3600), 2);
+    assertThat(health.goneSince()).isEqualTo(T0.plusSeconds(3600));
+
+    health.markFailed(DestinationFailure.NOT_FOUND, 404, T0.plusSeconds(7200), 2);
+    assertThat(health.goneSince()).isNull();
+
+    health.markFailed(DestinationFailure.NO_HOST, null, T0.plusSeconds(10800), 2);
+    health.markHealthy(T0.plusSeconds(14400));
+    assertThat(health.goneSince()).isNull();
+  }
 }

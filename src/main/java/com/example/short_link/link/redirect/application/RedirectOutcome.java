@@ -28,4 +28,6 @@ public sealed interface RedirectOutcome {
   record NotYetOpen(Instant opensAt) implements RedirectOutcome {}
 
   record PrefetchDeclined() implements RedirectOutcome {}
+
+  record DeadDestination(String url) implements RedirectOutcome {}
 }

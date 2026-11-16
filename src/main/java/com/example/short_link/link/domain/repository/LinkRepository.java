@@ -137,5 +137,7 @@ public interface LinkRepository {
     Boolean getDisabled();
 
     Boolean getStatsPublic();
+
+    Instant getDestinationGoneSince();
   }
 }

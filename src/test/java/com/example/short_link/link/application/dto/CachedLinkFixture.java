@@ -20,6 +20,7 @@ public final class CachedLinkFixture {
   private CachedLink.VisitOptions visitOptions = CachedLink.VisitOptions.NONE;
   private boolean disabled;
   private boolean statsPublic;
+  private Instant destinationGoneSince;
 
   private CachedLinkFixture(LinkId linkId, String originalUrl) {
     this.linkId = linkId;
@@ -85,6 +86,11 @@ public final class CachedLinkFixture {
     return this;
   }
 
+  public CachedLinkFixture destinationGoneSince(Instant destinationGoneSince) {
+    this.destinationGoneSince = destinationGoneSince;
+    return this;
+  }
+
   public CachedLinkFixture disabled(boolean disabled) {
     this.disabled = disabled;
     return this;
@@ -104,6 +110,7 @@ public final class CachedLinkFixture {
         variants,
         visitOptions,
         disabled,
-        statsPublic);
+        statsPublic,
+        destinationGoneSince);
   }
 }
