@@ -4,6 +4,7 @@ import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,8 @@ public record CachedLink(
     List<Variant> variants,
     VisitOptions visitOptions,
     boolean disabled,
-    boolean statsPublic) {
+    boolean statsPublic,
+    Instant destinationGoneSince) {
 
   public CachedLink {
     variants = variants == null ? List.of() : List.copyOf(variants);
@@ -37,6 +39,12 @@ public record CachedLink(
 
   public boolean showsClickCount(Instant now) {
     return statsPublic && !passwordRequired && !visitOptions.opensLaterThan(now);
+  }
+
+  public boolean destinationGone(String url, Instant now, Duration after) {
+    return destinationGoneSince != null
+        && originalUrl.equals(url)
+        && !now.isBefore(destinationGoneSince.plus(after));
   }
 
   public boolean limitsVisitors() {

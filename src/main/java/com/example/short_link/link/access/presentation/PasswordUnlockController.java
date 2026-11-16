@@ -104,6 +104,7 @@ public class PasswordUnlockController {
       case RedirectOutcome.ExpiredWithMessage em -> "expired";
       case RedirectOutcome.NotYetOpen n -> "not_open";
       case RedirectOutcome.PrefetchDeclined pd -> "preview";
+      case RedirectOutcome.DeadDestination dd -> "dead_destination";
       default -> "redirect";
     };
   }
@@ -126,6 +127,7 @@ public class PasswordUnlockController {
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
+      case RedirectOutcome.DeadDestination dd -> html.deadDestinationPageResponse(locale, dd.url());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
     };

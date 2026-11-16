@@ -46,6 +46,10 @@ public class LinkDestinationHealthEntity extends BaseTimeEntity {
     this.linkId = linkId == null ? null : linkId.value();
   }
 
+  public Instant goneSince() {
+    return failure == DestinationFailure.NO_HOST ? brokenSince : null;
+  }
+
   public boolean isBrokenFor(String destination) {
     return brokenSince != null && destination != null && destination.equals(checkedUrl);
   }
