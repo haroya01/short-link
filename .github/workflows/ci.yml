@@ -167,7 +167,7 @@ jobs:
       - run: ./gradlew spotlessCheck
 
       - name: Collect coverage data and evidence from the test jobs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: evidence-*
           path: build
