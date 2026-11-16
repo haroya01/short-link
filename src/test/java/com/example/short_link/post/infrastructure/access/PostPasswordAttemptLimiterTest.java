@@ -1,12 +1,15 @@
 package com.example.short_link.post.infrastructure.access;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.counter.RedisWindowCounter;
+import com.example.short_link.common.exception.GuardUnavailableException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.QueryTimeoutException;
 
 class PostPasswordAttemptLimiterTest {
 
@@ -20,6 +23,15 @@ class PostPasswordAttemptLimiterTest {
 
     assertThat(limiter.tryAttempt(42L, "2001:db8:1:2::9")).isTrue();
     assertThat(limiter.tryAttempt(42L, "2001:db8:1:2:ffff::1")).isFalse();
+  }
+
+  @Test
+  void aGuessIsRefusedWhenTheCounterCannotCountIt() {
+    when(counter.increment("post-pwd-attempt:42:203.0.113.9", PostPasswordAttemptLimiter.WINDOW))
+        .thenThrow(new QueryTimeoutException("Redis command timed out"));
+
+    assertThatThrownBy(() -> limiter.tryAttempt(42L, "203.0.113.9"))
+        .isInstanceOf(GuardUnavailableException.class);
   }
 
   @Test

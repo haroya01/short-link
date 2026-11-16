@@ -1,6 +1,7 @@
 package com.example.short_link.link.access.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -8,7 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.counter.RedisWindowCounter;
+import com.example.short_link.common.exception.GuardUnavailableException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.QueryTimeoutException;
 
 class LinkPasswordAttemptLimiterTest {
 
@@ -23,6 +26,15 @@ class LinkPasswordAttemptLimiterTest {
 
     assertThat(limiter.tryAttempt("abc123", "203.0.113.9")).isTrue();
     assertThat(limiter.tryAttempt("abc123", "203.0.113.9")).isFalse();
+  }
+
+  @Test
+  void aGuessIsRefusedWhenTheCounterCannotCountIt() {
+    when(counter.increment(eq("pwd-attempt:abc123:203.0.113.9"), any()))
+        .thenThrow(new QueryTimeoutException("Redis command timed out"));
+
+    assertThatThrownBy(() -> limiter.tryAttempt("abc123", "203.0.113.9"))
+        .isInstanceOf(GuardUnavailableException.class);
   }
 
   @Test

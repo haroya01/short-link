@@ -1,5 +1,6 @@
 package com.example.short_link.common.web;
 
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.common.web.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
@@ -70,6 +71,19 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(PowRequiredException.class)
   public ProblemDetail handlePowRequired(PowRequiredException e, HttpServletRequest req) {
     return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+  }
+
+  @ExceptionHandler(GuardUnavailableException.class)
+  public ResponseEntity<ProblemDetail> handleGuardUnavailable(
+      GuardUnavailableException e, HttpServletRequest req) {
+    log.warn(
+        "abuse guard unavailable: {} {} cause={}",
+        req.getMethod(),
+        req.getRequestURI(),
+        String.valueOf(e.getCause()));
+    return ResponseEntity.status(e.status())
+        .header("Retry-After", String.valueOf(GuardUnavailableException.RETRY_AFTER_SECONDS))
+        .body(ProblemDetails.of(e, req));
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

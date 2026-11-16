@@ -58,6 +58,7 @@ public class ClickFlusher {
 
   @Scheduled(fixedDelay = 1000)
   public void flush() {
+    reportRefused();
     List<PendingClick> pending = buffer.drain(maxBatchPerFlush);
     if (pending.isEmpty()) {
       return;
@@ -66,6 +67,16 @@ public class ClickFlusher {
     List<ClickEventEntity> saved = persist(batch);
     meterRegistry.counter("click_recorder", "result", "flushed").increment(saved.size());
     publishAll(saved);
+  }
+
+  private void reportRefused() {
+    long refused = buffer.takeRefused();
+    if (refused > 0) {
+      log.error(
+          "click buffer full: dropped {} clicks since the last flush (capacity {})",
+          refused,
+          buffer.capacity());
+    }
   }
 
   // Publish inside a transaction so AFTER_COMMIT listeners run. On the scheduler path, persistence

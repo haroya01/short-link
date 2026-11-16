@@ -1,10 +1,12 @@
 package com.example.short_link.post.infrastructure.access;
 
 import com.example.short_link.common.counter.RedisWindowCounter;
+import com.example.short_link.common.exception.GuardUnavailableException;
 import com.example.short_link.common.web.ClientNetwork;
 import com.example.short_link.post.application.access.PostPasswordAttempts;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,7 +20,11 @@ class PostPasswordAttemptLimiter implements PostPasswordAttempts {
 
   @Override
   public boolean tryAttempt(Long postId, String clientIp) {
-    return counter.increment(key(postId, clientIp), WINDOW) <= MAX_ATTEMPTS;
+    try {
+      return counter.increment(key(postId, clientIp), WINDOW) <= MAX_ATTEMPTS;
+    } catch (DataAccessException e) {
+      throw new GuardUnavailableException(e);
+    }
   }
 
   @Override

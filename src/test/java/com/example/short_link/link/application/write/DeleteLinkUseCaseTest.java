@@ -1,8 +1,10 @@
 package com.example.short_link.link.application.write;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -15,6 +17,9 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.support.FakeTransactions;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DeleteLinkUseCaseTest {
@@ -24,7 +29,8 @@ class DeleteLinkUseCaseTest {
   private final AuditLogService auditLogService = mock(AuditLogService.class);
   private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final DeleteLinkUseCase useCase =
-      new DeleteLinkUseCase(ownership, repository, auditLogService, linkCacheEviction);
+      new DeleteLinkUseCase(
+          ownership, repository, auditLogService, linkCacheEviction, FakeTransactions.template());
 
   @Test
   void executeDeletesLinkOwnedByUser() {
@@ -46,6 +52,41 @@ class DeleteLinkUseCaseTest {
 
     verify(auditLogService)
         .record(eq(AuditAction.LINK_DELETED), eq("link"), eq("abc1234"), eq(42L));
+  }
+
+  @Test
+  void theDeleteRunsInsideTheTransactionAndTheAuditRowIsWrittenAfterIt() {
+    LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
+    when(ownership.requireOwned(42L, new ShortCode("abc1234"))).thenReturn(link);
+    List<String> seen = new ArrayList<>();
+    doAnswer(
+            inv -> {
+              seen.add("delete " + FakeTransactions.where());
+              return null;
+            })
+        .when(repository)
+        .delete(link);
+    doAnswer(
+            inv -> {
+              seen.add("audit " + FakeTransactions.where());
+              return null;
+            })
+        .when(auditLogService)
+        .record(any(), any(), any(), any());
+
+    useCase.execute(new DeleteLinkCommand(42L, new ShortCode("abc1234")));
+
+    assertThat(seen).containsExactly("delete inside", "audit outside");
+  }
+
+  @Test
+  void aDeleteThatFailsLeavesNoAuditRow() {
+    when(ownership.requireOwned(any(), any())).thenThrow(LinkException.class);
+
+    assertThatThrownBy(() -> useCase.execute(new DeleteLinkCommand(42L, new ShortCode("nope0001"))))
+        .isInstanceOf(LinkException.class);
+
+    verify(auditLogService, never()).record(any(), any(), any(), any());
   }
 
   @Test

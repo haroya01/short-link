@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
@@ -49,23 +48,11 @@ public class UserDeletionService {
   private final ObjectStorage storage;
   private final TransactionTemplate transaction;
 
-  @Transactional
   public void deleteAccount(Long userId) {
-    UserEntity user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    if (user.isDeleted()) {
+    Long ownedLinks = transaction.execute(status -> softDelete(userId));
+    if (ownedLinks == null) {
       return;
     }
-    user.softDelete();
-    profileCache.evictByUsername(user.getUsername());
-    refreshTokenStore.deleteAllForUser(userId);
-    deviceTokens.deleteByUserId(userId);
-    events.publishEvent(new AccountDeletedEvent(userId));
-
-    long ownedLinks = linkAccountData.countOwned(userId);
-    meterRegistry.counter("user.soft_deleted").increment();
     auditLogService.record(
         AuditAction.USER_DELETED,
         "user",
@@ -73,6 +60,24 @@ public class UserDeletionService {
         userId,
         Map.of("soft", true, "ownedLinks", ownedLinks));
     log.info("user {} soft-deleted (links retained: {})", userId, ownedLinks);
+  }
+
+  private Long softDelete(Long userId) {
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    if (user.isDeleted()) {
+      return null;
+    }
+    user.softDelete();
+    profileCache.evictByUsername(user.getUsername());
+    refreshTokenStore.deleteAllForUser(userId);
+    deviceTokens.deleteByUserId(userId);
+    events.publishEvent(new AccountDeletedEvent(userId));
+    long ownedLinks = linkAccountData.countOwned(userId);
+    meterRegistry.counter("user.soft_deleted").increment();
+    return ownedLinks;
   }
 
   public void hardDelete(Long userId) {

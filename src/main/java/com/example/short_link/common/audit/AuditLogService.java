@@ -8,11 +8,10 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-// Uses an independent transaction so caller rollbacks do not remove audit rows. Audit write
-// failures are logged and swallowed.
+// Callers record after their own transaction has committed, so a failed write is logged and
+// swallowed. Inside a transaction the row joins it, and swallowing would leave it rollback-only.
 @Slf4j
 @Service
 public class AuditLogService {
@@ -27,19 +26,31 @@ public class AuditLogService {
     this.meterRegistry = meterRegistry;
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(AuditAction action, String targetType, String targetId, Long actorUserId) {
-    write(action, targetType, targetId, actorUserId, Map.of());
+    record(action, targetType, targetId, actorUserId, Map.of());
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       AuditAction action,
       String targetType,
       String targetId,
       Long actorUserId,
       Map<String, ?> metadata) {
-    write(action, targetType, targetId, actorUserId, metadata);
+    if (aFailureWouldLeaveTheCallersTransactionRollbackOnly()) {
+      write(action, targetType, targetId, actorUserId, metadata);
+      return;
+    }
+    try {
+      write(action, targetType, targetId, actorUserId, metadata);
+    } catch (RuntimeException e) {
+      log.warn(
+          "audit log write failed for action={} target={}/{}", action, targetType, targetId, e);
+      meterRegistry.counter("audit.failed", "action", action.name()).increment();
+    }
+  }
+
+  private static boolean aFailureWouldLeaveTheCallersTransactionRollbackOnly() {
+    return TransactionSynchronizationManager.isActualTransactionActive();
   }
 
   private void write(
@@ -48,26 +59,26 @@ public class AuditLogService {
       String targetId,
       Long actorUserId,
       Map<String, ?> metadata) {
+    repository.save(
+        AuditLogEntity.record(
+            actorUserId,
+            action.name(),
+            targetType,
+            targetId,
+            json(metadata),
+            MDC.get("requestId"),
+            Instant.now()));
+    meterRegistry.counter("audit.recorded", "action", action.name()).increment();
+  }
+
+  private static String json(Map<String, ?> metadata) {
+    if (metadata == null || metadata.isEmpty()) {
+      return null;
+    }
     try {
-      String metadataJson =
-          metadata == null || metadata.isEmpty()
-              ? null
-              : OBJECT_MAPPER.writeValueAsString(metadata);
-      AuditLogEntity entity =
-          AuditLogEntity.record(
-              actorUserId,
-              action.name(),
-              targetType,
-              targetId,
-              metadataJson,
-              MDC.get("requestId"),
-              Instant.now());
-      repository.save(entity);
-      meterRegistry.counter("audit.recorded", "action", action.name()).increment();
-    } catch (JsonProcessingException | RuntimeException e) {
-      log.warn(
-          "audit log write failed for action={} target={}/{}", action, targetType, targetId, e);
-      meterRegistry.counter("audit.failed", "action", action.name()).increment();
+      return OBJECT_MAPPER.writeValueAsString(metadata);
+    } catch (JsonProcessingException e) {
+      throw new IllegalArgumentException("audit metadata cannot be written as JSON", e);
     }
   }
 }

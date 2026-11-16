@@ -9,6 +9,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.application.dto.RecordedClick;
 import com.example.short_link.link.application.dto.SavedClick;
@@ -23,6 +27,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -191,5 +196,46 @@ class ClickFlusherTest {
 
     assertThat(buffer.isEmpty()).isTrue();
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(5.0);
+  }
+
+  private List<String> errorsLoggedWhile(Runnable work) {
+    Logger logger = (Logger) LoggerFactory.getLogger(ClickFlusher.class);
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    try {
+      work.run();
+    } finally {
+      logger.detachAppender(appender);
+    }
+    return appender.list.stream()
+        .filter(event -> event.getLevel() == Level.ERROR)
+        .map(ILoggingEvent::getFormattedMessage)
+        .toList();
+  }
+
+  @Test
+  void clicksRefusedByAFullBufferAreReportedOnceAsAnErrorWithTheirCount() {
+    when(assembler.assemble(any())).thenAnswer(inv -> entity(1L));
+    when(repository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+    for (int i = 1; i <= 103; i++) {
+      buffer.offer(pending(i));
+    }
+
+    List<String> first = errorsLoggedWhile(flusher::flush);
+    List<String> second = errorsLoggedWhile(flusher::flush);
+
+    assertThat(first)
+        .containsExactly("click buffer full: dropped 3 clicks since the last flush (capacity 100)");
+    assertThat(second).isEmpty();
+  }
+
+  @Test
+  void aBufferThatNeverFilledReportsNothing() {
+    when(assembler.assemble(any())).thenAnswer(inv -> entity(1L));
+    when(repository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+    buffer.offer(pending(1L));
+
+    assertThat(errorsLoggedWhile(flusher::flush)).isEmpty();
   }
 }
