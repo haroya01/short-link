@@ -339,6 +339,28 @@ class TrendingTopicsTest {
   }
 
   @Test
+  void aTagThatTookItsArticlesLanguageIsCountedAmongThatLanguagesTopics() {
+    List<String> crowd = new ArrayList<>();
+    for (int n = 0; n < 41; n++) {
+      crowd.add(tagRow("やま%02d".formatted(n), 100 - n, 0));
+    }
+    crowd.add(tagRow("harbor", 2, 2));
+    tags("a.example", crowd.toArray(String[]::new));
+    links("a.example", linkRow("https://news.example/a", "Harbor lights tonight", "en", 3, 2));
+
+    topics.refresh();
+
+    assertThat(ids()).hasSize(41).endsWith("tag:harbor").doesNotContain("tag:やま40");
+    Topic harbor = topic("tag:harbor");
+    assertThat(harbor.language()).isEqualTo("en");
+    assertThat(harbor.people()).isEqualTo(5);
+    assertThat(harbor.related())
+        .extracting(TopicArticle::url)
+        .containsExactly("https://news.example/a");
+    assertThat(topics.held().find("link:https://news.example/a")).isEmpty();
+  }
+
+  @Test
   void blockingAServerTakesItOutOfThePoolAtOnce() {
     tags("a.example", tagRow("소풍", 5, 4));
     tags("b.example", tagRow("소풍", 9, 9), tagRow("기차역", 9, 9));

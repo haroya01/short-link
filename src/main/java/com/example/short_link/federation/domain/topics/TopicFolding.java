@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -39,7 +40,17 @@ public final class TopicFolding {
     List<Topic> ranked = links.stream().sorted(TopicRanking.ORDER).toList();
     int largest =
         ranked.isEmpty() ? tag.people() : Math.max(tag.people(), ranked.getFirst().people());
-    return tag.with(ranked.stream().limit(MAX_RELATED).map(Topic::article).toList(), largest);
+    return tag.in(languageWith(tag, ranked))
+        .with(ranked.stream().limit(MAX_RELATED).map(Topic::article).toList(), largest);
+  }
+
+  private static String languageWith(Topic tag, List<Topic> links) {
+    if (tag.language() != null) {
+      return tag.language();
+    }
+    List<String> stated =
+        links.stream().map(Topic::language).filter(Objects::nonNull).distinct().toList();
+    return stated.size() == 1 ? stated.getFirst() : null;
   }
 
   static boolean carries(Topic link, Topic tag) {

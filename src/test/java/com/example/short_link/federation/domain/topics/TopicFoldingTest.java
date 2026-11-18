@@ -149,6 +149,73 @@ class TopicFoldingTest {
   }
 
   @Test
+  void aTagOfUnknownLanguageTakesTheOneItsArticlesAgreeOn() {
+    List<Topic> folded =
+        TopicFolding.fold(
+            List.of(
+                tag("harbor", null, 12),
+                link("a", "Harbor lights", "en", 9),
+                link("b", "Harbor ferries", null, 8),
+                link("c", "Harbor market", "en", 7),
+                link("d", "Harbor cranes", "en", 6),
+                link("e", "Harbor fog", "en", 5)));
+
+    assertThat(only(folded, "tag:harbor").language()).isEqualTo("en");
+    assertThat(only(folded, "tag:harbor").related()).hasSize(3);
+  }
+
+  @Test
+  void aTagWhoseArticlesNameDifferentLanguagesStaysUnknown() {
+    List<Topic> twoLanguages =
+        TopicFolding.fold(
+            List.of(
+                tag("harbor", null, 12),
+                link("a", "Harbor lights", "en", 9),
+                link("b", "Harbor の朝", "ja", 8)));
+    List<Topic> oneBelowTheThreeKept =
+        TopicFolding.fold(
+            List.of(
+                tag("harbor", null, 12),
+                link("a", "Harbor lights", "en", 9),
+                link("b", "Harbor ferries", "en", 8),
+                link("c", "Harbor market", "en", 7),
+                link("d", "Harbor の朝", "ja", 3)));
+
+    assertThat(only(twoLanguages, "tag:harbor").language()).isNull();
+    assertThat(only(oneBelowTheThreeKept, "tag:harbor").language()).isNull();
+    assertThat(only(oneBelowTheThreeKept, "tag:harbor").related()).hasSize(3);
+  }
+
+  @Test
+  void aTagWithNoArticleThatNamesALanguageStaysUnknown() {
+    List<Topic> folded =
+        TopicFolding.fold(
+            List.of(
+                tag("harbor", null, 12),
+                tag("lantern", null, 9),
+                link("a", "Harbor lights", null, 9)));
+
+    assertThat(only(folded, "tag:harbor").language()).isNull();
+    assertThat(only(folded, "tag:harbor").related()).hasSize(1);
+    assertThat(only(folded, "tag:lantern").language()).isNull();
+  }
+
+  @Test
+  void aTagThatAlreadyHasALanguageKeepsIt() {
+    List<Topic> folded =
+        TopicFolding.fold(
+            List.of(
+                tag("harbor", "de", 12),
+                tag("lantern", "en", 9),
+                link("a", "Harbor lights", null, 9),
+                link("b", "Lantern night", "en", 5)));
+
+    assertThat(only(folded, "tag:harbor").language()).isEqualTo("de");
+    assertThat(only(folded, "tag:harbor").related()).hasSize(1);
+    assertThat(only(folded, "tag:lantern").language()).isEqualTo("en");
+  }
+
+  @Test
   void anArticleNamingTwoTagsFoldsUnderTheOneMorePeopleShare() {
     List<Topic> folded =
         TopicFolding.fold(
