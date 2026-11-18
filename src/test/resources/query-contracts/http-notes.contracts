@@ -324,18 +324,33 @@
 # The page is then built as any note page (notes and kept posts in one fetch) and any post card
 # page. A later page is cut from the ranking held in memory, so it only builds its rows. A device
 # has no language or follows to read. Handing over a kurl key and a uri only fills memory; a flush
-# writes each kind in one INSERT.
-@junit | home-for-you-first | 20 | 0 | 0 | 0 | 20
-@junit | home-for-you-next | 11 | 0 | 0 | 0 | 11
+# writes each kind in one INSERT. Measured again 2026-11-18 with the reader's language first: the
+# ranking reads the same statements, and in this journey the post card (the post, its author, tags
+# and marks) lands on the first page instead of the later one.
+@junit | home-for-you-first | 24 | 0 | 0 | 0 | 24
+@junit | home-for-you-next | 7 | 0 | 0 | 0 | 7
 @junit | home-for-you-device | 21 | 0 | 0 | 0 | 21
 @junit | home-for-you-seen | 0 | 0 | 0 | 0 | 0
 @junit | home-for-you-seen-flush | 0 | 2 | 0 | 0 | 2
 @junit | home-for-you-device-hide | 21 | 0 | 0 | 0 | 21
 # Blog: one statement walks the listed posts down from the cursor's position (published time, then
 # id), and the page is built as any post card page. Since walks up from the marker in the same way.
+# Measured 2026-11-18 with the reader's languages first: the walk takes only the posts written in
+# them, and the page on which they run out adds one walk of the rest from its top (next and
+# crossing here, and the device's first page, whose two posts end exactly at the page). A first
+# page learns the languages as for you does: a member's signals and language, a device's signals,
+# nothing for a reader with only the header. The cursor and the since marker carry them, so later
+# pages, the rest and since read none of that, and a cursor from before still walks every post in
+# its one statement.
 @junit | home-blog-first | 4 | 0 | 0 | 0 | 4
-@junit | home-blog-next | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-next | 5 | 0 | 0 | 0 | 5
 @junit | home-blog-since | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-member-first | 6 | 0 | 0 | 0 | 6
+@junit | home-blog-crossing | 5 | 0 | 0 | 0 | 5
+@junit | home-blog-rest | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-plain-next | 4 | 0 | 0 | 0 | 4
+@junit | home-blog-device-first | 6 | 0 | 0 | 0 | 6
+@junit | home-blog-member-since | 4 | 0 | 0 | 0 | 4
 # Refill of missing link cards after a release (NoteLinkPreviewRefill), measured against Docker MySQL
 # 2026-11-03. Its fixture notes cost the author, the insert, names for the response, the bell
 # followers and the federation actor check, then after commit the card: a page with nothing to show

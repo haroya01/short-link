@@ -163,7 +163,7 @@ class HomeForYouHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 token,
                 200));
-    assertThat(keys(first)).containsExactly("note:" + mine, uri("rin", 102), uri("yui", 103));
+    assertThat(keys(first)).containsExactly("note:" + mine, uri("yui", 103), "post:" + post);
     assertThat(first.path("items").get(1).path("kind").asString()).isEqualTo("remote");
     assertThat(first.path("items").get(1).path("remote").path("author").isObject()).isTrue();
     assertThat(first.has("newest")).isFalse();
@@ -179,7 +179,7 @@ class HomeForYouHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 token,
                 200));
-    assertThat(keys(onward)).containsExactly("post:" + post, uri("mio", 101), "note:" + theirs);
+    assertThat(keys(onward)).containsExactly(uri("mio", 101), "note:" + theirs, uri("rin", 102));
     assertThat(onward.path("next").isNull()).isTrue();
 
     JsonNode signedOut =
@@ -193,12 +193,12 @@ class HomeForYouHttpQueryContractTest extends AccountHttpJourneySupport {
                 200));
     assertThat(keys(signedOut))
         .containsExactly(
-            uri("rin", 102),
             uri("yui", 103),
             "post:" + post,
             uri("mio", 101),
             "note:" + mine,
-            "note:" + theirs);
+            "note:" + theirs,
+            uri("rin", 102));
 
     callWithHeaders(
         "home-for-you-seen",

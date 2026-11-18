@@ -4,8 +4,10 @@ import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostRepository.BlogLanguages;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,21 +64,54 @@ public class PostHomeSlices {
         .toList();
   }
 
-  public BlogSlice blogBelow(Long viewerId, Instant publishedAt, Long id, int limit) {
-    List<PostEntity> rows = postRepository.findBlogBelow(viewerId, publishedAt, id, limit + 1);
-    boolean more = rows.size() > limit;
-    return blog(more ? rows.subList(0, limit) : rows, more, viewerId);
+  public BlogSlice blogBelow(
+      Long viewerId,
+      Collection<String> languages,
+      boolean rest,
+      Instant publishedAt,
+      Long id,
+      int limit) {
+    if (languages.isEmpty()) {
+      List<PostEntity> rows =
+          postRepository.findBlogBelow(viewerId, BlogLanguages.ANY, publishedAt, id, limit + 1);
+      return blog(rows, rows.size(), limit, viewerId);
+    }
+    BlogLanguages others = BlogLanguages.notIn(languages);
+    if (rest) {
+      return blog(
+          postRepository.findBlogBelow(viewerId, others, publishedAt, id, limit + 1),
+          0,
+          limit,
+          viewerId);
+    }
+    List<PostEntity> rows =
+        new ArrayList<>(
+            postRepository.findBlogBelow(
+                viewerId, BlogLanguages.in(languages), publishedAt, id, limit + 1));
+    int restFrom = rows.size();
+    if (restFrom <= limit) {
+      rows.addAll(postRepository.findBlogBelow(viewerId, others, null, null, limit + 1 - restFrom));
+    }
+    return blog(rows, restFrom, limit, viewerId);
   }
 
-  public BlogSlice blogAbove(Long viewerId, Instant publishedAt, long id, int limit) {
+  public BlogSlice blogAbove(
+      Long viewerId, Collection<String> languages, Instant publishedAt, long id, int limit) {
     List<PostEntity> rows =
-        new ArrayList<>(postRepository.findBlogAbove(viewerId, publishedAt, id, limit + 1));
+        new ArrayList<>(
+            postRepository.findBlogAbove(
+                viewerId, BlogLanguages.in(languages), publishedAt, id, limit + 1));
     boolean more = rows.size() > limit;
     List<PostEntity> nearest = more ? rows.subList(0, limit) : rows;
-    return blog(nearest.reversed(), more, viewerId);
+    return blog(nearest.reversed(), nearest.size(), more, viewerId);
   }
 
-  private BlogSlice blog(List<PostEntity> rows, boolean more, Long viewerId) {
+  private BlogSlice blog(List<PostEntity> rows, int restFrom, int limit, Long viewerId) {
+    boolean more = rows.size() > limit;
+    return blog(more ? rows.subList(0, limit) : rows, restFrom, more, viewerId);
+  }
+
+  private BlogSlice blog(List<PostEntity> rows, int restFrom, boolean more, Long viewerId) {
     if (rows.isEmpty()) {
       return BlogSlice.EMPTY;
     }
@@ -87,7 +122,10 @@ public class PostHomeSlices {
     PostEntity first = rows.getFirst();
     PostEntity last = rows.getLast();
     return new BlogSlice(
-        cards, first.getPublishedAt(), first.getId(), last.getPublishedAt(), last.getId(), more);
+        cards,
+        new BlogSlice.Place(first.getPublishedAt(), first.getId(), restFrom == 0),
+        new BlogSlice.Place(last.getPublishedAt(), last.getId(), restFrom < rows.size()),
+        more);
   }
 
   public PostSlice roomAt(Long viewerId, Long roomId, int offset, int limit) {

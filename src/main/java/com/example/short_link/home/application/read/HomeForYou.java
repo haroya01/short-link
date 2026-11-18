@@ -85,6 +85,12 @@ public class HomeForYou {
     return new HomeFeedQueryService.Page(show(viewerId, refs.subList(from, to)), next);
   }
 
+  Set<String> languages(HomeAsk ask, Instant asOf) {
+    return remote
+        .reader(ask.viewerId(), ask.viewer(), ForYouProfile.accepted(ask.languages()), asOf)
+        .languages();
+  }
+
   private List<Ref> rank(
       Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf, boolean hiding) {
     HomeRanking.Weights weights = HomeRanking.Weights.DEFAULT;

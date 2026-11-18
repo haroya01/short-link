@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,122 @@ class HomeBlogIntegrationTest {
   }
 
   @Test
+  void aReaderGetsThePostsInTheirLanguageFirstAndThenTheRestEachNewestFirstAcrossPages() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+    long ko2 = post(writer, "ko", ahead.minusSeconds(10_800));
+    long ja2 = post(writer, "ja", ahead.minusSeconds(14_400));
+    long ko3 = post(writer, "ko", ahead.minus(Duration.ofDays(90)));
+
+    for (int size : new int[] {1, 2, 3, 4, 40}) {
+      HomeFeedQueryService.Page first = blog(null, null, size);
+      List<String> cursors = new ArrayList<>();
+      List<Long> scrolled = scroll(first, cursor -> blog(cursor, null, size), cursors);
+
+      assertThat(scrolled).as("size %d", size).doesNotHaveDuplicates();
+      assertThat(scrolled.stream().filter(Set.of(ja1, ko1, en1, ko2, ja2, ko3)::contains))
+          .as("size %d", size)
+          .containsExactly(ko1, ko2, ko3, ja1, en1, ja2);
+      assertThat(first.newest()).isEqualTo(marker(ahead.minusSeconds(3_600), ko1));
+      assertThat(cursors)
+          .as("size %d", size)
+          .allMatch(cursor -> cursor.matches("b[12]-ko\\.\\d+\\.\\d+"));
+      assertThat(cursors.stream().map(cursor -> cursor.charAt(1)).toList())
+          .as("size %d", size)
+          .isSorted();
+    }
+  }
+
+  @Test
+  void theHeaderOfASignedOutReaderNamesTheirLanguagesAndBothComeFirst() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+    long ko2 = post(writer, "ko", ahead.minusSeconds(10_800));
+    long ja2 = post(writer, "ja", ahead.minusSeconds(14_400));
+
+    HomeFeedQueryService.Page first = signedOut("ja-JP,ja;q=0.9,en-US;q=0.8,ko;q=0.7", null, null);
+    List<Long> scrolled = scroll(first, cursor -> signedOut("ko", cursor, null), new ArrayList<>());
+
+    assertThat(first.next()).startsWith("b1-en-ja.");
+    assertThat(scrolled).doesNotHaveDuplicates();
+    assertThat(scrolled.stream().filter(Set.of(ja1, ko1, en1, ko2, ja2)::contains))
+        .containsExactly(ja1, en1, ja2, ko1, ko2);
+  }
+
+  @Test
+  void aCursorFromBeforeLanguagesKeepsPagingEveryLanguageNewestFirst() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+    long ko2 = post(writer, "ko", ahead.minusSeconds(10_800));
+    long ja2 = post(writer, "ja", ahead.minusSeconds(14_400));
+
+    HomeFeedQueryService.Page onward = blog(plain(ahead, ja1), null, 2);
+    HomeFeedQueryService.Page last = blog(onward.next(), null, 2);
+
+    assertThat(ids(onward)).containsExactly(ko1, en1);
+    assertThat(onward.next()).isEqualTo(plain(ahead.minusSeconds(7_200), en1));
+    assertThat(onward.newest()).isNull();
+    assertThat(ids(last)).containsExactly(ko2, ja2);
+  }
+
+  @Test
+  void sinceWithTheReadersMarkerBringsOnlyTheirLanguageAndAPlainMarkerEveryPost() {
+    Instant at = ahead.minusSeconds(10_800);
+    long ko2 = post(writer, "ko", at);
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long ja1 = post(writer, "ja", ahead);
+
+    HomeFeedQueryService.Page theirs = blog(null, marker(at, ko2), 20);
+    HomeFeedQueryService.Page every = blog(null, plain(at, ko2), 20);
+
+    assertThat(ids(theirs)).containsExactly(ko1);
+    assertThat(theirs.newest()).isEqualTo(marker(ahead.minusSeconds(3_600), ko1));
+    assertThat(theirs.gap()).isFalse();
+    assertThat(ids(every)).containsExactly(ja1, ko1, en1);
+    assertThat(every.newest()).isEqualTo(plain(ahead, ja1));
+    assertThat(every.gap()).isFalse();
+  }
+
+  @Test
+  void aReaderWithNoPostInTheirLanguageGetsTheOneListAndItsPlainMarker() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+
+    HomeFeedQueryService.Page first = signedOut("xx", null, null);
+    long arrived = post(writer, "ko", ahead.plusSeconds(60));
+    HomeFeedQueryService.Page refreshed = signedOut("xx", null, first.newest());
+
+    assertThat(ids(first)).containsExactly(ja1, ko1);
+    assertThat(first.newest()).isEqualTo(plain(ahead, ja1));
+    assertThat(first.next())
+        .isEqualTo("b2-xx." + plain(ahead.minusSeconds(3_600), ko1).substring(1));
+    assertThat(ids(signedOut("ko", first.next(), null))).startsWith(en1);
+    assertThat(ids(refreshed)).containsExactly(arrived);
+    assertThat(refreshed.gap()).isFalse();
+  }
+
+  @Test
+  void aSeriesStillShowsOnlyItsLatestPostWhateverLanguageTheReaderReads() {
+    long series = series(writer);
+    long earlier = post(writer, "ko", ahead.minusSeconds(3_600));
+    long latest = post(writer, "ja", ahead);
+    long alone = post(writer, "ko", ahead.minusSeconds(7_200));
+    jdbc.update("UPDATE posts SET series_id = ? WHERE id IN (?, ?)", series, earlier, latest);
+
+    List<Long> scrolled =
+        scroll(blog(null, null, 40), cursor -> blog(cursor, null, 40), new ArrayList<>());
+
+    assertThat(scrolled).doesNotContain(earlier);
+    assertThat(scrolled.stream().filter(Set.of(latest, alone)::contains))
+        .containsExactly(alone, latest);
+  }
+
+  @Test
   void sinceBringsWhatCameAboveTheMarkerTheLaterIdAtTheSameTimeIncluded() {
     Instant at = ahead.minusSeconds(600);
     long below = post(writer, "PUBLISHED", "PUBLIC", null, at);
@@ -132,6 +249,30 @@ class HomeBlogIntegrationTest {
     return home.page(ask(reader, SeenViewer.member(reader), "blog", cursor, since, size, true));
   }
 
+  private HomeFeedQueryService.Page signedOut(String header, String cursor, String since) {
+    return home.page(
+        new HomeAsk(null, null, header, HomeFeedQueryService.Tab.BLOG, cursor, since, 2, false));
+  }
+
+  private static List<Long> everyId(HomeFeedQueryService.Page page) {
+    return page.items().stream().map(item -> item.post().item().id()).toList();
+  }
+
+  private static List<Long> scroll(
+      HomeFeedQueryService.Page first,
+      Function<String, HomeFeedQueryService.Page> onward,
+      List<String> cursors) {
+    List<Long> ids = new ArrayList<>(everyId(first));
+    String cursor = first.next();
+    for (int turn = 0; turn < 500 && cursor != null; turn++) {
+      cursors.add(cursor);
+      HomeFeedQueryService.Page page = onward.apply(cursor);
+      ids.addAll(everyId(page));
+      cursor = page.next();
+    }
+    return ids;
+  }
+
   private List<Long> ids(HomeFeedQueryService.Page page) {
     Set<Long> ours = Set.of(writer, blocked, reader);
     return page.items().stream()
@@ -142,6 +283,10 @@ class HomeBlogIntegrationTest {
   }
 
   private static String marker(Instant at, long id) {
+    return "b1-ko." + ChronoUnit.MICROS.between(Instant.EPOCH, at) + "." + id;
+  }
+
+  private static String plain(Instant at, long id) {
     return "b" + ChronoUnit.MICROS.between(Instant.EPOCH, at) + "." + id;
   }
 
@@ -171,6 +316,24 @@ class HomeBlogIntegrationTest {
           user);
     }
     return room;
+  }
+
+  private long series(long owner) {
+    String slug = "bs-" + UUID.randomUUID().toString().substring(0, 8);
+    jdbc.update(
+        "INSERT INTO series (user_id, slug, title, created_at, updated_at)"
+            + " VALUES (?, ?, ?, NOW(6), NOW(6))",
+        owner,
+        slug,
+        slug);
+    return jdbc.queryForObject(
+        "SELECT id FROM series WHERE user_id = ? AND slug = ?", Long.class, owner, slug);
+  }
+
+  private long post(long author, String language, Instant at) {
+    long id = post(author, "PUBLISHED", "PUBLIC", null, at);
+    jdbc.update("UPDATE posts SET language_tag = ? WHERE id = ?", language, id);
+    return id;
   }
 
   private long post(long author, String status, String audience, Long room, Instant at) {
