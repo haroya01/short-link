@@ -20,6 +20,7 @@ import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.domain.foryou.ForYouCandidate;
 import com.example.short_link.federation.domain.foryou.ForYouReader;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
+import com.example.short_link.federation.domain.foryou.HomeRanking;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteViewFixtures;
 import com.example.short_link.note.application.read.PooledNote;
@@ -53,8 +54,7 @@ class HomeForYouTest {
   void noRemotePoolAndNoSightings() {
     when(remote.enabled()).thenReturn(true);
     when(remote.homePool(any(), any())).thenReturn(List.of());
-    when(remote.reader(any(), any(), any(), any())).thenReturn(ForYouReader.NONE);
-    when(remote.follows(any())).thenReturn(Set.of());
+    when(remote.homeReader(any(), any(), any(), any())).thenReturn(HomeRanking.Reader.NONE);
     when(posts.pool(any(), any(), any(), anyInt())).thenReturn(List.of());
     when(posts.cards(any(), any())).thenReturn(List.of());
     when(views.listed(any(), any()))
@@ -80,7 +80,8 @@ class HomeForYouTest {
   void aMemberTheReaderFollowsIsLiftedAsTheFollowedAuthorTheSignalsName() {
     when(notes.pool(any(), any(), any(), anyInt()))
         .thenReturn(List.of(note(1, 20, Duration.ofHours(1)), note(2, 30, Duration.ofHours(3))));
-    when(remote.follows(7L)).thenReturn(Set.of("u30"));
+    when(remote.homeReader(any(), any(), any(), any()))
+        .thenReturn(new HomeRanking.Reader(ForYouReader.NONE, 7L, Set.of("u30"), Set.of()));
 
     HomeFeedQueryService.Page page = forYou.page(ask(7L, READER, "for-you", null, null, 20, true));
 
@@ -156,7 +157,37 @@ class HomeForYouTest {
 
     assertThat(page.next()).isEqualTo("r" + NOW.toEpochMilli() + ".1");
     verifyNoInteractions(localSeen, remoteSeen);
-    verify(remote).reader(null, null, List.of("ko", "en"), NOW);
+    verify(remote).homeReader(null, null, "ko-KR,en", NOW);
+  }
+
+  @Test
+  void theSameReaderAtTheSameTimeHasARankingForEachLanguageTheyAskIn() {
+    when(notes.pool(any(), any(), any(), anyInt()))
+        .thenReturn(
+            List.of(
+                new PooledNote(1, 20, "ja", NOW.minus(Duration.ofHours(1)), List.of(), 0, 0, 0),
+                new PooledNote(2, 21, "ko", NOW.minus(Duration.ofHours(3)), List.of(), 0, 0, 0)));
+    when(remote.homeReader(7L, READER, "ko", NOW)).thenReturn(owning("ko"));
+    when(remote.homeReader(7L, READER, "ja-JP,ja;q=0.9", NOW)).thenReturn(owning("ja"));
+
+    HomeFeedQueryService.Page korean = forYou.page(asking("ko", null, 1));
+    HomeFeedQueryService.Page japanese = forYou.page(asking("ja-JP,ja;q=0.9", null, 2));
+    HomeFeedQueryService.Page onward = forYou.page(asking("ko", korean.next(), 1));
+
+    assertThat(shown(korean)).containsExactly("note 2");
+    assertThat(shown(onward)).containsExactly("note 1");
+    assertThat(shown(japanese)).containsExactly("note 1", "note 2");
+    verify(notes, times(2)).pool(any(), any(), any(), anyInt());
+    verify(remote, times(1)).homeReader(7L, READER, "ko", NOW);
+  }
+
+  private static HomeRanking.Reader owning(String language) {
+    return new HomeRanking.Reader(ForYouReader.NONE, 7L, Set.of(), Set.of(language));
+  }
+
+  private static HomeAsk asking(String header, String cursor, int size) {
+    return new HomeAsk(
+        7L, READER, header, HomeFeedQueryService.Tab.FOR_YOU, cursor, null, size, false);
   }
 
   @Test

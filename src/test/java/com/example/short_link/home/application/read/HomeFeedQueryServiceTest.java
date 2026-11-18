@@ -3,6 +3,8 @@ package com.example.short_link.home.application.read;
 import static com.example.short_link.home.application.read.HomeAskFixtures.ask;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -100,15 +102,29 @@ class HomeFeedQueryServiceTest {
     verify(forYou, times(1)).page(any());
   }
 
+  private static final Instant TOP = Instant.parse("2026-10-20T10:00:00.123456Z");
+  private static final Instant LAST = Instant.parse("2026-10-19T10:00:00.000001Z");
+
+  private final PostCard blogCard = post(0, "2026-10-20T10:00:00Z").post();
+
+  private BlogSlice blogSlice(BlogSlice.Place first, BlogSlice.Place last, boolean more) {
+    return new BlogSlice(List.of(blogCard), first, last, more);
+  }
+
+  private static BlogSlice.Place written(Instant at, long id) {
+    return new BlogSlice.Place(at, id, false);
+  }
+
+  private static BlogSlice.Place rest(Instant at, long id) {
+    return new BlogSlice.Place(at, id, true);
+  }
+
   @Test
   void blogPagesFromTheLastRowsPositionAndOnlyAFirstPageNamesTheNewest() {
-    Instant top = Instant.parse("2026-10-20T10:00:00.123456Z");
-    Instant last = Instant.parse("2026-10-19T10:00:00.000001Z");
-    PostCard card = post(0, "2026-10-20T10:00:00Z").post();
-    when(posts.blogBelow(7L, null, null, 2))
-        .thenReturn(new BlogSlice(List.of(card), top, 9L, last, 4L, true));
-    when(posts.blogBelow(7L, last, 4L, 2))
-        .thenReturn(new BlogSlice(List.of(card), last, 3L, last, 3L, false));
+    when(posts.blogBelow(7L, List.of(), false, null, null, 2))
+        .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
+    when(posts.blogBelow(7L, List.of(), false, LAST, 4L, 2))
+        .thenReturn(blogSlice(written(LAST, 3L), written(LAST, 3L), false));
 
     HomeFeedQueryService.Page first = home.page(ask(7L, null, "blog", null, null, 2, true));
     HomeFeedQueryService.Page onward =
@@ -119,7 +135,105 @@ class HomeFeedQueryServiceTest {
     assertThat(first.newest()).isEqualTo("b1792490400123456.9");
     assertThat(onward.next()).isNull();
     assertThat(onward.newest()).isNull();
-    verifyNoInteractions(notes, seen, forYou);
+    verifyNoInteractions(notes, seen);
+    verify(forYou, never()).page(any());
+  }
+
+  @Test
+  void aBlogForAReaderWithOwnLanguagesStartsInThemAndItsCursorCarriesThemAndTheSideItReached() {
+    Instant mid = Instant.parse("2026-10-18T10:00:00Z");
+    List<String> languages = List.of("ja", "ko");
+    when(forYou.ownLanguages(any(), eq(NOW.truncatedTo(ChronoUnit.MILLIS))))
+        .thenReturn(Set.of("ko", "ja", "KO", "zh.tw", "x"));
+    when(posts.blogBelow(null, languages, false, null, null, 2))
+        .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
+    when(posts.blogBelow(null, languages, false, LAST, 4L, 2))
+        .thenReturn(blogSlice(written(LAST, 3L), rest(TOP, 20L), true));
+    when(posts.blogBelow(null, languages, true, TOP, 20L, 2))
+        .thenReturn(blogSlice(rest(mid, 8L), rest(mid, 8L), false));
+
+    HomeFeedQueryService.Page first = home.page(ask(null, null, "blog", null, null, 2, false));
+    HomeFeedQueryService.Page crossing =
+        home.page(ask(null, null, "blog", first.next(), null, 2, false));
+    HomeFeedQueryService.Page others =
+        home.page(ask(null, null, "blog", crossing.next(), null, 2, false));
+
+    assertThat(first.next()).isEqualTo("b1-ja-ko.1792404000000001.4");
+    assertThat(first.newest()).isEqualTo("b1-ja-ko.1792490400123456.9");
+    assertThat(crossing.next()).isEqualTo("b2-ja-ko.1792490400123456.20");
+    assertThat(crossing.newest()).isNull();
+    assertThat(others.next()).isNull();
+    verify(forYou, times(1)).ownLanguages(any(), any());
+  }
+
+  @Test
+  void aBlogThatOpensWithTheRestNamesAPlainNewestSoSinceBringsWhateverIsPublished() {
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of("ko"), false, null, null, 2))
+        .thenReturn(blogSlice(rest(TOP, 9L), rest(LAST, 4L), true));
+
+    HomeFeedQueryService.Page first = home.page(ask(7L, null, "blog", null, null, 2, false));
+
+    assertThat(first.newest()).isEqualTo("b1792490400123456.9");
+    assertThat(first.next()).isEqualTo("b2-ko.1792404000000001.4");
+  }
+
+  @Test
+  void aBlogCursorFromBeforeLanguagesKeepsPagingTheOneListWhateverTheReaderReads() {
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of(), false, LAST, 4L, 2))
+        .thenReturn(blogSlice(written(LAST, 3L), written(LAST, 2L), true));
+
+    HomeFeedQueryService.Page onward =
+        home.page(ask(7L, null, "blog", "b1792404000000001.4", null, 2, false));
+
+    assertThat(onward.next()).isEqualTo("b1792404000000001.2");
+    verify(forYou, never()).ownLanguages(any(), any());
+  }
+
+  @Test
+  void blogSinceWithLanguagesBringsOnlyWhatWasWrittenInThemAndAPlainMarkerEveryPost() {
+    Instant newer = Instant.parse("2026-10-21T10:00:00Z");
+    when(posts.blogAbove(7L, List.of("ko"), TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
+        .thenReturn(blogSlice(written(newer, 12L), written(newer, 11L), false));
+    when(posts.blogAbove(7L, List.of("ko"), newer, 12L, HomeFeedQueryService.SINCE_LIMIT))
+        .thenReturn(BlogSlice.EMPTY);
+    when(posts.blogAbove(7L, List.of(), TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
+        .thenReturn(blogSlice(written(newer, 13L), written(newer, 11L), false));
+
+    HomeFeedQueryService.Page refreshed =
+        home.page(ask(7L, null, "blog", null, "b1-ko.1792490400123456.9", 2, false));
+    HomeFeedQueryService.Page nothing =
+        home.page(ask(7L, null, "blog", null, refreshed.newest(), 2, false));
+    HomeFeedQueryService.Page plain =
+        home.page(ask(7L, null, "blog", null, "b1792490400123456.9", 2, false));
+
+    assertThat(refreshed.newest()).isEqualTo("b1-ko.1792576800000000.12");
+    assertThat(refreshed.gap()).isFalse();
+    assertThat(refreshed.next()).isNull();
+    assertThat(nothing.items()).isEmpty();
+    assertThat(nothing.newest()).isEqualTo(refreshed.newest());
+    assertThat(plain.newest()).isEqualTo("b1792576800000000.13");
+    verify(forYou, never()).ownLanguages(any(), any());
+  }
+
+  @Test
+  void aBlogSinceThatCannotBeAnsweredIsAGapAndTheReadersFreshFirstPage() {
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of("ko"), false, null, null, 2))
+        .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
+    when(posts.blogAbove(7L, List.of("ko"), LAST, 4L, HomeFeedQueryService.SINCE_LIMIT))
+        .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 5L), true));
+
+    for (String since :
+        List.of("b2-ko.1792404000000001.4", "b1-ko.1792404000000001.4", "nonsense")) {
+      HomeFeedQueryService.Page fresh = home.page(ask(7L, null, "blog", null, since, 2, false));
+
+      assertThat(fresh.gap()).as(since).isTrue();
+      assertThat(fresh.next()).as(since).isEqualTo("b1-ko.1792404000000001.4");
+      assertThat(fresh.newest()).as(since).isEqualTo("b1-ko.1792490400123456.9");
+    }
+    verify(posts, times(1)).blogAbove(any(), any(), any(), anyLong(), anyInt());
   }
 
   @Test

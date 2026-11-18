@@ -32,25 +32,42 @@ public final class ForYouProfile {
         .forEach(known::add);
     Map<String, Double> tags = new HashMap<>();
     Map<String, Double> authors = new HashMap<>();
-    Map<String, Integer> read = new HashMap<>();
     for (Signal signal : signals) {
       ForYouCandidate.normalized(signal.tags())
           .forEach(tag -> tags.merge(tag, signal.weight(), Double::sum));
       if (signal.author() != null) {
         authors.merge(signal.author(), signal.weight(), Double::sum);
       }
+    }
+    known.addAll(learned(signals));
+    return new ForYouReader(known, tags, authors);
+  }
+
+  public static Set<String> learned(List<Signal> signals) {
+    Map<String, Integer> read = new HashMap<>();
+    for (Signal signal : signals) {
       String lang = language(signal.language());
       if (lang != null) {
         read.merge(lang, 1, Integer::sum);
       }
     }
+    Set<String> learned = new LinkedHashSet<>();
     read.forEach(
         (lang, count) -> {
           if (count >= LANGUAGE_MIN_SIGNALS && count >= LANGUAGE_SHARE * signals.size()) {
-            known.add(lang);
+            learned.add(lang);
           }
         });
-    return new ForYouReader(known, tags, authors);
+    return learned;
+  }
+
+  public static Set<String> own(String declared, List<Signal> explicit) {
+    Set<String> own = learned(explicit);
+    String lang = language(declared);
+    if (lang != null) {
+      own.add(lang);
+    }
+    return own;
   }
 
   public static String language(String tag) {
@@ -59,6 +76,11 @@ public final class ForYouProfile {
     }
     String primary = tag.strip().split("[-_;]", 2)[0].toLowerCase(Locale.ROOT);
     return primary.isEmpty() || primary.equals("*") ? null : primary;
+  }
+
+  public static String declared(String header) {
+    List<String> languages = accepted(header);
+    return languages.isEmpty() ? null : languages.getFirst();
   }
 
   public static List<String> accepted(String header) {

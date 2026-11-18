@@ -68,4 +68,35 @@ class ForYouProfileTest {
     assertThat(ForYouProfile.accepted(null)).isEmpty();
     assertThat(ForYouProfile.accepted("  ")).isEmpty();
   }
+
+  @Test
+  void aReadersOwnLanguagesAreTheDeclaredOneAndThoseLearnedFromTheSignalsGiven() {
+    List<ForYouProfile.Signal> explicit = new ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      explicit.add(signal(1, "a", "en"));
+    }
+    explicit.add(signal(1, "b", "ja-JP"));
+    explicit.add(signal(1, "b", "ja"));
+
+    assertThat(ForYouProfile.own("ko-KR", explicit)).containsExactlyInAnyOrder("ko", "ja", "en");
+    explicit.add(signal(1, "c", null));
+    assertThat(ForYouProfile.own("ko", explicit)).containsExactlyInAnyOrder("ko", "en");
+    assertThat(ForYouProfile.own("ko", List.of(signal(1, "b", "ja"))))
+        .containsExactlyInAnyOrder("ko");
+    assertThat(ForYouProfile.own("ko", List.of())).containsExactlyInAnyOrder("ko");
+    assertThat(ForYouProfile.own(null, List.of(signal(1, "b", "ja"), signal(1, "b", "ja"))))
+        .containsExactlyInAnyOrder("ja");
+    assertThat(ForYouProfile.own("*", List.of())).isEmpty();
+    assertThat(ForYouProfile.own(null, List.of())).isEmpty();
+  }
+
+  @Test
+  void theDeclaredLanguageIsTheFirstTheBrowserNamesAndNoneWhenItNamesNone() {
+    assertThat(ForYouProfile.declared("ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")).isEqualTo("ko");
+    assertThat(ForYouProfile.declared("ja")).isEqualTo("ja");
+    assertThat(ForYouProfile.declared("*;q=0.5, EN-us")).isEqualTo("en");
+    assertThat(ForYouProfile.declared("*")).isNull();
+    assertThat(ForYouProfile.declared("  ")).isNull();
+    assertThat(ForYouProfile.declared(null)).isNull();
+  }
 }

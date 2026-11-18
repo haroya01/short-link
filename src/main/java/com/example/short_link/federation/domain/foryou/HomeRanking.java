@@ -12,6 +12,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 // StrictMath keeps scores bit-identical across JVMs; the home-rank vectors compare them.
 public final class HomeRanking {
@@ -52,12 +53,13 @@ public final class HomeRanking {
             1_000);
   }
 
-  public record Reader(ForYouReader taste, Long member, Set<String> follows) {
+  public record Reader(ForYouReader taste, Long member, Set<String> follows, Set<String> own) {
 
-    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of());
+    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of(), Set.of());
 
     public Reader {
       follows = member == null ? Set.of() : Set.copyOf(follows);
+      own = Set.copyOf(own);
     }
   }
 
@@ -127,19 +129,39 @@ public final class HomeRanking {
       }
     }
     shown.sort(BEST_FIRST);
-    Map<ForYouCandidate, HomeCandidate> byItem = new IdentityHashMap<>();
-    shown.forEach(scored -> byItem.put(scored.candidate().item(), scored.candidate()));
     List<HomeCandidate> items = new ArrayList<>(pinned);
-    ForYouRanking.mix(
-            shown.stream().map(scored -> scored.candidate().item()).toList(),
-            weights.block(),
-            weights.authorSlots(),
-            weights.hostSlots(),
-            weights.maxRanked())
-        .stream()
-        .limit(weights.maxRanked())
-        .forEach(item -> items.add(byItem.get(item)));
+    items.addAll(ownLanguagesFirst(shown, reader.own(), weights));
     return new Ranked(items, pinned.size(), scores);
+  }
+
+  private static List<HomeCandidate> ownLanguagesFirst(
+      List<Scored> bestFirst, Set<String> own, Weights weights) {
+    Map<ForYouCandidate, HomeCandidate> byItem = new IdentityHashMap<>();
+    Map<Integer, List<ForYouCandidate>> tiers = new TreeMap<>();
+    for (Scored scored : bestFirst) {
+      ForYouCandidate item = scored.candidate().item();
+      byItem.put(item, scored.candidate());
+      tiers.computeIfAbsent(tier(item, own), tier -> new ArrayList<>()).add(item);
+    }
+    List<HomeCandidate> ranked = new ArrayList<>();
+    for (List<ForYouCandidate> tier : tiers.values()) {
+      int room = weights.maxRanked() - ranked.size();
+      ForYouRanking.mix(tier, weights.block(), weights.authorSlots(), weights.hostSlots(), room)
+          .stream()
+          .limit(room)
+          .forEach(item -> ranked.add(byItem.get(item)));
+    }
+    return ranked;
+  }
+
+  private static int tier(ForYouCandidate item, Set<String> own) {
+    if (own.isEmpty()) {
+      return 0;
+    }
+    if (item.language() == null) {
+      return 1;
+    }
+    return own.contains(item.language()) ? 0 : 2;
   }
 
   private static List<HomeCandidate> pool(

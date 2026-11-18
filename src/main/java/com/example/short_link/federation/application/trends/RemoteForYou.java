@@ -8,6 +8,7 @@ import com.example.short_link.federation.domain.foryou.ForYouProfile;
 import com.example.short_link.federation.domain.foryou.ForYouRanking;
 import com.example.short_link.federation.domain.foryou.ForYouReader;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
+import com.example.short_link.federation.domain.foryou.HomeRanking;
 import com.example.short_link.federation.domain.repository.ForYouSignalReader;
 import com.example.short_link.federation.domain.repository.RemoteNoteReachRepository;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,11 @@ public class RemoteForYou {
   static final int POOL = 1_000;
   static final int PER_KIND = 40;
   static final int MIN_DWELL_MS = 8_000;
+  static final Set<ForYouSignalReader.Kind> REACTIONS =
+      Set.of(
+          ForYouSignalReader.Kind.LIKED,
+          ForYouSignalReader.Kind.BOOKMARKED,
+          ForYouSignalReader.Kind.ANSWERED);
 
   private final LatestProperties latestProps;
   private final LatestPosts latest;
@@ -153,7 +160,7 @@ public class RemoteForYou {
     return latestProps.enabled();
   }
 
-  public Set<String> follows(Long viewerId) {
+  private Set<String> follows(Long viewerId) {
     return viewerId == null ? Set.of() : signals.follows(viewerId);
   }
 
@@ -181,7 +188,7 @@ public class RemoteForYou {
 
   private Ranking rank(
       Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf, boolean stored) {
-    ForYouReader reader = reader(viewerId, viewer, accepted, asOf);
+    ForYouReader reader = known(viewerId, viewer, accepted, asOf).taste();
     List<ForYouCandidate> pool =
         (stored ? stored(viewerId, asOf, false) : held(viewerId, asOf, false))
             .stream().map(HomeCandidate::item).toList();
@@ -194,20 +201,51 @@ public class RemoteForYou {
         ranked.items().stream().map(ForYouCandidate::ref).toList(), ranked.seenFrom());
   }
 
-  public ForYouReader reader(
-      Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf) {
-    List<ForYouProfile.Signal> read = new ArrayList<>();
-    if (viewer != null) {
-      for (ForYouSignalReader.Signal signal :
-          signals.signals(viewer, asOf.minus(SIGNAL_WINDOW), PER_KIND, MIN_DWELL_MS)) {
-        read.add(
-            new ForYouProfile.Signal(
-                weight(signal.kind()), signal.author(), signal.language(), signal.tags()));
-      }
+  public HomeRanking.Reader homeReader(
+      Long viewerId, SeenViewer viewer, String header, Instant asOf) {
+    Known known = known(viewerId, viewer, ForYouProfile.accepted(header), asOf);
+    return new HomeRanking.Reader(known.taste(), viewerId, follows(viewerId), known.own());
+  }
+
+  public Set<String> ownLanguages(Long viewerId, String header, Instant asOf) {
+    String asked = ForYouProfile.declared(header);
+    if (viewerId == null) {
+      return own(asked, List.of());
     }
-    List<String> languages =
-        viewerId == null ? accepted : signals.locale(viewerId).map(List::of).orElse(List.of());
-    return ForYouProfile.of(languages, read);
+    String declared = asked == null ? signals.locale(viewerId).orElse(null) : asked;
+    return own(
+        declared,
+        signals.signals(
+            SeenViewer.member(viewerId), asOf.minus(SIGNAL_WINDOW), PER_KIND, MIN_DWELL_MS));
+  }
+
+  private record Known(ForYouReader taste, Set<String> own) {}
+
+  private Known known(Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf) {
+    List<ForYouSignalReader.Signal> read =
+        viewer == null
+            ? List.of()
+            : signals.signals(viewer, asOf.minus(SIGNAL_WINDOW), PER_KIND, MIN_DWELL_MS);
+    Optional<String> locale = viewerId == null ? Optional.empty() : signals.locale(viewerId);
+    List<String> languages = viewerId == null ? accepted : locale.map(List::of).orElse(List.of());
+    String declared = accepted.isEmpty() ? locale.orElse(null) : accepted.getFirst();
+    return new Known(
+        ForYouProfile.of(languages, read.stream().map(RemoteForYou::weighed).toList()),
+        own(declared, read));
+  }
+
+  private static Set<String> own(String declared, List<ForYouSignalReader.Signal> read) {
+    return ForYouProfile.own(
+        declared,
+        read.stream()
+            .filter(signal -> REACTIONS.contains(signal.kind()))
+            .map(RemoteForYou::weighed)
+            .toList());
+  }
+
+  private static ForYouProfile.Signal weighed(ForYouSignalReader.Signal signal) {
+    return new ForYouProfile.Signal(
+        weight(signal.kind()), signal.author(), signal.language(), signal.tags());
   }
 
   private List<HomeCandidate> stored(Long viewerId, Instant asOf, boolean withFollowed) {

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -203,6 +204,100 @@ class HomeForYouIntegrationTest {
 
     assertThat(signals.follows(reader)).isEqualTo(Set.of("u" + writer, "r" + accepted));
     assertThat(signals.follows(writer)).isEmpty();
+  }
+
+  @Test
+  void theFirstTierIsTheDeclaredLanguageAndThoseOfTheReadersOwnReactionsNeverOfDwellAlone() {
+    long unknown = written(null, ago(180));
+    long japanese = written("ja", ago(120));
+    long bookmarked = written("ja", ago(100));
+    long english = written("en", ago(90));
+    long fresh = written("en", ago(60));
+    long korean = written("ko", ago(45));
+    SeenViewer device = SeenViewer.of(null, "3b2a1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    jdbc.update(
+        "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, ?)",
+        japanese,
+        reader,
+        utc(ago(30)));
+    jdbc.update(
+        "INSERT INTO note_bookmark (note_id, user_id, created_at) VALUES (?, ?, ?)",
+        bookmarked,
+        reader,
+        utc(ago(30)));
+    for (SeenViewer stayed : List.of(viewer, device)) {
+      for (long note : new long[] {english, fresh}) {
+        jdbc.update(
+            "INSERT INTO remote_dwell (viewer_kind, viewer_key, note_id, dwell_ms, dwelt_at)"
+                + " VALUES (?, ?, ?, 9000, ?)",
+            stayed.kind(),
+            stayed.keyBytes(),
+            note,
+            utc(ago(20)));
+      }
+    }
+    String browser = "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7";
+
+    assertThat(keys(home.page(asking(reader, viewer, null))))
+        .containsExactly(notes(japanese, korean, bookmarked, unknown, fresh, english));
+    assertThat(keys(home.page(asking(reader, viewer, "en-US,en;q=0.9"))))
+        .containsExactly(notes(japanese, fresh, english, bookmarked, unknown, korean));
+    assertThat(keys(home.page(asking(null, device, browser))))
+        .containsExactly(notes(korean, unknown, fresh, english, japanese, bookmarked));
+    assertThat(keys(home.page(asking(null, null, "*"))))
+        .containsExactly(notes(japanese, korean, fresh, english, bookmarked, unknown));
+  }
+
+  @Test
+  void followingALoudAccountInAnotherLanguageDoesNotMakeItTheReadersOwnButTwoLikesDo() {
+    long japanese = written("ja", ago(120));
+    long liked = written("ja", ago(100));
+    long korean = written("ko", ago(45));
+    long english = written("en", ago(10));
+    long loud = actor("lo");
+    for (long member : new long[] {reader, stranger}) {
+      jdbc.update(
+          "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+              + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+          member,
+          loud,
+          "https://kurl.me/follow/lo" + member);
+    }
+    for (int posted = 0; posted < 40; posted++) {
+      jdbc.update(
+          "INSERT INTO note (remote_actor_id, uri, body, created_at, visibility, reply, language)"
+              + " VALUES (?, ?, 'hi', ?, 'PUBLIC', FALSE, 'en')",
+          loud,
+          "https://lo.example/notes/" + loud + "/" + posted,
+          utc(ago(600 + posted)));
+    }
+    for (long note : new long[] {japanese, liked}) {
+      jdbc.update(
+          "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, ?)",
+          note,
+          reader,
+          utc(ago(5)));
+    }
+
+    assertThat(keys(home.page(asking(reader, viewer, null))))
+        .containsExactly(notes(korean, liked, japanese, english));
+    assertThat(keys(home.page(asking(stranger, SeenViewer.member(stranger), null))))
+        .containsExactly(notes(korean, english, liked, japanese));
+  }
+
+  private static HomeAsk asking(Long member, SeenViewer viewer, String header) {
+    return new HomeAsk(
+        member, viewer, header, HomeFeedQueryService.Tab.FOR_YOU, null, null, 40, false);
+  }
+
+  private static String[] notes(long... ids) {
+    return Arrays.stream(ids).mapToObj(id -> "note:" + id).toArray(String[]::new);
+  }
+
+  private long written(String language, Instant at) {
+    long id = note(writer, "PUBLIC", null, null, at);
+    jdbc.update("UPDATE note SET language = ? WHERE id = ?", language, id);
+    return id;
   }
 
   private HomeFeedQueryService.Page forYou(String cursor, int size, boolean hide) {
