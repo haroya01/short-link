@@ -121,9 +121,9 @@ class HomeFeedQueryServiceTest {
 
   @Test
   void blogPagesFromTheLastRowsPositionAndOnlyAFirstPageNamesTheNewest() {
-    when(posts.blogBelow(7L, null, false, null, null, 2))
+    when(posts.blogBelow(7L, List.of(), false, null, null, 2))
         .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
-    when(posts.blogBelow(7L, null, false, LAST, 4L, 2))
+    when(posts.blogBelow(7L, List.of(), false, LAST, 4L, 2))
         .thenReturn(blogSlice(written(LAST, 3L), written(LAST, 3L), false));
 
     HomeFeedQueryService.Page first = home.page(ask(7L, null, "blog", null, null, 2, true));
@@ -140,14 +140,16 @@ class HomeFeedQueryServiceTest {
   }
 
   @Test
-  void aBlogForAReaderWithADeclaredLanguageStartsInItAndItsCursorCarriesItAndTheSideItReached() {
+  void aBlogForAReaderWithOwnLanguagesStartsInThemAndItsCursorCarriesThemAndTheSideItReached() {
     Instant mid = Instant.parse("2026-10-18T10:00:00Z");
-    when(forYou.declared(any())).thenReturn("ko");
-    when(posts.blogBelow(null, "ko", false, null, null, 2))
+    List<String> languages = List.of("ja", "ko");
+    when(forYou.ownLanguages(any(), eq(NOW.truncatedTo(ChronoUnit.MILLIS))))
+        .thenReturn(Set.of("ko", "ja", "KO", "zh.tw", "x"));
+    when(posts.blogBelow(null, languages, false, null, null, 2))
         .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
-    when(posts.blogBelow(null, "ko", false, LAST, 4L, 2))
+    when(posts.blogBelow(null, languages, false, LAST, 4L, 2))
         .thenReturn(blogSlice(written(LAST, 3L), rest(TOP, 20L), true));
-    when(posts.blogBelow(null, "ko", true, TOP, 20L, 2))
+    when(posts.blogBelow(null, languages, true, TOP, 20L, 2))
         .thenReturn(blogSlice(rest(mid, 8L), rest(mid, 8L), false));
 
     HomeFeedQueryService.Page first = home.page(ask(null, null, "blog", null, null, 2, false));
@@ -156,29 +158,18 @@ class HomeFeedQueryServiceTest {
     HomeFeedQueryService.Page others =
         home.page(ask(null, null, "blog", crossing.next(), null, 2, false));
 
-    assertThat(first.next()).isEqualTo("b1-ko.1792404000000001.4");
-    assertThat(first.newest()).isEqualTo("b1-ko.1792490400123456.9");
-    assertThat(crossing.next()).isEqualTo("b2-ko.1792490400123456.20");
+    assertThat(first.next()).isEqualTo("b1-ja-ko.1792404000000001.4");
+    assertThat(first.newest()).isEqualTo("b1-ja-ko.1792490400123456.9");
+    assertThat(crossing.next()).isEqualTo("b2-ja-ko.1792490400123456.20");
     assertThat(crossing.newest()).isNull();
     assertThat(others.next()).isNull();
-    verify(forYou, times(1)).declared(any());
-  }
-
-  @Test
-  void aDeclaredLanguageThatCannotBeAPostsIsNoLanguage() {
-    when(forYou.declared(any())).thenReturn("zh.tw");
-    when(posts.blogBelow(null, null, false, null, null, 2))
-        .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
-
-    HomeFeedQueryService.Page first = home.page(ask(null, null, "blog", null, null, 2, false));
-
-    assertThat(first.next()).isEqualTo("b1792404000000001.4");
+    verify(forYou, times(1)).ownLanguages(any(), any());
   }
 
   @Test
   void aBlogThatOpensWithTheRestNamesAPlainNewestSoSinceBringsWhateverIsPublished() {
-    when(forYou.declared(any())).thenReturn("ko");
-    when(posts.blogBelow(7L, "ko", false, null, null, 2))
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of("ko"), false, null, null, 2))
         .thenReturn(blogSlice(rest(TOP, 9L), rest(LAST, 4L), true));
 
     HomeFeedQueryService.Page first = home.page(ask(7L, null, "blog", null, null, 2, false));
@@ -188,26 +179,26 @@ class HomeFeedQueryServiceTest {
   }
 
   @Test
-  void aBlogCursorFromBeforeLanguagesKeepsPagingTheOneListWhateverTheReaderDeclares() {
-    when(forYou.declared(any())).thenReturn("ko");
-    when(posts.blogBelow(7L, null, false, LAST, 4L, 2))
+  void aBlogCursorFromBeforeLanguagesKeepsPagingTheOneListWhateverTheReaderReads() {
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of(), false, LAST, 4L, 2))
         .thenReturn(blogSlice(written(LAST, 3L), written(LAST, 2L), true));
 
     HomeFeedQueryService.Page onward =
         home.page(ask(7L, null, "blog", "b1792404000000001.4", null, 2, false));
 
     assertThat(onward.next()).isEqualTo("b1792404000000001.2");
-    verify(forYou, never()).declared(any());
+    verify(forYou, never()).ownLanguages(any(), any());
   }
 
   @Test
-  void blogSinceWithALanguageBringsOnlyWhatWasWrittenInItAndAPlainMarkerEveryPost() {
+  void blogSinceWithLanguagesBringsOnlyWhatWasWrittenInThemAndAPlainMarkerEveryPost() {
     Instant newer = Instant.parse("2026-10-21T10:00:00Z");
-    when(posts.blogAbove(7L, "ko", TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
+    when(posts.blogAbove(7L, List.of("ko"), TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
         .thenReturn(blogSlice(written(newer, 12L), written(newer, 11L), false));
-    when(posts.blogAbove(7L, "ko", newer, 12L, HomeFeedQueryService.SINCE_LIMIT))
+    when(posts.blogAbove(7L, List.of("ko"), newer, 12L, HomeFeedQueryService.SINCE_LIMIT))
         .thenReturn(BlogSlice.EMPTY);
-    when(posts.blogAbove(7L, null, TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
+    when(posts.blogAbove(7L, List.of(), TOP, 9L, HomeFeedQueryService.SINCE_LIMIT))
         .thenReturn(blogSlice(written(newer, 13L), written(newer, 11L), false));
 
     HomeFeedQueryService.Page refreshed =
@@ -223,15 +214,15 @@ class HomeFeedQueryServiceTest {
     assertThat(nothing.items()).isEmpty();
     assertThat(nothing.newest()).isEqualTo(refreshed.newest());
     assertThat(plain.newest()).isEqualTo("b1792576800000000.13");
-    verify(forYou, never()).declared(any());
+    verify(forYou, never()).ownLanguages(any(), any());
   }
 
   @Test
   void aBlogSinceThatCannotBeAnsweredIsAGapAndTheReadersFreshFirstPage() {
-    when(forYou.declared(any())).thenReturn("ko");
-    when(posts.blogBelow(7L, "ko", false, null, null, 2))
+    when(forYou.ownLanguages(any(), any())).thenReturn(Set.of("ko"));
+    when(posts.blogBelow(7L, List.of("ko"), false, null, null, 2))
         .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 4L), true));
-    when(posts.blogAbove(7L, "ko", LAST, 4L, HomeFeedQueryService.SINCE_LIMIT))
+    when(posts.blogAbove(7L, List.of("ko"), LAST, 4L, HomeFeedQueryService.SINCE_LIMIT))
         .thenReturn(blogSlice(written(TOP, 9L), written(LAST, 5L), true));
 
     for (String since :

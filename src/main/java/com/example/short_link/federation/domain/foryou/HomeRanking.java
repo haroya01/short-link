@@ -53,13 +53,13 @@ public final class HomeRanking {
             1_000);
   }
 
-  public record Reader(ForYouReader taste, Long member, Set<String> follows, String declared) {
+  public record Reader(ForYouReader taste, Long member, Set<String> follows, Set<String> own) {
 
-    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of(), null);
+    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of(), Set.of());
 
     public Reader {
       follows = member == null ? Set.of() : Set.copyOf(follows);
-      declared = ForYouProfile.language(declared);
+      own = Set.copyOf(own);
     }
   }
 
@@ -130,18 +130,18 @@ public final class HomeRanking {
     }
     shown.sort(BEST_FIRST);
     List<HomeCandidate> items = new ArrayList<>(pinned);
-    items.addAll(declaredLanguageFirst(shown, reader.declared(), weights));
+    items.addAll(ownLanguagesFirst(shown, reader.own(), weights));
     return new Ranked(items, pinned.size(), scores);
   }
 
-  private static List<HomeCandidate> declaredLanguageFirst(
-      List<Scored> bestFirst, String declared, Weights weights) {
+  private static List<HomeCandidate> ownLanguagesFirst(
+      List<Scored> bestFirst, Set<String> own, Weights weights) {
     Map<ForYouCandidate, HomeCandidate> byItem = new IdentityHashMap<>();
     Map<Integer, List<ForYouCandidate>> tiers = new TreeMap<>();
     for (Scored scored : bestFirst) {
       ForYouCandidate item = scored.candidate().item();
       byItem.put(item, scored.candidate());
-      tiers.computeIfAbsent(tier(item, declared), tier -> new ArrayList<>()).add(item);
+      tiers.computeIfAbsent(tier(item, own), tier -> new ArrayList<>()).add(item);
     }
     List<HomeCandidate> ranked = new ArrayList<>();
     for (List<ForYouCandidate> tier : tiers.values()) {
@@ -154,11 +154,14 @@ public final class HomeRanking {
     return ranked;
   }
 
-  private static int tier(ForYouCandidate item, String declared) {
-    if (declared == null || declared.equals(item.language())) {
+  private static int tier(ForYouCandidate item, Set<String> own) {
+    if (own.isEmpty()) {
       return 0;
     }
-    return item.language() == null ? 1 : 2;
+    if (item.language() == null) {
+      return 1;
+    }
+    return own.contains(item.language()) ? 0 : 2;
   }
 
   private static List<HomeCandidate> pool(

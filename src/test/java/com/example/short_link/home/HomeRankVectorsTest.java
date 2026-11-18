@@ -126,7 +126,7 @@ class HomeRankVectorsTest {
             new ForYouReader(languages, tags, authors),
             memberId,
             follows,
-            reader.get("declared").isNull() ? null : reader.get("declared").asString()),
+            new HashSet<>(strings(reader.get("own")))),
         viewer,
         candidates,
         seen,
@@ -281,9 +281,7 @@ class HomeRankVectorsTest {
     RemoteSeen remoteSeen = mock(RemoteSeen.class);
     when(remote.enabled()).thenReturn(true);
     when(remote.homePool(in.reader().member(), in.asOf())).thenReturn(in.candidates());
-    when(remote.reader(any(), any(), any(), any())).thenReturn(in.reader().taste());
-    when(remote.declared(any(), any())).thenReturn(in.reader().declared());
-    when(remote.follows(in.reader().member())).thenReturn(in.reader().follows());
+    when(remote.homeReader(any(), any(), any(), any())).thenReturn(in.reader());
     when(notes.pool(any(), any(), any(), anyInt())).thenReturn(List.of());
     when(posts.pool(any(), any(), any(), anyInt())).thenReturn(List.of());
     when(localSeen.seenBefore(any(), any(), any()))

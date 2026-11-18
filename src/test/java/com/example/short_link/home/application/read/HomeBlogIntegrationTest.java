@@ -151,6 +151,39 @@ class HomeBlogIntegrationTest {
   }
 
   @Test
+  void aLanguageOfTheMembersOwnLikesAndBookmarksComesFirstTooButNotOneTheyOnlyStayedOn() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+    long ko2 = post(writer, "ko", ahead.minusSeconds(10_800));
+    jdbc.update(
+        "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, NOW(6))",
+        note("ja"),
+        reader);
+    jdbc.update(
+        "INSERT INTO note_bookmark (note_id, user_id, created_at) VALUES (?, ?, NOW(6))",
+        note("ja"),
+        reader);
+    for (int stayed = 0; stayed < 4; stayed++) {
+      jdbc.update(
+          "INSERT INTO remote_dwell (viewer_kind, viewer_key, note_id, dwell_ms, dwelt_at)"
+              + " VALUES (?, ?, ?, 9000, NOW(6))",
+          SeenViewer.MEMBER,
+          SeenViewer.member(reader).keyBytes(),
+          note("en"));
+    }
+
+    HomeFeedQueryService.Page first = blog(null, null, 2);
+    HomeFeedQueryService.Page crossing = blog(first.next(), null, 2);
+
+    assertThat(ids(first)).containsExactly(ja1, ko1);
+    assertThat(first.next()).startsWith("b1-ja-ko.");
+    assertThat(first.newest()).startsWith("b1-ja-ko.");
+    assertThat(ids(crossing)).containsExactly(ko2, en1);
+    assertThat(ids(asking(reader, "en", null, null))).containsExactly(ja1, en1);
+  }
+
+  @Test
   void aCursorFromBeforeLanguagesKeepsPagingEveryLanguageNewestFirst() {
     long ja1 = post(writer, "ja", ahead);
     long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
@@ -344,6 +377,15 @@ class HomeBlogIntegrationTest {
           user);
     }
     return room;
+  }
+
+  private long note(String language) {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, visibility, language, created_at)"
+            + " VALUES (?, 'here', 'PUBLIC', ?, NOW(6))",
+        writer,
+        language);
+    return jdbc.queryForObject("SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, writer);
   }
 
   private long series(long owner) {

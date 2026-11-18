@@ -135,38 +135,38 @@ public class HomeFeedQueryService {
   private Page blog(HomeAsk ask) {
     HomeCursor.Blog from = HomeCursor.Blog.parse(ask.cursor());
     if (from == null) {
-      String language = HomeCursor.Blog.language(forYou.declared(ask));
-      BlogSlice top = posts.blogBelow(ask.viewerId(), language, false, null, null, ask.size());
-      HomeCursor.Blog newest = HomeCursor.Blog.newest(top.first(), language);
+      List<String> languages = HomeCursor.Blog.languages(forYou.ownLanguages(ask, now()));
+      BlogSlice top = posts.blogBelow(ask.viewerId(), languages, false, null, null, ask.size());
+      HomeCursor.Blog newest = HomeCursor.Blog.newest(top.first(), languages);
       return new Page(
-          cards(top), blogNext(top, language), newest == null ? null : newest.toString(), null);
+          cards(top), blogNext(top, languages), newest == null ? null : newest.toString(), null);
     }
     BlogSlice below =
         posts.blogBelow(
             ask.viewerId(),
-            from.language(),
+            from.languages(),
             from.rest(),
             from.publishedAt(),
             from.id(),
             ask.size());
-    return new Page(cards(below), blogNext(below, from.language()), null, null);
+    return new Page(cards(below), blogNext(below, from.languages()), null, null);
   }
 
-  private static String blogNext(BlogSlice slice, String language) {
-    return slice.more() ? HomeCursor.Blog.of(slice.last(), language).toString() : null;
+  private static String blogNext(BlogSlice slice, List<String> languages) {
+    return slice.more() ? HomeCursor.Blog.of(slice.last(), languages).toString() : null;
   }
 
   // Since brings what was published above the marker, at most SINCE_LIMIT; more than that is a gap
-  // and a fresh first page. A marker that names a language brings only the posts written in it.
+  // and a fresh first page. A marker that names languages brings only the posts written in them.
   private Page blogSince(HomeAsk ask) {
     HomeCursor.Blog marker = HomeCursor.Blog.parse(ask.since());
     BlogSlice above =
         marker == null || marker.rest()
             ? null
             : posts.blogAbove(
-                ask.viewerId(), marker.language(), marker.publishedAt(), marker.id(), SINCE_LIMIT);
+                ask.viewerId(), marker.languages(), marker.publishedAt(), marker.id(), SINCE_LIMIT);
     if (above != null && !above.more()) {
-      HomeCursor.Blog top = HomeCursor.Blog.of(above.first(), marker.language());
+      HomeCursor.Blog top = HomeCursor.Blog.of(above.first(), marker.languages());
       return new Page(cards(above), null, top == null ? ask.since() : top.toString(), false);
     }
     Page first = blog(ask.fresh(ask.viewer()));
