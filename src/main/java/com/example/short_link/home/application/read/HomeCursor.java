@@ -4,8 +4,6 @@ import com.example.short_link.post.application.read.BlogSlice;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.List;
 import java.util.regex.Pattern;
 
 // Clients hand these back as they got them, so every shape once given out must keep reading.
@@ -101,38 +99,26 @@ sealed interface HomeCursor {
   }
 
   // "b<published µs>.<id>", the place of a blog post, both the blog's cursor and its since marker.
-  record Blog(Instant publishedAt, long id, List<String> languages, boolean rest)
-      implements HomeCursor {
+  record Blog(Instant publishedAt, long id, String language, boolean rest) implements HomeCursor {
 
-    static final int MAX_LANGUAGES = 8;
-
-    private static final String AMONG_LANGUAGES = "1";
+    private static final String IN_THE_LANGUAGE = "1";
     private static final String AMONG_THE_REST = "2";
     private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,8}");
 
-    public Blog {
-      languages = List.copyOf(languages);
-    }
-
-    static Blog of(BlogSlice.Place place, List<String> languages) {
+    static Blog of(BlogSlice.Place place, String language) {
       return place == null
           ? null
-          : new Blog(place.publishedAt(), place.id(), languages, place.rest());
+          : new Blog(place.publishedAt(), place.id(), language, place.rest());
     }
 
-    static Blog newest(BlogSlice.Place place, List<String> languages) {
+    static Blog newest(BlogSlice.Place place, String language) {
       return place == null
           ? null
-          : new Blog(place.publishedAt(), place.id(), place.rest() ? List.of() : languages, false);
+          : new Blog(place.publishedAt(), place.id(), place.rest() ? null : language, false);
     }
 
-    static List<String> languages(Collection<String> tags) {
-      return tags.stream()
-          .filter(tag -> LANGUAGE.matcher(tag).matches())
-          .distinct()
-          .sorted()
-          .limit(MAX_LANGUAGES)
-          .toList();
+    static String language(String tag) {
+      return tag != null && LANGUAGE.matcher(tag).matches() ? tag : null;
     }
 
     static Blog parse(String raw) {
@@ -142,7 +128,7 @@ sealed interface HomeCursor {
       String[] parts = raw.substring(1).split("\\.");
       try {
         return switch (parts.length) {
-          case 2 -> at(parts[0], parts[1], List.of(), false);
+          case 2 -> at(parts[0], parts[1], null, false);
           case 3 -> among(parts[0], parts[1], parts[2]);
           default -> null;
         };
@@ -153,30 +139,28 @@ sealed interface HomeCursor {
 
     private static Blog among(String head, String rawMicros, String rawId) {
       String[] named = head.split("-", -1);
-      List<String> languages = List.of(named).subList(1, named.length);
+      if (named.length != 2 || language(named[1]) == null) {
+        return null;
+      }
       boolean rest = named[0].equals(AMONG_THE_REST);
-      boolean known = rest || named[0].equals(AMONG_LANGUAGES);
-      return known && !languages.isEmpty() && languages(languages).equals(languages)
-          ? at(rawMicros, rawId, languages, rest)
-          : null;
+      return rest || named[0].equals(IN_THE_LANGUAGE) ? at(rawMicros, rawId, named[1], rest) : null;
     }
 
-    private static Blog at(String rawMicros, String rawId, List<String> languages, boolean rest) {
+    private static Blog at(String rawMicros, String rawId, String language, boolean rest) {
       long micros = Long.parseLong(rawMicros);
       long id = Long.parseLong(rawId);
       return micros >= 0 && id > 0
-          ? new Blog(Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id, languages, rest)
+          ? new Blog(Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id, language, rest)
           : null;
     }
 
     @Override
     public String toString() {
       String place = ChronoUnit.MICROS.between(Instant.EPOCH, publishedAt) + "." + id;
-      if (languages.isEmpty()) {
+      if (language == null) {
         return "b" + place;
       }
-      String among = rest ? AMONG_THE_REST : AMONG_LANGUAGES;
-      return "b" + among + "-" + String.join("-", languages) + "." + place;
+      return "b" + (rest ? AMONG_THE_REST : IN_THE_LANGUAGE) + "-" + language + "." + place;
     }
   }
 }

@@ -119,20 +119,35 @@ class HomeBlogIntegrationTest {
   }
 
   @Test
-  void theHeaderOfASignedOutReaderNamesTheirLanguagesAndBothComeFirst() {
+  void onlyTheFirstLanguageOfASignedOutReadersHeaderComesFirst() {
     long ja1 = post(writer, "ja", ahead);
     long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
     long en1 = post(writer, "en", ahead.minusSeconds(7_200));
     long ko2 = post(writer, "ko", ahead.minusSeconds(10_800));
     long ja2 = post(writer, "ja", ahead.minusSeconds(14_400));
 
-    HomeFeedQueryService.Page first = signedOut("ja-JP,ja;q=0.9,en-US;q=0.8,ko;q=0.7", null, null);
-    List<Long> scrolled = scroll(first, cursor -> signedOut("ko", cursor, null), new ArrayList<>());
+    HomeFeedQueryService.Page first =
+        asking(null, "ja-JP,ja;q=0.9,en-US;q=0.8,ko;q=0.7", null, null);
+    List<Long> scrolled =
+        scroll(first, cursor -> asking(null, "ko", cursor, null), new ArrayList<>());
 
-    assertThat(first.next()).startsWith("b1-en-ja.");
+    assertThat(first.next()).startsWith("b1-ja.");
     assertThat(scrolled).doesNotHaveDuplicates();
     assertThat(scrolled.stream().filter(Set.of(ja1, ko1, en1, ko2, ja2)::contains))
-        .containsExactly(ja1, en1, ja2, ko1, ko2);
+        .containsExactly(ja1, ja2, ko1, en1, ko2);
+  }
+
+  @Test
+  void aMembersHeaderComesBeforeTheirOwnLanguageWhichStandsInOnlyWithoutOne() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    long en1 = post(writer, "en", ahead.minusSeconds(7_200));
+
+    assertThat(ids(asking(reader, "ja-JP,ja;q=0.9,ko;q=0.8", null, null)))
+        .containsExactly(ja1, ko1);
+    assertThat(ids(asking(reader, "en", null, null))).containsExactly(en1, ja1);
+    assertThat(ids(asking(reader, "*", null, null))).containsExactly(ko1, ja1);
+    assertThat(ids(asking(reader, null, null, null))).containsExactly(ko1, ja1);
   }
 
   @Test
@@ -250,8 +265,21 @@ class HomeBlogIntegrationTest {
   }
 
   private HomeFeedQueryService.Page signedOut(String header, String cursor, String since) {
+    return asking(null, header, cursor, since);
+  }
+
+  private HomeFeedQueryService.Page asking(
+      Long member, String header, String cursor, String since) {
     return home.page(
-        new HomeAsk(null, null, header, HomeFeedQueryService.Tab.BLOG, cursor, since, 2, false));
+        new HomeAsk(
+            member,
+            member == null ? null : SeenViewer.member(member),
+            header,
+            HomeFeedQueryService.Tab.BLOG,
+            cursor,
+            since,
+            2,
+            false));
   }
 
   private static List<Long> everyId(HomeFeedQueryService.Page page) {

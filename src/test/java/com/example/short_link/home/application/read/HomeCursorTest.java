@@ -63,11 +63,8 @@ class HomeCursorTest {
     assertThat(Blog.parse("b1792404000000001.4"))
         .isEqualTo(
             new Blog(
-                Instant.EPOCH.plus(1_792_404_000_000_001L, ChronoUnit.MICROS),
-                4,
-                List.of(),
-                false));
-    Blog marker = new Blog(Instant.parse("2026-10-20T10:00:00.123456Z"), 9L, List.of(), false);
+                Instant.EPOCH.plus(1_792_404_000_000_001L, ChronoUnit.MICROS), 4, null, false));
+    Blog marker = new Blog(Instant.parse("2026-10-20T10:00:00.123456Z"), 9L, null, false);
     assertThat(Blog.parse(marker.toString())).isEqualTo(marker);
     for (String bad :
         List.of("b1.0", "b-1.2", "b1", "1.2", "bx.2", "b1.2.3", "b99999999999999999999.1", "")) {
@@ -77,53 +74,49 @@ class HomeCursorTest {
   }
 
   @Test
-  void aBlogPlaceForAReaderWithLanguagesCarriesThemAndWhetherItIsAmongTheRest() {
+  void aBlogPlaceForAReaderWithALanguageCarriesItAndWhetherItIsAmongTheRest() {
     Instant at = Instant.EPOCH.plus(1_792_404_000_000_001L, ChronoUnit.MICROS);
-    assertThat(Blog.parse("b1-ko.1792404000000001.4"))
-        .isEqualTo(new Blog(at, 4, List.of("ko"), false));
-    assertThat(Blog.parse("b2-ja-ko.1792404000000001.4"))
-        .isEqualTo(new Blog(at, 4, List.of("ja", "ko"), true));
+    assertThat(Blog.parse("b1-ko.1792404000000001.4")).isEqualTo(new Blog(at, 4, "ko", false));
+    assertThat(Blog.parse("b2-ja.1792404000000001.4")).isEqualTo(new Blog(at, 4, "ja", true));
     for (String cursor :
-        List.of("b1-ko.1792404000000001.4", "b2-ja-ko.1792404000000001.4", "b2-en.0.1")) {
+        List.of("b1-ko.1792404000000001.4", "b2-ja.1792404000000001.4", "b2-en.0.1")) {
       assertThat(Blog.parse(cursor)).as(cursor).hasToString(cursor);
     }
-    assertThat(Blog.parse("b1792404000000001.4").languages()).isEmpty();
+    assertThat(Blog.parse("b1792404000000001.4").language()).isNull();
     assertThat(Blog.parse("b1792404000000001.4").rest()).isFalse();
     for (String bad :
         List.of(
             "b1-.1.2",
             "b1-ko-.1.2",
+            "b1-ko-ja.1.2",
             "b3-ko.1.2",
             "b-ko.1.2",
             "b1-KO.1.2",
-            "b1-ko-ja.1.2",
-            "b1-ko-ko.1.2",
             "b1-k.1.2",
+            "b1-toolonglang.1.2",
             "b1-ko.1.0",
             "b1-ko.-1.2",
             "b1-ko.x.2",
             "b1-ko.1.2.3",
-            "b1-aa-bb-cc-dd-ee-ff-gg-hh-ii.1.2",
             "1-ko.1.2")) {
       assertThat(Blog.parse(bad)).as(bad).isNull();
     }
   }
 
   @Test
-  void aBlogKeepsOnlyPlainLanguageTagsSortedAndANewestAmongTheRestIsAPlainMarker() {
+  void aBlogTakesOnlyAPlainLanguageTagAndANewestAmongTheRestIsAPlainMarker() {
     Instant at = Instant.EPOCH.plus(5, ChronoUnit.MICROS);
-    assertThat(Blog.languages(List.of("ko", "ja", "ko", "zh.tw", "KO", "x", "a-b")))
-        .containsExactly("ja", "ko");
-    assertThat(Blog.languages(List.of())).isEmpty();
-    assertThat(Blog.languages(List.of("aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii")))
-        .hasSize(Blog.MAX_LANGUAGES);
-    assertThat(Blog.newest(new BlogSlice.Place(at, 3, false), List.of("ko")))
-        .hasToString("b1-ko.5.3");
-    assertThat(Blog.newest(new BlogSlice.Place(at, 3, true), List.of("ko"))).hasToString("b5.3");
-    assertThat(Blog.of(new BlogSlice.Place(at, 3, true), List.of("ko"))).hasToString("b2-ko.5.3");
-    assertThat(Blog.of(new BlogSlice.Place(at, 3, false), List.of())).hasToString("b5.3");
-    assertThat(Blog.of(null, List.of("ko"))).isNull();
-    assertThat(Blog.newest(null, List.of("ko"))).isNull();
+    assertThat(Blog.language("ko")).isEqualTo("ko");
+    for (String other : List.of("zh.tw", "KO", "x", "a-b", "")) {
+      assertThat(Blog.language(other)).as(other).isNull();
+    }
+    assertThat(Blog.language(null)).isNull();
+    assertThat(Blog.newest(new BlogSlice.Place(at, 3, false), "ko")).hasToString("b1-ko.5.3");
+    assertThat(Blog.newest(new BlogSlice.Place(at, 3, true), "ko")).hasToString("b5.3");
+    assertThat(Blog.of(new BlogSlice.Place(at, 3, true), "ko")).hasToString("b2-ko.5.3");
+    assertThat(Blog.of(new BlogSlice.Place(at, 3, false), null)).hasToString("b5.3");
+    assertThat(Blog.of(null, "ko")).isNull();
+    assertThat(Blog.newest(null, "ko")).isNull();
   }
 
   @Test

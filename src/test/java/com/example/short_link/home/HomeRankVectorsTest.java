@@ -122,7 +122,11 @@ class HomeRankVectorsTest {
     }
     return new Case(
         asOf,
-        new HomeRanking.Reader(new ForYouReader(languages, tags, authors), memberId, follows),
+        new HomeRanking.Reader(
+            new ForYouReader(languages, tags, authors),
+            memberId,
+            follows,
+            reader.get("declared").isNull() ? null : reader.get("declared").asString()),
         viewer,
         candidates,
         seen,
@@ -278,6 +282,7 @@ class HomeRankVectorsTest {
     when(remote.enabled()).thenReturn(true);
     when(remote.homePool(in.reader().member(), in.asOf())).thenReturn(in.candidates());
     when(remote.reader(any(), any(), any(), any())).thenReturn(in.reader().taste());
+    when(remote.declared(any(), any())).thenReturn(in.reader().declared());
     when(remote.follows(in.reader().member())).thenReturn(in.reader().follows());
     when(notes.pool(any(), any(), any(), anyInt())).thenReturn(List.of());
     when(posts.pool(any(), any(), any(), anyInt())).thenReturn(List.of());

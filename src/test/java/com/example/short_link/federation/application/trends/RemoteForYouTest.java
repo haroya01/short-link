@@ -345,6 +345,23 @@ class RemoteForYouTest {
   }
 
   @Test
+  void theDeclaredLanguageIsTheHeadersFirstAndOnlyWithoutOneAMembersOwn() {
+    when(signals.locale(7L)).thenReturn(Optional.of("ko"));
+    when(signals.locale(8L)).thenReturn(Optional.empty());
+    RemoteForYou forYou = forYou(true, true);
+
+    assertThat(forYou.declared(7L, "ja-JP,ja;q=0.9,en;q=0.8")).isEqualTo("ja");
+    assertThat(forYou.declared(null, "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")).isEqualTo("ko");
+    verify(signals, never()).locale(any(Long.class));
+    assertThat(forYou.declared(7L, "*")).isEqualTo("ko");
+    assertThat(forYou.declared(7L, null)).isEqualTo("ko");
+    assertThat(forYou.declared(8L, null)).isNull();
+    assertThat(forYou.declared(null, "*")).isNull();
+    assertThat(forYou.declared(null, null)).isNull();
+    verify(signals, never()).signals(any(), any(), anyInt(), anyInt());
+  }
+
+  @Test
   void anEmptyPoolAsksNothingOfWhatWasSeenAndAnOffFeedIsEmpty() {
     when(signals.signals(eq(DEVICE), any(), anyInt(), anyInt())).thenReturn(List.of());
     when(notes.remotePool(eq(null), any(), any(), anyInt(), eq(false))).thenReturn(List.of());

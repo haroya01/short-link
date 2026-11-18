@@ -61,6 +61,11 @@ public final class ForYouProfile {
     return primary.isEmpty() || primary.equals("*") ? null : primary;
   }
 
+  public static String declared(String header) {
+    List<String> languages = accepted(header);
+    return languages.isEmpty() ? null : languages.getFirst();
+  }
+
   public static List<String> accepted(String header) {
     if (header == null || header.isBlank()) {
       return List.of();

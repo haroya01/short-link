@@ -270,12 +270,12 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   @SuppressWarnings("unchecked")
   public List<PostEntity> findBlogBelow(
-      Long viewerId, BlogLanguages languages, Instant publishedAt, Long id, int limit) {
+      Long viewerId, BlogLanguage language, Instant publishedAt, Long id, int limit) {
     Query query =
         em.createNativeQuery(
             "SELECT p.* FROM posts p WHERE "
                 + JpaPostRepository.BROWSE_CONDITION
-                + BlogLanguageSql.predicate(languages)
+                + BlogLanguageSql.predicate(language)
                 + (publishedAt == null
                     ? ""
                     : " AND (p.published_at < :at OR (p.published_at = :at AND p.id < :id))")
@@ -284,28 +284,28 @@ class PostRepositoryAdapter implements PostRepository {
     if (publishedAt != null) {
       query.setParameter("at", publishedAt).setParameter("id", id);
     }
-    return blog(query, viewerId, languages, limit);
+    return blog(query, viewerId, language, limit);
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public List<PostEntity> findBlogAbove(
-      Long viewerId, BlogLanguages languages, Instant publishedAt, long id, int limit) {
+      Long viewerId, BlogLanguage language, Instant publishedAt, long id, int limit) {
     Query query =
         em.createNativeQuery(
             "SELECT p.* FROM posts p WHERE "
                 + JpaPostRepository.BROWSE_CONDITION
-                + BlogLanguageSql.predicate(languages)
+                + BlogLanguageSql.predicate(language)
                 + " AND (p.published_at > :at OR (p.published_at = :at AND p.id > :id))"
                 + " ORDER BY p.published_at, p.id",
             PostEntity.class);
     query.setParameter("at", publishedAt).setParameter("id", id);
-    return blog(query, viewerId, languages, limit);
+    return blog(query, viewerId, language, limit);
   }
 
   @SuppressWarnings("unchecked")
-  private List<PostEntity> blog(Query query, Long viewerId, BlogLanguages languages, int limit) {
-    return BlogLanguageSql.bind(query, languages)
+  private List<PostEntity> blog(Query query, Long viewerId, BlogLanguage language, int limit) {
+    return BlogLanguageSql.bind(query, language)
         .setParameter("lang", null)
         .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
         .setParameter("viewer", HeardSql.viewer(viewerId))

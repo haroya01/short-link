@@ -53,12 +53,13 @@ public final class HomeRanking {
             1_000);
   }
 
-  public record Reader(ForYouReader taste, Long member, Set<String> follows) {
+  public record Reader(ForYouReader taste, Long member, Set<String> follows, String declared) {
 
-    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of());
+    public static final Reader NONE = new Reader(ForYouReader.NONE, null, Set.of(), null);
 
     public Reader {
       follows = member == null ? Set.of() : Set.copyOf(follows);
+      declared = ForYouProfile.language(declared);
     }
   }
 
@@ -129,20 +130,18 @@ public final class HomeRanking {
     }
     shown.sort(BEST_FIRST);
     List<HomeCandidate> items = new ArrayList<>(pinned);
-    items.addAll(ownLanguageFirst(shown, reader.taste(), weights));
+    items.addAll(declaredLanguageFirst(shown, reader.declared(), weights));
     return new Ranked(items, pinned.size(), scores);
   }
 
-  private static List<HomeCandidate> ownLanguageFirst(
-      List<Scored> bestFirst, ForYouReader reader, Weights weights) {
+  private static List<HomeCandidate> declaredLanguageFirst(
+      List<Scored> bestFirst, String declared, Weights weights) {
     Map<ForYouCandidate, HomeCandidate> byItem = new IdentityHashMap<>();
-    Map<Double, List<ForYouCandidate>> tiers = new TreeMap<>(Comparator.reverseOrder());
+    Map<Integer, List<ForYouCandidate>> tiers = new TreeMap<>();
     for (Scored scored : bestFirst) {
       ForYouCandidate item = scored.candidate().item();
       byItem.put(item, scored.candidate());
-      tiers
-          .computeIfAbsent(ForYouRanking.language(item, reader), tier -> new ArrayList<>())
-          .add(item);
+      tiers.computeIfAbsent(tier(item, declared), tier -> new ArrayList<>()).add(item);
     }
     List<HomeCandidate> ranked = new ArrayList<>();
     for (List<ForYouCandidate> tier : tiers.values()) {
@@ -153,6 +152,13 @@ public final class HomeRanking {
           .forEach(item -> ranked.add(byItem.get(item)));
     }
     return ranked;
+  }
+
+  private static int tier(ForYouCandidate item, String declared) {
+    if (declared == null || declared.equals(item.language())) {
+      return 0;
+    }
+    return item.language() == null ? 1 : 2;
   }
 
   private static List<HomeCandidate> pool(

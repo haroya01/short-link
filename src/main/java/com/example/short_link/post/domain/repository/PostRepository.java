@@ -91,16 +91,16 @@ public interface PostRepository {
   // Quotes count the public or unlisted notes quoting the post.
   List<PoolRow> findHomePool(Long viewerId, Instant since, Instant until, int limit);
 
-  record BlogLanguages(Collection<String> tags, boolean excluded) {
+  record BlogLanguage(String tag, boolean excluded) {
 
-    public static final BlogLanguages ANY = new BlogLanguages(List.of(), false);
+    public static final BlogLanguage ANY = new BlogLanguage(null, false);
 
-    public static BlogLanguages in(Collection<String> tags) {
-      return new BlogLanguages(tags, false);
+    public static BlogLanguage is(String tag) {
+      return new BlogLanguage(tag, false);
     }
 
-    public static BlogLanguages notIn(Collection<String> tags) {
-      return new BlogLanguages(tags, true);
+    public static BlogLanguage not(String tag) {
+      return new BlogLanguage(tag, true);
     }
   }
 
@@ -108,10 +108,10 @@ public interface PostRepository {
   // posts published at the same time. Below takes those after the position (publishedAt, id),
   // above those before it, nearest first; a null position starts from the top.
   List<PostEntity> findBlogBelow(
-      Long viewerId, BlogLanguages languages, Instant publishedAt, Long id, int limit);
+      Long viewerId, BlogLanguage language, Instant publishedAt, Long id, int limit);
 
   List<PostEntity> findBlogAbove(
-      Long viewerId, BlogLanguages languages, Instant publishedAt, long id, int limit);
+      Long viewerId, BlogLanguage language, Instant publishedAt, long id, int limit);
 
   List<PostEntity> findInRoomAt(Long roomId, Long viewerId, int offset, int limit);
 

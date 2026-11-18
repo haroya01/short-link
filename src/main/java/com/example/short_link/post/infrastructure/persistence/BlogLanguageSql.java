@@ -1,20 +1,20 @@
 package com.example.short_link.post.infrastructure.persistence;
 
-import com.example.short_link.post.domain.repository.PostRepository.BlogLanguages;
+import com.example.short_link.post.domain.repository.PostRepository.BlogLanguage;
 import jakarta.persistence.Query;
 
 final class BlogLanguageSql {
 
   private BlogLanguageSql() {}
 
-  static String predicate(BlogLanguages languages) {
-    if (languages.tags().isEmpty()) {
+  static String predicate(BlogLanguage language) {
+    if (language.tag() == null) {
       return "";
     }
-    return " AND p.language_tag " + (languages.excluded() ? "NOT IN" : "IN") + " (:languages)";
+    return " AND p.language_tag " + (language.excluded() ? "<>" : "=") + " :language";
   }
 
-  static Query bind(Query query, BlogLanguages languages) {
-    return languages.tags().isEmpty() ? query : query.setParameter("languages", languages.tags());
+  static Query bind(Query query, BlogLanguage language) {
+    return language.tag() == null ? query : query.setParameter("language", language.tag());
   }
 }

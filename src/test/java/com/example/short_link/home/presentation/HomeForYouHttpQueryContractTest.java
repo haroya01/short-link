@@ -182,6 +182,17 @@ class HomeForYouHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(keys(onward)).containsExactly(uri("mio", 101), "note:" + theirs, uri("rin", 102));
     assertThat(onward.path("next").isNull()).isTrue();
 
+    JsonNode asked =
+        body(
+            callWithHeaders(
+                "home-for-you-header",
+                "GET",
+                "/api/v1/public/home?tab=for-you&limit=3&seen=hide",
+                null,
+                Map.of("Authorization", "Bearer " + token, "Accept-Language", "ja-JP,ja;q=0.9,ko"),
+                200));
+    assertThat(keys(asked)).containsExactly("note:" + mine, uri("rin", 102), "note:" + theirs);
+
     JsonNode signedOut =
         body(
             callWithHeaders(

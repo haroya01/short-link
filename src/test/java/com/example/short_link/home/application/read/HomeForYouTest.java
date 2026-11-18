@@ -160,6 +160,32 @@ class HomeForYouTest {
   }
 
   @Test
+  void theSameReaderAtTheSameTimeHasARankingForEachLanguageTheyAskIn() {
+    when(notes.pool(any(), any(), any(), anyInt()))
+        .thenReturn(
+            List.of(
+                new PooledNote(1, 20, "ja", NOW.minus(Duration.ofHours(1)), List.of(), 0, 0, 0),
+                new PooledNote(2, 21, "ko", NOW.minus(Duration.ofHours(3)), List.of(), 0, 0, 0)));
+    when(remote.declared(7L, "ko")).thenReturn("ko");
+    when(remote.declared(7L, "ja-JP,ja;q=0.9")).thenReturn("ja");
+
+    HomeFeedQueryService.Page korean = forYou.page(asking("ko", null, 1));
+    HomeFeedQueryService.Page japanese = forYou.page(asking("ja-JP,ja;q=0.9", null, 2));
+    HomeFeedQueryService.Page onward = forYou.page(asking("ko", korean.next(), 1));
+
+    assertThat(shown(korean)).containsExactly("note 2");
+    assertThat(shown(onward)).containsExactly("note 1");
+    assertThat(shown(japanese)).containsExactly("note 1", "note 2");
+    verify(notes, times(2)).pool(any(), any(), any(), anyInt());
+    verify(remote, times(1)).declared(7L, "ko");
+  }
+
+  private static HomeAsk asking(String header, String cursor, int size) {
+    return new HomeAsk(
+        7L, READER, header, HomeFeedQueryService.Tab.FOR_YOU, cursor, null, size, false);
+  }
+
+  @Test
   void otherServersStayOutWhenTheirPostsAreOff() {
     when(remote.enabled()).thenReturn(false);
     when(notes.pool(any(), any(), any(), anyInt())).thenReturn(List.of());

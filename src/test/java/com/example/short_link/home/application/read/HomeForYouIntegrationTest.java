@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -203,6 +204,54 @@ class HomeForYouIntegrationTest {
 
     assertThat(signals.follows(reader)).isEqualTo(Set.of("u" + writer, "r" + accepted));
     assertThat(signals.follows(writer)).isEmpty();
+  }
+
+  @Test
+  void theTiersUseTheHeadersFirstLanguageElseTheMembersOwnAndNeverALearnedOne() {
+    long korean = written("ko", ago(240));
+    long unknown = written(null, ago(180));
+    long japanese = written("ja", ago(120));
+    long liked = written("en", ago(90));
+    long fresh = written("en", ago(60));
+    for (long note : new long[] {liked, fresh}) {
+      jdbc.update(
+          "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, ?)",
+          note,
+          reader,
+          utc(ago(30)));
+    }
+    String browser = "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7";
+
+    assertThat(keys(home.page(asking(reader, null))))
+        .containsExactly(notes(korean, unknown, fresh, liked, japanese));
+    assertThat(keys(home.page(asking(reader, "ja-JP,ja;q=0.9,ko;q=0.8"))))
+        .containsExactly(notes(japanese, unknown, fresh, liked, korean));
+    assertThat(keys(home.page(asking(null, browser))))
+        .containsExactly(notes(korean, unknown, fresh, liked, japanese));
+    assertThat(keys(home.page(asking(null, "*"))))
+        .containsExactly(notes(fresh, liked, japanese, unknown, korean));
+  }
+
+  private HomeAsk asking(Long member, String header) {
+    return new HomeAsk(
+        member,
+        member == null ? null : SeenViewer.member(member),
+        header,
+        HomeFeedQueryService.Tab.FOR_YOU,
+        null,
+        null,
+        40,
+        false);
+  }
+
+  private static String[] notes(long... ids) {
+    return Arrays.stream(ids).mapToObj(id -> "note:" + id).toArray(String[]::new);
+  }
+
+  private long written(String language, Instant at) {
+    long id = note(writer, "PUBLIC", null, null, at);
+    jdbc.update("UPDATE note SET language = ? WHERE id = ?", language, id);
+    return id;
   }
 
   private HomeFeedQueryService.Page forYou(String cursor, int size, boolean hide) {

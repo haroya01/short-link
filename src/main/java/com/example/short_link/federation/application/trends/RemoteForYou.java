@@ -210,6 +210,14 @@ public class RemoteForYou {
     return ForYouProfile.of(languages, read);
   }
 
+  public String declared(Long viewerId, String header) {
+    String asked = ForYouProfile.declared(header);
+    if (asked != null || viewerId == null) {
+      return asked;
+    }
+    return signals.locale(viewerId).map(ForYouProfile::language).orElse(null);
+  }
+
   private List<HomeCandidate> stored(Long viewerId, Instant asOf, boolean withFollowed) {
     List<NoteViewReader.Pooled> rows =
         notes.remotePool(viewerId, asOf.minus(WINDOW), asOf, POOL, withFollowed);

@@ -68,4 +68,14 @@ class ForYouProfileTest {
     assertThat(ForYouProfile.accepted(null)).isEmpty();
     assertThat(ForYouProfile.accepted("  ")).isEmpty();
   }
+
+  @Test
+  void theDeclaredLanguageIsTheFirstTheBrowserNamesAndNoneWhenItNamesNone() {
+    assertThat(ForYouProfile.declared("ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")).isEqualTo("ko");
+    assertThat(ForYouProfile.declared("ja")).isEqualTo("ja");
+    assertThat(ForYouProfile.declared("*;q=0.5, EN-us")).isEqualTo("en");
+    assertThat(ForYouProfile.declared("*")).isNull();
+    assertThat(ForYouProfile.declared("  ")).isNull();
+    assertThat(ForYouProfile.declared(null)).isNull();
+  }
 }

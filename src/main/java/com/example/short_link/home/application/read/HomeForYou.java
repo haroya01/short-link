@@ -75,24 +75,25 @@ public class HomeForYou {
     boolean hiding = (at == null ? ask.hideSeen() : at.hide()) && viewer != null;
     List<String> accepted = ForYouProfile.accepted(ask.languages());
     String key =
-        (viewer == null ? "anon:" + String.join(",", accepted) : viewer.kind() + ":" + viewer.key())
+        (viewer == null ? "anon" : viewer.kind() + ":" + viewer.key())
+            + "|"
+            + String.join(",", accepted)
             + (hiding ? "|hide|" : "|all|")
             + asOf.toEpochMilli();
-    List<Ref> refs = rankings.get(key, made -> rank(viewerId, viewer, accepted, asOf, hiding));
+    List<Ref> refs = rankings.get(key, made -> rank(ask, accepted, asOf, hiding));
     int from = Math.min(at == null ? 0 : at.offset(), refs.size());
     int to = Math.min(from + ask.size(), refs.size());
     String next = to < refs.size() ? new HomeCursor.Ranked(asOf, to, hiding).toString() : null;
     return new HomeFeedQueryService.Page(show(viewerId, refs.subList(from, to)), next);
   }
 
-  Set<String> languages(HomeAsk ask, Instant asOf) {
-    return remote
-        .reader(ask.viewerId(), ask.viewer(), ForYouProfile.accepted(ask.languages()), asOf)
-        .languages();
+  String declared(HomeAsk ask) {
+    return remote.declared(ask.viewerId(), ask.languages());
   }
 
-  private List<Ref> rank(
-      Long viewerId, SeenViewer viewer, List<String> accepted, Instant asOf, boolean hiding) {
+  private List<Ref> rank(HomeAsk ask, List<String> accepted, Instant asOf, boolean hiding) {
+    Long viewerId = ask.viewerId();
+    SeenViewer viewer = ask.viewer();
     HomeRanking.Weights weights = HomeRanking.Weights.DEFAULT;
     List<HomeCandidate> pool = new ArrayList<>();
     if (remote.enabled()) {
@@ -125,7 +126,10 @@ public class HomeForYou {
     }
     HomeRanking.Reader reader =
         new HomeRanking.Reader(
-            remote.reader(viewerId, viewer, accepted, asOf), viewerId, remote.follows(viewerId));
+            remote.reader(viewerId, viewer, accepted, asOf),
+            viewerId,
+            remote.follows(viewerId),
+            declared(ask));
     Set<String> seen = hiding ? seen(viewer, pool, asOf) : Set.of();
     return HomeRanking.rank(pool, reader, seen, hiding, asOf, weights).items().stream()
         .map(candidate -> new Ref(candidate.source(), candidate.item().ref()))

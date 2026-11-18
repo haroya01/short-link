@@ -125,6 +125,22 @@ class HomeBlogHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(first.path("next").asString()).startsWith("b1-ko.");
     assertThat(first.path("newest").asString()).startsWith("b1-ko.");
 
+    JsonNode asked =
+        blog(
+            "home-blog-member-header",
+            "limit=1",
+            Map.of("Authorization", "Bearer " + token, "Accept-Language", "ja-JP,ja;q=0.9,ko"));
+    assertThat(keys(asked)).containsExactly("post:" + ja1);
+    assertThat(asked.path("next").asString()).startsWith("b1-ja.");
+
+    JsonNode own =
+        blog(
+            "home-blog-member-locale",
+            "limit=1",
+            Map.of("Authorization", "Bearer " + token, "Accept-Language", "*"));
+    assertThat(keys(own)).containsExactly("post:" + ko1);
+    assertThat(own.path("next").asString()).startsWith("b1-ko.");
+
     JsonNode crossing =
         blog("home-blog-crossing", "limit=2&cursor=" + first.path("next").asString(), Map.of());
     assertThat(keys(crossing)).containsExactly("post:" + ko2, "post:" + ja1);
@@ -145,7 +161,7 @@ class HomeBlogHttpQueryContractTest extends AccountHttpJourneySupport {
         blog(
             "home-blog-device-first",
             "limit=2",
-            Map.of(SeenParameters.DEVICE_HEADER, DEVICE, "Accept-Language", "ja-JP,ja;q=0.9"));
+            Map.of(SeenParameters.DEVICE_HEADER, DEVICE, "Accept-Language", "ja-JP,ja;q=0.9,ko"));
     assertThat(keys(device)).containsExactly("post:" + ja1, "post:" + ja2);
     assertThat(device.path("next").asString()).startsWith("b1-ja.");
 

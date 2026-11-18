@@ -36,11 +36,11 @@ class HomeRankingTest {
         .items();
   }
 
-  private static final HomeRanking.Reader KOREAN = reading("ko");
+  private static final HomeRanking.Reader KOREAN = declaring("ko", "ko");
 
-  private static HomeRanking.Reader reading(String... languages) {
+  private static HomeRanking.Reader declaring(String declared, String... scored) {
     return new HomeRanking.Reader(
-        new ForYouReader(Set.of(languages), Map.of(), Map.of()), null, Set.of());
+        new ForYouReader(Set.of(scored), Map.of(), Map.of()), null, Set.of(), declared);
   }
 
   private static HomeCandidate written(String name, String language, String author, long likes) {
@@ -68,7 +68,7 @@ class HomeRankingTest {
   }
 
   @Test
-  void aPostInTheReadersLanguageComesBeforeAForeignOneHoweverManyReactionsThatOneHas() {
+  void aPostInTheDeclaredLanguageComesBeforeAForeignOneHoweverManyReactionsThatOneHas() {
     HomeCandidate quiet = written("quiet", "ko", "a", 0);
     HomeCandidate viral = written("viral", "en", "b", 50_000);
     HomeCandidate liked = written("liked", "ko-KR", "c", 3);
@@ -81,7 +81,7 @@ class HomeRankingTest {
   }
 
   @Test
-  void anUnknownLanguageComesAfterTheReadersAndBeforeAForeignOne() {
+  void anUnknownLanguageComesAfterTheDeclaredOneAndBeforeAForeignOne() {
     HomeCandidate foreign = written("foreign", "en", "a", 50_000);
     HomeCandidate unknown = written("unknown", null, "b", 500);
     HomeCandidate own = written("own", "ko", "c", 0);
@@ -90,17 +90,38 @@ class HomeRankingTest {
   }
 
   @Test
-  void everyLanguageOfTheReaderIsTheOneFirstTierOrderedByScore() {
+  void aLanguageTheReaderOnlyLearnedAddsToTheScoreButStaysOutOfTheFirstTier() {
     HomeCandidate korean = written("korean", "ko", "a", 1);
     HomeCandidate japanese = written("japanese", "ja", "b", 9);
-    HomeCandidate english = written("english", "en", "c", 50_000);
+    HomeCandidate english = written("english", "en", "c", 20);
 
-    assertThat(rankedFor(reading("ko", "ja"), korean, japanese, english))
-        .containsExactly(japanese, korean, english);
+    assertThat(rankedFor(declaring("ko", "ko", "ja"), english, japanese, korean))
+        .containsExactly(korean, japanese, english);
   }
 
   @Test
-  void theAuthorCapIsCountedInsideEachTierAndNeverPullsAForeignPostAboveOneOfTheReaders() {
+  void aMemberWhoseOwnLanguageIsKoreanButAsksInJapaneseGetsJapaneseFirst() {
+    HomeCandidate japanese = written("japanese", "ja-JP", "a", 0);
+    HomeCandidate korean = written("korean", "ko", "b", 5);
+    HomeCandidate english = written("english", "en", "c", 50_000);
+    HomeCandidate unknown = written("unknown", null, "d", 0);
+
+    assertThat(rankedFor(declaring("JA", "ko"), korean, english, unknown, japanese))
+        .containsExactly(japanese, unknown, english, korean);
+  }
+
+  @Test
+  void withoutADeclaredLanguageALearnedOneOnlyAddsToTheScoreOfTheOneList() {
+    HomeCandidate quiet = written("quiet", "en", "a", 0);
+    HomeCandidate liked = written("liked", "ko", "b", 100);
+    HomeCandidate unknown = written("unknown", null, "c", 3);
+
+    assertThat(rankedFor(declaring(null, "en"), unknown, quiet, liked))
+        .containsExactly(liked, quiet, unknown);
+  }
+
+  @Test
+  void theAuthorCapIsCountedInsideEachTierAndNeverPullsAForeignPostAboveADeclaredOne() {
     HomeCandidate a9 = written("a9", "ko", "a", 9);
     HomeCandidate a8 = written("a8", "ko", "a", 8);
     HomeCandidate a7 = written("a7", "ko", "a", 7);
@@ -115,7 +136,7 @@ class HomeRankingTest {
   }
 
   @Test
-  void aReaderWithNoLanguageGetsTheOneListByScoreWithItsCapsAsBefore() {
+  void aReaderWithNoDeclaredLanguageGetsTheOneListByScoreWithItsCapsAsBefore() {
     HomeCandidate a9 = written("a9", "ko", "a", 9);
     HomeCandidate a8 = written("a8", "ko", "a", 8);
     HomeCandidate a7 = written("a7", "ko", "a", 7);
@@ -173,7 +194,8 @@ class HomeRankingTest {
     HomeCandidate own = written("own", "ko", "a", 0);
     HomeCandidate foreign = written("foreign", "en", "b", 50_000);
     HomeRanking.Reader member =
-        new HomeRanking.Reader(new ForYouReader(Set.of("ko"), Map.of(), Map.of()), 7L, Set.of());
+        new HomeRanking.Reader(
+            new ForYouReader(Set.of("ko"), Map.of(), Map.of()), 7L, Set.of(), "ko");
 
     HomeRanking.Ranked ranked =
         HomeRanking.rank(List.of(foreign, own, mine), member, Set.of(), false, NOW);
