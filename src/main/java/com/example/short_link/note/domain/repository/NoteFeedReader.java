@@ -1,5 +1,6 @@
 package com.example.short_link.note.domain.repository;
 
+import com.example.short_link.common.note.NoteTopicReader;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.note.domain.LocalPoolRow;
 import com.example.short_link.note.domain.NoteEntity;
@@ -58,6 +59,14 @@ public interface NoteFeedReader {
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
 
   List<NoteEntity> linked(String url, Long viewerId, int offset, int limit);
+
+  List<NoteTopicReader.Kept> taggedBefore(String tag, Long viewerId, Long beforeId, int limit);
+
+  List<NoteTopicReader.Kept> linkedBefore(String url, Long viewerId, Long beforeId, int limit);
+
+  List<String> taggedAmong(String tag, Long viewerId, Collection<String> uris);
+
+  List<String> linkedAmong(String url, Long viewerId, Collection<String> uris);
 
   List<NoteEntity> search(String match, String like, Long viewerId, int offset, int limit);
 }

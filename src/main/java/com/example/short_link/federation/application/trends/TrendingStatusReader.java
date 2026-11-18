@@ -27,8 +27,8 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor
 class TrendingStatusReader {
 
-  private static final int MAX_NAME = 100;
-  private static final int MAX_CARD_TITLE = 300;
+  static final int MAX_NAME = 100;
+  static final int MAX_CARD_TITLE = 300;
   private static final int MAX_CARD_DESCRIPTION = 500;
   private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9_.-]{1,128}");
   private static final Pattern NO_BOT = Pattern.compile("#nobot\\b", Pattern.CASE_INSENSITIVE);
@@ -231,11 +231,11 @@ class TrendingStatusReader {
         https(text(card.get("image"))));
   }
 
-  private static String https(String url) {
+  static String https(String url) {
     return url != null && url.startsWith("https://") && url.length() <= MAX_URI ? url : null;
   }
 
-  private static String cut(String text, int max) {
+  static String cut(String text, int max) {
     if (text == null) {
       return null;
     }

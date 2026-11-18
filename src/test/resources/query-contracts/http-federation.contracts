@@ -522,3 +522,55 @@
 @junit | remote-quote-note | 9 | 0 | 0 | 0 | 9
 @junit | remote-quote-federation-for-you | 13 | 0 | 0 | 0 | 13
 @junit | remote-quote-home-for-you | 18 | 0 | 0 | 0 | 18
+# Topics trending elsewhere, measured 2026-11-18 against MySQL 8.0.33. The pool lives in memory, so
+# the list asks nothing for anyone signed out and one statement for a member: the reactions their
+# own languages are learned from (the request named a language, so their locale is not read).
+# A refresh asks whether each of the four configured servers is blocked here, the instance key
+# once, this server's own trending tags and its own trending links, one statement each. A sampled
+# tag whose page holds readable posts also asks whether each server those posts come from is
+# blocked (one here) and which of their accounts are known; a page with none asks neither.
+@junit | federation-topics-refresh | 9 | 0 | 0 | 0 | 9
+@junit | federation-topics-refresh-unseeded | 7 | 0 | 0 | 0 | 7
+@junit | federation-topics | 0 | 0 | 0 | 0 | 0
+@junit | federation-topics-member | 1 | 0 | 0 | 0 | 1
+@junit | federation-topics-limit | 0 | 0 | 0 | 0 | 0
+# A topic's posts. Every page reads the kept notes under the tag or the link as ids, addresses and
+# times in one statement (41 for the window, the page and one more below it), then builds only the
+# kept notes it shows as any note page does. A tag that is no topic, or that trended only on a
+# blocked server, stops there: one statement with nothing kept, six with one member's note (the
+# note, its thread chain, its author, media, counts). Asking with neither or both of tag and url
+# reads nothing.
+@junit | federation-topic-posts-unknown | 6 | 0 | 0 | 0 | 6
+@junit | federation-topic-posts-blocked-server | 1 | 0 | 0 | 0 | 1
+@junit | federation-topic-posts-neither | 0 | 0 | 0 | 0 | 0
+@junit | federation-topic-posts-both | 0 | 0 | 0 | 0 | 0
+# A sampled tag answers from the page its refresh read. Otherwise the first reader of a topic
+# reads its servers' timelines: the instance key, whether each server the posts come from is
+# blocked here (three), which of their accounts are known, then the two kept notes on the page,
+# one from here and one from elsewhere (so both author statements). Within ten minutes the next
+# reader asks only for the kept notes, here one from elsewhere.
+@junit | federation-topic-posts-seeded | 1 | 0 | 0 | 0 | 1
+@junit | federation-topic-posts-cold | 12 | 0 | 0 | 0 | 12
+@junit | federation-topic-posts-warm | 6 | 0 | 0 | 0 | 6
+# A member adds the reactions their own languages are learned from (the topic says whether it is
+# in their language), which of the posts' accounts and servers they blocked or muted, and their
+# own marks on the kept notes shown. A page showing a post whose account this server has not met
+# learns it behind the answer: its row, whether its server is suspended, the instance key.
+@junit | federation-topic-posts-member | 10 | 0 | 0 | 0 | 10
+@junit | federation-topic-posts-member-first | 6 | 0 | 0 | 0 | 6
+# With more kept notes than the window holds, the posts from elsewhere are also checked against
+# the kept notes below it, one statement, so a post kept there waits for its own page. The first
+# page here is the first reader's (instance key, two servers' blocks, known accounts) and shows 39
+# notes of one member; the second is a member's and shows one kept note and one post whose account
+# is then learned. After the window, pages walk the kept notes down by id: the ids, then the notes
+# shown. The last one holds a note from elsewhere, and a member's adds their languages and marks.
+@junit | federation-topic-posts-window | 11 | 0 | 0 | 0 | 11
+@junit | federation-topic-posts-window-next | 13 | 0 | 0 | 0 | 13
+@junit | federation-topic-posts-older | 6 | 0 | 0 | 0 | 6
+@junit | federation-topic-posts-older-last | 9 | 0 | 0 | 0 | 9
+# A link's posts read the same way through note_link_preview.
+@junit | federation-topic-posts-link | 11 | 0 | 0 | 0 | 11
+@junit | federation-topic-posts-link-older | 7 | 0 | 0 | 0 | 7
+# Six readers arriving together at a topic nobody has read: six statements for the kept notes and
+# one read of its servers (instance key, two servers' blocks, known accounts), not six.
+@junit | federation-topic-posts-together | 10 | 0 | 0 | 0 | 10

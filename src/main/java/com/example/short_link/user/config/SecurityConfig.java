@@ -167,7 +167,9 @@ public class SecurityConfig {
                         GET,
                         "/api/v1/federation/trending",
                         "/api/v1/federation/latest",
-                        "/api/v1/federation/for-you")
+                        "/api/v1/federation/for-you",
+                        "/api/v1/federation/topics",
+                        "/api/v1/federation/topics/posts")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/federation/accounts/search")
                     .permitAll()

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.ServerSuspendedEvent;
 import com.example.short_link.federation.application.trends.LatestPosts;
 import com.example.short_link.federation.application.trends.TrendingPosts;
+import com.example.short_link.federation.application.trends.TrendingTopics;
 import com.example.short_link.federation.domain.FederationDomainBlockEntity;
 import com.example.short_link.federation.domain.ServerBlockSeverity;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
@@ -30,6 +31,7 @@ class ServerBlocksTest {
   @Mock private ApplicationEventPublisher events;
   @Mock private TrendingPosts trending;
   @Mock private LatestPosts latest;
+  @Mock private TrendingTopics topics;
 
   private ServerBlocks service() {
     return new ServerBlocks(
@@ -37,7 +39,8 @@ class ServerBlocksTest {
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         events,
         trending,
-        latest);
+        latest,
+        topics);
   }
 
   @Test
@@ -54,6 +57,7 @@ class ServerBlocksTest {
     verify(events, never()).publishEvent(any(Object.class));
     verify(trending).withdraw("spam.example");
     verify(latest).withdraw("spam.example");
+    verify(topics).withdraw("spam.example");
   }
 
   @Test

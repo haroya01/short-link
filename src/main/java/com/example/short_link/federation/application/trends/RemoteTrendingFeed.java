@@ -291,7 +291,7 @@ public class RemoteTrendingFeed {
     return items;
   }
 
-  private static int offset(String cursor) {
+  static int offset(String cursor) {
     if (cursor == null || !cursor.startsWith("t")) {
       return 0;
     }
@@ -302,7 +302,7 @@ public class RemoteTrendingFeed {
     }
   }
 
-  private static Long id(String cursor) {
+  static Long id(String cursor) {
     try {
       return cursor.length() == 1 ? null : Long.parseLong(cursor.substring(1));
     } catch (NumberFormatException malformed) {
