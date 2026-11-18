@@ -45,6 +45,22 @@ final class NoteSql {
     return HeardSql.viewer(viewerId);
   }
 
+  static String carryingTag() {
+    return " FROM note_tag g JOIN note n ON n.id = g.note_id"
+        + " WHERE g.tag = :tag AND "
+        + NoteAccessSql.listed("n")
+        + heardNote("n")
+        + unlimited("n");
+  }
+
+  static String carryingLink() {
+    return " FROM note_link_preview p JOIN note n ON n.id = p.note_id"
+        + " WHERE p.url = :url AND "
+        + NoteAccessSql.listed("n")
+        + heardNote("n")
+        + unlimited("n");
+  }
+
   // A reply whose parent is gone, or never reached this server, keeps reply set; the parent column
   // stays in the condition for idx_note_reply_created.
   static String notReply(String alias) {

@@ -1156,6 +1156,27 @@
         "200" : "#FederationSettingsView"
       }
     },
+    "GET /api/v1/federation/topics" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "limit" : "query integer(int32)"
+      },
+      "responses" : {
+        "200" : "#TopicList"
+      }
+    },
+    "GET /api/v1/federation/topics/posts" : {
+      "parameters" : {
+        "Accept-Language" : "header string",
+        "cursor" : "query string",
+        "limit" : "query integer(int32)",
+        "tag" : "query string",
+        "url" : "query string"
+      },
+      "responses" : {
+        "200" : "#TopicPosts"
+      }
+    },
     "GET /api/v1/federation/trending" : {
       "parameters" : {
         "cursor" : "query string",
@@ -7043,6 +7064,34 @@
     "TopUsersPage" : {
       "items" : "[#UserStat]",
       "total" : "integer(int64)"
+    },
+    "TopicArticle" : {
+      "image" : "string",
+      "source" : "string",
+      "title" : "string",
+      "url" : "string"
+    },
+    "TopicList" : {
+      "items" : "[#TopicView]"
+    },
+    "TopicPosts" : {
+      "items" : "[object]",
+      "next" : "string",
+      "topic" : "#TopicView"
+    },
+    "TopicView" : {
+      "id" : "string",
+      "image" : "string",
+      "kind" : "string",
+      "language" : "string",
+      "own" : "boolean",
+      "people" : "integer(int32)",
+      "related" : "[#TopicArticle]",
+      "servers" : "[string]",
+      "source" : "string",
+      "tag" : "string",
+      "title" : "string",
+      "url" : "string"
     },
     "Totals" : {
       "clicks" : "integer(int64)",

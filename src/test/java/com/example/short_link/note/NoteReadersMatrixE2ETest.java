@@ -381,6 +381,16 @@ class NoteReadersMatrixE2ETest {
       expect("/api/v1/public/notes/tags/" + tag + "?size=50", viewer, both, listed.and(heard));
       expect("/api/v1/public/notes/links?url=" + link + "&size=50", viewer, top, listed.and(heard));
       expect(
+          "/api/v1/federation/topics/posts?tag=" + tag + "&limit=40",
+          viewer,
+          both,
+          listed.and(heard));
+      expect(
+          "/api/v1/federation/topics/posts?url=" + link + "&limit=40",
+          viewer,
+          top,
+          listed.and(heard));
+      expect(
           "/api/v1/public/notes/" + quotedByOther + "/quotes?size=50",
           viewer,
           kind("quoting"),
@@ -612,6 +622,8 @@ class NoteReadersMatrixE2ETest {
                 "/api/v1/public/notes/tags/" + tag + "?size=50",
                 "/api/v1/public/notes/search?q=" + tag + "&size=50",
                 "/api/v1/public/notes/links?url=" + link + "&size=50",
+                "/api/v1/federation/topics/posts?tag=" + tag + "&limit=40",
+                "/api/v1/federation/topics/posts?url=" + link + "&limit=40",
                 "/api/v1/public/notes/" + quotedByOther + "/quotes?size=50",
                 "/api/v1/public/posts/" + postByOther + "/quotes?size=50",
                 "/api/v1/public/notes/" + quotedByOther + "/posts",

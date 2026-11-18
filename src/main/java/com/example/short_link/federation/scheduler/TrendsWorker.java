@@ -1,6 +1,7 @@
 package com.example.short_link.federation.scheduler;
 
 import com.example.short_link.federation.application.trends.TrendingPosts;
+import com.example.short_link.federation.application.trends.TrendingTopics;
 import com.example.short_link.federation.application.trends.TrendsProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class TrendsWorker implements SmartLifecycle {
 
   private final TrendingPosts trending;
+  private final TrendingTopics topics;
   private final TrendsProperties props;
   private final boolean scheduling;
 
@@ -20,9 +22,11 @@ public class TrendsWorker implements SmartLifecycle {
 
   public TrendsWorker(
       TrendingPosts trending,
+      TrendingTopics topics,
       TrendsProperties props,
       @Value("${short-link.scheduling.enabled:true}") boolean scheduling) {
     this.trending = trending;
+    this.topics = topics;
     this.props = props;
     this.scheduling = scheduling;
   }
@@ -60,6 +64,11 @@ public class TrendsWorker implements SmartLifecycle {
         trending.refresh();
       } catch (RuntimeException failed) {
         log.warn("federation trends refresh failed reason={}", failed.toString());
+      }
+      try {
+        topics.refresh();
+      } catch (RuntimeException failed) {
+        log.warn("federation topics refresh failed reason={}", failed.toString());
       }
       try {
         Thread.sleep(props.every());

@@ -85,6 +85,8 @@ public class WebMvcSecurityTestConfig {
           || ("GET".equals(method) && "/api/v1/federation/trending".equals(uri))
           || ("GET".equals(method) && "/api/v1/federation/latest".equals(uri))
           || ("GET".equals(method) && "/api/v1/federation/for-you".equals(uri))
+          || ("GET".equals(method) && "/api/v1/federation/topics".equals(uri))
+          || ("GET".equals(method) && "/api/v1/federation/topics/posts".equals(uri))
           || ("POST".equals(method) && "/api/v1/federation/seen".equals(uri))
           // ActivityPub 조회 — 프로드 SecurityConfig 와 같은 익명 GET 표면.
           || ("GET".equals(method)

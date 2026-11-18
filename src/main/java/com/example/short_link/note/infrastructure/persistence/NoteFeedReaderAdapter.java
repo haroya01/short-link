@@ -1,5 +1,7 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import static com.example.short_link.note.infrastructure.persistence.NoteSql.carryingLink;
+import static com.example.short_link.note.infrastructure.persistence.NoteSql.carryingTag;
 import static com.example.short_link.note.infrastructure.persistence.NoteSql.heard;
 import static com.example.short_link.note.infrastructure.persistence.NoteSql.heardNote;
 import static com.example.short_link.note.infrastructure.persistence.NoteSql.inLanguages;
@@ -8,6 +10,7 @@ import static com.example.short_link.note.infrastructure.persistence.NoteSql.unl
 import static com.example.short_link.note.infrastructure.persistence.NoteSql.viewer;
 
 import com.example.short_link.common.note.NoteAccessSql;
+import com.example.short_link.common.note.NoteTopicReader;
 import com.example.short_link.common.seen.Unseen;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.LocalPoolRow;
@@ -539,12 +542,7 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> linked(String url, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note_link_preview p JOIN note n ON n.id = p.note_id"
-                + " WHERE p.url = :url AND "
-                + NoteAccessSql.listed("n")
-                + heardNote("n")
-                + unlimited("n")
-                + " ORDER BY n.id DESC LIMIT :limit OFFSET :offset",
+            "SELECT n.*" + carryingLink() + " ORDER BY n.id DESC LIMIT :limit OFFSET :offset",
             NoteEntity.class)
         .setParameter("url", url)
         .setParameter("viewer", viewer(viewerId))
@@ -558,18 +556,87 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note_tag g JOIN note n ON n.id = g.note_id"
-                + " WHERE g.tag = :tag AND "
-                + NoteAccessSql.listed("n")
-                + heardNote("n")
-                + unlimited("n")
-                + " ORDER BY g.note_id DESC LIMIT :limit OFFSET :offset",
+            "SELECT n.*" + carryingTag() + " ORDER BY g.note_id DESC LIMIT :limit OFFSET :offset",
             NoteEntity.class)
         .setParameter("tag", tag)
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setParameter("limit", limit)
         .setParameter("offset", offset)
+        .getResultList();
+  }
+
+  @Override
+  public List<NoteTopicReader.Kept> taggedBefore(
+      String tag, Long viewerId, Long beforeId, int limit) {
+    return keptBefore(
+        em.createNativeQuery(
+                "SELECT n.id, n.uri, n.created_at"
+                    + carryingTag()
+                    + " AND g.note_id < :before ORDER BY g.note_id DESC")
+            .setParameter("tag", tag),
+        viewerId,
+        beforeId,
+        limit);
+  }
+
+  @Override
+  public List<NoteTopicReader.Kept> linkedBefore(
+      String url, Long viewerId, Long beforeId, int limit) {
+    return keptBefore(
+        em.createNativeQuery(
+                "SELECT n.id, n.uri, n.created_at"
+                    + carryingLink()
+                    + " AND n.id < :before ORDER BY n.id DESC")
+            .setParameter("url", url),
+        viewerId,
+        beforeId,
+        limit);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<NoteTopicReader.Kept> keptBefore(
+      Query query, Long viewerId, Long beforeId, int limit) {
+    List<Object[]> rows =
+        query
+            .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
+            .setParameter("viewer", viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .setMaxResults(limit)
+            .unwrap(NativeQuery.class)
+            .addScalar("id", Long.class)
+            .addScalar("uri", String.class)
+            .addScalar("created_at", Instant.class)
+            .getResultList();
+    return rows.stream()
+        .map(row -> new NoteTopicReader.Kept((Long) row[0], (String) row[1], (Instant) row[2]))
+        .toList();
+  }
+
+  @Override
+  public List<String> taggedAmong(String tag, Long viewerId, Collection<String> uris) {
+    return urisAmong(
+        em.createNativeQuery("SELECT n.uri" + carryingTag() + " AND n.uri IN (:uris)")
+            .setParameter("tag", tag),
+        viewerId,
+        uris);
+  }
+
+  @Override
+  public List<String> linkedAmong(String url, Long viewerId, Collection<String> uris) {
+    return urisAmong(
+        em.createNativeQuery("SELECT n.uri" + carryingLink() + " AND n.uri IN (:uris)")
+            .setParameter("url", url),
+        viewerId,
+        uris);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<String> urisAmong(Query query, Long viewerId, Collection<String> uris) {
+    return query
+        .setParameter("uris", uris)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
         .getResultList();
   }
 

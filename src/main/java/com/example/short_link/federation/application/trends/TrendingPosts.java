@@ -9,6 +9,7 @@ import com.example.short_link.federation.domain.repository.FederationDomainBlock
 import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import java.net.URI;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -30,7 +31,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class TrendingPosts {
 
   static final int MAX_LIMIT = 40;
-  private static final int MAX_FAILURES = 4;
 
   private final TrendsProperties props;
   private final TrendingSpread spread;
@@ -43,11 +43,9 @@ public class TrendingPosts {
   private final RemoteReach reach;
   private final JsonMapper json;
   private final Clock clock;
-  private final Map<String, Backoff> backoffs = new HashMap<>();
+  private final HostBackoff backoff = new HostBackoff();
 
   private volatile List<TrendingStatusReader.Read> trending = List.of();
-
-  private record Backoff(int failures, int skipsLeft) {}
 
   public TrendingPosts(
       TrendsProperties props,
@@ -108,6 +106,14 @@ public class TrendingPosts {
 
   private List<TrendingStatusReader.Read> shown(
       Long viewerId, List<TrendingStatusReader.Read> all) {
+    return shown(viewerId, all, standings, clock.instant());
+  }
+
+  static List<TrendingStatusReader.Read> shown(
+      Long viewerId,
+      List<TrendingStatusReader.Read> all,
+      RemoteAccountStandingReader standings,
+      Instant now) {
     RemoteAccountStandingReader.Hidden hidden =
         viewerId == null || all.isEmpty()
             ? RemoteAccountStandingReader.Hidden.NONE
@@ -115,7 +121,7 @@ public class TrendingPosts {
                 viewerId,
                 all.stream().map(TrendingStatusReader.Read::actorUri).distinct().toList(),
                 all.stream().map(TrendingStatusReader.Read::domain).distinct().toList(),
-                clock.instant());
+                now);
     return all.stream()
         .filter(
             read ->
@@ -143,7 +149,7 @@ public class TrendingPosts {
     List<List<TrendingStatusReader.Read>> answers = new ArrayList<>();
     Set<String> keepable = new HashSet<>();
     for (String server : props.hosts()) {
-      if (waiting(server) || blocked.contains(server)) {
+      if (backoff.waiting(server) || blocked.contains(server)) {
         continue;
       }
       if (signer == null) {
@@ -151,18 +157,19 @@ public class TrendingPosts {
       }
       Optional<List<TrendingStatusReader.Read>> answer = ask(server, signer, keepable);
       if (answer.isEmpty()) {
-        failed(server);
+        backoff.failed(server);
         continue;
       }
-      backoffs.remove(server);
+      backoff.answered(server);
       answers.add(answer.get().stream().filter(read -> !blocked.contains(read.domain())).toList());
     }
     // A refresh replaces the whole list, so a post deleted on its server is gone by the next one.
-    trending = known(blend(answers));
+    trending = known(blend(answers), standings);
     reach.trended(trending, keepable);
   }
 
-  private List<TrendingStatusReader.Read> known(List<TrendingStatusReader.Read> reads) {
+  static List<TrendingStatusReader.Read> known(
+      List<TrendingStatusReader.Read> reads, RemoteAccountStandingReader standings) {
     if (reads.isEmpty()) {
       return reads;
     }
@@ -253,21 +260,6 @@ public class TrendingPosts {
       return Optional.empty();
     }
     return Optional.of(statuses);
-  }
-
-  private boolean waiting(String server) {
-    Backoff backoff = backoffs.get(server);
-    if (backoff == null || backoff.skipsLeft() == 0) {
-      return false;
-    }
-    backoffs.put(server, new Backoff(backoff.failures(), backoff.skipsLeft() - 1));
-    return true;
-  }
-
-  private void failed(String server) {
-    int failures =
-        Math.min(backoffs.getOrDefault(server, new Backoff(0, 0)).failures() + 1, MAX_FAILURES);
-    backoffs.put(server, new Backoff(failures, 1 << (failures - 1)));
   }
 
   static List<TrendingStatusReader.Read> blend(List<List<TrendingStatusReader.Read>> answers) {

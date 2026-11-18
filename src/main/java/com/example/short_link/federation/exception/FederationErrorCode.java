@@ -25,7 +25,8 @@ public enum FederationErrorCode {
       HttpStatus.CONFLICT, "directories are off; FEDERATION_DIRECTORY_ENABLED turns them on"),
   DIRECTORY_SOURCE_BLOCKED(HttpStatus.CONFLICT, "%s is blocked here"),
   DIRECTORY_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "no such directory: %s"),
-  SEEN_WITHOUT_VIEWER(HttpStatus.UNAUTHORIZED, "sign in or send X-Kurl-Device");
+  SEEN_WITHOUT_VIEWER(HttpStatus.UNAUTHORIZED, "sign in or send X-Kurl-Device"),
+  TOPIC_ASK_INVALID(HttpStatus.BAD_REQUEST, "a topic is asked by exactly one of tag or url");
 
   private final HttpStatus status;
   private final String template;
