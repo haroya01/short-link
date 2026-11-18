@@ -393,6 +393,7 @@ class RoomQuotesE2ETest {
     forged(Who.STRANGER, "forged from outside", null, roomNote, null);
     forged(Who.BOTH, "forged from next door", nextDoor, roomNote, null);
     long roomEmbed = publish(Who.ROOMMATE, "embeds-room", mark("roomembed"), room, roomNote);
+    long roomEmbedAgain = publish(Who.AUTHOR, "embeds-room-again", "again", room, roomNote);
     publish(Who.BOTH, "embeds-room-openly", "pasted outside", null, roomNote);
     publish(Who.BOTH, "embeds-room-next-door", "pasted next door", nextDoor, roomNote);
 
@@ -429,13 +430,13 @@ class RoomQuotesE2ETest {
       if (member) {
         assertThat(thread(viewer, roomNote).path("quoteCount").asLong())
             .as("%s: a room note counts the quotes and posts of its own room", viewer)
-            .isEqualTo(3);
+            .isEqualTo(4);
         assertThat(ids(quotes))
             .as("%s: quotes of a room note", viewer)
             .containsExactly(ownRoomQuote, roomQuote);
         assertThat(ids(posts))
             .as("%s: posts carrying a room note", viewer)
-            .containsExactly(roomEmbed);
+            .containsExactly(roomEmbedAgain, roomEmbed);
         assertThat(ids(postQuotes))
             .as("%s: notes quoting a room post", viewer)
             .containsExactly(ownRoomPostQuote, roomPostQuote);
