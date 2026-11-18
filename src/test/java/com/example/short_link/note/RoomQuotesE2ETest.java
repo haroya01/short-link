@@ -463,6 +463,40 @@ class RoomQuotesE2ETest {
     }
   }
 
+  @Test
+  void whoLeftARoomKeepingTheirNotesSeesNothingOfItThroughTheirOwnQuotes() throws Exception {
+    long ofNote = quote(Who.ROOMMATE, Map.of("quotedNoteId", roomNote, "roomId", room));
+    long ofPost = quote(Who.ROOMMATE, Map.of("quotedPostId", roomPost, "roomId", room));
+    Answer left =
+        act(
+            Who.ROOMMATE,
+            post("/api/v1/rooms/" + room + "/leave")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"deleteMyNotes\":false}"));
+    assertThat(left.status()).as(left.raw()).isEqualTo(204);
+    em.flush();
+    em.clear();
+
+    Answer ownQuoteOfPost = read(Who.ROOMMATE, "/api/v1/public/notes/" + ofPost);
+    Answer ownQuoteOfNote = read(Who.ROOMMATE, "/api/v1/public/notes/" + ofNote);
+    assertThat(ownQuoteOfPost.status()).as(ownQuoteOfPost.raw()).isEqualTo(200);
+    assertThat(ownQuoteOfPost.body().path("note").path("id").asLong()).isEqualTo(ofPost);
+    assertThat(ownQuoteOfPost.raw()).doesNotContain(mark("roompost"));
+    assertThat(ownQuoteOfNote.status()).as(ownQuoteOfNote.raw()).isEqualTo(200);
+    assertThat(ownQuoteOfNote.raw()).doesNotContain(mark("roomnote"));
+    assertThat(read(Who.ROOMMATE, "/api/v1/public/notes/" + roomNote + "/quotes").raw())
+        .isEqualTo(read(Who.ANONYMOUS, "/api/v1/public/notes/" + Long.MAX_VALUE + "/quotes").raw());
+    assertThat(read(Who.ROOMMATE, "/api/v1/public/posts/" + roomPost + "/quotes").raw())
+        .isEqualTo(read(Who.ANONYMOUS, "/api/v1/public/posts/" + Long.MAX_VALUE + "/quotes").raw());
+
+    assertThat(thread(Who.AUTHOR, ofPost).path("quotedPost").path("id").asLong())
+        .isEqualTo(roomPost);
+    assertThat(listed(Who.AUTHOR, "/api/v1/public/notes/" + roomNote + "/quotes"))
+        .containsExactly(ofNote);
+    assertThat(listed(Who.AUTHOR, "/api/v1/public/posts/" + roomPost + "/quotes"))
+        .containsExactly(ofPost);
+  }
+
   private Answer quoting(String what, Who who, Map<String, Object> quote, int status)
       throws Exception {
     return expect(what, write(who, quote), status, null);

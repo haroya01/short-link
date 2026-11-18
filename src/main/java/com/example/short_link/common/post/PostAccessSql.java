@@ -60,10 +60,6 @@ public final class PostAccessSql {
     return published(alias) + " AND " + in(alias, PostAudience::shownAsCard);
   }
 
-  public static String quotedWhereItStands(String alias) {
-    return published(alias) + " AND " + in(alias, PostAudience::quotedWhereItStands);
-  }
-
   public static String onSideOf(String alias, String room) {
     return published(alias)
         + " AND (("

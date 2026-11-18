@@ -264,7 +264,7 @@ class NoteWriteActionsTest {
   void aNoteWithImagesAndAQuoteIsStoredInOrderAndAnnounced() {
     saving();
     QuotedPost quoted = new QuotedPost(5L, "Essay", "essay", "writer", 3L);
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of(5L, quoted));
+    when(quotedPosts.cardsFor(7L, Set.of(5L))).thenReturn(Map.of(5L, quoted));
     when(images.verifyAll(
             7L, List.of(new NoteDraft.Image("k1", "first"), new NoteDraft.Image("k2", null))))
         .thenReturn(
@@ -308,7 +308,7 @@ class NoteWriteActionsTest {
   @Test
   void aPrivateNoteQuotingAPostLeavesItsAuthorUntold() {
     saving();
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+    when(quotedPosts.cardsFor(7L, Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
@@ -361,7 +361,7 @@ class NoteWriteActionsTest {
     saving();
     QuotedPost diary =
         new QuotedPost(5L, "Diary", "diary", "writer", 3L, PostAudience.ROOM, false, 4L);
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of(5L, diary));
+    when(quotedPosts.cardsFor(7L, Set.of(5L))).thenReturn(Map.of(5L, diary));
     when(rooms.isMember(4L, 7L)).thenReturn(true);
     when(rooms.isMember(5L, 7L)).thenReturn(true);
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
@@ -394,7 +394,7 @@ class NoteWriteActionsTest {
   @Test
   void aQuoteOfAPostMadeInARoomTellsThePostsWriterOnlyWhenTheyReadThatRoom() {
     saving();
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+    when(quotedPosts.cardsFor(7L, Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(rooms.isMember(4L, 7L)).thenReturn(true);
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
@@ -492,7 +492,7 @@ class NoteWriteActionsTest {
 
   @Test
   void aQuoteMustBeAPublishedPost() {
-    when(quotedPosts.quotedWhereTheyStand(Set.of(9L))).thenReturn(Map.of());
+    when(quotedPosts.cardsFor(7L, Set.of(9L))).thenReturn(Map.of());
 
     assertThatThrownBy(
             () -> composer().create(7L, NoteDrafts.draft("x").images(null).quotingPost(9L).build()))

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface QuotedPostReader {
 
-  Map<Long, QuotedPost> quotedWhereTheyStand(Collection<Long> postIds);
+  Map<Long, QuotedPost> cardsFor(Long viewerId, Collection<Long> postIds);
 
   Optional<Long> roomOf(Long postId);
 }

@@ -19,7 +19,7 @@ class QuotedPostReaderAdapter implements QuotedPostReader {
   @PersistenceContext private EntityManager em;
 
   @Override
-  public Map<Long, QuotedPost> quotedWhereTheyStand(Collection<Long> postIds) {
+  public Map<Long, QuotedPost> cardsFor(Long viewerId, Collection<Long> postIds) {
     Map<Long, QuotedPost> posts = new HashMap<>();
     if (postIds.isEmpty()) {
       return posts;
@@ -28,10 +28,13 @@ class QuotedPostReaderAdapter implements QuotedPostReader {
         em.createNativeQuery(
                 "SELECT p.id, p.title, p.slug, u.username, p.user_id, p.audience,"
                     + " p.blocked_countries, p.room_id FROM posts p"
-                    + " JOIN users u ON u.id = p.user_id WHERE p.id IN (:ids) AND "
-                    + PostAccessSql.quotedWhereItStands("p")
-                    + " AND u.deleted_at IS NULL AND u.username IS NOT NULL")
+                    + " JOIN users u ON u.id = p.user_id WHERE p.id IN (:ids) AND ("
+                    + PostAccessSql.card("p")
+                    + " OR "
+                    + PostAccessSql.inRoomsOf("p")
+                    + ") AND u.deleted_at IS NULL AND u.username IS NOT NULL")
             .setParameter("ids", postIds)
+            .setParameter("viewer", NoteSql.viewer(viewerId))
             .getResultList()) {
       Object[] row = (Object[]) raw;
       Long id = ((Number) row[0]).longValue();

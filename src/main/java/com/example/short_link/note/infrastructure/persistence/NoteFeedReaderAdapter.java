@@ -498,7 +498,7 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
                 + " WHERE x.id = :noteId AND "
                 + NoteAccessSql.onSideOf("n", "x.room_id")
                 + " AND "
-                + NoteAccessSql.readable("n")
+                + NoteAccessSql.roomHas("n", ":viewer")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -518,7 +518,7 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
             "SELECT n.* FROM note n WHERE n.quoted_post_id = :postId AND "
                 + NoteAccessSql.onSideOf("n", ":room")
                 + " AND "
-                + NoteAccessSql.readable("n")
+                + NoteAccessSql.roomHas("n", ":viewer")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -538,7 +538,7 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
                     "SELECT COUNT(*) FROM note n WHERE n.quoted_post_id = :postId AND "
                         + NoteAccessSql.onSideOf("n", ":room")
                         + " AND "
-                        + NoteAccessSql.readable("n")
+                        + NoteAccessSql.roomHas("n", ":viewer")
                         + heardNote("n"))
                 .setParameter("postId", postId)
                 .setParameter("room", roomId)

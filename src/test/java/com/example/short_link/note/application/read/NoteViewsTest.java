@@ -217,7 +217,7 @@ class NoteViewsTest {
             Map.of(7L, new NoteAuthor(7L, "me", null), 8L, new NoteAuthor(8L, "them", "a.png")));
     when(media.findByNoteIds(List.of(1L, 2L)))
         .thenReturn(List.of(new NoteMediaEntity(2L, 0, "k", "https://cdn/k", "image/png", "alt")));
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+    when(quotedPosts.cardsFor(7L, Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me", 1L)));
     when(pages.stats(List.of(1L, 2L)))
         .thenReturn(Map.of(1L, new NoteStats(0, 5, 1, 0), 2L, new NoteStats(4, 2, 0, 0)));
@@ -308,7 +308,7 @@ class NoteViewsTest {
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isNull();
     verify(pages).viewerMarks(null, List.of(2L));
-    verify(quotedPosts, never()).quotedWhereTheyStand(anyCollection());
+    verify(quotedPosts, never()).cardsFor(org.mockito.ArgumentMatchers.any(), anyCollection());
   }
 
   @Test

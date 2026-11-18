@@ -119,7 +119,7 @@ public class NoteViews {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     Map<Long, QuotedPost> posts =
-        quoted.isEmpty() ? Map.of() : quotedPosts.quotedWhereTheyStand(quoted);
+        quoted.isEmpty() ? Map.of() : quotedPosts.cardsFor(viewerId, quoted);
     Map<Long, NoteStats> stats = pages.stats(ids);
     NoteViewerMarks marks = pages.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);

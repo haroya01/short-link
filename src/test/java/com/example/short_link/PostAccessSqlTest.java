@@ -103,9 +103,6 @@ class PostAccessSqlTest {
 
   @Test
   void aPostQuotesAndIsQuotedOnOneSideOfARoomsWall() {
-    assertThat(PostAccessSql.quotedWhereItStands("p"))
-        .isEqualTo(
-            "p.status = 'PUBLISHED' AND p.audience IN ('PUBLIC', 'FOLLOWERS', 'PASSWORD', 'ROOM')");
     assertThat(PostAccessSql.onSideOf("p", "x.room_id"))
         .isEqualTo(
             "p.status = 'PUBLISHED' AND ((x.room_id IS NULL"

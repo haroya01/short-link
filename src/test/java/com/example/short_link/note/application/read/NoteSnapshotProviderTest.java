@@ -54,7 +54,7 @@ class NoteSnapshotProviderTest {
   void aNoteResolvesWithItsAuthorQuoteAndImages() {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+    when(quotedPosts.cardsFor(null, Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "yuki", 1L)));
     when(media.findByNoteIds(List.of(42L)))
         .thenReturn(List.of(new NoteMediaEntity(42L, 0, "k", "https://cdn/k", "image/png", "alt")));
@@ -76,7 +76,7 @@ class NoteSnapshotProviderTest {
     NoteEntity nextDoor = note(5L);
     nextDoor.postIn(6L);
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+    when(quotedPosts.cardsFor(null, Set.of(5L)))
         .thenReturn(
             Map.of(
                 5L,
@@ -145,7 +145,7 @@ class NoteSnapshotProviderTest {
   void anUnpublishedQuoteIsDroppedAndAGoneAuthorOrNoteResolvesToNothing() {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
-    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of());
+    when(quotedPosts.cardsFor(null, Set.of(5L))).thenReturn(Map.of());
     when(media.findByNoteIds(List.of(42L))).thenReturn(List.of());
     assertThat(provider.find(42L).orElseThrow().quote()).isNull();
 

@@ -59,7 +59,7 @@ class NoteDraftCheck {
     requireSingleQuote(draft);
     Long roomId = room(userId, draft.roomId(), requested, parent);
     NoteEntity quotedNote = quotedNote(userId, draft.quotedNoteId(), roomId);
-    QuotedPost quotedPost = quotedPost(draft.quotedPostId(), roomId);
+    QuotedPost quotedPost = quotedPost(userId, draft.quotedPostId(), roomId);
     List<String> handles = Mentions.of(text.body());
     Map<Long, NoteAuthor> authors = authors(userId, quotedNote, handles);
     NoteAuthor quotedAuthor = quotedAuthor(userId, quotedNote, draft.quotedNoteId(), authors);
@@ -117,11 +117,11 @@ class NoteDraftCheck {
     return quoted;
   }
 
-  private QuotedPost quotedPost(Long quotedPostId, Long roomId) {
+  private QuotedPost quotedPost(Long userId, Long quotedPostId, Long roomId) {
     if (quotedPostId == null) {
       return null;
     }
-    QuotedPost quoted = quotedPosts.quotedWhereTheyStand(Set.of(quotedPostId)).get(quotedPostId);
+    QuotedPost quoted = quotedPosts.cardsFor(userId, Set.of(quotedPostId)).get(quotedPostId);
     if (quoted == null || !quoted.quotedFrom(roomId)) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_NOT_FOUND, quotedPostId);
     }
