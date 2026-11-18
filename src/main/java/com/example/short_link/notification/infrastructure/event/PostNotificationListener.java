@@ -177,7 +177,7 @@ public class PostNotificationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onNotesEmbedded(NotesEmbeddedEvent event) {
     List<Long> authors =
-        followerReader.shareableNoteAuthorsOf(event.noteIds()).stream()
+        followerReader.quotedNoteAuthorsOf(event.noteIds(), event.roomId()).stream()
             .filter(author -> !author.equals(event.actorUserId()))
             .toList();
     if (authors.isEmpty()) {

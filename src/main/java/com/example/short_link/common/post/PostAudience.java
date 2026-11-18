@@ -94,6 +94,14 @@ public enum PostAudience {
     return readBy(Reader.MEMBER);
   }
 
+  public boolean quotedFrom(boolean itsRoom) {
+    return shownAsCard() || (itsRoom && inRoom());
+  }
+
+  public boolean quotedWhereItStands() {
+    return quotedFrom(inRoom());
+  }
+
   public PostLock lock() {
     return switch (this) {
       case FOLLOWERS -> PostLock.FOLLOWERS;

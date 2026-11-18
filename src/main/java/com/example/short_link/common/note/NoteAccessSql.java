@@ -83,6 +83,24 @@ public final class NoteAccessSql {
     return in(alias, visibility -> !visibility.inRoom());
   }
 
+  public static String onSideOf(String alias, String room) {
+    return "(("
+        + room
+        + " IS NULL AND "
+        + in(alias, visibility -> visibility.quotedFrom(false))
+        + ") OR ("
+        + alias
+        + ".room_id = "
+        + room
+        + " AND "
+        + in(alias, visibility -> visibility.quotedFrom(true) && !visibility.quotedFrom(false))
+        + "))";
+  }
+
+  public static String roomHas(String alias, String member) {
+    return "(" + alias + ".room_id IS NULL OR " + holds(Reader.MEMBER, alias, member) + ")";
+  }
+
   public static String inFeedRooms(String alias) {
     return inRoom(alias)
         + " AND "

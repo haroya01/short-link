@@ -9,6 +9,7 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -53,7 +54,7 @@ class NoteSnapshotProviderTest {
   void aNoteResolvesWithItsAuthorQuoteAndImages() {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
-    when(quotedPosts.publishedByIds(Set.of(5L)))
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "yuki", 1L)));
     when(media.findByNoteIds(List.of(42L)))
         .thenReturn(List.of(new NoteMediaEntity(42L, 0, "k", "https://cdn/k", "image/png", "alt")));
@@ -65,6 +66,30 @@ class NoteSnapshotProviderTest {
     assertThat(snapshot.quote()).isEqualTo(new Quote("Essay", "essay", "yuki"));
     assertThat(snapshot.images())
         .containsExactly(new Image("https://cdn/k", "alt", "image/png", null, null));
+  }
+
+  @Test
+  void aRoomPostIsInTheQuoteOnlyOfANoteInItsOwnRoom() {
+    NoteEntity outside = note(5L);
+    NoteEntity inside = note(5L);
+    inside.postIn(4L);
+    NoteEntity nextDoor = note(5L);
+    nextDoor.postIn(6L);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+        .thenReturn(
+            Map.of(
+                5L,
+                new QuotedPost(5L, "Diary", "diary", "yuki", 1L, PostAudience.ROOM, false, 4L)));
+    when(media.findByNoteIds(List.of(42L))).thenReturn(List.of());
+
+    when(notes.findById(42L)).thenReturn(Optional.of(inside));
+    assertThat(provider.find(42L).orElseThrow().quote())
+        .isEqualTo(new Quote("Diary", "diary", "yuki"));
+    when(notes.findById(42L)).thenReturn(Optional.of(outside));
+    assertThat(provider.find(42L).orElseThrow().quote()).isNull();
+    when(notes.findById(42L)).thenReturn(Optional.of(nextDoor));
+    assertThat(provider.find(42L).orElseThrow().quote()).isNull();
   }
 
   @Test
@@ -120,7 +145,7 @@ class NoteSnapshotProviderTest {
   void anUnpublishedQuoteIsDroppedAndAGoneAuthorOrNoteResolvesToNothing() {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
-    when(quotedPosts.publishedByIds(Set.of(5L))).thenReturn(Map.of());
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of());
     when(media.findByNoteIds(List.of(42L))).thenReturn(List.of());
     assertThat(provider.find(42L).orElseThrow().quote()).isNull();
 

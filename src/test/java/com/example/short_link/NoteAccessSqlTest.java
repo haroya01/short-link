@@ -3,6 +3,7 @@ package com.example.short_link;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.NoteAccessSql;
+import com.example.short_link.common.note.NoteVisibility;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class NoteAccessSqlTest {
 
@@ -75,6 +78,30 @@ class NoteAccessSqlTest {
         .contains("(o.visibility IN ('PRIVATE') AND (EXISTS (SELECT 1 FROM user_follow")
         .contains("(o.visibility IN ('ROOM') AND EXISTS (SELECT 1 FROM room_member")
         .doesNotContain(" n.");
+  }
+
+  @ParameterizedTest
+  @EnumSource(NoteVisibility.class)
+  void whatEveryoneReadsIsQuotedFromAnywhereAndARoomsNoteOnlyFromInsideIt(
+      NoteVisibility visibility) {
+    boolean everyone = visibility == NoteVisibility.PUBLIC || visibility == NoteVisibility.UNLISTED;
+    boolean room = visibility == NoteVisibility.ROOM;
+
+    assertThat(visibility.quotedFrom(false)).isEqualTo(everyone);
+    assertThat(visibility.quotedFrom(true)).isEqualTo(everyone || room);
+    assertThat(visibility.quotedWhereItStands()).isEqualTo(everyone || room);
+  }
+
+  @Test
+  void aQuoteStaysOnOneSideOfARoomsWall() {
+    assertThat(NoteAccessSql.onSideOf("q", "x.room_id"))
+        .isEqualTo(
+            "((x.room_id IS NULL AND q.visibility IN ('PUBLIC', 'UNLISTED'))"
+                + " OR (q.room_id = x.room_id AND q.visibility IN ('ROOM')))");
+    assertThat(NoteAccessSql.roomHas("n", "n.user_id"))
+        .isEqualTo(
+            "(n.room_id IS NULL OR EXISTS (SELECT 1 FROM room_member vm"
+                + " WHERE vm.room_id = n.room_id AND vm.user_id = n.user_id))");
   }
 
   private static List<String> findings(String source) {

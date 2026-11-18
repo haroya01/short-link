@@ -19,6 +19,7 @@ import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteVersion;
+import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -198,21 +199,26 @@ public class NoteComposer {
       List<NoteMediaEntity> rows) {
     NoteEntity parent = checked.parent();
     NoteEntity quotedNote = checked.quote().note();
+    QuotedPost quotedPost = checked.quote().post();
     Set<Long> readers = unnamedReaders(note, mentioned, parent);
     boolean quoteSeen =
         quotedNote != null
             && !quotedNote.isRemote()
             && access.readable(note, quotedNote.getUserId());
+    boolean postQuoteSeen =
+        quotedPost != null
+            && note.getVisibility().quotedWhereItStands()
+            && access.readable(note, quotedPost.authorId());
     NotePublication.events(
             new NotePublication.Posted(
                 note,
                 userId,
                 parent,
                 quotedNote,
-                checked.quote().post(),
+                quotedPost,
                 mentioned,
                 readers,
-                quoteSeen,
+                new NotePublication.QuotesSeen(quoteSeen, postQuoteSeen),
                 rows.stream().map(NoteMediaEntity::getStorageKey).toList()))
         .forEach(events::publishEvent);
   }

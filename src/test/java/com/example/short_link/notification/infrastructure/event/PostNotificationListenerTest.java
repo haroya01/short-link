@@ -345,7 +345,8 @@ class PostNotificationListenerTest {
   void notesQuotedInAPostTellTheirAuthorsExceptThePostsOwnAndMutedOnes() {
     stored.user(7L, "writer");
     stored.silence(6L, 7L);
-    when(followerReader.shareableNoteAuthorsOf(Set.of(1L, 2L, 3L))).thenReturn(List.of(4L, 7L, 6L));
+    when(followerReader.quotedNoteAuthorsOf(Set.of(1L, 2L, 3L), null))
+        .thenReturn(List.of(4L, 7L, 6L));
 
     listener()
         .onNotesEmbedded(
@@ -364,7 +365,7 @@ class PostNotificationListenerTest {
 
   @Test
   void aPostQuotingOnlyItsOwnNotesTellsNoOne() {
-    when(followerReader.shareableNoteAuthorsOf(Set.of(1L))).thenReturn(List.of(7L));
+    when(followerReader.quotedNoteAuthorsOf(Set.of(1L), null)).thenReturn(List.of(7L));
 
     listener().onNotesEmbedded(new NotesEmbeddedEvent(7L, 10L, "s", "t", Set.of(1L)));
 
@@ -376,7 +377,7 @@ class PostNotificationListenerTest {
   @Test
   void aPostQuotingOnlyNotesOfPeopleWhoSilencedItsWriterTellsNoOne() {
     stored.silence(6L, 7L);
-    when(followerReader.shareableNoteAuthorsOf(Set.of(1L))).thenReturn(List.of(6L));
+    when(followerReader.quotedNoteAuthorsOf(Set.of(1L), null)).thenReturn(List.of(6L));
 
     listener().onNotesEmbedded(new NotesEmbeddedEvent(7L, 10L, "s", "t", Set.of(1L)));
 

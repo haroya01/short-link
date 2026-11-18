@@ -73,7 +73,66 @@ class NoteFederationAudienceTest {
     }
   }
 
+  @ParameterizedTest
+  @EnumSource(NoteVisibility.class)
+  void aNoteQuotingOneFromAnotherServerReachesThatServerUnlessItStaysInARoomOrBetweenTheNamed(
+      NoteVisibility visibility) {
+    NoteSnapshotReader.NoteSnapshot quoting =
+        NoteSnapshotFixtures.note(
+            42L,
+            7L,
+            "yuki",
+            "a quote",
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            null,
+            null,
+            List.of(),
+            new NoteSnapshotReader.QuotedNote(
+                41L,
+                null,
+                "https://m.example/users/alice/statuses/9",
+                "https://m.example/@alice/9"),
+            null,
+            false,
+            visibility);
+    boolean leaves = visibility.followersRead();
+
+    List<Sent> created = sent(quoting, federation -> federation.createdElsewhere(42L, 7L));
+    List<Sent> edited = sent(quoting, federation -> federation.edited(42L, 7L, true));
+
+    for (List<Sent> reaching : List.of(created, edited)) {
+      assertThat(reaching).hasSize(leaves ? 1 : 0);
+      reaching.forEach(sent -> assertThat(sent.inboxes()).containsExactly(FOLLOWERS, ALICE));
+    }
+    if (visibility == NoteVisibility.ROOM) {
+      assertThat(sent(quoting, federation -> federation.created(42L, 7L))).isEmpty();
+      assertThat(sent(quoting, federation -> federation.edited(42L, 7L))).isEmpty();
+      assertThat(sent(quoting, federation -> federation.edited(42L, 7L, false))).isEmpty();
+    }
+  }
+
   private static List<Sent> sent(NoteVisibility visibility, Consumer<NoteFederation> act) {
+    return sent(
+        NoteSnapshotFixtures.note(
+            42L,
+            7L,
+            "yuki",
+            "a note",
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            41L,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            visibility),
+        act);
+  }
+
+  private static List<Sent> sent(
+      NoteSnapshotReader.NoteSnapshot note, Consumer<NoteFederation> act) {
     NoteSnapshotReader notes = mock(NoteSnapshotReader.class);
     RemoteParents parents = mock(RemoteParents.class);
     FederationActorService localActors = mock(FederationActorService.class);
@@ -82,24 +141,7 @@ class NoteFederationAudienceTest {
     FederationFollowerRepository followers = mock(FederationFollowerRepository.class);
     DeliveryQueue deliveries = mock(DeliveryQueue.class);
     LocalActor writer = new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB");
-    lenient()
-        .when(notes.find(42L))
-        .thenReturn(
-            Optional.of(
-                NoteSnapshotFixtures.note(
-                    42L,
-                    7L,
-                    "yuki",
-                    "a note",
-                    Instant.parse("2026-10-06T00:00:00Z"),
-                    null,
-                    41L,
-                    null,
-                    List.of(),
-                    null,
-                    null,
-                    false,
-                    visibility)));
+    lenient().when(notes.find(42L)).thenReturn(Optional.of(note));
     lenient()
         .when(parents.of(41L))
         .thenReturn(

@@ -45,8 +45,10 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
     Quote quote = null;
     if (note.getQuotedPostId() != null) {
       QuotedPost post =
-          quotedPosts.publishedByIds(Set.of(note.getQuotedPostId())).get(note.getQuotedPostId());
-      if (post != null) {
+          quotedPosts
+              .quotedWhereTheyStand(Set.of(note.getQuotedPostId()))
+              .get(note.getQuotedPostId());
+      if (post != null && post.quotedFrom(note.getRoomId())) {
         quote = new Quote(post.title(), post.slug(), post.authorUsername());
       }
     }

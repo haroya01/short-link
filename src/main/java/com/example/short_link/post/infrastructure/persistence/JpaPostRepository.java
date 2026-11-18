@@ -404,19 +404,4 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("viewer") long viewer,
       @Param("now") Instant now,
       Pageable pageable);
-
-  @Query(
-      nativeQuery = true,
-      value =
-          "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id "
-              + "WHERE q.note_id = :noteId AND "
-              + PostAccessSql.CARD
-              + HeardSql.POST_AUTHOR
-              + " ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
-  List<PostEntity> findPublishedQuotingNote(
-      @Param("noteId") Long noteId,
-      @Param("viewer") long viewer,
-      @Param("now") Instant now,
-      @Param("offset") int offset,
-      @Param("limit") int limit);
 }

@@ -72,6 +72,12 @@ public record NoteBatch(
     return members.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
   }
 
+  QuotedPost quotedPostOf(NoteEntity note) {
+    QuotedPost post =
+        note.getQuotedPostId() == null ? null : quotedPosts.get(note.getQuotedPostId());
+    return post != null && post.quotedFrom(note.getRoomId()) ? post : null;
+  }
+
   NoteAuthor authorOf(NoteEntity note) {
     return note.isRemote()
         ? remoteAuthors.get(note.getRemoteActorId())

@@ -28,6 +28,7 @@ import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.live.LiveRevoke;
 import com.example.short_link.common.live.LiveTopic;
 import com.example.short_link.common.note.NoteVisibility;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.BlockEdge;
 import com.example.short_link.common.user.UserBlockChecker;
@@ -64,6 +65,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -262,7 +264,7 @@ class NoteWriteActionsTest {
   void aNoteWithImagesAndAQuoteIsStoredInOrderAndAnnounced() {
     saving();
     QuotedPost quoted = new QuotedPost(5L, "Essay", "essay", "writer", 3L);
-    when(quotedPosts.publishedByIds(Set.of(5L))).thenReturn(Map.of(5L, quoted));
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of(5L, quoted));
     when(images.verifyAll(
             7L, List.of(new NoteDraft.Image("k1", "first"), new NoteDraft.Image("k2", null))))
         .thenReturn(
@@ -306,7 +308,7 @@ class NoteWriteActionsTest {
   @Test
   void aPrivateNoteQuotingAPostLeavesItsAuthorUntold() {
     saving();
-    when(quotedPosts.publishedByIds(Set.of(5L)))
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
 
@@ -317,6 +319,107 @@ class NoteWriteActionsTest {
 
     verify(events, never()).publishEvent(any(PostQuotedEvent.class));
     verify(events, never()).publishEvent(any(ImageVariantsRequested.class));
+  }
+
+  @Test
+  void aRoomNoteIsQuotedOnlyFromInsideItsOwnRoom() {
+    saving();
+    NoteEntity inRoom = note(50L, 8L, "in the room");
+    inRoom.postIn(4L);
+    when(notes.findById(50L)).thenReturn(Optional.of(inRoom));
+    when(lookups.visibleTo(7L, Set.of(50L))).thenReturn(Set.of(50L));
+    when(rooms.isMember(4L, 7L)).thenReturn(true);
+    when(rooms.isMember(5L, 7L)).thenReturn(true);
+    when(people.activeAuthors(Set.of(7L, 8L)))
+        .thenReturn(Map.of(7L, WRITER, 8L, new NoteAuthor(8L, "other", null)));
+
+    NoteView quoting =
+        composer()
+            .create(
+                7L, NoteDrafts.draft("same room").images(null).quotingNote(50L).inRoom(4L).build());
+
+    assertThat(quoting.quotedNote().id()).isEqualTo(50L);
+    for (Long elsewhere : Arrays.asList(5L, null)) {
+      assertThatThrownBy(
+              () ->
+                  composer()
+                      .create(
+                          7L,
+                          NoteDrafts.draft("x")
+                              .images(null)
+                              .quotingNote(50L)
+                              .inRoom(elsewhere)
+                              .build()))
+          .isInstanceOfSatisfying(
+              NoteException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_SHAREABLE));
+    }
+  }
+
+  @Test
+  void aRoomPostIsQuotedOnlyFromInsideItsOwnRoomAndElsewhereIsAPostThatDoesNotExist() {
+    saving();
+    QuotedPost diary =
+        new QuotedPost(5L, "Diary", "diary", "writer", 3L, PostAudience.ROOM, false, 4L);
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L))).thenReturn(Map.of(5L, diary));
+    when(rooms.isMember(4L, 7L)).thenReturn(true);
+    when(rooms.isMember(5L, 7L)).thenReturn(true);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    NoteView quoting =
+        composer()
+            .create(
+                7L, NoteDrafts.draft("same room").images(null).quotingPost(5L).inRoom(4L).build());
+
+    assertThat(quoting.quotedPost()).isEqualTo(diary);
+    assertThat(quoting.quotedPost().audience()).isEqualTo("ROOM");
+    assertThat(quoting.quotedPost().locked()).isNull();
+    for (Long elsewhere : Arrays.asList(5L, null)) {
+      assertThatThrownBy(
+              () ->
+                  composer()
+                      .create(
+                          7L,
+                          NoteDrafts.draft("x")
+                              .images(null)
+                              .quotingPost(5L)
+                              .inRoom(elsewhere)
+                              .build()))
+          .isInstanceOfSatisfying(
+              NoteException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_NOT_FOUND));
+    }
+  }
+
+  @Test
+  void aQuoteOfAPostMadeInARoomTellsThePostsWriterOnlyWhenTheyReadThatRoom() {
+    saving();
+    when(quotedPosts.quotedWhereTheyStand(Set.of(5L)))
+        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
+    when(rooms.isMember(4L, 7L)).thenReturn(true);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+    when(lookups.visibleTo(3L, Set.of(100L))).thenReturn(Set.of(), Set.of(100L));
+    NoteDraft inRoom = NoteDrafts.draft("in here").images(null).quotingPost(5L).inRoom(4L).build();
+
+    composer().create(7L, inRoom);
+    verify(events, never()).publishEvent(any(PostQuotedEvent.class));
+
+    composer().create(7L, inRoom);
+    verify(events).publishEvent(new PostQuotedEvent(3L, 7L, 100L, "in here"));
+  }
+
+  @Test
+  void aRoomNoteQuotingANoteFromAnotherServerIsDeletedWithoutTellingThatServer() {
+    NoteEntity inRoom = note(2L, 7L, "방에서 인용");
+    inRoom.postIn(4L);
+    ReflectionTestUtils.setField(inRoom, "quotedNoteId", 50L);
+    when(notes.findById(2L)).thenReturn(Optional.of(inRoom));
+    when(media.findByNoteIds(List.of(2L))).thenReturn(List.of());
+
+    threads().delete(7L, 2L);
+
+    verify(events)
+        .publishEvent(new NoteDeletedEvent(2L, 7L, List.of(), null, List.of(), 50L, false));
   }
 
   @Test
@@ -389,7 +492,7 @@ class NoteWriteActionsTest {
 
   @Test
   void aQuoteMustBeAPublishedPost() {
-    when(quotedPosts.publishedByIds(Set.of(9L))).thenReturn(Map.of());
+    when(quotedPosts.quotedWhereTheyStand(Set.of(9L))).thenReturn(Map.of());
 
     assertThatThrownBy(
             () -> composer().create(7L, NoteDrafts.draft("x").images(null).quotingPost(9L).build()))

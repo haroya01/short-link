@@ -72,14 +72,15 @@ public class PostNoteQuotes {
   }
 
   private void announce(PostEntity post, Set<Long> noteIds) {
-    if (!noteIds.isEmpty() && post.getAudience().shownAsCard()) {
+    if (!noteIds.isEmpty() && post.getAudience().quotedWhereItStands()) {
       events.publishEvent(
           new NotesEmbeddedEvent(
               post.getUserId(),
               post.getId(),
               post.getSlug(),
               post.getTitle(),
-              Set.copyOf(noteIds)));
+              Set.copyOf(noteIds),
+              post.getRoomId()));
     }
   }
 

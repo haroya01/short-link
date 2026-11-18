@@ -20,6 +20,7 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.domain.repository.NoteTrendsReader;
+import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
@@ -57,6 +58,7 @@ public class NoteQueryService {
   private final NoteAccess access;
   private final NoteRoomReader rooms;
   private final NoteSeriesReader noteSeries;
+  private final QuotedPostReader quotedPosts;
   private final Clock clock;
 
   @Transactional(readOnly = true)
@@ -209,10 +211,17 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public PostQuotesView postQuotes(Long viewerId, Long postId, PageAsk ask) {
+    Long roomId = quotedPosts.roomOf(postId).orElse(null);
     NoteFeedView feed =
-        page(ask, viewerId, (offset, limit) -> feeds.quotesOfPost(postId, viewerId, offset, limit));
+        page(
+            ask,
+            viewerId,
+            (offset, limit) -> feeds.quotesOfPost(postId, roomId, viewerId, offset, limit));
     return new PostQuotesView(
-        feed.items(), feed.page(), feed.hasNext(), feeds.countQuotesOfPost(postId, viewerId));
+        feed.items(),
+        feed.page(),
+        feed.hasNext(),
+        feeds.countQuotesOfPost(postId, roomId, viewerId));
   }
 
   private NoteAuthor authorNamed(String username) {

@@ -25,6 +25,7 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.NoteRoomReader;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.domain.repository.NoteTrendsReader;
+import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
 import java.time.Instant;
@@ -59,6 +60,7 @@ class NoteQueryServiceTest {
   @Mock private NoteViews views;
   @Mock private NoteSeriesReader noteSeries;
   @Mock private NoteRoomReader rooms;
+  @Mock private QuotedPostReader quotedPosts;
   private NoteQueryService service;
 
   @BeforeEach
@@ -77,6 +79,7 @@ class NoteQueryServiceTest {
             new NoteAccess(lookups),
             rooms,
             noteSeries,
+            quotedPosts,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -472,8 +475,9 @@ class NoteQueryServiceTest {
   @Test
   void aPostsQuotingNotesComeWithHowManyThereAre() {
     NoteEntity quoting = note(3L, null);
-    when(feeds.quotesOfPost(40L, 9L, 0, 21)).thenReturn(List.of(quoting));
-    when(feeds.countQuotesOfPost(40L, 9L)).thenReturn(1L);
+    when(quotedPosts.roomOf(40L)).thenReturn(Optional.empty());
+    when(feeds.quotesOfPost(40L, null, 9L, 0, 21)).thenReturn(List.of(quoting));
+    when(feeds.countQuotesOfPost(40L, null, 9L)).thenReturn(1L);
     when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
 
     PostQuotesView quotes = service.postQuotes(9L, 40L, new PageAsk(0, 20));
@@ -481,6 +485,20 @@ class NoteQueryServiceTest {
     assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
     assertThat(quotes.total()).isEqualTo(1L);
     assertThat(quotes.hasNext()).isFalse();
+  }
+
+  @Test
+  void aRoomPostsQuotingNotesAreAskedForInsideItsRoom() {
+    NoteEntity quoting = note(3L, null);
+    when(quotedPosts.roomOf(41L)).thenReturn(Optional.of(6L));
+    when(feeds.quotesOfPost(41L, 6L, 9L, 0, 21)).thenReturn(List.of(quoting));
+    when(feeds.countQuotesOfPost(41L, 6L, 9L)).thenReturn(1L);
+    when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
+
+    PostQuotesView quotes = service.postQuotes(9L, 41L, new PageAsk(0, 20));
+
+    assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
+    assertThat(quotes.total()).isEqualTo(1L);
   }
 
   @Test

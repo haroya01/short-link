@@ -68,6 +68,8 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
                     + " WHERE NOT EXISTS (SELECT 1 FROM note_conversation_mute c"
                     + " WHERE c.user_id = s.user_id"
                     + " AND c.conversation_id = COALESCE(n.conversation_id, n.id))"
+                    + " AND "
+                    + NoteAccessSql.readable("n", "s.user_id")
                     + silenced)
             .setParameter("note", noteId);
     if (authorUserId != null) {
@@ -81,7 +83,7 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
   }
 
   @Override
-  public List<Long> shareableNoteAuthorsOf(Collection<Long> noteIds) {
+  public List<Long> quotedNoteAuthorsOf(Collection<Long> noteIds, Long roomId) {
     if (noteIds.isEmpty()) {
       return List.of();
     }
@@ -89,8 +91,11 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
         em.createNativeQuery(
                 "SELECT DISTINCT n.user_id FROM note n WHERE n.id IN (:ids)"
                     + " AND n.user_id IS NOT NULL AND "
-                    + NoteAccessSql.shareable("n"))
+                    + NoteAccessSql.onSideOf("n", ":room")
+                    + " AND "
+                    + NoteAccessSql.roomHas("n", "n.user_id"))
             .setParameter("ids", noteIds)
+            .setParameter("room", roomId)
             .getResultList();
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
   }

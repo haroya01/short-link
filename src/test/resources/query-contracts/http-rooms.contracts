@@ -108,3 +108,35 @@
 @junit | room-invitation-accept | 8 | 1 | 0 | 1 | 10
 @junit | room-invitation-decline | 0 | 0 | 1 | 0 | 1
 @junit | room-invitation-cancel | 3 | 0 | 0 | 1 | 4
+# Quotes inside a room, measured against Docker MySQL 2026-11-19. Quoting a room's note from that
+# room is note-quote without the bell statement (a room note is not broadcast), plus membership,
+# whether the writer may read the quoted note (a room note is not settled without asking), whether
+# its author may read the quote, and the room's name for the view. After commit the author hears
+# as for any quote: silence, policy and preference, keyword filters, insert, names for the push.
+@junit | room-note-quote-room-note | 16 | 2 | 0 | 0 | 18
+# Quoting a room's post: moderation, membership, the post, the writer, insert, whether the post's
+# author may read the quote, the room's name; then the same notice statements.
+@junit | room-note-quote-room-post | 12 | 2 | 0 | 0 | 14
+# From outside the room both stop before anything is written: the note after the writer is found
+# to read it, the post right after it is read (as a post that does not exist).
+@junit | room-note-quote-from-outside | 3 | 0 | 0 | 0 | 3
+@junit | room-post-quote-from-outside | 2 | 0 | 0 | 0 | 2
+# A room post carrying a room note: the first publish of post-publish-quoting-note with the
+# writer's membership and the room's name; after commit one statement picks the carried notes'
+# authors on the post's side of the wall who are still in the room, then the grouped notice.
+@junit | room-post-publish-quoting-room-note | 15 | 4 | 1 | 0 | 20
+# The quoted note's thread counts the room's quote and the room post in the same stats statement;
+# a note quoting the room's post reads that post in the page's one quoted-posts statement.
+@junit | room-note-thread-quoted | 10 | 0 | 0 | 0 | 10
+@junit | room-note-thread-quoting-room-post | 11 | 0 | 0 | 0 | 11
+# A room note's quotes for a member: the page, then the page as usual with the quoted note, the
+# reader's membership, their marks and the room's name. Someone outside gets an empty first
+# statement and nothing else.
+@junit | room-note-quotes | 9 | 0 | 0 | 0 | 9
+@junit | room-note-quotes-outsider | 1 | 0 | 0 | 0 | 1
+@junit | room-note-quoting-posts | 4 | 0 | 0 | 0 | 4
+@junit | room-note-quoting-posts-outsider | 1 | 0 | 0 | 0 | 1
+# A room post's quoting notes: the post's room, the page, the page as usual, the total. Outside the
+# room the post's room, an empty page and a zero total.
+@junit | room-post-note-quotes | 11 | 0 | 0 | 0 | 11
+@junit | room-post-note-quotes-outsider | 3 | 0 | 0 | 0 | 3

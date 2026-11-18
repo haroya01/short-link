@@ -3,8 +3,11 @@ package com.example.short_link.note.domain.repository;
 import com.example.short_link.note.domain.QuotedPost;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
 public interface QuotedPostReader {
 
-  Map<Long, QuotedPost> publishedByIds(Collection<Long> postIds);
+  Map<Long, QuotedPost> quotedWhereTheyStand(Collection<Long> postIds);
+
+  Optional<Long> roomOf(Long postId);
 }

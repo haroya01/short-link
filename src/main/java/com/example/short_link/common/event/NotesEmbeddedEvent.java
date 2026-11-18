@@ -3,4 +3,15 @@ package com.example.short_link.common.event;
 import java.util.Set;
 
 public record NotesEmbeddedEvent(
-    Long actorUserId, Long postId, String postSlug, String postTitle, Set<Long> noteIds) {}
+    Long actorUserId,
+    Long postId,
+    String postSlug,
+    String postTitle,
+    Set<Long> noteIds,
+    Long roomId) {
+
+  public NotesEmbeddedEvent(
+      Long actorUserId, Long postId, String postSlug, String postTitle, Set<Long> noteIds) {
+    this(actorUserId, postId, postSlug, postTitle, noteIds, null);
+  }
+}

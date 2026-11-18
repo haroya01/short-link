@@ -57,13 +57,13 @@ class NoteDraftCheck {
     NoteVisibility requested = visibility(draft.visibility());
     NoteEntity parent = parent(userId, draft.inReplyToId());
     requireSingleQuote(draft);
-    NoteEntity quotedNote = quotedNote(userId, draft.quotedNoteId());
-    QuotedPost quotedPost = quotedPost(draft.quotedPostId());
+    Long roomId = room(userId, draft.roomId(), requested, parent);
+    NoteEntity quotedNote = quotedNote(userId, draft.quotedNoteId(), roomId);
+    QuotedPost quotedPost = quotedPost(draft.quotedPostId(), roomId);
     List<String> handles = Mentions.of(text.body());
     Map<Long, NoteAuthor> authors = authors(userId, quotedNote, handles);
     NoteAuthor quotedAuthor = quotedAuthor(userId, quotedNote, draft.quotedNoteId(), authors);
     requireMayAnswer(userId, parent, authors.get(userId));
-    Long roomId = room(userId, draft.roomId(), requested, parent);
     return new Checked(
         text,
         parent,
@@ -99,7 +99,7 @@ class NoteDraftCheck {
     }
   }
 
-  private NoteEntity quotedNote(Long userId, Long quotedNoteId) {
+  private NoteEntity quotedNote(Long userId, Long quotedNoteId, Long roomId) {
     if (quotedNoteId == null) {
       return null;
     }
@@ -109,19 +109,20 @@ class NoteDraftCheck {
             .orElseThrow(
                 () -> new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, quotedNoteId));
     guard.requireReadable(userId, quoted);
-    if (!quoted.getVisibility().shareable()) {
+    boolean itsRoom = quoted.getRoomId() != null && quoted.getRoomId().equals(roomId);
+    if (!quoted.getVisibility().quotedFrom(itsRoom)) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
     }
     guard.requireNoBlockBetween(userId, quoted, NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     return quoted;
   }
 
-  private QuotedPost quotedPost(Long quotedPostId) {
+  private QuotedPost quotedPost(Long quotedPostId, Long roomId) {
     if (quotedPostId == null) {
       return null;
     }
-    QuotedPost quoted = quotedPosts.publishedByIds(Set.of(quotedPostId)).get(quotedPostId);
-    if (quoted == null) {
+    QuotedPost quoted = quotedPosts.quotedWhereTheyStand(Set.of(quotedPostId)).get(quotedPostId);
+    if (quoted == null || !quoted.quotedFrom(roomId)) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_NOT_FOUND, quotedPostId);
     }
     return quoted;

@@ -494,8 +494,11 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.quoted_note_id = :noteId AND "
-                + NoteAccessSql.shareable("n")
+            "SELECT n.* FROM note x JOIN note n ON n.quoted_note_id = x.id"
+                + " WHERE x.id = :noteId AND "
+                + NoteAccessSql.onSideOf("n", "x.room_id")
+                + " AND "
+                + NoteAccessSql.readable("n")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
@@ -509,14 +512,18 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<NoteEntity> quotesOfPost(Long postId, Long viewerId, int offset, int limit) {
+  public List<NoteEntity> quotesOfPost(
+      Long postId, Long roomId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.quoted_post_id = :postId AND "
-                + NoteAccessSql.shareable("n")
+                + NoteAccessSql.onSideOf("n", ":room")
+                + " AND "
+                + NoteAccessSql.readable("n")
                 + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("postId", postId)
+        .setParameter("room", roomId)
         .setParameter("viewer", viewer(viewerId))
         .setParameter("now", Instant.now())
         .setFirstResult(offset)
@@ -525,13 +532,16 @@ class NoteFeedReaderAdapter implements NoteFeedReader {
   }
 
   @Override
-  public long countQuotesOfPost(Long postId, Long viewerId) {
+  public long countQuotesOfPost(Long postId, Long roomId, Long viewerId) {
     return ((Number)
             em.createNativeQuery(
                     "SELECT COUNT(*) FROM note n WHERE n.quoted_post_id = :postId AND "
-                        + NoteAccessSql.shareable("n")
+                        + NoteAccessSql.onSideOf("n", ":room")
+                        + " AND "
+                        + NoteAccessSql.readable("n")
                         + heardNote("n"))
                 .setParameter("postId", postId)
+                .setParameter("room", roomId)
                 .setParameter("viewer", viewer(viewerId))
                 .setParameter("now", Instant.now())
                 .getSingleResult())

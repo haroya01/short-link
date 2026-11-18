@@ -11,5 +11,5 @@ public interface NotificationFollowerReader {
 
   List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId);
 
-  List<Long> shareableNoteAuthorsOf(Collection<Long> noteIds);
+  List<Long> quotedNoteAuthorsOf(Collection<Long> noteIds, Long roomId);
 }
