@@ -85,14 +85,13 @@ final class TopicAnswers {
 
   private static TopicArticle article(String url, String title, String source, String image) {
     String address = TrendingStatusReader.https(url);
-    String headline = TrendingStatusReader.cut(title, TrendingStatusReader.MAX_CARD_TITLE);
+    String name = TrendingStatusReader.cut(source, TrendingStatusReader.MAX_NAME);
+    String headline =
+        TopicArticle.withoutSource(
+            TrendingStatusReader.cut(title, TrendingStatusReader.MAX_CARD_TITLE), name);
     return address == null || headline == null
         ? null
-        : new TopicArticle(
-            address,
-            headline,
-            TrendingStatusReader.cut(source, TrendingStatusReader.MAX_NAME),
-            TrendingStatusReader.https(image));
+        : new TopicArticle(address, headline, name, TrendingStatusReader.https(image));
   }
 
   private static String language(String stated, String title) {

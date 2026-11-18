@@ -259,9 +259,9 @@ class FederationTopicsHttpQueryContractTest extends AccountHttpJourneySupport {
     trends(
         A,
         "links",
-        linkRow(koLink, "다리가 다시 열린다 " + sfx, "ko", 8, 6),
+        linkRow(koLink, "다리가 다시 열린다 " + sfx + " | Example Daily", "ko", 8, 6),
         linkRow(jaLink, "やまびこの時刻表 " + sfx, null, 30, 20),
-        linkRow(koFolded, picnic + " 가는 길", "ko-KR", 12, 8));
+        linkRow(koFolded, picnic + " 가는 길 - Example Daily", "ko-KR", 12, 8));
     trends(B, "tags", tagRow(harbor.toUpperCase(), 9, 2));
     trends(BLOCKED, "tags", tagRow("gone" + sfx, 50, 50));
     timeline(
@@ -294,6 +294,9 @@ class FederationTopicsHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(tag.path("related").size()).isEqualTo(1);
     assertThat(tag.path("related").get(0).path("url").asString()).isEqualTo(koFolded);
     assertThat(tag.path("related").get(0).path("source").asString()).isEqualTo("Example Daily");
+    assertThat(tag.path("related").get(0).path("title").asString()).isEqualTo(picnic + " 가는 길");
+    assertThat(topic(korean, "link:" + koLink).path("title").asString())
+        .isEqualTo("다리가 다시 열린다 " + sfx);
     JsonNode link = topic(korean, "link:" + jaLink);
     assertThat(link.path("kind").asString()).isEqualTo("link");
     assertThat(link.path("tag").isNull()).isTrue();

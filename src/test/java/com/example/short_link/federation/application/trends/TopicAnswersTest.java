@@ -100,6 +100,42 @@ class TopicAnswersTest {
   }
 
   @Test
+  void aLinkTitleLosesTheSourceNameItsSiteAppended() {
+    List<TopicSighting> links =
+        TopicAnswers.links(
+            rows(
+                link(
+                    "https://news.example/a",
+                    " The bridge\n reopens  |  EXAMPLE daily ",
+                    "en",
+                    3,
+                    3),
+                link("https://news.example/b", "다리가 다시 열린다 - Example Daily", null, 3, 3),
+                link("https://news.example/c", "Example Daily", "en", 3, 3),
+                link("https://news.example/d", "The ferry | Another Paper", "en", 3, 3)),
+            "a.example");
+
+    assertThat(links)
+        .extracting(sighting -> sighting.article().title())
+        .containsExactly(
+            "The bridge reopens", "다리가 다시 열린다", "Example Daily", "The ferry | Another Paper");
+    assertThat(links).extracting(TopicSighting::language).containsExactly("en", "ko", "en", "en");
+    assertThat(links.getFirst().article().source()).isEqualTo("Example Daily");
+  }
+
+  @Test
+  void thisServersOwnLinkHasNoSourceSoItsTitleIsKeptWhole() {
+    List<TopicSighting> links =
+        TopicAnswers.ownLinks(
+            List.of(
+                new NoteTopicReader.Link(
+                    "https://news.example/a", "The bridge reopens | Example Daily", null, 3)),
+            "kurl.me");
+
+    assertThat(links.getFirst().article().title()).isEqualTo("The bridge reopens | Example Daily");
+  }
+
+  @Test
   void aLinkWithoutAStatedLanguageReadsItFromItsTitle() {
     List<TopicSighting> links =
         TopicAnswers.links(

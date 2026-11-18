@@ -319,6 +319,26 @@ class TrendingTopicsTest {
   }
 
   @Test
+  void aLinkTitleLosesItsSourceTailBeforeLinksAreMergedAndFolded() {
+    tags("a.example", tagRow("소풍", 5, 4));
+    links(
+        "a.example",
+        linkRow("https://news.example/a", "The bridge reopens | Example Daily", "en", 4, 2),
+        linkRow("https://news.example/picnic", "봄 소풍 가는 길 - Example Daily", "ko", 9, 3));
+    links("b.example", linkRow("https://mirror.example/a", "The bridge reopens", "en", 9, 2));
+
+    topics.refresh();
+
+    assertThat(ids()).containsExactly("tag:소풍", "link:https://mirror.example/a");
+    Topic merged = topic("link:https://mirror.example/a");
+    assertThat(merged.article().title()).isEqualTo("The bridge reopens");
+    assertThat(merged.servers()).containsExactly("b.example", "a.example");
+    assertThat(topic("tag:소풍").related())
+        .extracting(TopicArticle::title)
+        .containsExactly("봄 소풍 가는 길");
+  }
+
+  @Test
   void blockingAServerTakesItOutOfThePoolAtOnce() {
     tags("a.example", tagRow("소풍", 5, 4));
     tags("b.example", tagRow("소풍", 9, 9), tagRow("기차역", 9, 9));
