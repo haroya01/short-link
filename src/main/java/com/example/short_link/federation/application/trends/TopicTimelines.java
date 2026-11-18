@@ -138,6 +138,12 @@ class TopicTimelines {
             .map(
                 answer -> answer.stream().filter(read -> !blocked.contains(read.domain())).toList())
             .toList();
-    return TrendingPosts.known(TrendingPosts.blend(unblocked), standings);
+    return TrendingPosts.known(TrendingPosts.blend(unblocked), standings).stream()
+        .map(TopicTimelines::withoutItsDocument)
+        .toList();
+  }
+
+  private static TrendingStatusReader.Read withoutItsDocument(TrendingStatusReader.Read read) {
+    return new TrendingStatusReader.Read(read.note(), read.actorUri(), read.domain(), null);
   }
 }

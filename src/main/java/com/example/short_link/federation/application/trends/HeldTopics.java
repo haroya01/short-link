@@ -51,9 +51,10 @@ final class HeldTopics {
     if (!byId.containsKey(topic.id())) {
       return List.of();
     }
+    posts.values().removeIf(held -> stale(held, now));
     CompletableFuture<Posts> mine = new CompletableFuture<>();
     CompletableFuture<Posts> flight =
-        posts.compute(topic.id(), (id, held) -> held == null || stale(held, now) ? mine : held);
+        posts.compute(topic.id(), (id, held) -> held == null ? mine : held);
     if (flight == mine) {
       try {
         mine.complete(new Posts(read.get(), now));

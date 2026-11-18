@@ -184,6 +184,23 @@ class TopicTimelinesTest {
   }
 
   @Test
+  void aPostIsHeldAsWhatIsShownWithoutTheDocumentItWasReadFrom() {
+    Topic harbor = TopicFixtures.tag("harbor");
+    answers(tagTimeline("a.example", "harbor", 40), status(uri("a.example", "ann", 1), AT, "en"));
+    answers(tagTimeline("a.example", "harbor", 20), status(uri("a.example", "ann", 1), AT, "en"));
+
+    TrendingStatusReader.Read held = timelines.posts(harbor, List.of("a.example")).getFirst();
+    TrendingStatusReader.Read sampled =
+        timelines.sample(harbor, "a.example", instance).orElseThrow().reads().getFirst();
+
+    assertThat(held.note().body()).isEqualTo("hello");
+    assertThat(held.actorUri()).isEqualTo("https://a.example/users/ann");
+    assertThat(held.domain()).isEqualTo("a.example");
+    assertThat(held.object()).isNull();
+    assertThat(sampled.object()).isNull();
+  }
+
+  @Test
   void aSampleIsOnePageOfTwentyThatNamesItsLanguageFromEveryPostAndKeepsTheReadableOnes() {
     Topic harbor = TopicFixtures.tag("harbor");
     ObjectNode reply = status(uri("a.example", "re", 5), AT, "ja");

@@ -143,6 +143,36 @@ class HeldTopicsTest {
   }
 
   @Test
+  void postsOlderThanTenMinutesAreLetGoWhenAnyTopicIsOpened() {
+    Topic harbor = tag("harbor", "a.example");
+    Topic lantern = tag("lantern", "a.example");
+    Topic ferry = tag("ferry", "a.example");
+    HeldTopics held = new HeldTopics(List.of(harbor, lantern, ferry));
+    held.posts(harbor, NOW, () -> List.of(read("https://a.example/users/someone/statuses/1")));
+    held.posts(
+        lantern,
+        NOW.plusSeconds(300),
+        () -> List.of(read("https://a.example/users/someone/statuses/2")));
+    assertThat(held.postsHeld()).isEqualTo(2);
+
+    held.posts(
+        ferry,
+        NOW.plusSeconds(601),
+        () -> List.of(read("https://a.example/users/someone/statuses/3")));
+
+    assertThat(held.postsHeld()).isEqualTo(2);
+    AtomicInteger asked = new AtomicInteger();
+    held.posts(
+        lantern,
+        NOW.plusSeconds(602),
+        () -> {
+          asked.incrementAndGet();
+          return List.of();
+        });
+    assertThat(asked).hasValue(0);
+  }
+
+  @Test
   void aReadThatBreaksIsNotHeld() {
     Topic harbor = tag("harbor", "a.example");
     HeldTopics held = new HeldTopics(List.of(harbor));
