@@ -184,6 +184,53 @@ class HomeBlogIntegrationTest {
   }
 
   @Test
+  void theLanguageOfAccountsAMemberFollowsDoesNotComeFirstButThatOfTwoLikesDoes() {
+    long ja1 = post(writer, "ja", ahead);
+    long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));
+    post(writer, "en", ahead.minusSeconds(7_200));
+    String loud = "lo" + UUID.randomUUID().toString().substring(0, 8);
+    jdbc.update(
+        "INSERT INTO federation_remote_actor (actor_uri, key_id, public_key_pem, inbox,"
+            + " username, domain, fetched_at, created_at, updated_at)"
+            + " VALUES (?, ?, 'pem', ?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        "https://" + loud + ".example/users/a",
+        "https://" + loud + ".example/users/a#main-key",
+        "https://" + loud + ".example/inbox",
+        loud,
+        loud + ".example");
+    long actor =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE username = ?", Long.class, loud);
+    for (long member : new long[] {reader, writer}) {
+      jdbc.update(
+          "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+              + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+          member,
+          actor,
+          "https://kurl.me/follow/" + loud + member);
+    }
+    for (int posted = 0; posted < 40; posted++) {
+      jdbc.update(
+          "INSERT INTO note (remote_actor_id, uri, body, created_at, visibility, reply, language)"
+              + " VALUES (?, ?, 'hi', NOW(6), 'PUBLIC', FALSE, 'en')",
+          actor,
+          "https://" + loud + ".example/notes/" + posted);
+    }
+    for (int liked = 0; liked < 2; liked++) {
+      jdbc.update(
+          "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, NOW(6))",
+          note("ja"),
+          reader);
+    }
+
+    HomeFeedQueryService.Page liking = blog(null, null, 2);
+
+    assertThat(ids(liking)).containsExactly(ja1, ko1);
+    assertThat(liking.next()).startsWith("b1-ja-ko.");
+    assertThat(ids(asking(writer, null, null, null))).containsExactly(ko1, ja1);
+  }
+
+  @Test
   void aCursorFromBeforeLanguagesKeepsPagingEveryLanguageNewestFirst() {
     long ja1 = post(writer, "ja", ahead);
     long ko1 = post(writer, "ko", ahead.minusSeconds(3_600));

@@ -377,15 +377,54 @@ class RemoteForYouTest {
   }
 
   @Test
-  void theOtherExplicitKindsTeachALanguageTooAndOneSignalIsNotEnough() {
+  void aReplyTeachesALanguageLikeALikeOrABookmarkAndOneReactionIsNotEnough() {
     when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt()))
-        .thenReturn(List.of(signal(Kind.ANSWERED, "ja"), signal(Kind.FOLLOWED, "ja")))
-        .thenReturn(List.of(signal(Kind.LIKED, "ja"), signal(Kind.DWELT, "ja")));
+        .thenReturn(List.of(signal(Kind.ANSWERED, "ja"), signal(Kind.LIKED, "ja")))
+        .thenReturn(List.of(signal(Kind.ANSWERED, "ja"), signal(Kind.DWELT, "ja")));
     RemoteForYou forYou = forYou(true, true);
 
     assertThat(forYou.ownLanguages(7L, "ko", AS_OF)).containsExactlyInAnyOrder("ko", "ja");
     assertThat(forYou.ownLanguages(7L, "ko", AS_OF)).containsExactlyInAnyOrder("ko");
     verify(signals, never()).locale(any(Long.class));
+  }
+
+  @Test
+  void theNotesOfAccountsAMemberFollowsNeitherTeachALanguageNorWaterDownTheirReactions() {
+    List<ForYouSignalReader.Signal> read = new ArrayList<>();
+    read.add(signal(Kind.LIKED, "ja"));
+    read.add(signal(Kind.LIKED, "ja"));
+    for (int i = 0; i < 40; i++) {
+      read.add(signal(Kind.FOLLOWED, "en"));
+    }
+    when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(read);
+    when(signals.locale(7L)).thenReturn(Optional.of("ko"));
+    when(signals.follows(7L)).thenReturn(Set.of("r41"));
+    RemoteForYou forYou = forYou(true, true);
+
+    HomeRanking.Reader reader = forYou.homeReader(7L, MEMBER, "ko", AS_OF);
+
+    assertThat(reader.own()).containsExactlyInAnyOrder("ko", "ja");
+    assertThat(reader.taste().languages()).containsExactlyInAnyOrder("ko", "en");
+    assertThat(reader.follows()).containsExactly("r41");
+    assertThat(forYou.ownLanguages(7L, "ko", AS_OF)).containsExactlyInAnyOrder("ko", "ja");
+  }
+
+  @Test
+  void aMemberWhoOnlyFollowsAccountsInALanguageKeepsTheirDeclaredLanguageAlone() {
+    List<ForYouSignalReader.Signal> read = new ArrayList<>();
+    for (int i = 0; i < 40; i++) {
+      read.add(signal(Kind.FOLLOWED, "en"));
+    }
+    when(signals.signals(eq(MEMBER), any(), anyInt(), anyInt())).thenReturn(read);
+    when(signals.locale(7L)).thenReturn(Optional.of("ko"));
+    when(signals.follows(7L)).thenReturn(Set.of("r41"));
+    RemoteForYou forYou = forYou(true, true);
+
+    HomeRanking.Reader reader = forYou.homeReader(7L, MEMBER, null, AS_OF);
+
+    assertThat(reader.own()).containsExactly("ko");
+    assertThat(reader.taste().languages()).containsExactlyInAnyOrder("ko", "en");
+    assertThat(forYou.ownLanguages(7L, null, AS_OF)).containsExactly("ko");
   }
 
   @Test

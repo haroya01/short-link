@@ -37,6 +37,11 @@ public class RemoteForYou {
   static final int POOL = 1_000;
   static final int PER_KIND = 40;
   static final int MIN_DWELL_MS = 8_000;
+  static final Set<ForYouSignalReader.Kind> REACTIONS =
+      Set.of(
+          ForYouSignalReader.Kind.LIKED,
+          ForYouSignalReader.Kind.BOOKMARKED,
+          ForYouSignalReader.Kind.ANSWERED);
 
   private final LatestProperties latestProps;
   private final LatestPosts latest;
@@ -233,7 +238,7 @@ public class RemoteForYou {
     return ForYouProfile.own(
         declared,
         read.stream()
-            .filter(signal -> signal.kind() != ForYouSignalReader.Kind.DWELT)
+            .filter(signal -> REACTIONS.contains(signal.kind()))
             .map(RemoteForYou::weighed)
             .toList());
   }

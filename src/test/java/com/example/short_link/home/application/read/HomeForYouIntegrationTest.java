@@ -248,6 +248,43 @@ class HomeForYouIntegrationTest {
         .containsExactly(notes(japanese, korean, fresh, english, bookmarked, unknown));
   }
 
+  @Test
+  void followingALoudAccountInAnotherLanguageDoesNotMakeItTheReadersOwnButTwoLikesDo() {
+    long japanese = written("ja", ago(120));
+    long liked = written("ja", ago(100));
+    long korean = written("ko", ago(45));
+    long english = written("en", ago(10));
+    long loud = actor("lo");
+    for (long member : new long[] {reader, stranger}) {
+      jdbc.update(
+          "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+              + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+          member,
+          loud,
+          "https://kurl.me/follow/lo" + member);
+    }
+    for (int posted = 0; posted < 40; posted++) {
+      jdbc.update(
+          "INSERT INTO note (remote_actor_id, uri, body, created_at, visibility, reply, language)"
+              + " VALUES (?, ?, 'hi', ?, 'PUBLIC', FALSE, 'en')",
+          loud,
+          "https://lo.example/notes/" + loud + "/" + posted,
+          utc(ago(600 + posted)));
+    }
+    for (long note : new long[] {japanese, liked}) {
+      jdbc.update(
+          "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, ?)",
+          note,
+          reader,
+          utc(ago(5)));
+    }
+
+    assertThat(keys(home.page(asking(reader, viewer, null))))
+        .containsExactly(notes(korean, liked, japanese, english));
+    assertThat(keys(home.page(asking(stranger, SeenViewer.member(stranger), null))))
+        .containsExactly(notes(korean, english, liked, japanese));
+  }
+
   private static HomeAsk asking(Long member, SeenViewer viewer, String header) {
     return new HomeAsk(
         member, viewer, header, HomeFeedQueryService.Tab.FOR_YOU, null, null, 40, false);
