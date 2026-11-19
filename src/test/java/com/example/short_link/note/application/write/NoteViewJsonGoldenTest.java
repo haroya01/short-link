@@ -228,7 +228,7 @@ class NoteViewJsonGoldenTest {
     when(lookups.visibleTo(any(), anyCollection())).thenReturn(Set.of(5L));
     when(media.findByNoteIds(anyCollection()))
         .thenReturn(List.of(image(1L, 0), image(1L, 1), image(10L, 0)));
-    when(quotedPosts.publishedByIds(any()))
+    when(quotedPosts.cardsFor(any(), any()))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(pages.stats(any()))
         .thenReturn(Map.of(1L, new NoteStats(2, 5, 1, 3), 3L, new NoteStats(0, 7, 2, 0)));
@@ -276,7 +276,7 @@ class NoteViewJsonGoldenTest {
     when(people.remoteAuthors(anyCollection(), any())).thenReturn(Map.of(42L, ALICE));
     when(lookups.readersAmong(any(), anyCollection())).thenReturn(Set.of(9L));
     when(media.findByNoteIds(anyCollection())).thenReturn(List.of(image(20L, 0)));
-    when(quotedPosts.publishedByIds(any()))
+    when(quotedPosts.cardsFor(any(), any()))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
     when(images.verifyAll(any(), any()))
         .thenAnswer(

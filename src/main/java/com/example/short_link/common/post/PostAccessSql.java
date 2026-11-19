@@ -60,6 +60,21 @@ public final class PostAccessSql {
     return published(alias) + " AND " + in(alias, PostAudience::shownAsCard);
   }
 
+  public static String onSideOf(String alias, String room) {
+    return published(alias)
+        + " AND (("
+        + room
+        + " IS NULL AND "
+        + in(alias, audience -> audience.quotedFrom(false))
+        + ") OR ("
+        + alias
+        + ".room_id = "
+        + room
+        + " AND "
+        + in(alias, audience -> audience.quotedFrom(true) && !audience.quotedFrom(false))
+        + "))";
+  }
+
   public static String inRoomsOf(String alias) {
     return inRooms(alias)
         + " AND EXISTS (SELECT 1 FROM room_member pm WHERE pm.room_id = "

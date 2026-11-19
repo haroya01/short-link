@@ -172,12 +172,13 @@ class NotePageReaderAdapter implements NotePageReader {
                 "SELECT s.note_id, s.kind, COUNT(*) FROM ("
                     + "SELECT in_reply_to_id AS note_id, 'REPLY' AS kind FROM note"
                     + " WHERE in_reply_to_id IN (:ids) AND reply_hidden_at IS NULL"
-                    + " UNION ALL SELECT quoted_note_id, 'QUOTE' FROM note"
-                    + " WHERE quoted_note_id IN (:ids)"
-                    + " UNION ALL SELECT q.note_id, 'QUOTE' FROM post_note_quote q"
-                    + " JOIN posts p ON p.id = q.post_id"
-                    + " WHERE q.note_id IN (:ids) AND "
-                    + PostAccessSql.CARD
+                    + " UNION ALL SELECT q.quoted_note_id, 'QUOTE' FROM note x"
+                    + " JOIN note q ON q.quoted_note_id = x.id WHERE x.id IN (:ids) AND "
+                    + NoteAccessSql.onSideOf("q", "x.room_id")
+                    + " UNION ALL SELECT e.note_id, 'QUOTE' FROM note x"
+                    + " JOIN post_note_quote e ON e.note_id = x.id"
+                    + " JOIN posts p ON p.id = e.post_id WHERE x.id IN (:ids) AND "
+                    + PostAccessSql.onSideOf("p", "x.room_id")
                     + " UNION ALL SELECT note_id, 'LIKE' FROM note_like WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, IF(kind = 'LIKE', 'LIKE', 'REPOST')"

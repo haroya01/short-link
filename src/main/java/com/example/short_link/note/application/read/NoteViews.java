@@ -118,7 +118,8 @@ public class NoteViews {
             .map(NoteEntity::getQuotedPostId)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-    Map<Long, QuotedPost> posts = quoted.isEmpty() ? Map.of() : quotedPosts.publishedByIds(quoted);
+    Map<Long, QuotedPost> posts =
+        quoted.isEmpty() ? Map.of() : quotedPosts.cardsFor(viewerId, quoted);
     Map<Long, NoteStats> stats = pages.stats(ids);
     NoteViewerMarks marks = pages.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
@@ -185,7 +186,7 @@ public class NoteViews {
   private static NoteView.Attached attached(NoteEntity note, NoteBatch batch) {
     return new NoteView.Attached(
         batch.images().getOrDefault(note.getId(), List.of()),
-        note.getQuotedPostId() == null ? null : batch.quotedPosts().get(note.getQuotedPostId()),
+        batch.quotedPostOf(note),
         note.getQuotedNoteId() == null
             ? null
             : quotedNote(batch.quotedNotes().get(note.getQuotedNoteId()), batch),

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +111,12 @@ class NoteAccessSqlIntegrationTest {
       compare(differ, "readable", NoteAccessSql::readable, reader, n -> readable(reader, n));
       compare(
           differ,
+          "roomHas",
+          alias -> NoteAccessSql.roomHas(alias, ":viewer"),
+          reader,
+          n -> reader.member());
+      compare(
+          differ,
           "onProfile",
           NoteAccessSql::onProfile,
           reader,
@@ -117,6 +124,35 @@ class NoteAccessSqlIntegrationTest {
               readable(reader, n)
                   && (n.visibility().onProfile(false)
                       || (n.visibility().onProfile(true) && owns(reader, n))));
+    }
+
+    assertThat(differ).isEmpty();
+  }
+
+  @Test
+  void aNoteStandsOnOneSideOfARoomsWallAsItsVisibilityAnswersBeingQuoted() {
+    Map<Long, Written> byId = new LinkedHashMap<>();
+    written.forEach(note -> byId.put(note.id(), note));
+    List<String> differ = new ArrayList<>();
+    for (Long side : Arrays.asList(null, room, room + 1_000_000)) {
+      Set<Long> sql =
+          new TreeSet<>(
+              jdbc.queryForList(
+                  "SELECT n.id FROM note n WHERE n.id IN (:ids) AND "
+                      + NoteAccessSql.onSideOf("n", ":side"),
+                  new MapSqlParameterSource().addValue("ids", byId.keySet()).addValue("side", side),
+                  Long.class));
+      Set<Long> java = new TreeSet<>();
+      for (Written note : byId.values()) {
+        boolean everyone = note.visibility().quotedFrom(false);
+        boolean itsRoomOnly = note.visibility().quotedFrom(true) && !everyone;
+        if (side == null ? everyone : itsRoomOnly && side.equals(room)) {
+          java.add(note.id());
+        }
+      }
+      if (!sql.equals(java)) {
+        differ.add("onSideOf " + side + ": sql " + sql + " java " + java);
+      }
     }
 
     assertThat(differ).isEmpty();

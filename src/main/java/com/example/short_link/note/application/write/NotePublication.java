@@ -22,6 +22,8 @@ final class NotePublication {
 
   private NotePublication() {}
 
+  record QuotesSeen(boolean note, boolean post) {}
+
   // readers is null when everyone the note names may read it.
   record Posted(
       NoteEntity note,
@@ -31,7 +33,7 @@ final class NotePublication {
       QuotedPost quotedPost,
       List<NoteAuthor> mentioned,
       Set<Long> readers,
-      boolean quoteSeen,
+      QuotesSeen seen,
       List<String> imageKeys) {
 
     boolean reachesElsewhere() {
@@ -49,19 +51,15 @@ final class NotePublication {
           && (parent == null || writerId.equals(parent.getUserId()));
     }
 
-    boolean quotesPostPublicly() {
-      return quotedPost != null && note.getVisibility().shareable();
-    }
-
     Set<Long> toldOtherwise() {
       Set<Long> told = new HashSet<>(Set.of(writerId));
       if (parent != null) {
         told.add(parent.getUserId());
       }
-      if (quoteSeen) {
+      if (seen.note()) {
         told.add(quotedNote.getUserId());
       }
-      if (quotesPostPublicly()) {
+      if (seen.post()) {
         told.add(quotedPost.authorId());
       }
       return told;
@@ -91,12 +89,12 @@ final class NotePublication {
     if (posted.broadcast()) {
       told.add(new NoteBroadcastEvent(note.getId(), writerId, note.excerpt()));
     }
-    if (posted.quoteSeen()) {
+    if (posted.seen().note()) {
       told.add(
           NoteInteractions.interaction(
               NoteInteractionEvent.Type.QUOTE, posted.quotedNote(), writerId, note));
     }
-    if (posted.quotesPostPublicly()) {
+    if (posted.seen().post()) {
       told.add(
           new PostQuotedEvent(
               posted.quotedPost().authorId(), writerId, note.getId(), note.excerpt()));

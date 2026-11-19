@@ -502,10 +502,27 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public List<PostEntity> findPublishedQuotingNote(
       Long noteId, Long viewerId, int offset, int limit) {
-    return jpa.findPublishedQuotingNote(
-        noteId, HeardSql.viewer(viewerId), clock.instant(), offset, limit);
+    return em.createNativeQuery(
+            "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id"
+                + " LEFT JOIN note x ON x.id = q.note_id WHERE q.note_id = :noteId AND "
+                + PostAccessSql.onSideOf("p", "x.room_id")
+                + " AND ("
+                + PostAccessSql.card("p")
+                + " OR "
+                + PostAccessSql.inRoomsOf("p")
+                + ")"
+                + HeardSql.POST_AUTHOR
+                + " ORDER BY p.published_at DESC, p.id DESC",
+            PostEntity.class)
+        .setParameter("noteId", noteId)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", clock.instant())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
   }
 
   @Override

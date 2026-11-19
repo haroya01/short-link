@@ -52,9 +52,9 @@ public interface NoteFeedReader {
 
   List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 
-  List<NoteEntity> quotesOfPost(Long postId, Long viewerId, int offset, int limit);
+  List<NoteEntity> quotesOfPost(Long postId, Long roomId, Long viewerId, int offset, int limit);
 
-  long countQuotesOfPost(Long postId, Long viewerId);
+  long countQuotesOfPost(Long postId, Long roomId, Long viewerId);
 
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
 

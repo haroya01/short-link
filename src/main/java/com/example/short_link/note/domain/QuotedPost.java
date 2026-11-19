@@ -13,10 +13,11 @@ public record QuotedPost(
     @JsonIgnore Long authorId,
     String audience,
     @JsonInclude(JsonInclude.Include.NON_NULL) Boolean regionRestricted,
-    @JsonInclude(JsonInclude.Include.NON_NULL) Locked locked) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) Locked locked,
+    @JsonIgnore Long roomId) {
 
   public QuotedPost(Long id, String title, String slug, String authorUsername, Long authorId) {
-    this(id, title, slug, authorUsername, authorId, PostAudience.DEFAULT, false);
+    this(id, title, slug, authorUsername, authorId, PostAudience.DEFAULT, false, null);
   }
 
   public QuotedPost(
@@ -26,7 +27,8 @@ public record QuotedPost(
       String authorUsername,
       Long authorId,
       PostAudience audience,
-      boolean regionRestricted) {
+      boolean regionRestricted,
+      Long roomId) {
     this(
         id,
         title,
@@ -35,7 +37,12 @@ public record QuotedPost(
         authorId,
         audience.name(),
         regionRestricted ? Boolean.TRUE : null,
-        audience.lock() == null ? null : new Locked(audience.lock()));
+        audience.lock() == null ? null : new Locked(audience.lock()),
+        roomId);
+  }
+
+  public boolean quotedFrom(Long room) {
+    return PostAudience.valueOf(audience).quotedFrom(roomId != null && roomId.equals(room));
   }
 
   public record Locked(PostLock reason) {}

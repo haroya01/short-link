@@ -49,8 +49,10 @@
 # and views them with the page, so the count it gives is what hidden replies would list.
 @junit | note-thread | 10 | 0 | 0 | 0 | 10
 # Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
+# Quotes of a post first ask which room the post lives in, measured 2026-11-19: a room post lists
+# and counts only the notes of that room.
 @junit | note-quotes | 6 | 0 | 0 | 0 | 6
-@junit | post-note-quotes | 7 | 0 | 0 | 0 | 7
+@junit | post-note-quotes | 8 | 0 | 0 | 0 | 8
 # Bookmarks are the reader's own: the note, the existing row, insert or delete. The list reads the
 # reader's bookmark ids newest first, those notes, then the page as usual.
 @junit | note-bookmark | 2 | 1 | 0 | 0 | 3

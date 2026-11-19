@@ -110,6 +110,14 @@ public enum NoteVisibility {
     return readBy(Reader.MEMBER) && !shareable();
   }
 
+  public boolean quotedFrom(boolean itsRoom) {
+    return shareable() || (itsRoom && inRoom());
+  }
+
+  public boolean quotedWhereItStands() {
+    return quotedFrom(inRoom());
+  }
+
   public boolean namesReaders() {
     return readBy(Reader.NAMED) && !shareable();
   }

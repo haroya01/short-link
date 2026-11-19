@@ -3,6 +3,7 @@ package com.example.short_link;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.post.PostAccessSql;
+import com.example.short_link.common.post.PostAudience;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class PostAccessSqlTest {
 
@@ -82,6 +85,29 @@ class PostAccessSqlTest {
             "rp.status = 'PUBLISHED' AND rp.audience IN ('ROOM') AND EXISTS (SELECT 1 FROM"
                 + " room_member pm WHERE pm.room_id = rp.room_id AND pm.user_id = :viewer)");
     assertThat(PostAccessSql.inFeedRooms("p")).contains("NOT fr.hidden_from_feed");
+  }
+
+  @ParameterizedTest
+  @EnumSource(PostAudience.class)
+  void aCardedPostIsQuotedFromAnywhereAndARoomsPostOnlyFromInsideIt(PostAudience audience) {
+    boolean carded =
+        audience == PostAudience.PUBLIC
+            || audience == PostAudience.FOLLOWERS
+            || audience == PostAudience.PASSWORD;
+    boolean room = audience == PostAudience.ROOM;
+
+    assertThat(audience.quotedFrom(false)).isEqualTo(carded);
+    assertThat(audience.quotedFrom(true)).isEqualTo(carded || room);
+    assertThat(audience.quotedWhereItStands()).isEqualTo(carded || room);
+  }
+
+  @Test
+  void aPostQuotesAndIsQuotedOnOneSideOfARoomsWall() {
+    assertThat(PostAccessSql.onSideOf("p", "x.room_id"))
+        .isEqualTo(
+            "p.status = 'PUBLISHED' AND ((x.room_id IS NULL"
+                + " AND p.audience IN ('PUBLIC', 'FOLLOWERS', 'PASSWORD'))"
+                + " OR (p.room_id = x.room_id AND p.audience IN ('ROOM')))");
   }
 
   private static List<String> findings(String source) {

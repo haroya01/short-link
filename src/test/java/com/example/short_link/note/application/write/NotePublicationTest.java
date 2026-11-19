@@ -44,7 +44,29 @@ class NotePublicationTest {
       List<String> imageKeys) {
     return NotePublication.events(
         new NotePublication.Posted(
-            note, 7L, parent, quotedNote, quotedPost, mentioned, readers, quoteSeen, imageKeys));
+            note,
+            7L,
+            parent,
+            quotedNote,
+            quotedPost,
+            mentioned,
+            readers,
+            new NotePublication.QuotesSeen(quoteSeen, false),
+            imageKeys));
+  }
+
+  private static List<Object> quotingPost(NoteEntity note, QuotedPost post, boolean seen) {
+    return NotePublication.events(
+        new NotePublication.Posted(
+            note,
+            7L,
+            null,
+            null,
+            post,
+            List.of(new NoteAuthor(3L, "writer", null)),
+            null,
+            new NotePublication.QuotesSeen(false, seen),
+            List.of()));
   }
 
   private static List<Class<?>> kinds(List<Object> events) {
@@ -215,16 +237,23 @@ class NotePublicationTest {
   }
 
   @Test
-  void aQuotedPostsWriterHearsOnlyOfANoteEveryoneMayShare() {
+  void aQuotedPostsWriterHearsOfTheQuoteOnceWhenItReachesThemAndElseOnlyAsSomeoneNamed() {
     QuotedPost post = new QuotedPost(5L, "Essay", "essay", "writer", 3L);
-    NoteEntity shared = note(100L, 7L, "인용", null);
-    NoteEntity onlyUs = note(101L, 7L, "우리끼리", null);
-    onlyUs.showTo(NoteVisibility.PRIVATE);
+    NoteEntity note = note(100L, 7L, "@writer 인용", null);
 
-    assertThat(told(shared, null, null, post, List.of(), null, false, List.of()))
-        .contains(new PostQuotedEvent(3L, 7L, 100L, "인용"));
-    assertThat(told(onlyUs, null, null, post, List.of(), null, false, List.of()))
-        .noneMatch(PostQuotedEvent.class::isInstance);
+    List<Object> seen = quotingPost(note, post, true);
+    List<Object> unseen = quotingPost(note, post, false);
+
+    assertThat(seen)
+        .contains(new PostQuotedEvent(3L, 7L, 100L, "@writer 인용"))
+        .noneMatch(NoteInteractionEvent.class::isInstance);
+    assertThat(unseen).noneMatch(PostQuotedEvent.class::isInstance);
+    assertThat(unseen)
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .extracting(
+            event -> ((NoteInteractionEvent) event).type(),
+            event -> ((NoteInteractionEvent) event).recipientUserId())
+        .containsExactly(tuple(NoteInteractionEvent.Type.MENTION, 3L));
   }
 
   @Test
