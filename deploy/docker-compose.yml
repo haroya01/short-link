@@ -18,6 +18,20 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=${TZ:-Asia/Seoul}
+      # 2GB 박스에서 앱과 동거한다. 기본값은 연결 151개·표 4000개 크기로 버퍼를 잡는다.
+      # 앱 풀은 20개(DB_POOL_MAX), 표는 150개가 안 된다.
+      - --max-connections=60
+      - --table-open-cache=400
+      - --table-definition-cache=400
+      # 문장별 통계(digest)는 남긴다. 운영에서 쓰는 digest 는 2,500개쯤이다.
+      - --performance-schema-digests-size=4000
+      - --performance-schema-events-statements-history-long-size=0
+      - --performance-schema-events-waits-history-long-size=0
+      - --performance-schema-events-stages-history-long-size=0
+      - --performance-schema-events-transactions-history-long-size=0
+      - --performance-schema-accounts-size=20
+      - --performance-schema-hosts-size=20
+      - --performance-schema-users-size=20
     ports:
       # Loopback-only — EC2 외부에선 안 보임. SSH tunnel 통해서만 접근 (DataGrip 등 GUI 도구).
       - "127.0.0.1:3306:3306"
