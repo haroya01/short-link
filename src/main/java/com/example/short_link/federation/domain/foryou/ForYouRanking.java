@@ -2,6 +2,7 @@ package com.example.short_link.federation.domain.foryou;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -46,6 +47,10 @@ public final class ForYouRanking {
           .thenComparing(scored -> scored.candidate().uri());
 
   private ForYouRanking() {}
+
+  public static Instant asOf(Instant now, boolean shared) {
+    return now.truncatedTo(shared ? ChronoUnit.MINUTES : ChronoUnit.MILLIS);
+  }
 
   public static Ranked rank(
       Collection<ForYouCandidate> pool, ForYouReader reader, Set<String> seen, Instant now) {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,6 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -464,6 +472,125 @@ class RemoteForYouTest {
     assertThat(forYou(false, true).page(7L, MEMBER, null, null, 20, false).items()).isEmpty();
     verifyNoInteractions(seen);
     verify(notes, never()).listed(any(), any());
+  }
+
+  private RemoteForYou forYou(Clock clock) {
+    return new RemoteForYou(
+        new LatestProperties(true, List.of(), 40, 0, null, null, true, null, 0, 0),
+        latest,
+        trending,
+        authors,
+        notes,
+        reach,
+        signals,
+        seen,
+        clock);
+  }
+
+  @Test
+  void readersNobodyCanTellApartShareTheMinutesRankingAndTheirScrollKeepsItPastTheMinute() {
+    Instant minute = Instant.parse("2026-10-22T03:00:00Z");
+    Instant nextMinute = minute.plusSeconds(60);
+    Clock clock = mock(Clock.class);
+    when(clock.instant())
+        .thenReturn(
+            minute.plusMillis(10_123),
+            minute.plusSeconds(40),
+            minute.plusSeconds(65),
+            minute.plusSeconds(80));
+    when(notes.remotePool(null, minute.minus(Duration.ofHours(72)), minute, 1_000, false))
+        .thenReturn(List.of(pooled(1, "ko"), pooled(2, "ko"), pooled(3, "ko")));
+    when(notes.remotePool(null, nextMinute.minus(Duration.ofHours(72)), nextMinute, 1_000, false))
+        .thenReturn(List.of(pooled(4, "ko"), pooled(1, "ko"), pooled(2, "ko"), pooled(3, "ko")));
+    when(reach.of(any())).thenReturn(Map.of());
+    when(notes.listed(eq(null), any()))
+        .thenAnswer(
+            call ->
+                call.<List<Long>>getArgument(1).stream()
+                    .map(id -> new NoteViewReader.Listed(id, "view" + id, uri(id)))
+                    .toList());
+    RemoteForYou forYou = forYou(clock);
+
+    RemoteTrendingFeed.Page first = forYou.page(null, null, "ko", null, 2, false);
+    RemoteTrendingFeed.Page another = forYou.page(null, null, "ko-KR,ko;q=0.9", null, 2, false);
+    RemoteTrendingFeed.Page later = forYou.page(null, null, "ko", null, 2, false);
+    RemoteTrendingFeed.Page onward = forYou.page(null, null, "ko", first.next(), 2, false);
+
+    assertThat(first.next()).isEqualTo("f" + minute.toEpochMilli() + ".2");
+    assertThat(another.next()).isEqualTo(first.next());
+    assertThat(views(another)).isEqualTo(views(first));
+    assertThat(later.next()).isEqualTo("f" + nextMinute.toEpochMilli() + ".2");
+    assertThat(views(later)).contains("view4");
+    List<Object> scrolled = new ArrayList<>(views(first));
+    scrolled.addAll(views(onward));
+    assertThat(scrolled).containsExactlyInAnyOrder("view1", "view2", "view3");
+    assertThat(onward.next()).isNull();
+    verify(notes, times(1))
+        .remotePool(null, minute.minus(Duration.ofHours(72)), minute, 1_000, false);
+    verify(notes, times(1))
+        .remotePool(null, nextMinute.minus(Duration.ofHours(72)), nextMinute, 1_000, false);
+    verifyNoInteractions(signals, seen);
+  }
+
+  @Test
+  void readersNobodyCanTellApartAskingAtTheSameMomentWaitForOneRanking() throws Exception {
+    Clock clock = mock(Clock.class);
+    when(clock.instant()).thenReturn(Instant.parse("2026-10-22T03:00:05Z"));
+    AtomicInteger ranked = new AtomicInteger();
+    CountDownLatch bothRanking = new CountDownLatch(2);
+    when(notes.remotePool(any(), any(), any(), anyInt(), eq(false)))
+        .thenAnswer(
+            call -> {
+              ranked.incrementAndGet();
+              bothRanking.countDown();
+              bothRanking.await(300, TimeUnit.MILLISECONDS);
+              return List.<NoteViewReader.Pooled>of();
+            });
+    when(reach.of(any())).thenReturn(Map.of());
+    RemoteForYou forYou = forYou(clock);
+    Callable<RemoteTrendingFeed.Page> firstPage =
+        () -> forYou.page(null, null, "ko", null, 2, false);
+    ExecutorService readers = Executors.newFixedThreadPool(2);
+    try {
+      for (Future<RemoteTrendingFeed.Page> page :
+          readers.invokeAll(List.of(firstPage, firstPage))) {
+        page.get(5, TimeUnit.SECONDS);
+      }
+    } finally {
+      readers.shutdownNow();
+    }
+
+    assertThat(ranked).hasValue(1);
+  }
+
+  @Test
+  void aMemberAndAReaderWithADeviceKeyAreRankedAgainOnEveryFirstPageAsOfItsMillisecond() {
+    Instant minute = Instant.parse("2026-10-22T03:00:00Z");
+    Instant[] asked = {
+      minute.plusMillis(10_123),
+      minute.plusMillis(40_500),
+      minute.plusMillis(41_000),
+      minute.plusMillis(42_750)
+    };
+    Clock clock = mock(Clock.class);
+    when(clock.instant())
+        .thenReturn(asked[0].plusNanos(456_000), asked[1], asked[2], asked[3].plusNanos(1));
+    when(signals.signals(any(), any(), anyInt(), anyInt())).thenReturn(List.of());
+    when(signals.locale(7L)).thenReturn(Optional.empty());
+    when(notes.remotePool(any(), any(), any(), anyInt(), eq(false))).thenReturn(List.of());
+    when(reach.of(any())).thenReturn(Map.of());
+    RemoteForYou forYou = forYou(clock);
+
+    forYou.page(7L, MEMBER, "ko", null, 2, false);
+    forYou.page(7L, MEMBER, "ko", null, 2, false);
+    forYou.page(null, DEVICE, "ko", null, 2, false);
+    forYou.page(null, DEVICE, "ko", null, 2, false);
+
+    for (Instant at : asked) {
+      verify(notes, times(1))
+          .remotePool(any(), eq(at.minus(Duration.ofHours(72))), eq(at), eq(1_000), eq(false));
+    }
+    verify(notes, times(4)).remotePool(any(), any(), any(), anyInt(), eq(false));
   }
 
   @Test
