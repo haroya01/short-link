@@ -8,6 +8,7 @@ import com.example.short_link.federation.application.trends.RemoteForYou;
 import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.federation.application.trends.RemoteTrendingFeed;
 import com.example.short_link.federation.domain.foryou.ForYouProfile;
+import com.example.short_link.federation.domain.foryou.ForYouRanking;
 import com.example.short_link.federation.domain.foryou.HomeCandidate;
 import com.example.short_link.federation.domain.foryou.HomeRanking;
 import com.example.short_link.note.application.read.NoteQueryService;
@@ -21,7 +22,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,7 +71,7 @@ public class HomeForYou {
     Long viewerId = ask.viewerId();
     SeenViewer viewer = ask.viewer();
     HomeCursor.Ranked at = HomeCursor.Ranked.parse(ask.cursor());
-    Instant asOf = at == null ? clock.instant().truncatedTo(ChronoUnit.MILLIS) : at.asOf();
+    Instant asOf = at == null ? firstPageAsOf(ask) : at.asOf();
     boolean hiding = (at == null ? ask.hideSeen() : at.hide()) && viewer != null;
     List<String> accepted = ForYouProfile.accepted(ask.languages());
     String key =
@@ -85,6 +85,11 @@ public class HomeForYou {
     int to = Math.min(from + ask.size(), refs.size());
     String next = to < refs.size() ? new HomeCursor.Ranked(asOf, to, hiding).toString() : null;
     return new HomeFeedQueryService.Page(show(viewerId, refs.subList(from, to)), next);
+  }
+
+  private Instant firstPageAsOf(HomeAsk ask) {
+    boolean shared = ask.viewerId() == null && ask.viewer() == null;
+    return ForYouRanking.asOf(clock.instant(), shared);
   }
 
   Set<String> ownLanguages(HomeAsk ask, Instant asOf) {

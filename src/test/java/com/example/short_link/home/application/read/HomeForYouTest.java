@@ -190,6 +190,105 @@ class HomeForYouTest {
         7L, READER, header, HomeFeedQueryService.Tab.FOR_YOU, cursor, null, size, false);
   }
 
+  private static final SeenViewer DEVICE =
+      SeenViewer.of(null, "2c7d9e1f-3a4b-4c5d-8e6f-7a8b9c0d1e2f");
+
+  private HomeForYou at(Clock clock) {
+    return new HomeForYou(remote, notes, posts, views, localSeen, remoteSeen, clock);
+  }
+
+  private static HomeAsk signedOut(SeenViewer viewer, String header, String cursor) {
+    return new HomeAsk(
+        null, viewer, header, HomeFeedQueryService.Tab.FOR_YOU, cursor, null, 2, false);
+  }
+
+  @Test
+  void readersNobodyCanTellApartShareTheMinutesRankingAndTheirScrollKeepsItPastTheMinute() {
+    Instant nextMinute = NOW.plusSeconds(60);
+    Clock clock = mock(Clock.class);
+    when(clock.instant())
+        .thenReturn(NOW.plusMillis(10_250), NOW.plusSeconds(40), NOW.plusSeconds(65));
+    List<PooledNote> pool =
+        List.of(
+            note(1, 20, Duration.ofHours(1)),
+            note(2, 21, Duration.ofHours(2)),
+            note(3, 22, Duration.ofHours(3)));
+    List<PooledNote> grown = new ArrayList<>(pool);
+    grown.add(new PooledNote(4, 23, "ko", NOW.plusSeconds(30), List.of(), 0, 0, 0));
+    when(notes.pool(any(), any(), eq(NOW), anyInt())).thenReturn(pool);
+    when(notes.pool(any(), any(), eq(nextMinute), anyInt())).thenReturn(grown);
+    HomeForYou home = at(clock);
+
+    HomeFeedQueryService.Page first = home.page(signedOut(null, "ko", null));
+    HomeFeedQueryService.Page another = home.page(signedOut(null, "ko-KR,ko;q=0.9", null));
+    HomeFeedQueryService.Page later = home.page(signedOut(null, "ko", null));
+    HomeFeedQueryService.Page onward = home.page(signedOut(null, "ko", first.next()));
+
+    assertThat(shown(first)).containsExactly("note 1", "note 2");
+    assertThat(first.next()).isEqualTo("r" + NOW.toEpochMilli() + ".2");
+    assertThat(shown(another)).containsExactly("note 1", "note 2");
+    assertThat(another.next()).isEqualTo(first.next());
+    assertThat(shown(later)).containsExactly("note 4", "note 1");
+    assertThat(later.next()).isEqualTo("r" + nextMinute.toEpochMilli() + ".2");
+    assertThat(shown(onward)).containsExactly("note 3");
+    assertThat(onward.next()).isNull();
+    verify(notes, times(1)).pool(null, NOW.minus(Duration.ofDays(7)), NOW, HomeForYou.LOCAL_POOL);
+    verify(notes, times(1))
+        .pool(null, nextMinute.minus(Duration.ofDays(7)), nextMinute, HomeForYou.LOCAL_POOL);
+    verify(remote, times(1)).homeReader(eq(null), eq(null), any(), eq(NOW));
+    verifyNoInteractions(localSeen, remoteSeen);
+  }
+
+  @Test
+  void readersWhoAskInAnotherLanguageInTheSameMinuteAreRankedApart() {
+    Clock clock = mock(Clock.class);
+    when(clock.instant()).thenReturn(NOW.plusSeconds(5), NOW.plusSeconds(6), NOW.plusSeconds(7));
+    when(notes.pool(any(), any(), any(), anyInt()))
+        .thenReturn(List.of(note(1, 20, Duration.ofHours(1))));
+    HomeForYou home = at(clock);
+
+    home.page(signedOut(null, "ko", null));
+    home.page(signedOut(null, "ja", null));
+    home.page(signedOut(null, "ko,ja", null));
+
+    verify(notes, times(3)).pool(null, NOW.minus(Duration.ofDays(7)), NOW, HomeForYou.LOCAL_POOL);
+  }
+
+  @Test
+  void aMemberAndAReaderWithADeviceKeyAreRankedAgainOnEveryFirstPageAsOfItsMillisecond() {
+    Instant[] asked = {
+      NOW.plusMillis(10_250), NOW.plusMillis(40_500), NOW.plusMillis(41_000), NOW.plusMillis(42_750)
+    };
+    Clock clock = mock(Clock.class);
+    when(clock.instant())
+        .thenReturn(asked[0].plusNanos(456_000), asked[1], asked[2], asked[3].plusNanos(1));
+    when(notes.pool(any(), any(), any(), anyInt()))
+        .thenReturn(
+            List.of(
+                note(1, 20, Duration.ofHours(1)),
+                note(2, 21, Duration.ofHours(2)),
+                note(3, 22, Duration.ofHours(3))));
+    HomeForYou home = at(clock);
+
+    List<String> cursors =
+        List.of(
+            home.page(asking("ko", null, 2)).next(),
+            home.page(asking("ko", null, 2)).next(),
+            home.page(signedOut(DEVICE, "ko", null)).next(),
+            home.page(signedOut(DEVICE, "ko", null)).next());
+
+    assertThat(cursors)
+        .containsExactly(
+            "r" + asked[0].toEpochMilli() + ".2",
+            "r" + asked[1].toEpochMilli() + ".2",
+            "r" + asked[2].toEpochMilli() + ".2",
+            "r" + asked[3].toEpochMilli() + ".2");
+    for (Instant at : asked) {
+      verify(notes, times(1)).pool(any(), any(), eq(at), anyInt());
+    }
+    verify(notes, times(4)).pool(any(), any(), any(), anyInt());
+  }
+
   @Test
   void otherServersStayOutWhenTheirPostsAreOff() {
     when(remote.enabled()).thenReturn(false);

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.seen.SeenParameters;
@@ -16,6 +18,7 @@ import com.example.short_link.federation.application.trends.RemoteSeen;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -28,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.JsonNode;
 
 @TestPropertySource(
@@ -46,6 +50,7 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
       "https://" + HOST + "/api/v1/timelines/public?local=true&limit=40";
 
   @MockitoBean private FederationHttp http;
+  @MockitoSpyBean private Clock clock;
   @Autowired private LatestPosts latest;
   @Autowired private RemoteSeen seen;
   @Autowired private RemoteReach reach;
@@ -124,7 +129,10 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
           .thenReturn(ok(person(user)));
     }
     assertThat(latest.pull()).isEqualTo(3);
+    Instant minute = Instant.now().truncatedTo(ChronoUnit.MINUTES).plus(1, ChronoUnit.MINUTES);
+    Instant nextMinute = minute.plus(1, ChronoUnit.MINUTES);
 
+    doReturn(minute.plusSeconds(5)).when(clock).instant();
     JsonNode anonymous =
         body(
             callWithHeaders(
@@ -139,7 +147,49 @@ class RemoteForYouHttpQueryContractTest extends AccountHttpJourneySupport {
         .isEqualTo("https://www.youtube.com/watch?v=abc");
     assertThat(anonymous.path("items").get(1).path("linkPreview").path("title").asString())
         .isEqualTo("A video");
-    assertThat(anonymous.path("next").asString()).startsWith("f").endsWith(".2");
+    assertThat(anonymous.path("next").asString()).isEqualTo("f" + minute.toEpochMilli() + ".2");
+
+    doReturn(minute.plusSeconds(40)).when(clock).instant();
+    JsonNode anotherAnonymous =
+        body(
+            callWithHeaders(
+                "federation-for-you-anonymous-shared",
+                "GET",
+                "/api/v1/federation/for-you?limit=2",
+                null,
+                Map.of("Accept-Language", "ja"),
+                200));
+    assertThat(uris(anotherAnonymous)).isEqualTo(uris(anonymous));
+    assertThat(anotherAnonymous.path("next").asString())
+        .isEqualTo(anonymous.path("next").asString());
+
+    doReturn(nextMinute.plusSeconds(5)).when(clock).instant();
+    JsonNode laterAnonymous =
+        body(
+            callWithHeaders(
+                "federation-for-you-anonymous-next-minute",
+                "GET",
+                "/api/v1/federation/for-you?limit=2",
+                null,
+                Map.of("Accept-Language", "ja-JP,ja;q=0.9"),
+                200));
+    assertThat(uris(laterAnonymous)).isEqualTo(uris(anonymous));
+    assertThat(laterAnonymous.path("next").asString())
+        .isEqualTo("f" + nextMinute.toEpochMilli() + ".2");
+
+    doReturn(nextMinute.plusSeconds(20)).when(clock).instant();
+    JsonNode onwardAnonymous =
+        body(
+            callWithHeaders(
+                "federation-for-you-anonymous-onward",
+                "GET",
+                "/api/v1/federation/for-you?limit=2&cursor=" + anonymous.path("next").asString(),
+                null,
+                Map.of("Accept-Language", "ja-JP,ja;q=0.9"),
+                200));
+    assertThat(uris(onwardAnonymous)).containsExactly(uri("yui", 101));
+    assertThat(onwardAnonymous.path("next").isNull()).isTrue();
+    doCallRealMethod().when(clock).instant();
 
     JsonNode first =
         body(

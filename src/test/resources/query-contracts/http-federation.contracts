@@ -506,6 +506,13 @@
 @junit | federation-for-you-anonymous | 9 | 0 | 0 | 0 | 9
 @junit | federation-for-you-first | 13 | 0 | 0 | 0 | 13
 @junit | federation-for-you-next | 6 | 0 | 0 | 0 | 6
+# Readers nobody can tell apart share one ranking for the minute, measured 2026-11-19: another
+# anonymous first page in the same minute only builds its notes, the next minute ranks again, and
+# a second page asked after the minute is cut from its first page's ranking.
+@junit | federation-for-you-anonymous-shared | 6 | 0 | 0 | 0 | 6
+@junit | federation-for-you-anonymous-next-minute | 9 | 0 | 0 | 0 | 9
+@junit | federation-for-you-anonymous-onward | 5 | 0 | 0 | 0 | 5
+# The dwell and its flush, and a device's first page, read as the block above says.
 @junit | federation-seen-dwell | 0 | 0 | 0 | 0 | 0
 @junit | federation-seen-flush-dwell | 1 | 2 | 0 | 0 | 3
 @junit | federation-for-you-device | 11 | 0 | 0 | 0 | 11
