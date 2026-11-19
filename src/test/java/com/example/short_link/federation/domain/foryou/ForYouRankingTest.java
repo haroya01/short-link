@@ -184,6 +184,15 @@ class ForYouRankingTest {
   }
 
   @Test
+  void aRankingIsMadeAsOfTheMillisecondForOneReaderAndTheMinuteForReadersWhoShareIt() {
+    Instant asked = Instant.parse("2026-11-19T04:05:38.123456Z");
+
+    assertThat(ForYouRanking.asOf(asked, false))
+        .isEqualTo(Instant.parse("2026-11-19T04:05:38.123Z"));
+    assertThat(ForYouRanking.asOf(asked, true)).isEqualTo(Instant.parse("2026-11-19T04:05:00Z"));
+  }
+
+  @Test
   void boostsCountTwiceAndRepliesOnce() {
     ForYouCandidate boosted =
         new ForYouCandidate(1L, "https://a/1", "a", "a", "ko", Set.of(), NOW, 1, 2, 3, 1L);

@@ -16,7 +16,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -91,7 +90,7 @@ public class RemoteForYou {
       return new RemoteTrendingFeed.Page(List.of(), null);
     }
     int size = Math.clamp(limit, 1, TrendingPosts.MAX_LIMIT);
-    Position at = position(cursor);
+    Position at = position(cursor, viewerId == null && viewer == null);
     boolean stored = latestProps.pulling();
     Ranking ranking =
         ranking(viewerId, viewer, ForYouProfile.accepted(languages), at.asOf(), stored);
@@ -115,12 +114,7 @@ public class RemoteForYou {
                 : viewer.kind() + ":" + viewer.key())
             + "|"
             + asOf.toEpochMilli();
-    Ranking ranking = rankings.getIfPresent(key);
-    if (ranking == null) {
-      ranking = rank(viewerId, viewer, accepted, asOf, stored);
-      rankings.put(key, ranking);
-    }
-    return ranking;
+    return rankings.get(key, made -> rank(viewerId, viewer, accepted, asOf, stored));
   }
 
   private Shown shownStored(Long viewerId, Ranking ranking, int from, int to) {
@@ -334,8 +328,8 @@ public class RemoteForYou {
     };
   }
 
-  private Position position(String cursor) {
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MILLIS);
+  private Position position(String cursor, boolean shared) {
+    Instant now = ForYouRanking.asOf(clock.instant(), shared);
     int dot = cursor == null || !cursor.startsWith("f") ? -1 : cursor.indexOf('.');
     if (dot < 2) {
       return new Position(now, 0);

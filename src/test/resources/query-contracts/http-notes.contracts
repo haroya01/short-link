@@ -338,6 +338,20 @@
 @junit | home-for-you-seen | 0 | 0 | 0 | 0 | 0
 @junit | home-for-you-seen-flush | 0 | 2 | 0 | 0 | 2
 @junit | home-for-you-device-hide | 21 | 0 | 0 | 0 | 21
+# Readers nobody can tell apart (no member, no device key) share one ranking for the minute,
+# measured 2026-11-19. The first of them in a minute ranks (the kept posts with their tags and
+# counts, this week's notes with their counts and tags, this week's posts and their tags: eight
+# statements, with no signals, language or follows to read) and builds its page. Another in the
+# same minute asking in the same languages only builds the page, as a later page does. A minute
+# later the ranking is made again, here with a note that arrived meanwhile on the page. A second
+# page asked after the minute is still cut from its first page's ranking. A member and a device
+# key rank on every first page as before: asked twice in one minute, both times cost the same.
+@junit | home-for-you-anonymous-first | 17 | 0 | 0 | 0 | 17
+@junit | home-for-you-anonymous-shared | 9 | 0 | 0 | 0 | 9
+@junit | home-for-you-anonymous-next-minute | 18 | 0 | 0 | 0 | 18
+@junit | home-for-you-anonymous-onward | 6 | 0 | 0 | 0 | 6
+@junit | home-for-you-member-again | 22 | 0 | 0 | 0 | 22
+@junit | home-for-you-device-again | 18 | 0 | 0 | 0 | 18
 # Blog: one statement walks the listed posts down from the cursor's position (published time, then
 # id), and the page is built as any post card page. Since walks up from the marker in the same way.
 # Measured 2026-11-18 with the reader's own languages first: the walk takes only the posts written
