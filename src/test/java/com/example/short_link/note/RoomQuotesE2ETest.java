@@ -485,6 +485,10 @@ class RoomQuotesE2ETest {
     assertThat(ownQuoteOfPost.raw()).doesNotContain(mark("roompost"));
     assertThat(ownQuoteOfNote.status()).as(ownQuoteOfNote.raw()).isEqualTo(200);
     assertThat(ownQuoteOfNote.raw()).doesNotContain(mark("roomnote"));
+    assertThat(read(Who.ROOMMATE, "/api/v1/rooms/my-notes?size=50").raw())
+        .contains("quoting " + tag)
+        .doesNotContain(mark("roompost"))
+        .doesNotContain(mark("roomnote"));
     assertThat(read(Who.ROOMMATE, "/api/v1/public/notes/" + roomNote + "/quotes").raw())
         .isEqualTo(read(Who.ANONYMOUS, "/api/v1/public/notes/" + Long.MAX_VALUE + "/quotes").raw());
     assertThat(read(Who.ROOMMATE, "/api/v1/public/posts/" + roomPost + "/quotes").raw())

@@ -122,8 +122,9 @@
 @junit | room-note-quote-from-outside | 3 | 0 | 0 | 0 | 3
 @junit | room-post-quote-from-outside | 2 | 0 | 0 | 0 | 2
 # A room post carrying a room note: the first publish of post-publish-quoting-note with the
-# writer's membership and the room's name; after commit one statement picks the carried notes'
-# authors on the post's side of the wall who are still in the room, then the grouped notice.
+# writer's membership and the room's name, and without the followers statement (a room post is not
+# announced to followers); after commit one statement picks the carried notes' authors on the
+# post's side of the wall who are still in the room, then the grouped notice.
 @junit | room-post-publish-quoting-room-note | 15 | 4 | 1 | 0 | 20
 # The quoted note's thread counts the room's quote and the room post in the same stats statement;
 # a note quoting the room's post reads that post in the page's one quoted-posts statement.
